@@ -48,7 +48,7 @@ public class BikePresence extends CompanionDeviceService {
         if (e == DevicePresenceEvent.EVENT_BLE_APPEARED || e == DevicePresenceEvent.EVENT_BT_CONNECTED) {
             appeared("event " + e);
         } else if (e == DevicePresenceEvent.EVENT_BLE_DISAPPEARED || e == DevicePresenceEvent.EVENT_BT_DISCONNECTED) {
-            Logger.log("Autostart: bike out of range (event " + e + ")");
+            disappeared("event " + e);
         }
     }
 
@@ -63,11 +63,30 @@ public class BikePresence extends CompanionDeviceService {
     @SuppressWarnings("deprecation")
     public void onDeviceDisappeared(AssociationInfo info) {
         Logger.init(this);
-        Logger.log("Autostart: bike out of range");
+        disappeared("disappeared");
+    }
+
+    /** Remembered for a pause after a manual stop: see {@link #appeared}. */
+    private void disappeared(String how) {
+        Logger.log("Autostart: bike out of range (" + how + ")");
+        if (Hub.autostartPaused(this) && Hub.prefs(this).getLong(Hub.KEY_BIKE_GONE_AT, 0) == 0) {
+            Hub.prefs(this).edit().putLong(Hub.KEY_BIKE_GONE_AT, System.currentTimeMillis()).apply();
+        }
     }
 
     private void appeared(String how) {
         if (!enabled(this)) return;
+        if (Hub.autostartPaused(this)) {
+            long goneAt = Hub.prefs(this).getLong(Hub.KEY_BIKE_GONE_AT, 0);
+            if (goneAt == 0 || System.currentTimeMillis() - goneAt < Hub.BIKE_OFF_MS) {
+                // the blip right after Stop (link closed, bike advertises again): stay stopped
+                Hub.prefs(this).edit().putLong(Hub.KEY_BIKE_GONE_AT, 0).apply();
+                Logger.log("Autostart: bike seen (" + how + "), but the bridge was stopped by hand: not starting");
+                return;
+            }
+            Hub.setStoppedByUser(this, false);
+            Logger.log("Autostart: bike was switched off since the manual stop: autostart active again");
+        }
         if (Hub.serviceRunning) {
             Logger.log("Autostart: bike seen (" + how + "), bridge already running");
             return;

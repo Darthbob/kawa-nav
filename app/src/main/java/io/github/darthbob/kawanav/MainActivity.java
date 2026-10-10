@@ -94,6 +94,12 @@ public class MainActivity extends Activity {
     private Button autoBikeButton;
     // riding
     private TextView freeModeStatus;
+    // debug
+    private LinearLayout debugCard;
+    private TextView debugIconsStatus;
+    private TextView debugGatt;
+    private int titleTaps;
+    private long titleTapAt;
     // offline
     private TextView storedView;
     private AutoCompleteTextView regionInput;
@@ -136,6 +142,31 @@ public class MainActivity extends Activity {
      * adb shell am start -n io.github.darthbob.kawanav/.MainActivity --ez bridge true|false
      * Also: --ez free_mode true|false, --es offline_region bayern, --ez offline_cancel true
      */
+    /**
+     * Copies the log to Download/KawaNav (readable by adb and file managers, also from a release build):
+     * {@code adb pull /sdcard/Download/KawaNav/}
+     */
+    private void exportLog() {
+        android.content.ContentResolver cr = getContentResolver();
+        String stamp = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(new java.util.Date());
+        for (String name : new String[]{"kawanav.log.1", "kawanav.log"}) {
+            java.io.File f = new java.io.File(getFilesDir(), name);
+            if (!f.exists()) continue;
+            android.content.ContentValues v = new android.content.ContentValues();
+            v.put(android.provider.MediaStore.Downloads.DISPLAY_NAME, stamp + "-" + name + ".txt");
+            v.put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain");
+            v.put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "Download/KawaNav");
+            android.net.Uri uri = cr.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+            if (uri == null) continue;
+            try (java.io.OutputStream out = cr.openOutputStream(uri)) {
+                java.nio.file.Files.copy(f.toPath(), out);
+            } catch (java.io.IOException e) {
+                Logger.log("Log export failed: " + e);
+            }
+        }
+        Logger.log("Log exported to Download/KawaNav");
+    }
+
     private void handleAdbIntent(Intent i) {
         if (i == null) return;
         if (i.hasExtra("free_mode")) {
@@ -144,6 +175,7 @@ public class MainActivity extends Activity {
             setContentView(buildUi()); // refresh the switch
         }
         if (i.getBooleanExtra("offline_cancel", false)) OfflineService.stop(this);
+        if (i.getBooleanExtra("export_log", false)) exportLog();
         if (i.hasExtra(OfflineService.EXTRA_REGION)) OfflineService.startRegion(this, i.getStringExtra(OfflineService.EXTRA_REGION));
         if (i.hasExtra("bridge")) {
             if (i.getBooleanExtra("bridge", false)) {
@@ -449,6 +481,7 @@ public class MainActivity extends Activity {
 
         TextView title = text(26, true);
         title.setText("KawaNav");
+        if (Hub.DEBUG_TOOLS) title.setOnClickListener(v -> titleTapped());
         root.addView(title);
         TextView subtitle = secondary("Google Maps directions and curve warnings on your Kawasaki");
         subtitle.setPadding(0, 0, 0, dp(8));
@@ -459,6 +492,7 @@ public class MainActivity extends Activity {
         root.addView(autostartCard());
         root.addView(ridingCard());
         root.addView(offlineCard());
+        if (Hub.DEBUG_TOOLS) root.addView(debugCard());
         root.addView(footer());
 
         ScrollView scroll = new ScrollView(this);
@@ -620,7 +654,7 @@ public class MainActivity extends Activity {
         LinearLayout helmetRow = settingRow();
         LinearLayout ht = column();
         ht.addView(itemTitle("When my helmet connects"));
-        ht.addView(secondary("Your intercom connects by itself when switched on"));
+        ht.addView(secondary("Your intercom connects by itself when switched on. While it is connected, the bike's display shows the headset icon"));
         helmetRow.addView(ht, weight());
         helmetsHidden = checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED;
         List<android.bluetooth.BluetoothDevice> helmets = helmetsHidden ? new ArrayList<>() : HelmetTrigger.candidates(this);
@@ -691,6 +725,8 @@ public class MainActivity extends Activity {
         }
         c.addView(choiceRow("Look ahead", "How far ahead to search for the next curve", la, laSel,
                 pos -> prefs.edit().putInt(Hub.KEY_LOOKAHEAD, LOOKAHEADS[pos]).apply()));
+        c.addView(switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging",
+                Hub.KEY_PHONE_BATTERY, true));
         c.addView(switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
         c.addView(switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
         return c;
@@ -741,14 +777,110 @@ public class MainActivity extends Activity {
         return c;
     }
 
+    /** Debug builds: seven taps on the title show or hide the debug card. */
+    private void titleTapped() {
+        long now = System.currentTimeMillis();
+        titleTaps = now - titleTapAt < 1000 ? titleTaps + 1 : 1;
+        titleTapAt = now;
+        if (titleTaps < 7) return;
+        titleTaps = 0;
+        boolean show = !prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false);
+        prefs.edit().putBoolean(Hub.KEY_DEBUG_ICONS, show).apply();
+        debugCard.setVisibility(show ? View.VISIBLE : View.GONE);
+        android.widget.Toast.makeText(this, show ? "Debug options shown" : "Debug options hidden",
+                android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    /** Hidden card to try values of the meter's status icon fields (13 0C frame, see PROTOCOL.md). */
+    private LinearLayout debugCard() {
+        LinearLayout c = card();
+        c.addView(cardTitle("Dash icons (debug)"));
+        c.addView(secondary("Fixed values for the status icon frame, sent every 5 s while the bike is connected. "
+                + "Auto: phone battery, helmet connected, voice and riding log 0. Tap the title 7 times to hide."));
+        c.addView(iconRow("Battery", Hub.KEY_ICON_BATTERY, "0 low, 1–3 bars, 7–10 charging 0–3 bars, 14 error, 15 none"));
+        c.addView(iconRow("Voice", Hub.KEY_ICON_VOICE, "0 idle, 1 wake word, 2 listening, 3 processing, 14 error, 15 none"));
+        c.addView(iconRow("Headset", Hub.KEY_ICON_HEADSET, "0 off, 1 on, 2 blinking, 3 none"));
+        c.addView(iconRow("Riding log", Hub.KEY_ICON_RIDING_LOG, "0 off, 1 recording, 2 paused, 14 error, 15 none"));
+        c.addView(phoneNameRow());
+        debugIconsStatus = secondary("");
+        debugIconsStatus.setTypeface(Typeface.MONOSPACE);
+        debugIconsStatus.setPadding(0, dp(10), 0, 0);
+        c.addView(debugIconsStatus);
+        c.addView(itemTitle("Bluetooth services of the bike"));
+        c.addView(secondary("Listed on each connect while this card is shown. Read-only: only standard values "
+                + "like the firmware version are read, nothing is written."));
+        debugGatt = secondary("");
+        debugGatt.setTypeface(Typeface.MONOSPACE);
+        debugGatt.setTextIsSelectable(true);
+        c.addView(debugGatt);
+        c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
+        debugCard = c;
+        return c;
+    }
+
+    /** Debug: text the meter gets as the phone's name (Bluetooth info on the dash?). */
+    private View phoneNameRow() {
+        LinearLayout box = column();
+        box.setPadding(0, dp(10), 0, 0);
+        box.addView(itemTitle("Phone name on the dash"));
+        box.addView(secondary("Sent now and on every connect, up to " + KawaProtocol.PHONE_NAME_BYTES
+                + " bytes (UTF-8). Empty: nothing is sent."));
+        LinearLayout r = row();
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setSingleLine(true);
+        input.setTextSize(15);
+        input.setHint("e.g. Hello Z900");
+        input.setText(prefs.getString(Hub.KEY_DEBUG_PHONE_NAME, ""));
+        r.addView(input, weight());
+        r.addView(button("Send", v -> {
+            String name = input.getText().toString().trim();
+            prefs.edit().putString(Hub.KEY_DEBUG_PHONE_NAME, name).apply();
+            hideKeyboard();
+            String msg;
+            if (name.isEmpty()) {
+                msg = "Cleared: no name is sent";
+            } else if (BridgeService.sendPhoneName()) {
+                int bytes = KawaProtocol.phoneNameBytes(name).length;
+                msg = "Sent" + (bytes < name.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+                        ? " (cut to " + bytes + " bytes)" : "");
+            } else {
+                msg = "Saved: sent when the bike connects";
+            }
+            android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
+        }));
+        box.addView(r);
+        return box;
+    }
+
+    private View iconRow(String title, String key, String values) {
+        String[] items = new String[17];
+        items[0] = "Auto";
+        for (int i = 0; i < 16; i++) items[i + 1] = String.valueOf(i);
+        return choiceRow(title, values, items, Hub.iconSetting(this, key) + 1, pos -> {
+            prefs.edit().putInt(key, pos - 1).apply();
+            BridgeService.settingsChanged();
+        });
+    }
+
     private void updateUi() {
+        if (debugCard != null && debugCard.getVisibility() == View.VISIBLE) {
+            KawaProtocol.Capabilities caps = Hub.bikeCapabilities;
+            debugIconsStatus.setText("Bike display: " + (caps == null ? "–" : "turn-by-turn "
+                    + (caps.turnByTurn ? "yes" : "no") + ", status icons " + (caps.statusIcons ? "yes" : "no"))
+                    + "\nLast sent: " + Hub.iconsStatus);
+            String gatt = Hub.gattDump.isEmpty() ? "Not read yet: connect the bike with this card shown." : Hub.gattDump;
+            if (!gatt.contentEquals(debugGatt.getText())) debugGatt.setText(gatt); // keeps a text selection
+        }
         // --- status
         int color;
         String title;
         if (!Hub.serviceRunning) {
             color = 0xFF9E9E9E;
             title = "Not running";
-            statusHint.setText("Tap Start before the ride, or set up an automatic start below.");
+            boolean autostart = BikePresence.enabled(this) || prefs.getString(Hub.KEY_HELMET, null) != null;
+            statusHint.setText(autostart && Hub.autostartPaused(this)
+                    ? "Stopped by hand: the automatic start waits until the bike is switched off. Tap Start to connect now."
+                    : "Tap Start before the ride, or set up an automatic start below.");
         } else {
             color = Hub.bikeConnected ? OK_GREEN : WARN_ORANGE;
             if (Hub.bikeStatus.startsWith("No paired")) color = ERROR_RED;

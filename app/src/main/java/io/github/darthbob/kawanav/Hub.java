@@ -58,6 +58,12 @@ public final class Hub {
     public static String offlineStatus = "–";
     /** Progress of pairing the bike from KawaNav ("" = not pairing). */
     public static String pairStatus = "";
+    /** What the connected meter says it can show (null: not known yet). */
+    public static KawaProtocol.Capabilities bikeCapabilities;
+    /** Debug: the meter's Bluetooth services, read once per connect while the debug card is shown. */
+    public static String gattDump = "";
+    /** Status icons last sent to the meter, for the debug card. */
+    public static String iconsStatus = "–";
 
     // --- settings
     public static final String PREFS = "settings";
@@ -70,6 +76,35 @@ public final class Hub {
     public static final String KEY_DEVICE = "device";
     /** Address of the helmet whose Bluetooth connection starts the bridge (autostart fallback). */
     public static final String KEY_HELMET = "helmet";
+    /** Phone battery icon on the bike's display (on unless turned off). */
+    public static final String KEY_PHONE_BATTERY = "phone_battery";
+    /** When the user stopped the bridge by hand (0: not), see {@link #autostartPaused}. */
+    public static final String KEY_STOPPED_BY_USER = "stopped_by_user_at";
+    /** A stop by hand pauses autostart at most this long (normally until the bike is switched off). */
+    public static final long AUTOSTART_PAUSE_MS = 60 * 60_000;
+    /** When the bike was last reported out of range (0: not since the last manual stop). */
+    public static final String KEY_BIKE_GONE_AT = "bike_gone_at";
+    /**
+     * The bike must be gone this long before it counts as switched off. Right after Stop, Android
+     * reports it out of range and back within ~2 s (the link closes, the bike advertises again).
+     */
+    public static final long BIKE_OFF_MS = 20_000;
+    /**
+     * Debug builds only: the hidden debug card and everything behind it (icon values, phone name,
+     * Bluetooth service list). Release builds ignore those settings even if a debug build left them set.
+     */
+    public static final boolean DEBUG_TOOLS = BuildConfig.DEBUG;
+    /** Hidden debug card for the meter's status icons is shown (tap the title 7 times). */
+    public static final String KEY_DEBUG_ICONS = "debug_icons";
+    /** Debug: fixed values (0..15) for the status icon fields, -1 = automatic. */
+    public static final String KEY_ICON_BATTERY = "icon_battery";
+    public static final String KEY_ICON_VOICE = "icon_voice";
+    public static final String KEY_ICON_HEADSET = "icon_headset";
+    public static final String KEY_ICON_RIDING_LOG = "icon_riding_log";
+    /** Debug: text sent to the meter as the phone's name on every connect ("" = none). */
+    public static final String KEY_DEBUG_PHONE_NAME = "debug_phone_name";
+    /** Debug builds: riding log icon on until changed in the debug card, to see how it looks on the dash. */
+    public static final int RIDING_LOG_DEFAULT = 1;
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
 
@@ -81,6 +116,27 @@ public final class Hub {
     /** Google Maps directions on the meter: on unless turned off; off, free mode runs during navigation too. */
     public static boolean mapsEnabled(Context c) {
         return prefs(c).getBoolean(KEY_MAPS, true);
+    }
+
+    /** Debug value of a status icon field (-1 = automatic, always in release builds). */
+    public static int iconSetting(Context c, String key) {
+        if (!DEBUG_TOOLS) return -1;
+        return prefs(c).getInt(key, KEY_ICON_RIDING_LOG.equals(key) ? RIDING_LOG_DEFAULT : -1);
+    }
+
+    /**
+     * The user stopped the bridge: autostart (bike or helmet) must not start it again right away. After
+     * Stop the bike advertises again and would be "seen" within seconds. Ends when the bike is switched
+     * off (gone for {@link #BIKE_OFF_MS}), on a manual start, or after {@link #AUTOSTART_PAUSE_MS}.
+     */
+    public static boolean autostartPaused(Context c) {
+        long at = prefs(c).getLong(KEY_STOPPED_BY_USER, 0);
+        return at > 0 && System.currentTimeMillis() - at < AUTOSTART_PAUSE_MS;
+    }
+
+    public static void setStoppedByUser(Context c, boolean stopped) {
+        prefs(c).edit().putLong(KEY_STOPPED_BY_USER, stopped ? System.currentTimeMillis() : 0)
+                .putLong(KEY_BIKE_GONE_AT, 0).apply();
     }
 
     public static SharedPreferences prefs(Context c) {

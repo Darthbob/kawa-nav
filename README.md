@@ -23,6 +23,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   are on (slight / normal / sharp / hairpin) with its distance, roundabouts with the exit that
   continues the road, and on straights the straight arrow with the distance to the next curve.
   Works from offline OpenStreetMap data, no mobile data needed while riding.
+- **Phone battery and headset on the dash**: the dash's phone battery icon shows the phone's charge
+  in 4 bars, like with Rideology, and that it is charging; the headset icon shows while your helmet intercom is connected.
 - **Starts by itself** when the bike is switched on (or the helmet intercom connects), also with the
   phone locked in a pocket, and stops 5 minutes after the bike is switched off.
 - **Offline maps**: download regions (country, state, district) from Geofabrik, see their data date,
@@ -40,8 +42,9 @@ model pages (details and sources in [docs/MODELS.md](docs/MODELS.md)):
 | Unclear | Ninja 1100SX, Versys 1100 (2025+), Z650 S (2026), Ninja 650 / Ninja H2 (2027) |
 | Not supported | Z900RS 2026 (analog dials), Rideology bikes 2019–2024 (older dashes without turn-by-turn) |
 
-KawaNav does not check the model. On a bike without turn-by-turn support it connects, but the arrows
-never appear.
+KawaNav does not check the model. After connecting it asks the dash what it can show; a dash that
+reports no turn-by-turn support gets a warning in the app (KawaNav keeps sending, the arrows will
+probably not appear).
 
 ## Supported languages (Google Maps text)
 
@@ -82,9 +85,9 @@ KawaNav shows these steps itself ("Switch greyed out?") when it notices the situ
 
 - Android 13 or newer (minSdk 33), with Bluetooth LE and GPS
 - Google Maps (for directions)
-- The bike paired with the phone once (Android-level bonding): in Rideology (tested) or with
-  KawaNav's "Pair your bike" (new, not yet tested on a bike). Rideology must be closed
-  (**force-stopped**) while KawaNav is used: the bike talks to one app at a time
+- The bike paired with the phone once (Android-level bonding): with KawaNav's "Pair your bike" or in
+  Rideology (both tested). If Rideology is installed, it must be closed (**force-stopped**) while
+  KawaNav is used: the bike talks to one app at a time
 - To build: JDK 17+, Android SDK with platform 36, Gradle 8.13 or newer (tested with Gradle 9.3.1),
   or simply Android Studio. The repository has **no Gradle wrapper**.
 
@@ -123,8 +126,8 @@ uninstall first. Keep the key and its password backed up.
 1. Pair the bike with the phone once, ignition on:
    - **in KawaNav:** "Pair your bike" in the orange banner (or "Set up" autostart) shows Android's
      dialog with nearby Kawasaki bikes; pick yours and confirm the pairing (on the dash too, if it
-     asks). This also sets up autostart. New and not yet tested on a bike; if it fails, use Rideology.
-   - **or in Rideology** (tested), then force-stop Rideology.
+     asks). This also sets up autostart. Rideology is not needed.
+   - **or in Rideology**, then force-stop Rideology.
 2. Open KawaNav. On the first start it walks you through everything once, explaining each step:
    Bluetooth, location and notification permissions, location "Allow all the time" (curves after an
    automatic start), notification access ("Read Google Maps directions") and unrestricted battery
@@ -155,6 +158,7 @@ Once a second KawaNav decides what goes on the dash:
 | Curve warnings during navigation | Off | Off / sharp only / all curves between Maps directions |
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° |
 | Look ahead | 1000 m | 500 / 1000 / 1500 / 2000 m |
+| Phone battery | On | Phone battery icon on the dash |
 | Distances in feet | Off | Imperial distances |
 | Left-hand traffic | Off | For countries driving on the left (UK, Ireland, …) |
 
@@ -203,6 +207,15 @@ least 50 m before Maps' next maneuver; afterwards the dash goes back to Maps' ar
 shows sharp bends and hairpins, "All" every bend that counts under "Which curves count". Off by
 default: the dash then shows only Google Maps. Needs downloaded roads like free ride.
 
+**Phone battery**: while connected, KawaNav sends the phone's battery level to the dash every 5 s,
+as Rideology does. The dash shows 4 steps (Rideology's thresholds): up to 10 %, up to 30 %, up to 70 %,
+above 70 %. While the phone is on a charger, the icon's charging version is sent (same bars).
+Switched off, the icon is removed. Not yet tried on the bike.
+
+**Headset icon**: the dash shows its headset icon while the helmet picked under "Start automatically"
+→ "When my helmet connects" is connected to the phone (as headset or for audio). With "Off" there, the
+icon stays off. Not yet tried on the bike.
+
 **Distances in feet**: sends distances to the dash in feet instead of metres (not yet tried on the
 bike).
 
@@ -233,6 +246,9 @@ the ignition is on. KawaNav links it with Android's companion device manager; An
 for the bike in a low-power scan and wakes `BikePresence`, which starts the bridge, also with the
 phone locked. The helmet trigger (`HelmetTrigger`) starts the bridge when the chosen intercom
 connects. After an automatic start the bridge stops itself when the bike has been gone for 5 min.
+Stop by hand (button or notification) pauses autostart until the bike has been switched off (gone
+for at least 20 s; right after Stop Android briefly reports the bike gone and back) or for at most
+1 hour; Start ends the pause.
 
 ## How it works
 
@@ -240,6 +256,7 @@ connects. After an automatic start the bridge stops itself when the bike has bee
 |---|---|
 | `BridgeService` | Foreground service: BLE link to the bike, decides once a second what the dash shows |
 | `KawaBle`, `KawaProtocol` | GATT client and frame format of the Kawasaki BLE5 meter ([PROTOCOL.md](docs/PROTOCOL.md)) |
+| `GattNames` | Names of standard Bluetooth services for the debug service list |
 | `MapsListener` | Notification listener for Google Maps' navigation notification |
 | `MapsIcons`, `IconMemory` | Recognise the maneuver from Maps' icon (Maps' own 64 maneuver drawables, rendered from the installed Maps app) |
 | `MapsParser` | Maps text → turn and distance (15 languages) |
@@ -268,13 +285,22 @@ autostart and connection events.
 
 ## Development and testing
 
-adb switches (the app screen has no test tools):
+**Dash icons (debug)**, debug builds only: tapping the KawaNav title 7 times shows (or hides) a hidden card that fixes
+the values of the dash's status icon frame (battery, voice, headset, riding log; 0–15 or Auto) to see
+what the dash does with them. The card shows the last frame sent. Riding log is set to 1 until changed. "Phone name on the dash" sends a text of up to
+24 bytes as the phone's name (Rideology sends the phone model there), now and on every connect.
+While the card is shown, each connect also lists the bike's Bluetooth services and characteristics
+(read-only: only standard values such as the firmware version are read, nothing is written).
+
+adb switches:
 
 ```sh
 adb shell 'am start -n io.github.darthbob.kawanav/.MainActivity --ez bridge true --ez free_mode true'
 adb shell 'am start -n io.github.darthbob.kawanav/.MainActivity --es offline_region bayern'   # Geofabrik id
 adb shell 'am start -n io.github.darthbob.kawanav/.MainActivity --ez offline_cancel true'
 adb shell 'am start -n io.github.darthbob.kawanav/.MainActivity --ez bridge false'
+adb shell 'am start -n io.github.darthbob.kawanav/.MainActivity --ez export_log true'      # log -> Download/KawaNav
+adb pull /sdcard/Download/KawaNav/                                                         # also for release builds
 ```
 
 Autostart without the bike (after the link exists):
@@ -292,9 +318,6 @@ tested with plain `javac`/`java` on a PC.
 ## Known limitations
 
 - Only German and English Maps wording is verified (see Supported languages).
-- Pairing the bike from KawaNav ("Pair your bike") is not yet tested on a bike; pairing in Rideology
-  is.
-- KawaNav does not read the dash's "turn-by-turn supported" flag yet.
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
 

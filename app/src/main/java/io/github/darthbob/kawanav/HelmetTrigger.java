@@ -31,6 +31,10 @@ public class HelmetTrigger extends BroadcastReceiver {
         String helmet = Hub.prefs(context).getString(Hub.KEY_HELMET, null);
         if (d == null || helmet == null || !helmet.equals(d.getAddress())) return;
         Logger.init(context);
+        if (Hub.autostartPaused(context)) {
+            Logger.log("Helmet " + d.getName() + " connected, but the bridge was stopped by hand: not starting");
+            return;
+        }
         if (Hub.serviceRunning) {
             Logger.log("Helmet " + d.getName() + " connected, bridge already running");
             return;

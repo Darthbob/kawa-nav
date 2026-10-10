@@ -10,11 +10,14 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
+import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -35,6 +38,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private static final long RECONNECT_MS = 3000;
     private static final long NO_BIKE_RETRY_MS = 15_000;
     private static final int CLEAR_REPEATS = 3;
+    /** Status icon (phone battery, headset) refresh, as often as Rideology sends it. */
+    private static final long ICONS_MS = 5000;
     /** After an autostart: stop again when the bike has not been connected for this long. */
     private static final long AUTO_STOP_MS = 5 * 60_000;
 
@@ -44,6 +49,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private KawaBle ble;
     private CurveEngine curve;
     private int clearsSent;
+    /** Status icon fields last sent to the meter (one per 4 bits, -1: none since connecting) and when. */
+    private int iconsSent = -1;
+    private long iconsSentAt;
+    /** Android's headset (HFP) and A2DP profiles, to see whether the chosen helmet is connected. */
+    private BluetoothProfile headsetProfile, a2dpProfile;
     private long lastTick;
     private String lastNotificationText = "";
     private String lastShownKey = "";
@@ -60,7 +70,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     // ------------------------------------------------------------------ static API
 
+    /** Started by the user: also ends a pause of autostart after a manual stop. */
     public static void start(Context c) {
+        Hub.setStoppedByUser(c, false);
         c.startForegroundService(new Intent(c, BridgeService.class));
     }
 
@@ -69,7 +81,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
         c.startForegroundService(new Intent(c, BridgeService.class).putExtra(EXTRA_AUTO, true));
     }
 
+    /** Stopped by the user: autostart waits until the bike is switched off, see {@link Hub#autostartPaused}. */
     public static void stop(Context c) {
+        Hub.setStoppedByUser(c, true);
+        Logger.log("Bridge stopped by hand: autostart paused until the bike is switched off");
         c.stopService(new Intent(c, BridgeService.class));
     }
 
@@ -84,6 +99,12 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /** Re-read settings (free mode on/off etc.) if running. */
     public static void settingsChanged() {
         if (instance != null) instance.applySettings();
+    }
+
+    /** Debug: sends the phone name from the settings now; false if the bike is not connected. */
+    public static boolean sendPhoneName() {
+        if (instance == null || !instance.ble.isReady()) return false;
+        return instance.writePhoneName();
     }
 
     /** New data from Maps: update the meter now instead of waiting for the next tick. */
@@ -113,6 +134,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.serviceRunning = true;
         ble = new KawaBle(this, this);
         curve = new CurveEngine(this);
+        openAudioProfiles();
         applySettings();
         connectBike();
         handler.post(tickLoop);
@@ -143,7 +165,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
-            Logger.log("Stop tapped in the notification");
+            Logger.log("Stop tapped in the notification: autostart paused until the bike is switched off");
+            Hub.setStoppedByUser(this, true);
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -163,10 +186,12 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         handler.removeCallbacksAndMessages(null);
         curve.stop();
+        closeAudioProfiles();
         KawaBle b = ble;
         if (b.isReady()) {
-            // let the meter drop the arrow, then close the link
+            // let the meter drop the arrow and the status icons, then close the link
             b.write(KawaProtocol.clearFrame(), "clear");
+            b.write(KawaProtocol.meterIndicationFrame(KawaProtocol.BATTERY_NONE, 0, 0, 0), "icons off");
             new Handler(Looper.getMainLooper()).postDelayed(b::disconnect, 500);
         } else {
             b.disconnect();
@@ -176,6 +201,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.bikeConnected = false;
         Hub.output = null;
         Hub.outputStatus = "–";
+        Hub.iconsStatus = "–";
+        Hub.bikeCapabilities = null;
         Logger.log("Bridge stopped");
         super.onDestroy();
     }
@@ -198,6 +225,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         }
         Hub.bikeStatus = "Looking for " + d.getName() + "…";
         Hub.bikeHint = "Switch on the ignition. Rideology must be closed: the bike talks to one app at a time.";
+        ble.setDumpServices(Hub.DEBUG_TOOLS && Hub.prefs(this).getBoolean(Hub.KEY_DEBUG_ICONS, false));
         ble.connect(d, true);
     }
 
@@ -234,13 +262,37 @@ public class BridgeService extends Service implements KawaBle.Listener {
             Hub.bikeHint = "";
             Hub.bikeConnected = true;
             clearsSent = 0;
+            iconsSent = -1;
+            Hub.bikeCapabilities = null;
+            ble.write(KawaProtocol.CAPABILITIES_REQUEST, "capabilities request");
+            writePhoneName();
             tick();
         }
         updateNotification();
     }
 
     @Override
+    public void onNotify(byte[] value) {
+        KawaProtocol.Capabilities c = KawaProtocol.parseCapabilities(value);
+        if (c == null) return;
+        Hub.bikeCapabilities = c;
+        Logger.log("Bike display: turn-by-turn " + (c.turnByTurn ? "supported" : "NOT supported")
+                + ", status icons " + (c.statusIcons ? "supported" : "NOT supported"));
+        if (!c.turnByTurn) {
+            // only a warning: Rideology stops sending arrows here, KawaNav keeps sending in case the flag is misread
+            Hub.bikeHint = "This bike's display reports no turn-by-turn support: arrows and curves will probably not appear.";
+        }
+        updateNotification();
+    }
+
+    @Override
+    public void onServicesDump(String dump) {
+        Hub.gattDump = dump;
+    }
+
+    @Override
     public void onLinkLost() {
+        Hub.bikeCapabilities = null;
         Hub.bikeStatus = "Connection lost, reconnecting…";
         Hub.bikeHint = "";
         Hub.bikeConnected = false;
@@ -297,6 +349,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             updateNotification();
             return;
         }
+        sendIcons(now);
         if (out == null) {
             Hub.outputStatus = "Nothing to show";
             if (clearsSent < CLEAR_REPEATS) {
@@ -317,6 +370,96 @@ public class BridgeService extends Service implements KawaBle.Listener {
             ble.write(KawaProtocol.naviFrame(0, out.turn, unit, dist), out.describe());
         }
         updateNotification();
+    }
+
+    /**
+     * Status icons on the meter, refreshed every 5 s: the phone battery (4 bars, Rideology's
+     * thresholds) unless switched off, and the headset icon while the helmet chosen for autostart
+     * is connected to the phone. Each field can be fixed in the hidden debug card ({@link Hub#iconSetting}).
+     */
+    private void sendIcons(long now) {
+        boolean batteryOn = Hub.prefs(this).getBoolean(Hub.KEY_PHONE_BATTERY, true);
+        int percent = getSystemService(BatteryManager.class).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        boolean charging = pluggedIn();
+        int battery = icon(Hub.KEY_ICON_BATTERY, batteryOn ? KawaProtocol.batteryLevel(percent, charging) : KawaProtocol.BATTERY_NONE);
+        int voice = icon(Hub.KEY_ICON_VOICE, 0);
+        int headset = icon(Hub.KEY_ICON_HEADSET, helmetConnected() ? 1 : 0);
+        int ridingLog = icon(Hub.KEY_ICON_RIDING_LOG, 0);
+        int icons = battery << 12 | voice << 8 | headset << 4 | ridingLog;
+        if (icons == iconsSent && now - iconsSentAt < ICONS_MS) return;
+        byte[] frame = KawaProtocol.meterIndicationFrame(battery, voice, headset, ridingLog);
+        String label = "battery " + battery + " (phone " + percent + "%" + (charging ? " charging" : "") + "), voice " + voice
+                + ", headset " + headset + ", riding log " + ridingLog;
+        ble.write(frame, "icons: " + label);
+        Hub.iconsStatus = label + "\n" + KawaProtocol.hex(frame);
+        iconsSent = icons;
+        iconsSentAt = now;
+    }
+
+    /** Debug: the text set in the debug card as the phone's name, if any (Rideology sends Build.MODEL). */
+    private boolean writePhoneName() {
+        if (!Hub.DEBUG_TOOLS) return false;
+        String name = Hub.prefs(this).getString(Hub.KEY_DEBUG_PHONE_NAME, "");
+        if (name.isEmpty()) return false;
+        return ble.write(KawaProtocol.phoneNameFrame(name), "phone name \"" + name + "\"");
+    }
+
+    /**
+     * The phone is on a charger (USB, wireless…). Plugged in rather than "charging": the icon should
+     * not flip to normal when the phone pauses charging (full, adaptive charging at 80 %, hot).
+     */
+    private boolean pluggedIn() {
+        Intent b = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        return b != null && b.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) != 0;
+    }
+
+    /** A status icon field: the debug value if one is set, else the automatic one. */
+    private int icon(String key, int auto) {
+        int v = Hub.iconSetting(this, key);
+        return v >= 0 ? v : auto;
+    }
+
+    /** The helmet picked under "When my helmet connects" is connected to the phone (call or audio profile). */
+    private boolean helmetConnected() {
+        String helmet = Hub.prefs(this).getString(Hub.KEY_HELMET, null);
+        if (helmet == null) return false;
+        for (BluetoothProfile p : new BluetoothProfile[]{headsetProfile, a2dpProfile}) {
+            if (p == null) continue;
+            for (BluetoothDevice d : p.getConnectedDevices()) {
+                if (helmet.equals(d.getAddress())) return true;
+            }
+        }
+        return false;
+    }
+
+    private final BluetoothProfile.ServiceListener audioProfiles = new BluetoothProfile.ServiceListener() {
+        @Override
+        public void onServiceConnected(int profile, BluetoothProfile proxy) {
+            if (profile == BluetoothProfile.HEADSET) headsetProfile = proxy;
+            else a2dpProfile = proxy;
+        }
+
+        @Override
+        public void onServiceDisconnected(int profile) {
+            if (profile == BluetoothProfile.HEADSET) headsetProfile = null;
+            else a2dpProfile = null;
+        }
+    };
+
+    private void openAudioProfiles() {
+        BluetoothAdapter a = ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
+        if (a == null) return;
+        a.getProfileProxy(this, audioProfiles, BluetoothProfile.HEADSET);
+        a.getProfileProxy(this, audioProfiles, BluetoothProfile.A2DP);
+    }
+
+    private void closeAudioProfiles() {
+        BluetoothAdapter a = ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
+        if (a == null) return;
+        if (headsetProfile != null) a.closeProfileProxy(BluetoothProfile.HEADSET, headsetProfile);
+        if (a2dpProfile != null) a.closeProfileProxy(BluetoothProfile.A2DP, a2dpProfile);
+        headsetProfile = null;
+        a2dpProfile = null;
     }
 
     private Hub.Output decide() {

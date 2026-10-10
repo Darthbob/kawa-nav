@@ -30,6 +30,12 @@ public final class KawaBle {
 
         /** The link dropped or a connection attempt failed (only while not intentionally disconnected). */
         void onLinkLost();
+
+        /** A frame from the meter on one of the notify characteristics. */
+        void onNotify(byte[] value);
+
+        /** Debug: the meter's services and characteristics, see {@link #setDumpServices}. */
+        void onServicesDump(String dump);
     }
 
     private static final long OP_TIMEOUT_MS = 3000;
@@ -46,12 +52,22 @@ public final class KawaBle {
     private BluetoothGatt gatt;
     private BluetoothGattCharacteristic writeChar;
     private boolean busy;
-    private byte[] lastTx;
+    /** Last frame written per frame type (first byte), so repeats are not logged. */
+    private final byte[][] lastTx = new byte[256][];
     private boolean ready;
+    /** Debug: list all services on connect and read the standard readable characteristics. */
+    private boolean dumpServices;
+    private java.util.List<String> readLines;
+    private int readIndex = -1;
 
     public KawaBle(Context context, Listener listener) {
         this.context = context.getApplicationContext();
         this.listener = listener;
+    }
+
+    /** Debug: on the next connects, list the meter's services (read-only, see {@link #dump}). */
+    public void setDumpServices(boolean on) {
+        dumpServices = on;
     }
 
     public boolean isReady() {
@@ -95,11 +111,12 @@ public final class KawaBle {
         }
         enqueue(() -> {
             int rc = gatt.writeCharacteristic(writeChar, data, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-            // the bridge repeats the same frame every second; only log changes and errors
-            if (rc != BluetoothGatt.GATT_SUCCESS || !java.util.Arrays.equals(data, lastTx)) {
+            // the bridge repeats the same frames; only log changes and errors
+            int type = data[0] & 0xFF;
+            if (rc != BluetoothGatt.GATT_SUCCESS || !java.util.Arrays.equals(data, lastTx[type])) {
                 log("TX " + label + ": " + KawaProtocol.hex(data) + (rc == BluetoothGatt.GATT_SUCCESS ? "" : "  (rc=" + rc + ")"));
             }
-            lastTx = data;
+            lastTx[type] = data;
             if (rc != BluetoothGatt.GATT_SUCCESS) opDone();
         });
         return true;
@@ -142,6 +159,7 @@ public final class KawaBle {
     }
 
     private void onServices(BluetoothGatt g) {
+        if (dumpServices) dump(g);
         BluetoothGattService svc = g.getService(KawaProtocol.SERVICE);
         if (svc == null) {
             log("Kawasaki BLE5 service not found. Services on device:");
@@ -175,6 +193,50 @@ public final class KawaBle {
             setReady(true);
             opDone();
         });
+    }
+
+    /**
+     * Debug: lists every service and characteristic with its properties and reads the standard (SIG)
+     * readable characteristics, e.g. firmware revision. Never writes, never reads vendor characteristics
+     * (Kawasaki's included) or anything in a firmware update service.
+     */
+    private void dump(BluetoothGatt g) {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        for (BluetoothGattService s : g.getServices()) {
+            lines.add(GattNames.label(s.getUuid()));
+            boolean noRead = GattNames.isFirmwareUpdate(s.getUuid());
+            for (BluetoothGattCharacteristic c : s.getCharacteristics()) {
+                int idx = lines.size();
+                lines.add("  " + GattNames.label(c.getUuid()) + " [" + properties(c.getProperties()) + "]");
+                if (noRead || !GattNames.isStandard(c.getUuid())
+                        || (c.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) == 0) continue;
+                enqueue(() -> {
+                    readLines = lines;
+                    readIndex = idx;
+                    if (!g.readCharacteristic(c)) {
+                        lines.set(idx, lines.get(idx) + " = (read refused)");
+                        readIndex = -1;
+                        opDone();
+                    }
+                });
+            }
+        }
+        enqueue(() -> {
+            String d = String.join("\n", lines);
+            log("Bluetooth services (debug):\n" + d);
+            listener.onServicesDump(d);
+            opDone();
+        });
+    }
+
+    private static String properties(int p) {
+        StringBuilder sb = new StringBuilder();
+        if ((p & BluetoothGattCharacteristic.PROPERTY_READ) != 0) sb.append("read ");
+        if ((p & BluetoothGattCharacteristic.PROPERTY_WRITE) != 0) sb.append("write ");
+        if ((p & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) sb.append("write-no-resp ");
+        if ((p & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) sb.append("notify ");
+        if ((p & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0) sb.append("indicate ");
+        return sb.toString().trim();
     }
 
     private final BluetoothGattCallback callback = new BluetoothGattCallback() {
@@ -224,8 +286,23 @@ public final class KawaBle {
         }
 
         @Override
+        public void onCharacteristicRead(BluetoothGatt g, BluetoothGattCharacteristic c, byte[] value, int status) {
+            main.post(() -> {
+                if (readLines != null && readIndex >= 0) {
+                    readLines.set(readIndex, readLines.get(readIndex) + " = "
+                            + (status == BluetoothGatt.GATT_SUCCESS ? GattNames.value(value) : "(status " + status + ")"));
+                    readIndex = -1;
+                }
+                opDone();
+            });
+        }
+
+        @Override
         public void onCharacteristicChanged(BluetoothGatt g, BluetoothGattCharacteristic c, byte[] value) {
             log("RX " + c.getUuid().toString().substring(0, 8) + ": " + KawaProtocol.hex(value));
+            main.post(() -> {
+                if (g == gatt) listener.onNotify(value);
+            });
         }
     };
 }

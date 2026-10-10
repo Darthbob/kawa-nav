@@ -52,6 +52,39 @@ clear / no navigation 140800FFFF057030FFFFFFFFFFF0FF0571FF000000FFFFFFFFFFFFFFFF
 
 `13 0C 00 FF FF 05 00 (BATTERY<<4 | VOICE) (HEADSET<<4 | RIDELOG) FF FF FF FF FF FF`
 
+- BATTERY (`Ble5Value.j`): phone battery, 0 low (≤10 %) · 1 ≤30 % · 2 ≤70 % · 3 >70 % (lj/a.b) ·
+  7–10 charging with 0–3 bars · 14 error · 15 n/a. Rideology only ever sends 7 when charging;
+  KawaNav sends 7 + bars while the phone is plugged in (not yet verified on the bike).
+- VOICE (`Ble5Value.m`): 0 idle · 1 listening for wake word · 2 listening for command · 3 processing · 14 error · 15 n/a
+- HEADSET (`Ble5Value.k`): 0 off · 1 on · 2 blink · 3 n/a
+- RIDELOG (`Ble5Value.l`): 0 off · 1 recording · 2 paused · 14 error · 15 n/a
+- KawaNav sends it every 5 s with VOICE 0, RIDELOG 1 (test: is that the "recording" icon?), HEADSET 1 while the chosen helmet is connected,
+  and BATTERY 15 to remove the battery icon (not yet verified on the bike).
+
+## Capabilities (request `1A 00 00`, answer starts with `1A`; Rideology qe/a.java case 2, oh/b.java)
+
+- Turn-by-turn supported unless the high nibble of byte 12 is 15 (`Ble5Value.b.l`); Rideology then
+  sends no navigation frames.
+- Status icons supported unless byte 11 low nibble = 15 and the 2-bit fields byte 12 bits 3-2, 1-0 and
+  byte 13 bits 7-6, 5-4 are all 3; Rideology then sends no meter indication frames.
+- KawaNav requests it after connecting, logs it ("Bike display: …"), shows it in the debug card and
+  warns (does not stop sending) when turn-by-turn is not supported. Same parsing as
+  [wazeology](https://github.com/agstrc/wazeology), an independent Z900 SE project.
+
+## Text to the meter (checked 2026-10-11 in Rideology 2.11.13, ne/c.java case 20)
+
+The only text Rideology sends to a BLE5 meter is the phone's model name (`Build.MODEL`), once while
+connecting. 35 bytes, zero-filled, UTF-8 split in 8-byte parts:
+
+```
+0B 20 00 FF FF | 05 01 name[0..7] | 05 02 name[8..15] | 05 03 name[16..23]
+```
+
+Where the meter shows it is unknown (probably its Bluetooth / connected-phone info). KawaNav's debug
+card (debug builds) can send any text here ("Phone name on the dash"); not yet tried on the bike. The
+turn-by-turn and indication frames carry no text. The text frame `12 LEN text…` (20 bytes) is only
+in the protocol classes of older Rideology bikes (other GATT UUIDs, ne/s.java), not BLE5.
+
 ## Verified on the bike (Z900 2026 "Kawasaki-ZR900S", 2026-10-10)
 
 - Turn frames work with no init sequence: connect, MTU, enable notifies, write the frame.
@@ -59,3 +92,5 @@ clear / no navigation 140800FFFF057030FFFFFFFFFFF0FF0571FF000000FFFFFFFFFFFFFFFF
   HERE `onDestinationReached` (gh/b.java) together with the last turn (normally 43 Destination).
 - Turn ids 44–55 (waypoints): nothing shown. Rideology never sends them (no mapping in mh/o.h()).
 - => Useful set for a replacement app: turns 0–43, flags 0 (navigating) and 3 (clear).
+- Status icon frames (0x13): the dash redraws them about once a second; faster changes are not shown.
+- Pairing without Rideology (KawaNav's companion association + createBond) works.

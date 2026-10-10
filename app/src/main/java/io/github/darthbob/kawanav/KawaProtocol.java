@@ -92,13 +92,88 @@ public final class KawaProtocol {
         return b;
     }
 
+    /** Longest phone name the meter takes, in UTF-8 bytes. */
+    public static final int PHONE_NAME_BYTES = 24;
+
+    /**
+     * Phone name frame, 35 bytes (ne/c.java case 20; Rideology sends Build.MODEL while connecting).
+     * The UTF-8 name in up to three 8-byte parts, cut at a character so it fits 24 bytes, zero-filled.
+     */
+    public static byte[] phoneNameFrame(String name) {
+        byte[] text = phoneNameBytes(name);
+        byte[] b = new byte[35];
+        b[0] = 11;
+        b[1] = 32;
+        b[2] = 0;
+        b[3] = (byte) 0xFF;
+        b[4] = (byte) 0xFF;
+        for (int part = 0; part < 3 && part * 8 < text.length; part++) {
+            b[5 + part * 10] = 5;
+            b[6 + part * 10] = (byte) (part + 1);
+            System.arraycopy(text, part * 8, b, 7 + part * 10, Math.min(8, text.length - part * 8));
+        }
+        return b;
+    }
+
+    /** The name as UTF-8, without characters beyond {@link #PHONE_NAME_BYTES}. */
+    public static byte[] phoneNameBytes(String name) {
+        String s = name;
+        byte[] text = s.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        while (text.length > PHONE_NAME_BYTES) {
+            s = s.substring(0, s.offsetByCodePoints(s.length(), -1));
+            text = s.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+        return text;
+    }
+
+    /** Battery level "n/a": the meter shows no phone battery icon. */
+    public static final int BATTERY_NONE = 15;
+
     /** Battery percentage to Ble5Value.j, same thresholds as Rideology (lj/a.b). */
     public static int batteryLevel(float percent) {
-        if (percent <= 0f) return 15;
+        if (percent <= 0f) return BATTERY_NONE;
         if (percent <= 10f) return 0;
         if (percent <= 30f) return 1;
         if (percent <= 70f) return 2;
         return 3;
+    }
+
+    /**
+     * Like {@link #batteryLevel(float)}, charging: Ble5Value.j CHARGING_SEGMENT_ON_0..3 (7..10).
+     * Rideology itself only ever sends 7 (charging, no bars).
+     */
+    public static int batteryLevel(float percent, boolean charging) {
+        int level = batteryLevel(percent);
+        return charging && level != BATTERY_NONE ? 7 + level : level;
+    }
+
+    public static final int CAPABILITIES = 0x1A;
+    /** Asks the meter what it can show; it answers with a {@link #CAPABILITIES} frame. */
+    public static final byte[] CAPABILITIES_REQUEST = {CAPABILITIES, 0, 0};
+
+    /** What the meter says it can show, from its 0x1A answer (Rideology: qe/a.java case 2, oh/b.java). */
+    public static final class Capabilities {
+        public final boolean turnByTurn;
+        public final boolean statusIcons;
+
+        Capabilities(boolean turnByTurn, boolean statusIcons) {
+            this.turnByTurn = turnByTurn;
+            this.statusIcons = statusIcons;
+        }
+    }
+
+    /**
+     * Parses the meter's 0x1A answer, null for any other frame. Turn-by-turn: high nibble of byte 12
+     * is not 15 (Ble5Value.b.l, Rideology sends no navigation frames when it is). Status icons: not all
+     * of byte 11 low nibble = 15 and the 2-bit fields of byte 12 (bits 3-0) and byte 13 (bits 7-4) = 3.
+     */
+    public static Capabilities parseCapabilities(byte[] v) {
+        if (v == null || v.length < 14 || (v[0] & 0xFF) != CAPABILITIES) return null;
+        int b11 = v[11] & 0xFF, b12 = v[12] & 0xFF, b13 = v[13] & 0xFF;
+        boolean turnByTurn = (b12 >>> 4) != 15;
+        boolean noIcons = (b11 & 0x0F) == 15 && ((b12 >>> 2) & 3) == 3 && (b12 & 3) == 3
+                && ((b13 >>> 6) & 3) == 3 && ((b13 >>> 4) & 3) == 3;
+        return new Capabilities(turnByTurn, !noIcons);
     }
 
     /**
