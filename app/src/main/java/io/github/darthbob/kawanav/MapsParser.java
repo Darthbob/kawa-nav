@@ -11,7 +11,9 @@ import java.util.regex.Pattern;
  *
  * Languages: German, English, French, Spanish, Italian, Dutch, Portuguese, Polish, Czech, Swedish,
  * Danish, Norwegian, Finnish, Greek, Russian. Words are matched as lower-case substrings, so stems
- * cover inflections ("prawo" in "w prawo", "oikeal" in "oikealle"). Only German and English
+ * cover inflections ("prawo" in "w prawo", "oikeal" in "oikealle"). A "|" at the start / end of a
+ * word anchors it to a word boundary, so street names don't match ("|right" not in "Wright Street",
+ * "|ziel|" not in "Zielstraße"). Only German and English
  * wording is verified against real notifications; the others follow Google's usual phrasing.
  */
 public final class MapsParser {
@@ -21,18 +23,18 @@ public final class MapsParser {
     private static final Pattern DISTANCE = Pattern.compile(
             "(\\d+(?:[.,]\\d+)?)\\s*(km|mi|ft|yd|m|км|м|χλμ|μ)(?!\\p{L})", Pattern.CASE_INSENSITIVE);
 
-    static final String[] LEFT = {"links", "left", "gauche", "izquierda", "sinistra", "esquerda", "lewo",
+    static final String[] LEFT = {"links", "|left", "gauche", "izquierda", "sinistra", "esquerda", "lewo",
             "lewej", "vlevo", "levém", "doleva", "vänster", "venstre", "vasemm", "αριστερ", "налево", "влево", "слева", "левее"};
-    static final String[] RIGHT = {"rechts", "right", "droite", "derecha", "destra", "direita", "prawo",
+    static final String[] RIGHT = {"rechts", "|right", "droite", "derecha", "destra", "direita", "prawo",
             "prawej", "vpravo", "pravém", "doprava", "höger", "højre", "høyre", "oikeal", "δεξι", "направо", "вправо", "справа", "правее"};
-    static final String[] ROUNDABOUT = {"kreisverkehr", "kreisel", "roundabout", "rotary", "rond-point",
+    static final String[] ROUNDABOUT = {"kreisverkehr", "kreisel", "roundabout", "traffic circle", "rotary", "rond-point",
             "rotonda", "glorieta", "rotunda", "rotatória", "rotonde", "rondo", "rondzie", "kruhov", "rondell",
             "rundkørs", "rundkjøring", "liikenneympyr", "κυκλικ", "кругов"};
     static final String[] U_TURN = {"wenden", "u-turn", "kehrt", "umkehren", "demi-tour", "cambio de sentido",
             "media vuelta", "da la vuelta", "inversione", "inverti", "keer om", "omkeren", "retorno", "inversão",
             "zawróć", "zawracaj", "otočte", "otočit", "u-sväng", "vänd", "u-vending", "vend om", "u-sving",
             "snu", "u-käännös", "käänny ympäri", "αναστροφή", "разворот", "развернитесь"};
-    static final String[] DESTINATION = {"ziel", "ankunft", "angekommen", "destination", "arriv", "tu destino",
+    static final String[] DESTINATION = {"|ziel|", "ankunft", "angekommen", "destination", "arriv", "tu destino",
             "has llegado", "destinazione", "bestemming", "aangekomen", "o destino", "seu destino", "chegou",
             "docelow", "dotarłeś", "cíl", "framme", "ankommet", "destinasjon", "fremme", "määränpää",
             "perillä", "προορισμ", "назначени", "прибыл"};
@@ -48,7 +50,7 @@ public final class MapsParser {
     static final String[] ON_RAMP = {"auffahrt", "auffahren", "ramp", "bretelle", "acceso", "entrata",
             "rampa di accesso", "oprit", "rampa de acesso", "wjazd", "nájezd", "påfart", "tilkørsel",
             "påkørsel", "påkjørsel", "ράμπα", "въезд"};
-    static final String[] EXIT = {"ausfahrt", "take exit", "exit ", "sortie", "salida", "uscita", "afrit",
+    static final String[] EXIT = {"ausfahrt", "|exit|", "sortie", "salida", "uscita", "afrit",
             "afslag", "saída", "zjazd", "zjedź", "výjezd", "sjezd", "avfart", "frakørsel", "avkjørsel",
             "avkjøring", "poistu", "έξοδο", "съезд", "съезжайте"};
     static final String[] KEEP = {"halten", "keep", "gabelung", "fork", "serrez", "restez", "bifurcation",
@@ -195,7 +197,19 @@ public final class MapsParser {
 
     private static boolean has(String t, String... words) {
         for (String w : words) {
-            if (t.contains(w)) return true;
+            if (w.indexOf('|') < 0 ? t.contains(w) : hasAnchored(t, w)) return true;
+        }
+        return false;
+    }
+
+    /** Match for a word with "|" anchors: no letter may touch an anchored side. */
+    private static boolean hasAnchored(String t, String w) {
+        boolean start = w.startsWith("|"), end = w.endsWith("|");
+        String core = w.substring(start ? 1 : 0, w.length() - (end ? 1 : 0));
+        for (int i = t.indexOf(core); i >= 0; i = t.indexOf(core, i + 1)) {
+            int j = i + core.length();
+            if ((!start || i == 0 || !Character.isLetter(t.charAt(i - 1)))
+                    && (!end || j == t.length() || !Character.isLetter(t.charAt(j)))) return true;
         }
         return false;
     }
