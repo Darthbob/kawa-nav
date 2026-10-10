@@ -1,0 +1,14 @@
+.gradle/
+build/
+local.properties
+
+# decompiled Kawasaki Rideology app: personal research only, never commit/distribute
+research/
+
+# local test tools (desktop tests, meter test app): not part of the repo
+tools/
+
+# release signing: key and passwords stay local, never commit
+keystore.properties
+*.jks
+*.keystore

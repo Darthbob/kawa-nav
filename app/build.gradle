@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing: keystore.properties (git-ignored) in the project root holds storeFile,
+// storePassword, keyAlias and keyPassword. Without it, release builds stay unsigned.
+def keystoreFile = rootProject.file('keystore.properties')
+def keystore = new Properties()
+if (keystoreFile.exists()) keystoreFile.withInputStream { keystore.load(it) }
+
+android {
+    namespace 'io.github.darthbob.kawanav'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'io.github.darthbob.kawanav'
+        minSdk 33
+        targetSdk 36
+        versionCode 1
+        versionName '0.1'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        if (keystoreFile.exists()) {
+            release {
+                storeFile file(keystore['storeFile'])
+                storePassword keystore['storePassword']
+                keyAlias keystore['keyAlias']
+                keyPassword keystore['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            if (keystoreFile.exists()) signingConfig signingConfigs.release
+        }
+    }
+}
