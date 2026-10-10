@@ -66,6 +66,18 @@ The app's own screen is in English.
 Download the APK from the [Releases](../../releases) page and open it on the phone (allow installing
 apps from your browser or file manager when Android asks). Then follow [First-time setup](#first-time-setup).
 
+**Notification access greyed out?** Android 13 and newer protect notification access ("Restricted
+setting") for apps installed from a downloaded APK instead of an app store. Unlock it once:
+
+1. In the notification access screen, tap KawaNav and its greyed-out switch once. Android refuses
+   ("App was denied access"), but only after this attempt does the menu entry in step 2 appear.
+2. Settings → Apps → KawaNav → **⋮** (top right) → **Allow restricted settings**, and confirm.
+3. Back in KawaNav, tap "Open" for Google Maps directions and turn the switch on.
+
+KawaNav shows these steps itself ("Switch greyed out?") when it notices the situation.
+
+<img src="docs/restricted-settings.png" alt="App info with the ⋮ menu open: Allow restricted settings" width="360">
+
 ## Requirements
 
 - Android 13 or newer (minSdk 33), with Bluetooth LE and GPS

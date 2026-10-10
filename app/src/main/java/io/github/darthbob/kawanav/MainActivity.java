@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Typeface;
@@ -86,6 +87,7 @@ public class MainActivity extends Activity {
     private boolean setupWaiting;  // a permission dialog or settings screen of the guide is open
     private boolean setupDialog;   // an explanation dialog of the guide is showing
     private boolean fromSetup;     // the pending permission request comes from the guide
+    private boolean listenerSettingsOpened; // notification access settings opened, see onResume
     private boolean helmetsHidden; // the helmet list was built without Bluetooth permission
     // autostart
     private TextView autoBikeSub;
@@ -157,6 +159,11 @@ public class MainActivity extends Activity {
         super.onResume();
         BridgeService.appVisible();
         setupWaiting = false; // back from the guide's permission dialog or settings screen
+        if (listenerSettingsOpened) {
+            listenerSettingsOpened = false;
+            // back without notification access: with a downloaded APK, Android greys the switch out
+            if (!hasNotificationAccess() && installedFromFile()) handler.post(this::showRestrictedSettingsHelp);
+        }
         handler.post(this::continueSetup);
         if (pendingIntent != null) {
             Intent i = pendingIntent;
@@ -341,7 +348,7 @@ public class MainActivity extends Activity {
                         .setPositiveButton("Continue", (d, w) -> {
                             setupDialog = false;
                             setupWaiting = true;
-                            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+                            openListenerSettings();
                         })
                         .setNegativeButton("Not now", (d, w) -> {
                             setupDialog = false;
@@ -355,6 +362,66 @@ public class MainActivity extends Activity {
                 requestBatteryExemption(); // Android's own dialog explains it
                 break;
         }
+    }
+
+    private void openListenerSettings() {
+        listenerSettingsOpened = true;
+        startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+    }
+
+    /**
+     * Installed from a downloaded APK (not an app store or adb): Android 13+ then blocks
+     * "restricted settings" such as notification access until the user allows them in App info.
+     */
+    private boolean installedFromFile() {
+        try {
+            int source = getPackageManager().getInstallSourceInfo(getPackageName()).getPackageSource();
+            return source == PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE
+                    || source == PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    /** How to unlock notification access for a downloaded APK, with a screenshot of the ⋮ menu. */
+    private void showRestrictedSettingsHelp() {
+        if (isFinishing()) return;
+        setupDialog = true; // the first-start guide waits for this dialog
+        LinearLayout c = column();
+        c.setPadding(dp(24), dp(8), dp(24), 0);
+        c.addView(itemTitle("KawaNav was installed from a downloaded file, so Android protects this setting. "
+                + "Unlock it once:\n\n"
+                + "1. \"Try the switch\": tap KawaNav and its greyed-out switch once. Android refuses, "
+                + "but this makes step 2 appear.\n"
+                + "2. \"Open app info\": tap ⋮ at the top right, then \"Allow restricted settings\" and confirm.\n"
+                + "3. Back in KawaNav, tap \"Open\" for Google Maps directions: the switch works now."));
+        android.widget.ImageView shot = new android.widget.ImageView(this);
+        shot.setImageResource(R.drawable.restricted_settings_help);
+        shot.setAdjustViewBounds(true);
+        shot.setContentDescription("App info with the menu open: Allow restricted settings");
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, dp(14), 0, 0);
+        c.addView(shot, lp);
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(c);
+        boolean[] leaving = {false};
+        new AlertDialog.Builder(this)
+                .setTitle("Switch greyed out?")
+                .setView(scroll)
+                .setPositiveButton("Open app info", (d, w) -> {
+                    leaving[0] = true; // the guide goes on when KawaNav is back (onResume)
+                    openAppSettings();
+                })
+                .setNeutralButton("Try the switch", (d, w) -> {
+                    leaving[0] = true;
+                    openListenerSettings();
+                })
+                .setNegativeButton("Close", null)
+                .setOnDismissListener(d -> {
+                    setupDialog = false;
+                    if (!leaving[0]) continueSetup();
+                })
+                .show();
     }
 
     private void requestBatteryExemption() {
@@ -481,8 +548,10 @@ public class MainActivity extends Activity {
         pairSub = (TextView) pairRow.getTag();
         gpsRow = bannerRow("Turn on location", "Upcoming curves need GPS", "Open",
                 v -> startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)));
-        accessRow = bannerRow("Allow reading Google Maps directions", "Turn on \"KawaNav\" in the list that opens",
-                "Open", v -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+        accessRow = bannerRow("Allow reading Google Maps directions", installedFromFile()
+                        ? "Turn on \"KawaNav\" in the list that opens. Greyed out? Tap for help"
+                        : "Turn on \"KawaNav\" in the list that opens",
+                "Open", v -> openListenerSettings());
         batteryRow = bannerRow("Allow unrestricted battery use", "So Android does not stop KawaNav in your pocket",
                 "Allow", v -> requestBatteryExemption());
         bgLocRow = bannerRow("Set location to \"Allow all the time\"", "For curves after an automatic start",
