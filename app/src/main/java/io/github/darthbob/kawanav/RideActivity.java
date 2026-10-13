@@ -48,8 +48,8 @@ public class RideActivity extends KawaActivity {
         id = getIntent().getStringExtra(EXTRA_ID);
 
         LinearLayout root = column();
-        root.setPadding(dp(16), dp(20), dp(16), dp(24));
-        title = text(26, true);
+        root.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE5), dp(Ui.SPACE4), dp(Ui.SPACE6));
+        title = display("");
         root.addView(title);
         TextView when = secondary("");
         when.setId(View.generateViewId());
@@ -102,10 +102,12 @@ public class RideActivity extends KawaActivity {
         LinearLayout c = card();
         c.addView(cardTitle("Track"));
         track = new TrackView(this);
+        track.setBackgroundColor(Ui.surfaceSunken(night));
         LinearLayout.LayoutParams lp = matchWrap();
         lp.height = dp(220);
+        lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
         c.addView(track, lp);
-        c.addView(secondary("Blue is the slowest part of the ride, red the fastest. The green dot is where "
+        c.addView(note("Blue is the slowest part of the ride, red the fastest. The green dot is where "
                 + "it started."));
         return c;
     }
@@ -169,50 +171,63 @@ public class RideActivity extends KawaActivity {
 
     private void showSummary(Ride r) {
         summary.removeAllViews();
-        LinearLayout c = card();
-        add(c, "Distance", r.distance() + (r.distBikeM > 0 ? " (from the bike)" : " (from GPS)"));
-        add(c, "Time", r.duration());
-        if (r.avgKmh > 0) add(c, "Average speed", String.format(Locale.ROOT, "%.0f km/h", r.avgKmh));
-        if (r.maxKmh > 0) add(c, "Top speed", String.format(Locale.ROOT, "%.0f km/h", r.maxKmh));
+        LinearLayout section = column();
+        section.addView(sectionHeader("Summary"));
+        LinearLayout tiles = statGrid(2,
+                statTile("Distance", r.distance()),
+                statTile("Time", r.duration()),
+                r.avgKmh > 0 ? statTile("Average", String.format(Locale.ROOT, "%.0f km/h", r.avgKmh)) : null,
+                r.maxKmh > 0 ? statTile("Top speed", String.format(Locale.ROOT, "%.0f km/h", r.maxKmh)) : null,
+                r.maxLeanL < 0 || r.maxLeanR > 0
+                        ? statTile("Max lean", String.format(Locale.ROOT, "%.0f° / %.0f°", Math.abs(r.maxLeanL), r.maxLeanR))
+                        : null,
+                r.fuelUsedL > 0 ? statTile("Fuel used", String.format(Locale.ROOT, "%.1f L", r.fuelUsedL)) : null);
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
+        section.addView(tiles, lp);
+        LinearLayout c = group();
         if (r.maxRpm > 0) add(c, "Highest engine speed", String.format(Locale.ROOT, "%,d rpm", r.maxRpm));
-        if (r.maxLeanL < 0 || r.maxLeanR > 0) {
-            add(c, "Max lean", String.format(Locale.ROOT, "%.0f° left, %.0f° right", Math.abs(r.maxLeanL), r.maxLeanR));
-        }
-        if (r.fuelUsedL > 0) add(c, "Fuel used", String.format(Locale.ROOT, "%.2f L", r.fuelUsedL));
         if (r.odoStartKm == r.odoStartKm && r.odoEndKm == r.odoEndKm) {
             add(c, "Odometer", String.format(Locale.ROOT, "%,.0f → %,.0f km", r.odoStartKm, r.odoEndKm));
         }
         add(c, "Recorded", r.samples + " s" + (r.hasGps ? "" : ", without a GPS track"));
-        summary.addView(c);
+        section.addView(c);
+        summary.addView(section);
     }
 
-    private void add(LinearLayout c, String label, String value) {
+    private void add(LinearLayout group, String label, String text) {
         LinearLayout line = row();
-        line.setPadding(0, dp(4), 0, dp(4));
+        line.setPadding(0, dp(Ui.ROW_PAD_V), 0, dp(Ui.ROW_PAD_V));
+        line.setMinimumHeight(dp(Ui.TOUCH_MIN));
         line.addView(itemTitle(label), weight());
-        TextView v = text(15, true);
-        v.setText(value);
-        v.setGravity(android.view.Gravity.END);
-        line.addView(v);
-        c.addView(line);
+        line.addView(value(text));
+        addRow(group, line);
     }
 
     private LinearLayout actionsCard() {
         LinearLayout c = card();
-        c.addView(cardTitle("This ride"));
-        LinearLayout r = row();
-        r.setPadding(0, dp(4), 0, 0);
-        r.addView(button("Rename", v -> rename()), weight());
-        r.addView(button("Delete", v -> confirmDelete()), weight());
-        c.addView(r);
+        c.addView(cardTitle("Keep or share"));
         LinearLayout e = row();
-        e.setPadding(0, dp(4), 0, 0);
+        e.setPadding(0, dp(6), 0, 0);
         e.addView(primaryButton("Export CSV", v -> export("csv")), weight());
-        e.addView(button("Export GPX", v -> export("gpx")), weight());
+        e.addView(gap());
+        e.addView(secondaryButton("Export GPX", v -> export("gpx")), weight());
         c.addView(e);
-        c.addView(secondary("CSV has Rideology's columns, so the existing tools can read the ride. GPX is a "
+        LinearLayout r = row();
+        r.setPadding(0, dp(Ui.SPACE3), 0, 0);
+        r.addView(secondaryButton("Rename", v -> rename()), weight());
+        r.addView(gap());
+        r.addView(destructiveButton("Delete", v -> confirmDelete()), weight());
+        c.addView(r);
+        c.addView(note("CSV has Rideology's columns, so the existing tools can read the ride. GPX is a "
                 + "track for map programs. Both go to Download/KawaNav."));
         return c;
+    }
+
+    private View gap() {
+        View v = new View(this);
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(Ui.SPACE2), 1));
+        return v;
     }
 
     private void rename() {

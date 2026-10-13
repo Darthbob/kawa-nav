@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.graphics.drawable.GradientDrawable;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -52,22 +53,21 @@ public class BikeActivity extends KawaActivity {
         night = isNight();
         LinearLayout root = column();
         root.setPadding(dp(16), dp(20), dp(16), dp(24));
-        title = text(26, true);
+        title = display("");
         root.addView(title);
         vin = secondary("");
         vin.setOnClickListener(v -> vinShown = !vinShown);
         root.addView(vin);
         updated = secondary("");
-        updated.setPadding(0, 0, 0, dp(8));
+        updated.setPadding(0, dp(2), 0, dp(Ui.SPACE2));
         root.addView(updated);
         sections = column();
         root.addView(sections);
         root.addView(settingsCard());
         root.addView(parkedCard());
-        TextView note = secondary("Values as the bike reported them when it was last connected. Tap the VIN to show "
+        TextView note = note("Values as the bike reported them when it was last connected. Tap the VIN to show "
                 + "all of it.");
-        note.setTextSize(12);
-        note.setPadding(dp(4), dp(18), dp(4), dp(8));
+        note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE5), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
         setContentView(page(root));
     }
@@ -98,26 +98,31 @@ public class BikeActivity extends KawaActivity {
      * and with the throttle closed (the app itself only wants it standing still).
      */
     private LinearLayout settingsCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("Ride settings"));
+        LinearLayout section = column();
+        LinearLayout headRow = row();
+        headRow.addView(sectionHeader("Ride settings"), weight());
+        headRow.addView(pill("DEBUG", 0x336BBE45, Ui.accentText(night)));
+        section.addView(headRow);
+        LinearLayout c = group();
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
                 + "screen. The bike must be standing still, in neutral and with the throttle closed."));
         modeSpinner = spinner(SettingsWrite.MODES, 0);
         powerSpinner = spinner(SettingsWrite.POWER, 0);
         ktrcSpinner = spinner(SettingsWrite.KTRC, 0);
         kqsSpinner = spinner(SettingsWrite.ON_OFF, 0);
-        c.addView(settingRowWith("Riding mode", modeSpinner));
-        c.addView(settingRowWith("Power", powerSpinner));
-        c.addView(settingRowWith("KTRC", ktrcSpinner));
-        c.addView(settingRowWith("KQS", kqsSpinner));
+        addRow(c, settingRowWith("Riding mode", modeSpinner));
+        addRow(c, settingRowWith("Power", powerSpinner));
+        addRow(c, settingRowWith("KTRC", ktrcSpinner));
+        addRow(c, settingRowWith("KQS", kqsSpinner));
         settingsStatus = secondary("");
-        settingsStatus.setPadding(0, dp(6), 0, 0);
+        settingsStatus.setPadding(0, dp(Ui.SPACE2), 0, dp(10));
         c.addView(settingsStatus);
         settingsSend = primaryButton("Send to the bike", v -> confirmSend());
         c.addView(settingsSend, matchWrap());
-        c.setVisibility(View.GONE);
-        settingsCard = c;
-        return c;
+        section.addView(c);
+        section.setVisibility(View.GONE);
+        settingsCard = section;
+        return section;
     }
 
     private LinearLayout settingRowWith(String label, android.widget.Spinner s) {
@@ -152,17 +157,19 @@ public class BikeActivity extends KawaActivity {
     }
 
     private LinearLayout parkedCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("Parked"));
+        LinearLayout section = column();
+        section.addView(sectionHeader("Parked"));
+        LinearLayout c = group();
         parkedText = secondary("");
         c.addView(parkedText);
         LinearLayout buttons = row();
-        buttons.setPadding(0, dp(8), 0, 0);
+        buttons.setPadding(0, dp(10), 0, dp(12));
         parkedNavigate = primaryButton("Walk to the bike", v -> navigateToBike());
         buttons.addView(parkedNavigate, weight());
         c.addView(buttons);
-        parkedCard = c;
-        return c;
+        section.addView(c);
+        parkedCard = section;
+        return section;
     }
 
     private void navigateToBike() {
@@ -181,6 +188,7 @@ public class BikeActivity extends KawaActivity {
         BikeData b = Hub.bike;
         long now = System.currentTimeMillis();
         title.setText(name(b, prefs.getString(Hub.KEY_BIKE_NAME, null)));
+        title.setTextSize(26);
         vin.setText(vinText(b, vinShown));
         vin.setVisibility(b.model != null && b.model.vin != null ? View.VISIBLE : View.GONE);
         updated.setText(Hub.bikeConnected ? "Connected" : lastRead(b, now));
@@ -224,34 +232,74 @@ public class BikeActivity extends KawaActivity {
         }
     }
 
+    /** Rebuilds the values: a section header and a group of rows per group; the first four dash values as tiles. */
     private void buildSections(List<String[]> rows) {
         sections.removeAllViews();
         valueViews.clear();
         if (rows.isEmpty()) {
-            LinearLayout c = card();
-            c.addView(cardTitle("No values yet"));
-            c.addView(secondary("Start KawaNav and switch on the ignition: the bike sends its values once connected."));
-            sections.addView(c);
+            sections.addView(emptyState("No values yet",
+                    "Start KawaNav and switch on the ignition: the bike sends its values once connected."));
             return;
         }
-        LinearLayout c = null;
         String section = null;
-        for (String[] r : rows) {
+        LinearLayout group = null;
+        LinearLayout tiles = null;
+        List<View> tileList = new ArrayList<>();
+        int sectionIndex = -1;
+        int inSection = 0;
+        for (int i = 0; i < rows.size(); i++) {
+            String[] r = rows.get(i);
             if (!r[0].equals(section)) {
                 section = r[0];
-                c = card();
-                c.addView(cardTitle(section));
-                sections.addView(c);
+                LinearLayout container = column();
+                container.addView(sectionHeader(section));
+                group = group();
+                container.addView(group);
+                sections.addView(container);
+                sectionIndex++;
+                tiles = null;
+                tileList = new ArrayList<>();
+                inSection = 0;
             }
+            // the handful of numbers a rider checks at a glance, right at the top of the first group
+            // only the first group ("On the dash") starts with tiles; the rest stay quiet rows
+            if (sectionIndex == 0 && tiles == null && inSection < 4) {
+                LinearLayout tile = column();
+                tile.setPadding(dp(Ui.SPACE3), dp(10), dp(Ui.SPACE3), dp(10));
+                tile.setMinimumHeight(dp(Ui.TOUCH_MIN));
+                GradientDrawable bg = new GradientDrawable();
+                bg.setColor(Ui.surfaceSunken(night));
+                bg.setCornerRadius(dp(Ui.RADIUS_TILE));
+                tile.setBackground(bg);
+                TextView v = text(20, true);
+                v.setText(r[2]);
+                TextView l = text(12, false);
+                l.setText(r[1]);
+                l.setTextColor(Ui.inkSecondary(night));
+                tile.addView(v);
+                tile.addView(l);
+                tileList.add(tile);
+                valueViews.add(v);
+                inSection++;
+                if (tileList.size() == 4 || i == rows.size() - 1) {
+                    View[] arr = tileList.toArray(new View[0]);
+                    tiles = statGrid(2, arr);
+                    LinearLayout holder = column();
+                    holder.setPadding(0, dp(10), 0, dp(10));
+                    holder.addView(tiles);
+                    group.addView(holder);
+                }
+                continue;
+            }
+            inSection++;
             LinearLayout line = row();
-            line.setPadding(0, dp(5), 0, dp(5));
-            TextView label = itemTitle(r[1]);
-            line.addView(label, weight());
-            TextView value = text(15, true);
-            value.setText(r[2]);
-            value.setGravity(android.view.Gravity.END);
+            line.setPadding(0, dp(Ui.ROW_PAD_V), 0, dp(Ui.ROW_PAD_V));
+            line.setMinimumHeight(dp(Ui.TOUCH_MIN));
+            line.addView(itemTitle(r[1]), weight());
+            TextView value = value(r[2]);
+            value.setTextSize(15);
             line.addView(value);
-            c.addView(line);
+            addRow(group, line);
             valueViews.add(value);
         }
     }

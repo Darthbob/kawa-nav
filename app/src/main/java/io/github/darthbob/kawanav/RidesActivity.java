@@ -21,6 +21,7 @@ public class RidesActivity extends KawaActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private RideStore store;
     private TextView totals;
+    private LinearLayout totalsTiles;
     private LinearLayout list;
     private TextView empty;
     private boolean loading;
@@ -35,20 +36,19 @@ public class RidesActivity extends KawaActivity {
         night = isNight();
 
         LinearLayout root = column();
-        root.setPadding(dp(16), dp(20), dp(16), dp(24));
-        TextView title = text(26, true);
-        title.setText("Recorded rides");
-        root.addView(title);
+        root.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE5), dp(Ui.SPACE4), dp(Ui.SPACE6));
+        root.addView(display("Recorded rides"));
         totals = secondary("");
-        totals.setPadding(0, 0, 0, dp(8));
+        totals.setPadding(0, dp(2), 0, dp(Ui.SPACE2));
         root.addView(totals);
+        totalsTiles = column();
+        root.addView(totalsTiles);
         empty = secondary("");
         root.addView(empty);
         list = column();
         root.addView(list);
-        TextView note = secondary("Rides are stored on the phone only. Nothing is uploaded anywhere.");
-        note.setTextSize(12);
-        note.setPadding(dp(4), dp(18), dp(4), dp(8));
+        TextView note = note("Rides are stored on the phone only. Nothing is uploaded anywhere.");
+        note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE5), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
         setContentView(page(root));
         refresh();
@@ -103,13 +103,28 @@ public class RidesActivity extends KawaActivity {
                 weekMs += r.activeMs;
             }
         }
+        totalsTiles.removeAllViews();
+        if (!rides.isEmpty()) {
+            LinearLayout tiles = statGrid(3,
+                    statTile("This week", String.format(Locale.ROOT, "%.0f km", week)),
+                    statTile("This month", String.format(Locale.ROOT, "%.0f km", month)),
+                    statTile("This year", String.format(Locale.ROOT, "%.0f km", year)));
+            LinearLayout.LayoutParams lp = matchWrap();
+            lp.setMargins(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE2));
+            totalsTiles.addView(tiles, lp);
+        }
         totals.setText(rides.isEmpty() ? ""
-                : String.format(Locale.ROOT, "This week %.0f km in %s · month %.0f km · year %.0f km · all %.0f km",
-                week, minutes(weekMs), month, year, all));
+                : String.format(Locale.ROOT, "%d rides · %s this week · %.0f km altogether",
+                rides.size(), minutes(weekMs), all));
         empty.setVisibility(rides.isEmpty() ? View.VISIBLE : View.GONE);
         empty.setText("No rides recorded yet. Start one on the main screen before you ride; the values come "
                 + "from the bike while it is connected" + (rides.isEmpty() ? "." : ""));
-        for (Ride r : rides) list.addView(row(r, today));
+        LinearLayout group = null;
+        if (!rides.isEmpty()) {
+            group = group();
+            list.addView(group);
+        }
+        for (Ride r : rides) addRow(group, row(r, today));
     }
 
     private static String minutes(long ms) {
@@ -119,6 +134,7 @@ public class RidesActivity extends KawaActivity {
 
     private View row(Ride r, long today) {
         LinearLayout row = settingRow();
+        row.setMinimumHeight(dp(Ui.TOUCH_MIN));
         LinearLayout t = column();
         TextView name = itemTitle(r.name.isEmpty() ? Ride.defaultName(r.start) : r.name);
         t.addView(name);
@@ -131,6 +147,10 @@ public class RidesActivity extends KawaActivity {
                 + (r.hasGps ? "" : " · no GPS track");
         t.addView(secondary(detail));
         row.addView(t, weight());
+        TextView chev = text(20, false);
+        chev.setText("›");
+        chev.setTextColor(Ui.inkMuted(night));
+        row.addView(chev);
         row.setOnClickListener(v -> {
             android.content.Intent i = new android.content.Intent(this, RideActivity.class);
             i.putExtra(RideActivity.EXTRA_ID, r.id);

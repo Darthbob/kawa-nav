@@ -80,7 +80,7 @@ public final class TrackView extends View {
             prevY = y;
             first = false;
             if (i == marked) {
-                marker.setColor(Color.WHITE);
+                marker.setColor(Ui.markerOnTrack());
                 float r = getResources().getDisplayMetrics().density * 5;
                 canvas.drawCircle(x, y, r, marker);
             }
@@ -88,7 +88,7 @@ public final class TrackView extends View {
         // where the ride started
         for (RideTsv.Sample s : samples) {
             if (!s.hasGps()) continue;
-            marker.setColor(0xFF6BBE45);
+            marker.setColor(Ui.accent());
             float r = getResources().getDisplayMetrics().density * 6;
             canvas.drawCircle((float) (offX + (s.lon - minLon) * Math.cos(centerLat) * scale),
                     (float) (offY + (maxLat - s.lat) * scale), r, marker);

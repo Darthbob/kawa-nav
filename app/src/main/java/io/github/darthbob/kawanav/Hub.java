@@ -119,6 +119,9 @@ public final class Hub {
     public static final String KEY_DEBUG_CAPTURE = "debug_capture";
     /** The meter clock is set from the phone once per connection (off until tried on the bike). */
     public static final String KEY_CLOCK_SYNC = "clock_sync";
+    /** "On the road" and "Offline maps" folds: whether those groups are open on the main screen. */
+    public static final String KEY_OPEN_RIDING = "open_riding";
+    public static final String KEY_OPEN_OFFLINE = "open_offline";
     /** Call icon on the dash (Rideology's notification icons). */
     public static final String KEY_DASH_CALLS = "dash_calls";
     /** Mail/message icon on the dash. */

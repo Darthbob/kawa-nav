@@ -48,10 +48,11 @@ public final class ChartView extends View {
         float d = context.getResources().getDisplayMetrics().density;
         line.setStyle(Paint.Style.STROKE);
         line.setStrokeWidth(d * 2);
-        line.setColor(0xFF6BBE45);
-        grid.setColor(0x33888888);
+        boolean night = Ui.night(context);
+        line.setColor(night ? Ui.accent() : Ui.accentText(false));
+        grid.setColor(Ui.chartGrid(night));
         grid.setStrokeWidth(1);
-        text.setColor(0x99888888);
+        text.setColor(Ui.chartInk(night));
         text.setTextSize(d * 11);
     }
 
@@ -140,7 +141,7 @@ public final class ChartView extends View {
                 float y = (float) (padT + h - (v - min) / (max - min) * h);
                 Paint p = new Paint(line);
                 p.setStyle(Paint.Style.FILL);
-                p.setColor(0xFFFFFFFF);
+                p.setColor(Ui.markerOnTrack());
                 canvas.drawCircle(x, y, d * 4, p);
             }
         }

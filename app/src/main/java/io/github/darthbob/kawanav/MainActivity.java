@@ -105,6 +105,9 @@ public class MainActivity extends KawaActivity {
     private Button autoBikeButton;
     // riding
     private TextView freeModeStatus;
+    private TextView ridingSummary;
+    private LinearLayout offlineBody;
+    private TextView offlineSummary;
     // debug
     private LinearLayout debugCard;
     private LinearLayout bikeDebugCard;
@@ -512,22 +515,20 @@ public class MainActivity extends KawaActivity {
 
     private View buildUi() {
         night = isNight();
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(20), dp(16), dp(24));
+        LinearLayout root = column();
+        root.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE5), dp(Ui.SPACE4), dp(Ui.SPACE6));
 
-        TextView title = text(26, true);
-        title.setText("KawaNav");
+        TextView title = display("KawaNav");
         if (Hub.DEBUG_TOOLS) title.setOnClickListener(v -> titleTapped());
         root.addView(title);
-        TextView subtitle = secondary("Google Maps directions and curve warnings on your Kawasaki");
-        subtitle.setPadding(0, 0, 0, dp(8));
+        TextView subtitle = secondary("Directions and curve warnings on your Kawasaki's dash");
+        subtitle.setPadding(0, dp(2), 0, dp(Ui.SPACE2));
         root.addView(subtitle);
 
         root.addView(banner());
         root.addView(statusCard());
-        root.addView(bikeCard());
         root.addView(rideCard());
+        root.addView(bikeCard());
         root.addView(autostartCard());
         root.addView(ridingCard());
         root.addView(offlineCard());
@@ -538,12 +539,13 @@ public class MainActivity extends KawaActivity {
         return page(root);
     }
 
+    /** What the rider checks most: the link to the bike and what the dash shows right now. */
     private LinearLayout statusCard() {
         LinearLayout c = card();
         LinearLayout head = row();
-        statusDot = text(18, false);
+        statusDot = text(20, false);
         statusDot.setText("●");
-        statusDot.setPadding(0, 0, dp(8), 0);
+        statusDot.setPadding(0, 0, dp(Ui.SPACE2), 0);
         head.addView(statusDot);
         statusTitle = text(19, true);
         head.addView(statusTitle, weight());
@@ -552,13 +554,13 @@ public class MainActivity extends KawaActivity {
         c.addView(statusHint);
 
         LinearLayout meter = row();
-        meter.setPadding(0, dp(14), 0, dp(14));
-        meterArrow = text(40, true);
+        meter.setPadding(0, dp(Ui.SPACE4), 0, dp(10));
+        meterArrow = text(44, true);
         meterArrow.setGravity(Gravity.CENTER);
         meterArrow.setMinWidth(dp(64));
         meter.addView(meterArrow);
         LinearLayout mt = column();
-        mt.setPadding(dp(12), 0, 0, 0);
+        mt.setPadding(dp(Ui.SPACE3), 0, 0, 0);
         meterText = text(18, true);
         mt.addView(meterText);
         meterSource = secondary("");
@@ -571,19 +573,23 @@ public class MainActivity extends KawaActivity {
         return c;
     }
 
-    /** Record a ride: the button, the running time and distance, and the way to the recorded rides. */
+    /**
+     * Recording a ride: one big button, the state under it, and the way to the recorded rides. Sits
+     * above the bike card because "what am I doing now" is asked more often than "what did the bike say".
+     */
     private LinearLayout rideCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("Rides"));
-        c.addView(secondary("While a ride is recorded, the bike's values (speed, engine, gear, throttle, lean, "
-                + "temperatures) and the phone's track are written to the phone once a second."));
-        rideStatus = itemTitle("");
-        rideStatus.setPadding(0, dp(8), 0, dp(2));
-        c.addView(rideStatus);
+        LinearLayout c = group();
+        LinearLayout head = row();
+        head.setPadding(0, dp(10), 0, 0);
+        head.addView(itemTitle("Ride recording"), weight());
+        rideStatus = secondary("");
+        head.addView(rideStatus);
+        c.addView(head);
+
         LinearLayout buttons = row();
-        buttons.setPadding(0, dp(4), 0, 0);
+        buttons.setPadding(0, dp(10), 0, dp(12));
         rideButton = primaryButton("Record", v -> toggleRide());
-        ridePauseButton = button("Pause", v -> {
+        ridePauseButton = secondaryButton("Pause", v -> {
             BridgeService.toggleRidePause();
             handler.postDelayed(this::updateUi, 300);
         });
@@ -591,10 +597,9 @@ public class MainActivity extends KawaActivity {
         buttons.addView(rideButton, weight());
         buttons.addView(ridePauseButton, weight());
         c.addView(buttons);
-        LinearLayout more = row();
-        more.setPadding(0, dp(8), 0, 0);
-        more.addView(button("Recorded rides", v -> startActivity(new Intent(this, RidesActivity.class))), weight());
-        c.addView(more);
+
+        addRow(c, listRow("Recorded rides", "Everything you have recorded, with track and charts", null, true,
+                v -> startActivity(new Intent(this, RidesActivity.class))));
         return c;
     }
 
@@ -612,18 +617,21 @@ public class MainActivity extends KawaActivity {
 
     /** The bike's last values (odometer, fuel, range, battery) and the way to its own screen. */
     private LinearLayout bikeCard() {
-        LinearLayout c = card();
-        bikeTitle = cardTitle("Your bike");
-        c.addView(bikeTitle);
-        bikeSummary = itemTitle("");
-        c.addView(bikeSummary);
+        LinearLayout c = group();
+        LinearLayout head = row();
+        head.setPadding(0, dp(10), 0, 0);
+        bikeTitle = itemTitle("Your bike");
+        head.addView(bikeTitle, weight());
         bikeUpdated = secondary("");
-        c.addView(bikeUpdated);
-        LinearLayout buttons = row();
-        buttons.setPadding(0, dp(6), 0, 0);
-        buttons.addView(button("Bike details", v -> startActivity(new Intent(this, BikeActivity.class))), weight());
-        c.addView(buttons);
-        c.setOnClickListener(v -> startActivity(new Intent(this, BikeActivity.class)));
+        head.addView(bikeUpdated);
+        c.addView(head);
+        bikeSummary = value("");
+        bikeSummary.setGravity(Gravity.START);
+        bikeSummary.setTextSize(15);
+        bikeSummary.setPadding(0, dp(Ui.SPACE1), 0, dp(10));
+        c.addView(bikeSummary);
+        addRow(c, listRow("Bike details", "Odometer, fuel, temperatures, maintenance, riding modes",
+                null, true, v -> startActivity(new Intent(this, BikeActivity.class))));
         return c;
     }
 
@@ -635,7 +643,8 @@ public class MainActivity extends KawaActivity {
                 + "\n\nKawaNav © 2026 Darthbob. Free software under the GNU General Public License v3, "
                 + "without any warranty. Source code: github.com/Darthbob/kawa-nav");
         t.setTextSize(12);
-        t.setPadding(dp(4), dp(18), dp(4), dp(8));
+        t.setTextColor(Ui.inkMuted(night));
+        t.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE5), dp(Ui.SPACE1), dp(Ui.SPACE2));
         t.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
         return t;
     }
@@ -645,17 +654,17 @@ public class MainActivity extends KawaActivity {
         banner = column();
         banner.setPadding(dp(16), dp(14), dp(16), dp(10));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(WARN_ORANGE);
+        bg.setColor(Ui.warnFill());
         bg.setCornerRadius(dp(16));
         banner.setBackground(bg);
         LinearLayout.LayoutParams lp = matchWrap();
         lp.setMargins(0, dp(6), 0, dp(6));
         banner.setLayoutParams(lp);
         bannerTitle = text(17, true);
-        bannerTitle.setTextColor(BANNER_TEXT);
+        bannerTitle.setTextColor(Ui.bannerInk());
         banner.addView(bannerTitle);
         TextView sub = text(13, false);
-        sub.setTextColor(BANNER_TEXT);
+        sub.setTextColor(Ui.bannerInk());
         sub.setText("For the best experience on the bike:");
         banner.addView(sub);
         permRow = bannerRow("Allow Bluetooth, location and notifications",
@@ -683,25 +692,26 @@ public class MainActivity extends KawaActivity {
         r.setPadding(0, dp(10), 0, dp(4));
         LinearLayout t = column();
         TextView tt = text(15, true);
-        tt.setTextColor(BANNER_TEXT);
+        tt.setTextColor(Ui.bannerInk());
         tt.setText(title);
         t.addView(tt);
         TextView st = text(13, false);
-        st.setTextColor(BANNER_TEXT);
+        st.setTextColor(Ui.bannerInk());
         st.setAlpha(0.8f);
         st.setText(sub);
         t.addView(st);
         r.addView(t, weight());
         Button b = button(action, l);
-        b.setTextColor(BANNER_TEXT);
+        b.setTextColor(Ui.bannerInk());
         b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setStateListAnimator(null);
+        b.setMinWidth(dp(72));
         GradientDrawable bb = new GradientDrawable();
         bb.setColor(0xFFFFFFFF);
-        bb.setCornerRadius(dp(20));
+        bb.setCornerRadius(dp(22));
         b.setBackground(bb);
         b.setPadding(dp(16), 0, dp(16), 0);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44));
         lp.setMargins(dp(10), 0, 0, 0);
         r.addView(b, lp);
         r.setOnClickListener(l);
@@ -720,18 +730,53 @@ public class MainActivity extends KawaActivity {
         BikePresence.pair(this);
     }
 
-    private LinearLayout autostartCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("Start automatically"));
-        c.addView(secondary("No need to open KawaNav before a ride: it starts by itself, even with the phone locked."));
+    /**
+     * A section whose rows fold away, with a one-line summary in the header: long option lists stay out
+     * of the way, but nothing disappears without a trace. The state is remembered.
+     */
+    private LinearLayout collapsibleSection(String title, String key, boolean openByDefault, LinearLayout body,
+                                            TextView summary) {
+        LinearLayout section = column();
+        LinearLayout head = row();
+        head.setPadding(dp(Ui.SPACE1), dp(14), dp(Ui.SPACE1), dp(4));
+        head.setMinimumHeight(dp(Ui.TOUCH_MIN));
+        TextView chev = text(15, true);
+        chev.setTextColor(Ui.inkSecondary(night));
+        chev.setPadding(0, 0, dp(Ui.SPACE2), 0);
+        TextView t = text(13, true);
+        t.setText(title.toUpperCase(Locale.ROOT));
+        t.setTextColor(Ui.inkSecondary(night));
+        t.setLetterSpacing(0.08f);
+        head.addView(chev);
+        head.addView(t, weight());
+        summary.setTextColor(Ui.inkSecondary(night));
+        summary.setTextSize(13);
+        head.addView(summary);
+        boolean[] open = {prefs.getBoolean(key, openByDefault)};
+        body.setVisibility(open[0] ? View.VISIBLE : View.GONE);
+        chev.setText(open[0] ? "▾" : "▸");
+        head.setOnClickListener(v -> {
+            open[0] = !open[0];
+            prefs.edit().putBoolean(key, open[0]).apply();
+            body.setVisibility(open[0] ? View.VISIBLE : View.GONE);
+            chev.setText(open[0] ? "▾" : "▸");
+        });
+        section.addView(head);
+        section.addView(body);
+        return section;
+    }
 
+    private LinearLayout autostartCard() {
+        LinearLayout section = column();
+        section.addView(sectionHeader("Start automatically"));
+        LinearLayout c = group();
         LinearLayout bikeRow = settingRow();
         LinearLayout bt = column();
         bt.addView(itemTitle("When the bike is switched on"));
         autoBikeSub = secondary("");
         bt.addView(autoBikeSub);
         bikeRow.addView(bt, weight());
-        autoBikeButton = button("", v -> toggleAutostart());
+        autoBikeButton = secondaryButton("", v -> toggleAutostart());
         bikeRow.addView(autoBikeButton);
         c.addView(bikeRow);
 
@@ -767,15 +812,15 @@ public class MainActivity extends KawaActivity {
             if (addr != null) askBackgroundLocation();
         }));
         helmetRow.addView(helmetSpinner, controlWidth());
-        c.addView(helmetRow);
-        return c;
+        addRow(c, helmetRow);
+        section.addView(c);
+        return section;
     }
 
     private LinearLayout ridingCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("On the road"));
-        c.addView(switchRow("Google Maps directions", "While Maps is navigating, the bike's display shows its directions",
-                Hub.KEY_MAPS, true));
+        LinearLayout c = group();
+        addRow(c, switchRow("Google Maps directions",
+                "While Maps is navigating, the bike's display shows its directions", Hub.KEY_MAPS, true));
 
         Switch free = new Switch(this);
         free.setChecked(Hub.freeMode(this));
@@ -791,14 +836,14 @@ public class MainActivity extends KawaActivity {
         ft.addView(freeModeStatus);
         fr.addView(ft, weight());
         fr.addView(free);
-        c.addView(fr);
+        addRow(c, fr);
 
-        c.addView(choiceRow("Curve warnings during navigation", "Shown up to 300 m before a curve, between Maps directions",
+        addRow(c, choiceRow("Curve warnings during navigation", "Shown up to 300 m before a curve, between Maps directions",
                 new String[]{"Off", "Sharp only", "All"}, prefs.getInt(Hub.KEY_NAV_CURVES, 0), pos -> {
                     prefs.edit().putInt(Hub.KEY_NAV_CURVES, pos).apply();
                     BridgeService.settingsChanged();
                 }));
-        c.addView(choiceRow("Which curves count", "How much a bend must turn to be shown", CURVES_INFO,
+        addRow(c, choiceRow("Which curves count", "How much a bend must turn to be shown", CURVES_INFO,
                 new String[]{"Only tight ones", "Normal", "Also gentle ones", "All over 15°"}, prefs.getInt(Hub.KEY_SENSITIVITY, 1),
                 pos -> prefs.edit().putInt(Hub.KEY_SENSITIVITY, pos).apply()));
         String[] la = new String[LOOKAHEADS.length];
@@ -807,27 +852,30 @@ public class MainActivity extends KawaActivity {
             la[i] = LOOKAHEADS[i] + " m";
             if (LOOKAHEADS[i] == prefs.getInt(Hub.KEY_LOOKAHEAD, 1000)) laSel = i;
         }
-        c.addView(choiceRow("Look ahead", "How far ahead to search for the next curve", la, laSel,
+        addRow(c, choiceRow("Look ahead", "How far ahead to search for the next curve", la, laSel,
                 pos -> prefs.edit().putInt(Hub.KEY_LOOKAHEAD, LOOKAHEADS[pos]).apply()));
-        c.addView(switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging",
+        addRow(c, switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging",
                 Hub.KEY_PHONE_BATTERY, true));
-        c.addView(switchRow("Set the dash clock from the phone", "Once per connection, like Rideology. Keeps the "
+        addRow(c, switchRow("Set the dash clock from the phone", "Once per connection, like Rideology. Keeps the "
                 + "shift lamp as it is set on the bike", Hub.KEY_CLOCK_SYNC, false));
-        c.addView(switchRow("Call icon on the dash", "An icon while a call comes in; needs notification access. No numbers or names are sent",
+        addRow(c, switchRow("Call icon on the dash", "An icon while a call comes in; needs notification access. No numbers or names are sent",
                 Hub.KEY_DASH_CALLS, false, v -> MapsListener.alertsChanged(this)));
-        c.addView(switchRow("Mail and message icon on the dash", "An icon while a mail or message arrives (Gmail, Messages, LINE…); needs notification access",
+        addRow(c, switchRow("Mail and message icon on the dash", "An icon while a mail or message arrives (Gmail, Messages, LINE…); needs notification access",
                 Hub.KEY_DASH_MAIL, false, v -> MapsListener.alertsChanged(this)));
-        c.addView(switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
-        c.addView(switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
-        return c;
+        addRow(c, switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
+        addRow(c, switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
+        ridingSummary = secondary("");
+        return collapsibleSection("On the road", Hub.KEY_OPEN_RIDING, false, c, ridingSummary);
     }
 
     private LinearLayout offlineCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("Offline maps"));
-        c.addView(secondary("Curves are only shown where the roads are downloaded. Download the regions you ride "
-                + "in, over Wi-Fi. Regions add up: e.g. Bayern now, Tirol later."));
-        c.addView(secondary("Road data © OpenStreetMap contributors (ODbL)"));
+        LinearLayout c = group();
+        LinearLayout intro = column();
+        intro.setPadding(0, dp(10), 0, dp(6));
+        intro.addView(secondary("Curves are only shown where the roads are downloaded. Download the regions you "
+                + "ride in, over Wi-Fi. Regions add up: e.g. Bayern now, Tirol later."));
+        intro.addView(note("Road data © OpenStreetMap contributors (ODbL)"));
+        c.addView(intro);
         storedView = itemTitle("");
         storedView.setPadding(0, dp(10), 0, dp(4));
         c.addView(storedView);
@@ -858,13 +906,15 @@ public class MainActivity extends KawaActivity {
         c.addView(offlineStatus);
 
         LinearLayout buttons = row();
-        buttons.setPadding(0, dp(6), 0, 0);
+        buttons.setPadding(0, dp(6), 0, dp(10));
         regionButton = primaryButton("Download", v -> downloadRegion());
         buttons.addView(regionButton, weight());
         c.addView(buttons);
         loadRegions();
         refreshRegions();
-        return c;
+        offlineSummary = secondary("");
+        offlineBody = c;
+        return collapsibleSection("Offline maps", Hub.KEY_OPEN_OFFLINE, false, c, offlineSummary);
     }
 
     /** Debug builds: seven taps on the title show or hide the debug card. */
@@ -885,7 +935,10 @@ public class MainActivity extends KawaActivity {
     /** Hidden card to try values of the meter's status icon fields (13 0C frame, see PROTOCOL.md). */
     private LinearLayout debugCard() {
         LinearLayout c = card();
-        c.addView(cardTitle("Dash icons (debug)"));
+        LinearLayout head = row();
+        head.addView(cardTitle("Dash icons"), weight());
+        head.addView(pill("DEBUG", 0x336BBE45, Ui.accentText(night)));
+        c.addView(head);
         c.addView(secondary("Fixed values for the status icon frame, sent every 5 s while the bike is connected. "
                 + "Auto: phone battery, helmet connected, voice and riding log 0. Tap the title 7 times to hide."));
         c.addView(iconRow("Battery", Hub.KEY_ICON_BATTERY, "0 low, 1–3 bars, 7–10 charging 0–3 bars, 14 error, 15 none"));
@@ -915,7 +968,10 @@ public class MainActivity extends KawaActivity {
      */
     private LinearLayout bikeDebugCard() {
         LinearLayout c = card();
-        c.addView(cardTitle("Bike data (debug)"));
+        LinearLayout dbgHead = row();
+        dbgHead.addView(cardTitle("Bike data"), weight());
+        dbgHead.addView(pill("DEBUG", 0x336BBE45, Ui.accentText(night)));
+        c.addView(dbgHead);
         c.addView(secondary("Decoded values next to the last raw frame of each type. Compare them with the dash "
                 + "to check the scaling (PROTOCOL.md)."));
         c.addView(choiceRow("Requests after connecting", "Applies on the next connect. Full is Rideology's sequence: "
@@ -1009,8 +1065,8 @@ public class MainActivity extends KawaActivity {
                     ? "Stopped by hand: the automatic start waits until the bike is switched off. Tap Start to connect now."
                     : "Tap Start before the ride, or set up an automatic start below.");
         } else {
-            color = Hub.bikeConnected ? OK_GREEN : WARN_ORANGE;
-            if (Hub.bikeStatus.startsWith("No paired")) color = ERROR_RED;
+            color = Hub.bikeConnected ? OK_GREEN : Ui.warnFill();
+            if (Hub.bikeStatus.startsWith("No paired")) color = Ui.danger(night);
             title = Hub.bikeStatus;
             statusHint.setText(Hub.bikeHint);
         }
@@ -1056,6 +1112,17 @@ public class MainActivity extends KawaActivity {
         rideStatus.setText(recording
                 ? (Hub.rideState == RideRecorder.PAUSED ? "Paused · " : "Recording · ") + Hub.rideText
                 : (Hub.serviceRunning ? "Not recording" : "Start KawaNav before recording a ride"));
+
+        // --- folded groups: their one-line summaries, and offline maps opens itself while downloading
+        boolean freeOn = Hub.freeMode(this);
+        boolean navCurveWarnings = prefs.getInt(Hub.KEY_NAV_CURVES, 0) > 0;
+        ridingSummary.setText((Hub.mapsEnabled(this) ? "Maps on" : "Maps off") + " · "
+                + (freeOn || navCurveWarnings ? "curves on" : "curves off"));
+        if (offlineSummary != null) {
+            CharSequence stored = storedView.getText();
+            offlineSummary.setText(stored.length() == 0 ? "" : stored.toString());
+            if (Hub.offlineRunning) offlineBody.setVisibility(View.VISIBLE); // never hide progress
+        }
 
         // --- banner: what still keeps KawaNav from working fully
         android.companion.AssociationInfo bike = BikePresence.association(this);
