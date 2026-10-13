@@ -63,6 +63,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /** The connect sequence was queued on this connection (vehicle info polling waits for it). */
     private boolean startupQueued;
     private boolean modelLogged;
+    /** The clock was set on this connection (asked for at most once). */
+    private boolean clockSynced;
     private long infoPolledAt;
     /** The link was up on this connection (a link loss then means: bike switched off or out of range). */
     private boolean wasReady;
@@ -368,6 +370,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             modelLogged = false;
             wasReady = true;
             configRetries.clear();
+            clockSynced = false;
             if (RawCapture.enabled(this)) RawCapture.start(this);
             tick(); // the arrow first
             handler.postDelayed(startup, STARTUP_DELAY_MS);
@@ -411,6 +414,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             Logger.log("Bike: model " + ((BikeFrames.ModelInfo) f).model);
         }
         retryConfigIfNotReady(f);
+        syncClockOnce(f);
         if (!(f instanceof BikeFrames.GeneralCaps)) return;
         BikeFrames.GeneralCaps c = (BikeFrames.GeneralCaps) f;
         Hub.bikeCapabilities = c;
@@ -587,6 +591,28 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Logger.log("Bike: " + BikeFrames.name(f.id) + " not ready yet, asking again (" + n + ")");
         requests.submit(new BikeRequests.Request(KawaProtocol.readRequest(f.id), BikeFrames.name(f.id) + " request",
                 BikeRequests.DATA_OR_ACK, BikeRequests.STARTUP, null));
+    }
+
+    /**
+     * The rider asked KawaNav to set the meter clock: when the 0x1B read arrives, write the phone's local
+     * time back, keeping the shift-lamp byte exactly as read (Rideology does this on every connect).
+     * Off by default until it has been tried on the bike.
+     */
+    private void syncClockOnce(BikeFrames.Frame f) {
+        if (clockSynced || !(f instanceof BikeFrames.GeneralSettings)) return;
+        BikeFrames.GeneralSettings g = (BikeFrames.GeneralSettings) f;
+        if (g.result < 0) return; // no answer to the read
+        BikeFrames.GeneralCaps caps = Hub.bike.caps;
+        if (!Hub.prefs(this).getBoolean(Hub.KEY_CLOCK_SYNC, false) || caps == null || !caps.clockSettable()) return;
+        clockSynced = true;
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        byte[] frame = KawaProtocol.generalSettingsWrite(Math.max(g.shiftLampStatus, 0), Math.max(g.shiftLampLevel, 0),
+                c.get(java.util.Calendar.DAY_OF_MONTH), c.get(java.util.Calendar.MONTH) + 1,
+                c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.HOUR_OF_DAY),
+                c.get(java.util.Calendar.MINUTE), c.get(java.util.Calendar.SECOND));
+        requests.submit(new BikeRequests.Request(frame, "clock sync", BikeRequests.DATA_OR_ACK,
+                BikeRequests.USER, (r, ok, result) -> Logger.log("Bike: clock sync "
+                        + (ok && result == 0 ? "done" : "failed (" + (ok ? "result " + result : "no answer") + ")"))));
     }
 
     /** Asks for the vehicle info (odometer, fuel, range…) again when the last answer is older than {@link #INFO_POLL_MS}. */

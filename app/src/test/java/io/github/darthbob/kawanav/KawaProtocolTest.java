@@ -58,4 +58,17 @@ public class KawaProtocolTest {
         assertEquals(List.of("03", "40", "1A", "1D", "47", "41", "1B", "48", "1E"), ids);
         assertTrue(KawaProtocol.startup(KawaProtocol.INIT_NONE, null, null).size() == 1);
     }
+
+    @Test
+    public void clockSyncWrite() {
+        assertEquals("1b0c00ffff054a01590d0a1a121e0505",
+                hex(KawaProtocol.generalSettingsWrite(1, 25, 13, 10, 2026, 18, 30, 5)));
+    }
+
+    @Test
+    public void shiftLampWriteKeepsTheClock() {
+        // day/month/hour/minute/second "unchanged" are FF, but the year slot is (byte)(-1-2000) = 0x2F
+        assertEquals("1b0c00ffff054a0159ffff2fffffff",
+                hex(KawaProtocol.shiftLampWrite(1, 25)));
+    }
 }

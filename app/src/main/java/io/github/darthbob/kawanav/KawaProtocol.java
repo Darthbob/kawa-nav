@@ -188,6 +188,46 @@ public final class KawaProtocol {
         return b;
     }
 
+    /**
+     * 0x1B write: block 0x0A becomes 0x4A and byte 7 becomes 1 (h9/b.java:401-404); the shift-lamp byte
+     * keeps status (bits 7-6) and level code (bits 5-0), then day, month, year-2000, hour, minute, second.
+     */
+    public static byte[] generalSettingsWrite(int lampStatus, int lampLevel, int day, int month, int year,
+                                             int hour, int minute, int second) {
+        byte[] b = request(BikeFrames.GENERAL_SETTINGS, 15, 0);
+        b[5] = 5;
+        b[6] = 0x4A;
+        b[7] = 1;
+        b[8] = (byte) (((lampStatus & 3) << 6) | (lampLevel & 0x3F));
+        b[9] = (byte) (day & 0x3F);
+        b[10] = (byte) (month & 0x0F);
+        b[11] = (byte) (year - 2000);
+        b[12] = (byte) (hour & 0x1F);
+        b[13] = (byte) (minute & 0x3F);
+        b[14] = (byte) (second & 0x3F);
+        return b;
+    }
+
+    /**
+     * 0x1B write that changes only the shift lamp: the six time fields mean "leave unchanged". The app
+     * sends day/month/hour/minute/second as FF, but the year as `(byte) (-1 - 2000)` = 0x2F
+     * (ne/f.java:34-43; PROTOCOL.md).
+     */
+    public static byte[] shiftLampWrite(int lampStatus, int lampLevel) {
+        byte[] b = request(BikeFrames.GENERAL_SETTINGS, 15, 0);
+        b[5] = 5;
+        b[6] = 0x4A;
+        b[7] = 1;
+        b[8] = (byte) (((lampStatus & 3) << 6) | (lampLevel & 0x3F));
+        b[9] = (byte) 0xFF;
+        b[10] = (byte) 0xFF;
+        b[11] = 0x2F;
+        b[12] = (byte) 0xFF;
+        b[13] = (byte) 0xFF;
+        b[14] = (byte) 0xFF;
+        return b;
+    }
+
     /** 0x1E: reads the three maintenance reminders, blocks 0x0C, 0x0D, 0x0E. 45 bytes, counter 01 as captured. */
     public static byte[] serviceIndicatorRead() {
         byte[] b = request(BikeFrames.SERVICE_INDICATOR, 45, 1);

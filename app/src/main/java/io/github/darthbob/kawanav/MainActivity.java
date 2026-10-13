@@ -767,6 +767,8 @@ public class MainActivity extends KawaActivity {
                 pos -> prefs.edit().putInt(Hub.KEY_LOOKAHEAD, LOOKAHEADS[pos]).apply()));
         c.addView(switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging",
                 Hub.KEY_PHONE_BATTERY, true));
+        c.addView(switchRow("Set the dash clock from the phone", "Once per connection, like Rideology. Keeps the "
+                + "shift lamp as it is set on the bike", Hub.KEY_CLOCK_SYNC, false));
         c.addView(switchRow("Call icon on the dash", "An icon while a call comes in; needs notification access. No numbers or names are sent",
                 Hub.KEY_DASH_CALLS, false, v -> MapsListener.alertsChanged(this)));
         c.addView(switchRow("Mail and message icon on the dash", "An icon while a mail or message arrives (Gmail, Messages, LINE…); needs notification access",
