@@ -178,7 +178,7 @@ public class MainActivity extends KawaActivity {
             setContentView(buildUi()); // refresh the switch
         }
         if (i.getBooleanExtra("offline_cancel", false)) OfflineService.stop(this);
-        if (i.getBooleanExtra("export_log", false)) exportLog();
+        if (i.getBooleanExtra("export_log", false)) Logger.afterWrites(this::exportLog);
         if (i.hasExtra(OfflineService.EXTRA_REGION)) OfflineService.startRegion(this, i.getStringExtra(OfflineService.EXTRA_REGION));
         if (i.hasExtra("bridge")) {
             if (i.getBooleanExtra("bridge", false)) {

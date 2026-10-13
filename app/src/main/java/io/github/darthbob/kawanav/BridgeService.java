@@ -190,8 +190,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         KawaBle b = ble;
         if (b.isReady()) {
             // let the meter drop the arrow and the status icons, then close the link
-            b.write(KawaProtocol.clearFrame(), "clear");
-            b.write(KawaProtocol.meterIndicationFrame(KawaProtocol.BATTERY_NONE, 0, 0, 0), "icons off");
+            b.write(KawaProtocol.clearFrame(), "clear", true);
+            b.write(KawaProtocol.meterIndicationFrame(KawaProtocol.BATTERY_NONE, 0, 0, 0), "icons off", true);
             new Handler(Looper.getMainLooper()).postDelayed(b::disconnect, 500);
         } else {
             b.disconnect();
@@ -272,7 +272,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     @Override
-    public void onNotify(byte[] value) {
+    public void onNotify(java.util.UUID characteristic, byte[] value) {
         KawaProtocol.Capabilities c = KawaProtocol.parseCapabilities(value);
         if (c == null) return;
         Hub.bikeCapabilities = c;
@@ -353,7 +353,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (out == null) {
             Hub.outputStatus = "Nothing to show";
             if (clearsSent < CLEAR_REPEATS) {
-                ble.write(KawaProtocol.clearFrame(), "clear");
+                ble.write(KawaProtocol.clearFrame(), "clear", true);
                 clearsSent++;
             }
         } else {
@@ -367,7 +367,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 unit = 3; // feet
                 dist = (int) Math.round(dist / 0.3048);
             }
-            ble.write(KawaProtocol.naviFrame(0, out.turn, unit, dist), out.describe());
+            ble.write(KawaProtocol.naviFrame(0, out.turn, unit, dist), out.describe(), true);
         }
         updateNotification();
     }
@@ -390,7 +390,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         byte[] frame = KawaProtocol.meterIndicationFrame(battery, voice, headset, ridingLog);
         String label = "battery " + battery + " (phone " + percent + "%" + (charging ? " charging" : "") + "), voice " + voice
                 + ", headset " + headset + ", riding log " + ridingLog;
-        ble.write(frame, "icons: " + label);
+        ble.write(frame, "icons: " + label, true);
         Hub.iconsStatus = label + "\n" + KawaProtocol.hex(frame);
         iconsSent = icons;
         iconsSentAt = now;
