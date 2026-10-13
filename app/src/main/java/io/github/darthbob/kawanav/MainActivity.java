@@ -73,6 +73,10 @@ public class MainActivity extends KawaActivity {
     private TextView meterText;
     private TextView meterSource;
     private Button startButton;
+    // bike
+    private TextView bikeTitle;
+    private TextView bikeSummary;
+    private TextView bikeUpdated;
     // setup
     // banner: settings that keep KawaNav from working fully
     private LinearLayout banner;
@@ -123,6 +127,7 @@ public class MainActivity extends KawaActivity {
         prefs = Hub.prefs(this);
         roadStore = new RoadStore(this);
         offlineRegions = new OfflineRegions(this, roadStore);
+        BikeStore.load(this);
         setContentView(buildUi());
         // the launch intent is handled once: not again when Android recreates the activity
         // (rotation, restart after a crash, opened from recents)
@@ -149,7 +154,8 @@ public class MainActivity extends KawaActivity {
      */
     /**
      * Copies the log to Download/KawaNav (readable by adb and file managers, also from a release build):
-     * {@code adb pull /sdcard/Download/KawaNav/}
+     * {@code adb pull /sdcard/Download/KawaNav/}. Runs on the log's own thread, so no line is written or
+     * the file rotated while it is copied.
      */
     private void exportLog() {
         android.content.ContentResolver cr = getContentResolver();
@@ -180,18 +186,28 @@ public class MainActivity extends KawaActivity {
             setContentView(buildUi()); // refresh the switch
         }
         if (i.getBooleanExtra("offline_cancel", false)) OfflineService.stop(this);
-        if (i.getBooleanExtra("export_log", false)) Logger.afterWrites(this::exportLog);
+        if (i.getBooleanExtra("export_log", false)) Logger.withLogFiles(this::exportLog);
         if (i.hasExtra(OfflineService.EXTRA_REGION)) OfflineService.startRegion(this, i.getStringExtra(OfflineService.EXTRA_REGION));
         if (Hub.DEBUG_TOOLS) {
             // debug builds: vehicle data tests, e.g. --es bike_read 41, --ei init_level 2, --es replay 20261013-190000.txt
             if (i.hasExtra("bike_read")) {
-                Logger.log("adb: read " + i.getStringExtra("bike_read") + ": "
-                        + BridgeService.read(Integer.parseInt(i.getStringExtra("bike_read"), 16)));
+                int id;
+                try {
+                    id = Integer.parseInt(String.valueOf(i.getStringExtra("bike_read")), 16);
+                } catch (NumberFormatException e) {
+                    id = -1;
+                }
+                Logger.log("adb: read " + i.getStringExtra("bike_read") + ": " + BridgeService.read(id));
             }
-            if (i.hasExtra("init_level")) prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, i.getIntExtra("init_level", 1)).apply();
+            int level = i.getIntExtra("init_level", -1);
+            if (level >= KawaProtocol.INIT_NONE && level <= KawaProtocol.INIT_FULL) {
+                prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, level).apply();
+            }
             if (i.hasExtra("raw_capture")) prefs.edit().putBoolean(Hub.KEY_DEBUG_CAPTURE, i.getBooleanExtra("raw_capture", false)).apply();
             if (i.hasExtra("replay")) {
+                // a capture of this phone, or a file copied into the app's files/ (adb push + run-as cp)
                 java.io.File f = new java.io.File(RawCapture.dir(this), i.getStringExtra("replay"));
+                if (!f.isFile()) f = new java.io.File(getFilesDir(), i.getStringExtra("replay"));
                 Logger.log("adb: replay " + f.getName() + ": " + BridgeService.replay(f));
             }
         }
@@ -506,6 +522,7 @@ public class MainActivity extends KawaActivity {
 
         root.addView(banner());
         root.addView(statusCard());
+        root.addView(bikeCard());
         root.addView(autostartCard());
         root.addView(ridingCard());
         root.addView(offlineCard());
@@ -546,6 +563,23 @@ public class MainActivity extends KawaActivity {
 
         startButton = primaryButton("", v -> toggleBridge());
         c.addView(startButton, matchWrap());
+        return c;
+    }
+
+    /** The bike's last values (odometer, fuel, range, battery) and the way to its own screen. */
+    private LinearLayout bikeCard() {
+        LinearLayout c = card();
+        bikeTitle = cardTitle("Your bike");
+        c.addView(bikeTitle);
+        bikeSummary = itemTitle("");
+        c.addView(bikeSummary);
+        bikeUpdated = secondary("");
+        c.addView(bikeUpdated);
+        LinearLayout buttons = row();
+        buttons.setPadding(0, dp(6), 0, 0);
+        buttons.addView(button("Bike details", v -> startActivity(new Intent(this, BikeActivity.class))), weight());
+        c.addView(buttons);
+        c.setOnClickListener(v -> startActivity(new Intent(this, BikeActivity.class)));
         return c;
     }
 
@@ -961,6 +995,14 @@ public class MainActivity extends KawaActivity {
         meterArrow.setTextColor(out != null && Hub.serviceRunning ? KAWASAKI_GREEN : 0xFF9E9E9E);
         startButton.setText(Hub.serviceRunning ? "Stop" : "Start");
         tint(startButton, Hub.serviceRunning ? 0xFF616161 : KAWASAKI_GREEN);
+
+        // --- bike
+        bikeTitle.setText(BikeActivity.name(Hub.bike, prefs.getString(Hub.KEY_BIKE_NAME, null)));
+        String summary = BikeActivity.summary(Hub.bike);
+        bikeSummary.setText(summary);
+        bikeSummary.setVisibility(summary.isEmpty() ? View.GONE : View.VISIBLE);
+        bikeUpdated.setText(Hub.bikeConnected && !summary.isEmpty() ? "Connected"
+                : BikeActivity.lastRead(Hub.bike, System.currentTimeMillis()));
 
         // --- banner: what still keeps KawaNav from working fully
         android.companion.AssociationInfo bike = BikePresence.association(this);

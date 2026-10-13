@@ -115,6 +115,7 @@ public final class CurveEngine implements LocationListener {
     @Override
     public void onLocationChanged(Location loc) {
         if (!running) return;
+        Hub.lastFix = loc;
         updateHeading(loc);
         ensureRoads(loc);
         compute(loc);

@@ -68,6 +68,8 @@ public final class Hub {
     public static final BikeData bike = new BikeData();
     /** ATT MTU of the current connection, for the debug card. */
     public static int bikeMtu;
+    /** Last GPS fix any part of KawaNav got (curves, ride recorder), or null. */
+    public static android.location.Location lastFix;
 
     // --- settings
     public static final String PREFS = "settings";
@@ -78,6 +80,8 @@ public final class Hub {
     public static final String KEY_SENSITIVITY = "curve_sensitivity"; // 0 low, 1 normal, 2 high
     public static final String KEY_LOOKAHEAD = "curve_lookahead_m";
     public static final String KEY_DEVICE = "device";
+    /** Bluetooth name of the bike last connected (e.g. "Kawasaki-ZR900S"), for the bike screens. */
+    public static final String KEY_BIKE_NAME = "bike_name";
     /** Address of the helmet whose Bluetooth connection starts the bridge (autostart fallback). */
     public static final String KEY_HELMET = "helmet";
     /** Phone battery icon on the bike's display (on unless turned off). */
@@ -136,7 +140,8 @@ public final class Hub {
     /** Requests sent to the bike after connecting (release builds: read-only). */
     public static int initLevel(Context c) {
         if (!DEBUG_TOOLS) return KawaProtocol.INIT_READ;
-        return prefs(c).getInt(KEY_DEBUG_INIT_LEVEL, KawaProtocol.INIT_READ);
+        int level = prefs(c).getInt(KEY_DEBUG_INIT_LEVEL, KawaProtocol.INIT_READ);
+        return Math.max(KawaProtocol.INIT_NONE, Math.min(KawaProtocol.INIT_FULL, level));
     }
 
     /**

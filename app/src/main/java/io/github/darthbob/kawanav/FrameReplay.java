@@ -51,7 +51,10 @@ public final class FrameReplay {
                     if (first < 0) first = at;
                     long wait = startedAt + (at - first) - System.currentTimeMillis();
                     if (wait > 0) Thread.sleep(wait);
-                    main.post(() -> sink.frame((UUID) fr[1], (byte[]) fr[2]));
+                    Thread self = Thread.currentThread();
+                    main.post(() -> {
+                        if (running == self) sink.frame((UUID) fr[1], (byte[]) fr[2]); // not after stop()
+                    });
                     n++;
                 }
                 Logger.log("Replay of " + f.getName() + " finished: " + n + " frames");

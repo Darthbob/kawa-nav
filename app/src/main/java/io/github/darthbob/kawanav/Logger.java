@@ -46,9 +46,12 @@ public final class Logger {
         if (d != null) io.execute(() -> appendToFile(d, stamped));
     }
 
-    /** Runs {@code r} on the main thread once every line logged so far is in the file (e.g. before exporting it). */
-    public static void afterWrites(Runnable r) {
-        io.execute(() -> main.post(r));
+    /**
+     * Runs {@code r} on the log's background thread, after every line logged so far is in the file and
+     * before any later one (e.g. to copy the files without them changing underneath).
+     */
+    public static void withLogFiles(Runnable r) {
+        io.execute(r);
     }
 
     private static void appendToFile(File dir, String line) {

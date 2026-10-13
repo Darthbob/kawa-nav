@@ -48,6 +48,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".BikeActivity"
+            android:exported="false"
+            android:label="Your bike"
+            android:screenOrientation="portrait" />
+
         <service
             android:name=".BridgeService"
             android:exported="false"

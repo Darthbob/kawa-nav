@@ -163,7 +163,8 @@ public final class BikeFrames {
             shiftLampMin = u8(v, 9);
             shiftLampSettable = valid && shiftLampMin >= 1 && shiftLampMax <= 61 && shiftLampMin <= shiftLampMax;
             int[][] clock = {{10, 0xC0}, {10, 0x30}, {10, 0x0C}, {10, 0x03}, {11, 0xC0}, {11, 0x30}};
-            for (int i = 0; i < 6; i++) clockSettable[i] = valid && bits(v, clock[i][0], clock[i][1]) == 0;
+            // as Zen3515: the clock flags count even while the config is flagged not ready
+            for (int i = 0; i < 6; i++) clockSettable[i] = bits(v, clock[i][0], clock[i][1]) == 0;
             meterIndication = bits(v, 11, 0x0F);
             navi = bits(v, 12, 0xF0);
             indicatorSubcaps[0] = bits(v, 12, 0x0C);
@@ -184,7 +185,7 @@ public final class BikeFrames {
 
     /**
      * Rideology's "retry" check on config frames: a block is there but its flag byte says the data is
-     * not ready yet (bit 0 clear). Such a config is asked for again.
+     * not ready yet (bit 0 clear). The bridge then asks for the config again.
      */
     static boolean retryRequired(byte[] v, int a, int b, int flag) {
         return (u8(v, a) != 0xFF || u8(v, b) != 0xFF) && (u8(v, flag) & 1) == 0;
@@ -572,12 +573,19 @@ public final class BikeFrames {
             valid = v.length >= 15 && !retryRequired(v, 5, 6, 14);
         }
 
-        /** The meter keeps reminder {@code which} with date and distance. */
-        public boolean supported(int which) {
+        /** Fields of a reminder in {@link #has}: capability, notify, month, day, year, distance. */
+        public static final int CAPABILITY = 0, NOTIFY = 1, MONTH = 2, DAY = 3, YEAR = 4, DISTANCE = 5;
+
+        /** The meter keeps this field of reminder {@code which} (capability: 0 or 1; the others: 0). */
+        public boolean has(int which, int field) {
             int[] l = LAYOUT[which];
-            int cap = bits(raw, l[0], l[1]);
-            if (cap != 0 && cap != 1) return false;
-            for (int i = 2; i < l.length; i += 2) if (bits(raw, l[i], l[i + 1]) != 0) return false;
+            int x = bits(raw, l[field * 2], l[field * 2 + 1]);
+            return field == CAPABILITY ? x == 0 || x == 1 : x == 0;
+        }
+
+        /** The meter keeps reminder {@code which} with all its fields. */
+        public boolean supported(int which) {
+            for (int f = CAPABILITY; f <= DISTANCE; f++) if (!has(which, f)) return false;
             return true;
         }
     }
@@ -592,18 +600,25 @@ public final class BikeFrames {
             public final boolean supported;
             public final int notify, day, month, year, distanceKm;
 
-            Reminder(byte[] v, int base, boolean supported) {
-                this.supported = supported;
+            /** @param c the maintenance config; only a valid one hides fields (each by its own flag) */
+            Reminder(byte[] v, int base, ServiceConfig c, int which) {
+                ServiceConfig cfg = c != null && c.valid ? c : null;
+                supported = cfg == null || cfg.has(which, ServiceConfig.CAPABILITY);
                 boolean b = supported && blockPresent(v, base - 2) && v.length > base + 7;
                 int n = b ? u8(v, base + 1) : 0xFF;
-                notify = n == 0xFF ? -1 : n >> 4;
+                notify = n != 0xFF && field(cfg, which, ServiceConfig.NOTIFY) ? n >> 4 : -1;
                 int m = n & 0x0F;
-                month = b && m >= 1 && m <= 12 ? m : -1;
+                month = b && m >= 1 && m <= 12 && field(cfg, which, ServiceConfig.MONTH) ? m : -1;
                 int d = b ? u8(v, base + 2) & 0x3F : 0;
-                day = d >= 1 && d <= 31 ? d : -1;
+                day = d >= 1 && d <= 31 && field(cfg, which, ServiceConfig.DAY) ? d : -1;
                 int y = b ? u8(v, base + 3) : 0xFF;
-                year = y == 0xFF ? -1 : 2000 + (y & 0x7F);
-                distanceKm = b && u8(v, base + 5) != 0xFF ? (u8(v, base + 5) & 0x0F) << 16 | be16(v, base + 6) : -1;
+                year = y != 0xFF && field(cfg, which, ServiceConfig.YEAR) ? 2000 + (y & 0x7F) : -1;
+                distanceKm = b && u8(v, base + 5) != 0xFF && field(cfg, which, ServiceConfig.DISTANCE)
+                        ? (u8(v, base + 5) & 0x0F) << 16 | be16(v, base + 6) : -1;
+            }
+
+            private static boolean field(ServiceConfig cfg, int which, int field) {
+                return cfg == null || cfg.has(which, field);
             }
 
             public boolean hasDate() {
@@ -615,7 +630,7 @@ public final class BikeFrames {
 
         ServiceIndicator(byte[] v, ServiceConfig c) {
             super(v);
-            for (int i = 0; i < 3; i++) reminders[i] = new Reminder(v, 7 + i * 10, c == null || c.supported(i));
+            for (int i = 0; i < 3; i++) reminders[i] = new Reminder(v, 7 + i * 10, c, i);
         }
     }
 

@@ -35,7 +35,6 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private static final String CHANNEL = "bridge";
     private static final int NOTIFICATION_ID = 1;
     private static final long TICK_MS = 1000;
-    private static final long RECONNECT_MS = 3000;
     private static final long NO_BIKE_RETRY_MS = 15_000;
     private static final int CLEAR_REPEATS = 3;
     /** Status icon (phone battery, headset) refresh, as often as Rideology sends it. */
@@ -46,6 +45,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private static final long STARTUP_DELAY_MS = 1000;
     /** Vehicle info (odometer, fuel…) is asked for again when the last answer is this old. */
     private static final long INFO_POLL_MS = 20_000;
+    /** The bike's values are saved at most this often while connected (and on link loss). */
+    private static final long SAVE_MS = 60_000;
+    /** A GPS fix this recent counts as "where the bike was parked" when the link is lost. */
+    private static final long PARKED_FIX_MS = 5 * 60_000;
     /** Frame types that may be read on request (debug card, adb): reads only, never settings writes. */
     private static final int[] READABLE = {0x03, 0x1A, 0x1B, 0x1D, 0x1E, 0x40, 0x41, 0x45, 0x47, 0x48};
 
@@ -61,6 +64,14 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private boolean startupQueued;
     private boolean modelLogged;
     private long infoPolledAt;
+    /** The link was up on this connection (a link loss then means: bike switched off or out of range). */
+    private boolean wasReady;
+    private long savedAt;
+    /** onDestroy ran: late callbacks of the link (closed 500 ms later) must not touch anything. */
+    private boolean destroyed;
+    /** Config frames the meter flagged "not ready", asked for again (per type, this connection). */
+    private final java.util.Map<Integer, Integer> configRetries = new java.util.HashMap<>();
+    private static final int CONFIG_RETRIES = 3;
     private int clearsSent;
     /** Status icon fields last sent to the meter (one per 4 bits, -1: none since connecting) and when. */
     private int iconsSent = -1;
@@ -172,11 +183,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
         wakeLock.acquire();
 
         Hub.serviceRunning = true;
+        BikeStore.load(this);
         ble = new KawaBle(this, this);
         requests = new BikeRequests(new BikeRequests.Io() {
             @Override
             public boolean send(byte[] frame, String label) {
-                if (RawCapture.enabled(BridgeService.this) && ble.isReady()) RawCapture.tx(frame);
                 return ble.write(frame, label);
             }
 
@@ -248,13 +259,18 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     @Override
     public void onDestroy() {
+        destroyed = true;
+        FrameReplay.stop(); // before the handler is cleared: a replay may still post frames
         instance = null;
         Hub.serviceRunning = false;
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         handler.removeCallbacksAndMessages(null);
         requests.clear();
-        FrameReplay.stop();
         RawCapture.stop();
+        if (wasReady) {
+            rememberParked();
+            BikeStore.save(this);
+        }
         curve.stop();
         closeAudioProfiles();
         KawaBle b = ble;
@@ -285,6 +301,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     // ------------------------------------------------------------------ bike connection
 
     private void connectBike() {
+        if (destroyed) return;
         handler.removeCallbacks(connectRunnable);
         BluetoothDevice d = findBike();
         if (d == null) {
@@ -326,9 +343,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     @Override
     public void onStateChanged(boolean ready) {
+        if (destroyed) return;
         if (ready) {
             BluetoothDevice d = findBike();
             Hub.bikeStatus = "Connected to " + (d != null ? d.getName() : "the bike");
+            if (d != null && d.getName() != null) Hub.prefs(this).edit().putString(Hub.KEY_BIKE_NAME, d.getName()).apply();
             Hub.bikeHint = "";
             Hub.bikeConnected = true;
             clearsSent = 0;
@@ -340,6 +359,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
             requests.clear();
             startupQueued = false;
             modelLogged = false;
+            wasReady = true;
+            configRetries.clear();
             if (RawCapture.enabled(this)) RawCapture.start(this);
             tick(); // the arrow first
             handler.postDelayed(startup, STARTUP_DELAY_MS);
@@ -363,6 +384,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     @Override
     public void onNotify(java.util.UUID characteristic, byte[] value) {
+        if (destroyed) return;
         if (RawCapture.enabled(this)) RawCapture.rx(characteristic, value);
         requests.onFrame(value);
         onFrame(characteristic, value);
@@ -371,12 +393,17 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /** A frame from the meter (or from a replay): decoded into {@link Hub#bike}. */
     private void onFrame(java.util.UUID characteristic, byte[] value) {
         BikeFrames.Frame f = decoder.decode(value);
-        Hub.bike.apply(f, System.currentTimeMillis());
-        if (f instanceof BikeFrames.ModelInfo && !modelLogged && ((BikeFrames.ModelInfo) f).model != null) {
-            modelLogged = true;
-            BikeFrames.ModelInfo m = (BikeFrames.ModelInfo) f;
-            Logger.log("Bike: model " + m.model + ", VIN " + BikeData.maskedVin(m.vin));
+        long now = System.currentTimeMillis();
+        Hub.bike.apply(f, now);
+        if (f != null && f.id != BikeFrames.RIDING_LOG && f.id != BikeFrames.RIDING_LOG_HIGH && now - savedAt > SAVE_MS) {
+            savedAt = now;
+            BikeStore.save(this);
         }
+        if (f instanceof BikeFrames.ModelInfo && !modelLogged && ((BikeFrames.ModelInfo) f).model != null) {
+            modelLogged = true; // model code only: with the VIN's end it would give away nearly all of it
+            Logger.log("Bike: model " + ((BikeFrames.ModelInfo) f).model);
+        }
+        retryConfigIfNotReady(f);
         if (!(f instanceof BikeFrames.GeneralCaps)) return;
         BikeFrames.GeneralCaps c = (BikeFrames.GeneralCaps) f;
         Hub.bikeCapabilities = c;
@@ -390,21 +417,32 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     @Override
+    public void onTx(byte[] frame) {
+        if (RawCapture.enabled(this)) RawCapture.tx(frame);
+    }
+
+    @Override
     public void onServicesDump(String dump) {
         Hub.gattDump = dump;
     }
 
     @Override
     public void onLinkLost() {
+        if (destroyed) return;
         requests.clear();
         handler.removeCallbacks(startup);
         RawCapture.stop();
+        if (wasReady) {
+            wasReady = false;
+            rememberParked();
+            BikeStore.save(this);
+        }
         Hub.bikeCapabilities = null;
         Hub.bikeStatus = "Connection lost, reconnecting…";
         Hub.bikeHint = "";
         Hub.bikeConnected = false;
         updateNotification();
-        handler.postDelayed(connectRunnable, RECONNECT_MS);
+        handler.postDelayed(connectRunnable, ble.reconnectDelayMs());
     }
 
     // ------------------------------------------------------------------ output
@@ -502,6 +540,46 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.iconsStatus = label + "\n" + KawaProtocol.hex(frame);
         iconsSent = icons;
         iconsSentAt = now;
+    }
+
+    /**
+     * The link to the bike was lost: the phone is next to it (switched off, the rider walks away), so its
+     * position is where the bike is parked. Uses the last fix of curves or the ride recorder, else
+     * Android's last known position, if recent enough.
+     */
+    private void rememberParked() {
+        if (!hasLocationPermission()) return;
+        android.location.Location fix = Hub.lastFix;
+        if (fix == null || System.currentTimeMillis() - fix.getTime() > PARKED_FIX_MS) {
+            android.location.LocationManager lm = getSystemService(android.location.LocationManager.class);
+            for (String p : new String[]{android.location.LocationManager.FUSED_PROVIDER,
+                    android.location.LocationManager.GPS_PROVIDER}) {
+                android.location.Location l = lm.getLastKnownLocation(p);
+                if (l != null && (fix == null || l.getTime() > fix.getTime())) fix = l;
+            }
+        }
+        if (fix == null || System.currentTimeMillis() - fix.getTime() > PARKED_FIX_MS) {
+            Logger.log("Bike parked: no recent position");
+            return;
+        }
+        Hub.bike.parked = new BikeData.Place(fix.getLatitude(), fix.getLongitude(), fix.getAccuracy(), System.currentTimeMillis());
+        Logger.log(String.format(java.util.Locale.ROOT, "Bike parked: position saved (±%.0f m)", fix.getAccuracy()));
+    }
+
+    /**
+     * Like Rideology: a config frame (capabilities, vehicle info config, maintenance config) the meter
+     * flags as not ready yet is asked for again, a few times per connection.
+     */
+    private void retryConfigIfNotReady(BikeFrames.Frame f) {
+        boolean notReady = f instanceof BikeFrames.GeneralCaps && !((BikeFrames.GeneralCaps) f).valid
+                || f instanceof BikeFrames.InfoConfig && !((BikeFrames.InfoConfig) f).valid
+                || f instanceof BikeFrames.ServiceConfig && !((BikeFrames.ServiceConfig) f).valid;
+        if (!notReady || !ble.isReady()) return;
+        int n = configRetries.merge(f.id, 1, Integer::sum);
+        if (n > CONFIG_RETRIES) return;
+        Logger.log("Bike: " + BikeFrames.name(f.id) + " not ready yet, asking again (" + n + ")");
+        requests.submit(new BikeRequests.Request(KawaProtocol.readRequest(f.id), BikeFrames.name(f.id) + " request",
+                BikeRequests.DATA_OR_ACK, BikeRequests.STARTUP, null));
     }
 
     /** Asks for the vehicle info (odometer, fuel, range…) again when the last answer is older than {@link #INFO_POLL_MS}. */

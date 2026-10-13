@@ -20,6 +20,22 @@ public final class BikeData {
     public BikeFrames.VehicleSettings settings;
     public BikeFrames.ServiceIndicator service;
     public long infoAt, extAt, liveAt, settingsAt, serviceAt, generalAt;
+    /** Where the phone was when the link to the bike was lost (≈ where the bike was parked), or null. */
+    public Place parked;
+
+    /** A GPS position with its accuracy and time. */
+    public static final class Place {
+        public final double lat, lon;
+        public final float accuracyM;
+        public final long at;
+
+        public Place(double lat, double lon, float accuracyM, long at) {
+            this.lat = lat;
+            this.lon = lon;
+            this.accuracyM = accuracyM;
+            this.at = at;
+        }
+    }
 
     /** Debug: frames received per type since connecting, the last one and when. */
     public final int[] count = new int[256];

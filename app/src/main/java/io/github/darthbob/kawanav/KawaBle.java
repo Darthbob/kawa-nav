@@ -38,6 +38,9 @@ public final class KawaBle {
 
         /** Debug: the meter's services and characteristics, see {@link #setDumpServices}. */
         void onServicesDump(String dump);
+
+        /** A frame was handed to Android for writing (debug capture). */
+        default void onTx(byte[] frame) {}
     }
 
     private static final long OP_TIMEOUT_MS = 3000;
@@ -46,6 +49,16 @@ public final class KawaBle {
     private static final long STREAM_LOG_MS = 30_000;
     /** Service discovery sometimes misses the Kawasaki service: discover again this often before reconnecting. */
     private static final int DISCOVERY_RETRIES = 2;
+    /** Android still busy with an earlier write (its callback came after our timeout): try again this soon. */
+    private static final long BUSY_RETRY_MS = 100;
+    /** ... at most this often in a row; then the link counts as stuck and is reconnected. */
+    private static final int BUSY_RETRIES = 30;
+    private static final long RECONNECT_MS = 3000;
+    /** Android's "a write is still pending" result (BluetoothStatusCodes.ERROR_GATT_WRITE_REQUEST_BUSY). */
+    private static final int WRITE_BUSY = 201;
+
+    /** Which GATT callback the running op waits for; callbacks for anything else are late and ignored. */
+    private static final int WAIT_NONE = 0, WAIT_WRITE = 1, WAIT_DESCRIPTOR = 2, WAIT_READ = 3;
 
     private final Context context;
     private final Listener listener;
@@ -58,6 +71,22 @@ public final class KawaBle {
         log("GATT op timed out, continuing");
         opDone();
     };
+    private int waiting;
+    private int busyRetries;
+    private final Runnable busyRetry = () -> {
+        if (KawaBle.this.gatt == null) return;
+        if (++busyRetries > BUSY_RETRIES) {
+            log("Bluetooth stays busy: reconnecting");
+            busyRetries = 0;
+            disconnect();
+            KawaBle.this.listener.onLinkLost();
+            return;
+        }
+        busy = false;
+        next();
+    };
+    /** Connects in a row that found no Kawasaki service (wrong device, stale cache): reconnects slow down. */
+    private int missingStreak;
 
     private BluetoothGatt gatt;
     private BluetoothGattCharacteristic writeChar;
@@ -91,6 +120,14 @@ public final class KawaBle {
         return ready;
     }
 
+    /**
+     * How long to wait before connecting again after a link loss: 3 s, longer each time in a row the
+     * device turned out to have no Kawasaki service (up to 5 min).
+     */
+    public long reconnectDelayMs() {
+        return missingStreak == 0 ? RECONNECT_MS : Math.min(300_000, RECONNECT_MS << Math.min(missingStreak, 7));
+    }
+
     /** ATT MTU negotiated on this connection (23 until the meter answered the MTU request). */
     public int mtu() {
         return mtu;
@@ -115,6 +152,8 @@ public final class KawaBle {
 
     public void disconnect() {
         main.removeCallbacks(opTimeout);
+        main.removeCallbacks(busyRetry);
+        waiting = WAIT_NONE;
         queue.clear();
         urgent.clear();
         urgentLabels.clear();
@@ -146,7 +185,7 @@ public final class KawaBle {
             return false;
         }
         if (!urgent) {
-            enqueue(() -> send(data, label));
+            enqueue(() -> send(data, label, false));
             return true;
         }
         int type = data[0] & 0xFF;
@@ -159,15 +198,36 @@ public final class KawaBle {
         return true;
     }
 
-    private void send(byte[] data, String label) {
+    private void send(byte[] data, String label, boolean urgent) {
+        waiting = WAIT_WRITE;
         int rc = gatt.writeCharacteristic(writeChar, data, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-        // the bridge repeats the same frames; only log changes and errors
         int type = data[0] & 0xFF;
+        if (rc == WRITE_BUSY) {
+            // Android still waits for an earlier write's answer (late after our timeout): keep this frame
+            // first in its lane and try again shortly, instead of failing everything queued behind it
+            waiting = WAIT_NONE;
+            main.removeCallbacks(opTimeout);
+            if (!urgent) {
+                queue.addFirst(() -> send(data, label, false));
+            } else if (!urgentLabels.containsKey(type)) {
+                this.urgent.addFirst(data);
+                urgentLabels.put(type, label);
+            }
+            main.removeCallbacks(busyRetry);
+            main.postDelayed(busyRetry, BUSY_RETRY_MS);
+            return;
+        }
+        busyRetries = 0;
+        // the bridge repeats the same frames; only log changes and errors
         if (rc != BluetoothGatt.GATT_SUCCESS || !java.util.Arrays.equals(data, lastTx[type])) {
             log("TX " + label + ": " + KawaProtocol.hex(data) + (rc == BluetoothGatt.GATT_SUCCESS ? "" : "  (rc=" + rc + ")"));
         }
         lastTx[type] = data;
-        if (rc != BluetoothGatt.GATT_SUCCESS) opDone();
+        if (rc == BluetoothGatt.GATT_SUCCESS) {
+            listener.onTx(data);
+        } else {
+            opDone();
+        }
     }
 
     private void enqueue(Runnable op) {
@@ -190,7 +250,7 @@ public final class KawaBle {
         busy = true;
         main.postDelayed(opTimeout, OP_TIMEOUT_MS);
         if (frame != null) {
-            send(frame, urgentLabels.remove(frame[0] & 0xFF));
+            send(frame, urgentLabels.remove(frame[0] & 0xFF), true);
         } else {
             op.run();
         }
@@ -198,6 +258,7 @@ public final class KawaBle {
 
     private void opDone() {
         main.removeCallbacks(opTimeout);
+        waiting = WAIT_NONE;
         busy = false;
         next();
     }
@@ -220,23 +281,27 @@ public final class KawaBle {
         BluetoothGattService svc = g.getService(KawaProtocol.SERVICE);
         writeChar = svc == null ? null : svc.getCharacteristic(KawaProtocol.WRITE_CHAR);
         if (writeChar == null) {
-            if (svc == null) {
-                log("Kawasaki BLE5 service not found. Services on device:");
-                for (BluetoothGattService s : g.getServices()) log("  " + s.getUuid());
-            } else {
-                log("Write characteristic not found");
+            if (discoveries == 0 && missingStreak == 0) {
+                if (svc == null) {
+                    log("Kawasaki BLE5 service not found. Services on device:");
+                    for (BluetoothGattService s : g.getServices()) log("  " + s.getUuid());
+                } else {
+                    log("Write characteristic not found");
+                }
             }
             // the bike's stack sometimes reports an incomplete list: look again, then reconnect
             if (discoveries++ < DISCOVERY_RETRIES) {
                 log("Discovering services again");
                 g.discoverServices();
             } else {
-                log("Kawasaki service still missing: reconnecting");
+                missingStreak++;
+                log("Kawasaki service still missing: reconnecting in " + reconnectDelayMs() / 1000 + " s");
                 disconnect();
                 listener.onLinkLost();
             }
             return;
         }
+        missingStreak = 0;
         if (dumpServices) dump(g);
         java.util.Arrays.fill(rxCount, 0);
         java.util.Arrays.fill(rxCountLogged, 0);
@@ -249,6 +314,7 @@ public final class KawaBle {
                 continue;
             }
             enqueue(() -> {
+                waiting = WAIT_DESCRIPTOR;
                 g.setCharacteristicNotification(c, true);
                 BluetoothGattDescriptor d = c.getDescriptor(KawaProtocol.CCCD);
                 if (d == null) {
@@ -282,6 +348,7 @@ public final class KawaBle {
                 if (noRead || !GattNames.isStandard(c.getUuid())
                         || (c.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) == 0) continue;
                 enqueue(() -> {
+                    waiting = WAIT_READ;
                     readLines = lines;
                     readIndex = idx;
                     if (!g.readCharacteristic(c)) {
@@ -324,7 +391,10 @@ public final class KawaBle {
         byte[] last = lastRx[type];
         lastRx[type] = v;
         String head = "RX " + id.toString().substring(0, 8) + ": ";
-        if (streamed ? rxCount[type] == 1 : last == null || !sameIgnoringCounter(last, v)) {
+        if (type == BikeFrames.MODEL_INFO) {
+            // carries the VIN in plain text: never into the log (users share it)
+            if (last == null) log(head + "03 model info (" + v.length + " bytes, not logged: VIN)");
+        } else if (streamed ? rxCount[type] == 1 : last == null || !sameIgnoringCounter(last, v)) {
             log(head + KawaProtocol.hex(v));
         }
         long now = System.currentTimeMillis();
@@ -386,6 +456,7 @@ public final class KawaBle {
         @Override
         public void onDescriptorWrite(BluetoothGatt g, BluetoothGattDescriptor d, int status) {
             main.post(() -> {
+                if (g != gatt || waiting != WAIT_DESCRIPTOR) return; // late, after a timeout
                 log("Notify on " + d.getCharacteristic().getUuid().toString().substring(0, 8)
                         + (status == BluetoothGatt.GATT_SUCCESS ? " enabled" : " failed, status " + status));
                 opDone();
@@ -395,6 +466,7 @@ public final class KawaBle {
         @Override
         public void onCharacteristicWrite(BluetoothGatt g, BluetoothGattCharacteristic c, int status) {
             main.post(() -> {
+                if (g != gatt || waiting != WAIT_WRITE) return; // late, after a timeout
                 if (status != BluetoothGatt.GATT_SUCCESS) log("Write failed, status " + status);
                 opDone();
             });
@@ -403,6 +475,7 @@ public final class KawaBle {
         @Override
         public void onCharacteristicRead(BluetoothGatt g, BluetoothGattCharacteristic c, byte[] value, int status) {
             main.post(() -> {
+                if (g != gatt || waiting != WAIT_READ) return; // late, after a timeout
                 if (readLines != null && readIndex >= 0) {
                     readLines.set(readIndex, readLines.get(readIndex) + " = "
                             + (status == BluetoothGatt.GATT_SUCCESS ? GattNames.value(value) : "(status " + status + ")"));
