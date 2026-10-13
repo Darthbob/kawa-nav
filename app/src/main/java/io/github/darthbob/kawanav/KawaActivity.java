@@ -95,6 +95,27 @@ public abstract class KawaActivity extends Activity {
         return t;
     }
 
+    /** A small icon, tinted for the current theme (quiet by default, accent on request). */
+    protected android.widget.ImageView icon(int drawable, boolean accent) {
+        android.widget.ImageView v = new android.widget.ImageView(this);
+        v.setImageResource(drawable);
+        int size = dp(20);
+        v.setLayoutParams(new LinearLayout.LayoutParams(size, size));
+        v.setColorFilter(accent ? Ui.accentText(night) : Ui.inkSecondary(night));
+        v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return v;
+    }
+
+    /** An icon followed by a gap, to put in front of a title. */
+    protected LinearLayout iconTitle(int drawable, TextView title) {
+        LinearLayout r = row();
+        r.addView(icon(drawable, false));
+        LinearLayout.LayoutParams lp = weight();
+        lp.leftMargin = dp(Ui.SPACE2);
+        r.addView(title, lp);
+        return r;
+    }
+
     /** The name of a row or of a value's label. */
     protected TextView itemTitle(String s) {
         TextView t = text(15, false);
@@ -127,8 +148,23 @@ public abstract class KawaActivity extends Activity {
         t.setText(s.toUpperCase(Locale.ROOT));
         t.setTextColor(Ui.inkSecondary(night));
         t.setLetterSpacing(0.08f);
-        t.setPadding(dp(4), dp(Ui.SPACE4), dp(4), dp(Ui.SPACE1));
         return t;
+    }
+
+    /** A section header with its icon: icon, then the label, with the section's air around it. */
+    protected LinearLayout sectionHeader(int drawable, String s) {
+        LinearLayout r = row();
+        r.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE4), dp(Ui.SPACE1), dp(Ui.SPACE1));
+        if (drawable != 0) r.addView(icon(drawable, false), iconGap());
+        r.addView(sectionHeader(s), weight());
+        return r;
+    }
+
+    /** The room a small icon takes in front of a label (18 dp + a small gap). */
+    protected LinearLayout.LayoutParams iconGap() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(18), dp(18));
+        lp.rightMargin = dp(Ui.SPACE1);
+        return lp;
     }
 
     // ------------------------------------------------------------------ containers
@@ -184,9 +220,19 @@ public abstract class KawaActivity extends Activity {
 
     /** A tappable row: title, up to two lines under it, and a chevron when it opens something. */
     protected View listRow(String title, String line1, String line2, boolean chevron, View.OnClickListener l) {
+        return listRow(0, title, line1, line2, chevron, l);
+    }
+
+    /** @param drawable a leading icon, or 0 for none */
+    protected View listRow(int drawable, String title, String line1, String line2, boolean chevron, View.OnClickListener l) {
         LinearLayout r = row();
         r.setPadding(0, dp(Ui.ROW_PAD_V), 0, dp(Ui.ROW_PAD_V));
         r.setMinimumHeight(dp(Ui.TOUCH_MIN));
+        if (drawable != 0) {
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(20), dp(20));
+            lp.rightMargin = dp(Ui.SPACE3);
+            r.addView(icon(drawable, false), lp);
+        }
         LinearLayout t = column();
         t.addView(itemTitle(title));
         if (line1 != null && !line1.isEmpty()) t.addView(secondary(line1));

@@ -581,10 +581,14 @@ public class MainActivity extends KawaActivity {
         LinearLayout c = group();
         LinearLayout head = row();
         head.setPadding(0, dp(10), 0, 0);
+        head.addView(icon(R.drawable.ic_route, false), iconGap());
         head.addView(itemTitle("Ride recording"), weight());
-        rideStatus = secondary("");
-        head.addView(rideStatus);
         c.addView(head);
+        // the state on its own line: a long one ("Start KawaNav before recording a ride") would squeeze
+        // the title into a column at large font sizes
+        rideStatus = secondary("");
+        rideStatus.setPadding(0, dp(2), 0, 0);
+        c.addView(rideStatus);
 
         LinearLayout buttons = row();
         buttons.setPadding(0, dp(10), 0, dp(12));
@@ -598,7 +602,8 @@ public class MainActivity extends KawaActivity {
         buttons.addView(ridePauseButton, weight());
         c.addView(buttons);
 
-        addRow(c, listRow("Recorded rides", "Everything you have recorded, with track and charts", null, true,
+        addRow(c, listRow(R.drawable.ic_list, "Recorded rides",
+                "Everything you have recorded, with track and charts", null, true,
                 v -> startActivity(new Intent(this, RidesActivity.class))));
         return c;
     }
@@ -621,6 +626,7 @@ public class MainActivity extends KawaActivity {
         LinearLayout head = row();
         head.setPadding(0, dp(10), 0, 0);
         bikeTitle = itemTitle("Your bike");
+        head.addView(icon(R.drawable.ic_moto, false), iconGap());
         head.addView(bikeTitle, weight());
         bikeUpdated = secondary("");
         head.addView(bikeUpdated);
@@ -662,7 +668,14 @@ public class MainActivity extends KawaActivity {
         banner.setLayoutParams(lp);
         bannerTitle = text(17, true);
         bannerTitle.setTextColor(Ui.bannerInk());
-        banner.addView(bannerTitle);
+        LinearLayout bannerHead = row();
+        android.widget.ImageView warn = icon(R.drawable.ic_alert, false);
+        warn.setColorFilter(Ui.bannerInk());
+        bannerHead.addView(warn);
+        LinearLayout.LayoutParams warnLp = weight();
+        warnLp.leftMargin = dp(Ui.SPACE2);
+        bannerHead.addView(bannerTitle, warnLp);
+        banner.addView(bannerHead);
         TextView sub = text(13, false);
         sub.setTextColor(Ui.bannerInk());
         sub.setText("For the best experience on the bike:");
@@ -734,8 +747,8 @@ public class MainActivity extends KawaActivity {
      * A section whose rows fold away, with a one-line summary in the header: long option lists stay out
      * of the way, but nothing disappears without a trace. The state is remembered.
      */
-    private LinearLayout collapsibleSection(String title, String key, boolean openByDefault, LinearLayout body,
-                                            TextView summary) {
+    private LinearLayout collapsibleSection(int drawable, String title, String key, boolean openByDefault,
+                                            LinearLayout body, TextView summary) {
         LinearLayout section = column();
         LinearLayout head = row();
         head.setPadding(dp(Ui.SPACE1), dp(14), dp(Ui.SPACE1), dp(4));
@@ -748,6 +761,7 @@ public class MainActivity extends KawaActivity {
         t.setTextColor(Ui.inkSecondary(night));
         t.setLetterSpacing(0.08f);
         head.addView(chev);
+        head.addView(icon(drawable, false), iconGap());
         head.addView(t, weight());
         summary.setTextColor(Ui.inkSecondary(night));
         summary.setTextSize(13);
@@ -768,7 +782,7 @@ public class MainActivity extends KawaActivity {
 
     private LinearLayout autostartCard() {
         LinearLayout section = column();
-        section.addView(sectionHeader("Start automatically"));
+        section.addView(sectionHeader(R.drawable.ic_clock, "Start automatically"));
         LinearLayout c = group();
         LinearLayout bikeRow = settingRow();
         LinearLayout bt = column();
@@ -865,7 +879,7 @@ public class MainActivity extends KawaActivity {
         addRow(c, switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
         addRow(c, switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
         ridingSummary = secondary("");
-        return collapsibleSection("On the road", Hub.KEY_OPEN_RIDING, false, c, ridingSummary);
+        return collapsibleSection(R.drawable.ic_road, "On the road", Hub.KEY_OPEN_RIDING, false, c, ridingSummary);
     }
 
     private LinearLayout offlineCard() {
@@ -914,7 +928,7 @@ public class MainActivity extends KawaActivity {
         refreshRegions();
         offlineSummary = secondary("");
         offlineBody = c;
-        return collapsibleSection("Offline maps", Hub.KEY_OPEN_OFFLINE, false, c, offlineSummary);
+        return collapsibleSection(R.drawable.ic_map, "Offline maps", Hub.KEY_OPEN_OFFLINE, false, c, offlineSummary);
     }
 
     /** Debug builds: seven taps on the title show or hide the debug card. */

@@ -100,7 +100,7 @@ public class RideActivity extends KawaActivity {
 
     private LinearLayout trackCard() {
         LinearLayout c = card();
-        c.addView(cardTitle("Track"));
+        c.addView(iconTitle(R.drawable.ic_route, cardTitle("Track")));
         track = new TrackView(this);
         track.setBackgroundColor(Ui.surfaceSunken(night));
         LinearLayout.LayoutParams lp = matchWrap();
@@ -115,7 +115,7 @@ public class RideActivity extends KawaActivity {
     private LinearLayout chartCard() {
         LinearLayout c = card();
         LinearLayout head = row();
-        head.addView(cardTitle("Values"), weight());
+        head.addView(iconTitle(R.drawable.ic_speed, cardTitle("Values")), weight());
         String[] names = new String[SERIES.length];
         for (int i = 0; i < SERIES.length; i++) names[i] = SERIES[i].title;
         seriesSpinner = spinner(names, 0);
@@ -172,7 +172,7 @@ public class RideActivity extends KawaActivity {
     private void showSummary(Ride r) {
         summary.removeAllViews();
         LinearLayout section = column();
-        section.addView(sectionHeader("Summary"));
+        section.addView(sectionHeader(R.drawable.ic_speed, "Summary"));
         LinearLayout tiles = statGrid(2,
                 statTile("Distance", r.distance()),
                 statTile("Time", r.duration()),
@@ -206,7 +206,7 @@ public class RideActivity extends KawaActivity {
 
     private LinearLayout actionsCard() {
         LinearLayout c = card();
-        c.addView(cardTitle("Keep or share"));
+        c.addView(iconTitle(R.drawable.ic_share, cardTitle("Keep or share")));
         LinearLayout e = row();
         e.setPadding(0, dp(6), 0, 0);
         e.addView(primaryButton("Export CSV", v -> export("csv")), weight());

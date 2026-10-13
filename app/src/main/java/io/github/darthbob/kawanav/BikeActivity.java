@@ -38,6 +38,18 @@ public class BikeActivity extends KawaActivity {
     private LinearLayout parkedCard;
     private TextView parkedText;
     private Button parkedNavigate;
+    /** The icon of a value group: what the rows behind it are about. Unknown groups get none. */
+    private static int sectionIcon(String section) {
+        switch (section) {
+            case "On the dash": return R.drawable.ic_speed;
+            case "Engine": return R.drawable.ic_thermo;
+            case "Maintenance": return R.drawable.ic_sliders;
+            case "Dash": return R.drawable.ic_clock;
+            default:
+                return section.startsWith("Riding modes") ? R.drawable.ic_sliders : 0;
+        }
+    }
+
     /** Row labels shown now; the sections are only rebuilt when they change (keeps the scroll position). */
     private List<String> shownLabels = new ArrayList<>();
     private final List<TextView> valueViews = new ArrayList<>();
@@ -100,7 +112,7 @@ public class BikeActivity extends KawaActivity {
     private LinearLayout settingsCard() {
         LinearLayout section = column();
         LinearLayout headRow = row();
-        headRow.addView(sectionHeader("Ride settings"), weight());
+        headRow.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"), weight());
         headRow.addView(pill("DEBUG", 0x336BBE45, Ui.accentText(night)));
         section.addView(headRow);
         LinearLayout c = group();
@@ -158,7 +170,7 @@ public class BikeActivity extends KawaActivity {
 
     private LinearLayout parkedCard() {
         LinearLayout section = column();
-        section.addView(sectionHeader("Parked"));
+        section.addView(sectionHeader(R.drawable.ic_pin, "Parked"));
         LinearLayout c = group();
         parkedText = secondary("");
         c.addView(parkedText);
@@ -252,7 +264,7 @@ public class BikeActivity extends KawaActivity {
             if (!r[0].equals(section)) {
                 section = r[0];
                 LinearLayout container = column();
-                container.addView(sectionHeader(section));
+                container.addView(sectionHeader(sectionIcon(section), section));
                 group = group();
                 container.addView(group);
                 sections.addView(container);
