@@ -29,6 +29,11 @@ public class BikeActivity extends KawaActivity {
     private TextView vin;
     private TextView updated;
     private LinearLayout sections;
+    // ride settings (debug builds until this has been tried on a bike)
+    private LinearLayout settingsCard;
+    private android.widget.Spinner modeSpinner, powerSpinner, ktrcSpinner, kqsSpinner;
+    private TextView settingsStatus;
+    private Button settingsSend;
     private LinearLayout parkedCard;
     private TextView parkedText;
     private Button parkedNavigate;
@@ -57,6 +62,7 @@ public class BikeActivity extends KawaActivity {
         root.addView(updated);
         sections = column();
         root.addView(sections);
+        root.addView(settingsCard());
         root.addView(parkedCard());
         TextView note = secondary("Values as the bike reported them when it was last connected. Tap the VIN to show "
                 + "all of it.");
@@ -85,6 +91,65 @@ public class BikeActivity extends KawaActivity {
             handler.postDelayed(this, 1000);
         }
     };
+
+    /**
+     * Sends ride settings to the bike: riding mode, power, KTRC and KQS. Only in debug builds for now —
+     * the write has never been tried on a bike — and only while the bike is standing still, in neutral
+     * and with the throttle closed (the app itself only wants it standing still).
+     */
+    private LinearLayout settingsCard() {
+        LinearLayout c = card();
+        c.addView(cardTitle("Ride settings"));
+        c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
+                + "screen. The bike must be standing still, in neutral and with the throttle closed."));
+        modeSpinner = spinner(SettingsWrite.MODES, 0);
+        powerSpinner = spinner(SettingsWrite.POWER, 0);
+        ktrcSpinner = spinner(SettingsWrite.KTRC, 0);
+        kqsSpinner = spinner(SettingsWrite.ON_OFF, 0);
+        c.addView(settingRowWith("Riding mode", modeSpinner));
+        c.addView(settingRowWith("Power", powerSpinner));
+        c.addView(settingRowWith("KTRC", ktrcSpinner));
+        c.addView(settingRowWith("KQS", kqsSpinner));
+        settingsStatus = secondary("");
+        settingsStatus.setPadding(0, dp(6), 0, 0);
+        c.addView(settingsStatus);
+        settingsSend = primaryButton("Send to the bike", v -> confirmSend());
+        c.addView(settingsSend, matchWrap());
+        c.setVisibility(View.GONE);
+        settingsCard = c;
+        return c;
+    }
+
+    private LinearLayout settingRowWith(String label, android.widget.Spinner s) {
+        LinearLayout r = settingRow();
+        r.addView(itemTitle(label), weight());
+        r.addView(s, controlWidth());
+        return r;
+    }
+
+    private void confirmSend() {
+        BikeFrames.VehicleSettings s = Hub.bike.settings;
+        String now = s == null ? "unknown" : "mode " + s.ridingMode + ", power " + s.power + ", KTRC " + s.ktrc
+                + ", KQS " + s.kqs + " (numbers as the bike reports them)";
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Send settings to the bike?")
+                .setMessage("The bike must stand still, be in neutral and have the throttle closed. KawaNav "
+                        + "re-checks this before sending and reads the settings back afterwards.\n\nOn the bike now: "
+                        + now + "\n\nSending: " + SettingsWrite.MODES[modeSpinner.getSelectedItemPosition()] + ", power "
+                        + SettingsWrite.POWER[powerSpinner.getSelectedItemPosition()] + ", KTRC "
+                        + SettingsWrite.KTRC[ktrcSpinner.getSelectedItemPosition()] + ", KQS "
+                        + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()] + ".")
+                .setPositiveButton("Send", (d, w) -> {
+                    String problem = BridgeService.writeSettings(modeSpinner.getSelectedItemPosition(),
+                            powerSpinner.getSelectedItemPosition(), ktrcSpinner.getSelectedItemPosition(),
+                            kqsSpinner.getSelectedItemPosition(), 0, "");
+                    if (problem != null) {
+                        settingsStatus.setText("Not sent: " + problem);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
 
     private LinearLayout parkedCard() {
         LinearLayout c = card();
@@ -131,6 +196,22 @@ public class BikeActivity extends KawaActivity {
                 String v = rows.get(i)[2];
                 if (!v.contentEquals(valueViews.get(i).getText())) valueViews.get(i).setText(v);
             }
+        }
+
+        boolean canWrite = Hub.DEBUG_TOOLS && Hub.bikeConnected && b.tuning != null && b.tuning.any();
+        settingsCard.setVisibility(canWrite ? View.VISIBLE : View.GONE);
+        if (canWrite) {
+            BikeFrames.VehicleSettings s = b.settings;
+            if (s != null && !settingsSend.isEnabled()) { // prefill from the bike right after connecting
+                if (s.ridingMode >= 0 && s.ridingMode < SettingsWrite.MODES.length) modeSpinner.setSelection(s.ridingMode);
+                if (s.power >= 0 && s.power < SettingsWrite.POWER.length) powerSpinner.setSelection(s.power);
+                int k = SettingsWrite.ktrcFromWire(s.ktrc);
+                if (k >= 0) ktrcSpinner.setSelection(k);
+                if (s.kqs >= 0 && s.kqs < SettingsWrite.ON_OFF.length) kqsSpinner.setSelection(s.kqs);
+            }
+            settingsSend.setEnabled(true);
+            String job = BridgeService.settingsJob;
+            settingsStatus.setText(job.isEmpty() ? "Ready" : job);
         }
 
         BikeData.Place p = b.parked;

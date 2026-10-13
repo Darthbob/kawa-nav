@@ -68,6 +68,8 @@ public final class Hub {
     public static final BikeData bike = new BikeData();
     /** ATT MTU of the current connection, for the debug card. */
     public static int bikeMtu;
+    /** Settings write waiting for the meter's answer, see {@link BridgeService#writeSettings}. */
+    public static BridgeService.PendingSettings settingsWritePending;
     /** Last GPS fix any part of KawaNav got (curves, ride recorder), or null. */
     public static android.location.Location lastFix;
 

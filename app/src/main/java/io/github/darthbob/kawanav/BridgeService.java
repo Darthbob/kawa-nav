@@ -151,6 +151,94 @@ public class BridgeService extends Service implements KawaBle.Listener {
         return true;
     }
 
+    /** Progress of a settings write, "" when none is running; shown on the bike screen. */
+    public static String settingsJob = "";
+
+    /**
+     * Writes ride settings to the bike: riding mode, power, KTRC, KQS and the profile name. Only from
+     * debug builds for now (it has never been tried on a bike), only while standing still, in neutral and
+     * with the throttle closed. Returns null when the job started, else why it did not.
+     */
+    public static String writeSettings(int mode, int power, int ktrcLevel, int kqs, int kebc, String name) {
+        if (!Hub.DEBUG_TOOLS) return "writing settings is not enabled in this build yet";
+        if (instance == null || !instance.ble.isReady()) return "the bike is not connected";
+        if (!instance.requests.idle()) return "the bike is still answering another request, try again";
+        long age = System.currentTimeMillis() - Hub.bike.liveAt;
+        String blocked = SettingsWrite.blockedBecause(Hub.bike.live, age, Hub.bike.tuning);
+        if (blocked != null) return blocked;
+        int ktrc = SettingsWrite.ktrcWire(ktrcLevel);
+        byte[] frame = SettingsWrite.frame(mode, power, ktrc, kqs, kebc, name);
+        Hub.settingsWritePending = new PendingSettings(mode, power, ktrcLevel, kqs, kebc, name);
+        settingsJob = "Sending…";
+        Logger.log("Bike: sending settings (mode " + mode + ", power " + power + ", KTRC " + ktrcLevel
+                + ", KQS " + kqs + ")");
+        instance.requests.submit(new BikeRequests.Request(frame, "vehicle settings write",
+                BikeRequests.DATA_OR_ACK, BikeRequests.USER, (r, ok, result) -> instance.afterSettingsWrite(ok, result)));
+        return null;
+    }
+
+    /** What the rider asked for, to compare with the bike's answer and to re-read afterwards. */
+    public static final class PendingSettings {
+        public final int mode, power, ktrc, kqs, kebc;
+        public final String name;
+
+        PendingSettings(int mode, int power, int ktrc, int kqs, int kebc, String name) {
+            this.mode = mode;
+            this.power = power;
+            this.ktrc = ktrc;
+            this.kqs = kqs;
+            this.kebc = kebc;
+            this.name = name;
+        }
+    }
+
+    /** The meter answered the write: 0 = done (re-read and check), 0x10 = it is applying it, else rejected. */
+    private void afterSettingsWrite(boolean answered, int rawResult) {
+        PendingSettings p = Hub.settingsWritePending;
+        if (p == null) return;
+        if (!answered) {
+            settingsJob = "";
+            Hub.settingsWritePending = null;
+            Logger.log("Bike: no answer to the settings write; nothing was changed as far as we know");
+            return;
+        }
+        int result = SettingsWrite.result(Hub.bike.last[BikeFrames.VEHICLE_SETTINGS]);
+        if (result == SettingsWrite.RESULT_WAIT) {
+            settingsJob = "The meter is applying it…";
+            Logger.log("Bike: " + SettingsWrite.describeResult(result));
+            return; // the meter finishes on its own and answers again (PROTOCOL.md)
+        }
+        if (result != SettingsWrite.RESULT_OK) {
+            settingsJob = "";
+            Hub.settingsWritePending = null;
+            Logger.log("Bike: settings write " + SettingsWrite.describeResult(result));
+            return;
+        }
+        settingsJob = "Reading the settings back…";
+        Logger.log("Bike: settings write accepted, reading back");
+        instance.requests.submit(new BikeRequests.Request(KawaProtocol.vehicleSettingsRead(), "vehicle settings read",
+                BikeRequests.DATA_OR_ACK, BikeRequests.USER, (r, ok, res) -> instance.verifySettings()));
+    }
+
+    /** Compares the bike's settings with what was asked for, once the re-read arrived. */
+    private void verifySettings() {
+        PendingSettings p = Hub.settingsWritePending;
+        Hub.settingsWritePending = null;
+        settingsJob = "";
+        if (p == null || Hub.bike.settings == null) return;
+        BikeFrames.VehicleSettings s = Hub.bike.settings;
+        boolean ok = s.ridingMode == p.mode && s.power == p.power && ktrcMatches(s.ktrc, p.ktrc)
+                && (p.kqs == 0 || s.kqs == 1) && SettingsWrite.ktrcFromWire(s.ktrc) >= 0;
+        Logger.log("Bike: settings read back: mode " + s.ridingMode + ", power " + s.power + ", KTRC "
+                + s.ktrc + ", KQS " + s.kqs + " -> " + (ok ? "as asked" : "NOT as asked"));
+    }
+
+    /** The bike reports the KTRC field; the app sends OFF as 10. */
+    private static boolean ktrcMatches(int onBike, int askedLevel) {
+        return onBike == SettingsWrite.ktrcWire(askedLevel)
+                || (askedLevel == 0 && onBike >= 1 && onBike <= 5 && onBike != 0);
+    }
+
     /** Shows or clears a dash icon (call, mail); false when the bike is not connected. */
     public static boolean sendDashAlert(int category, int event) {
         if (instance == null || !instance.ble.isReady()) return false;
