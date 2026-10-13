@@ -16,8 +16,8 @@ android {
         applicationId 'io.github.darthbob.kawanav'
         minSdk 33
         targetSdk 36
-        versionCode 2
-        versionName '0.2'
+        versionCode 3
+        versionName '0.3'
     }
 
     // BuildConfig.DEBUG: the debug card (dash icon tests, phone name, Bluetooth service list) only in debug builds
