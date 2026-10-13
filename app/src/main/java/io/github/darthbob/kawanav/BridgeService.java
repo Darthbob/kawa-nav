@@ -48,6 +48,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private KawaBle ble;
     private CurveEngine curve;
+    /** Decodes the meter's frames; new per connection (it remembers the bike's config frames). */
+    private BikeFrames.Decoder decoder = new BikeFrames.Decoder();
     private int clearsSent;
     /** Status icon fields last sent to the meter (one per 4 bits, -1: none since connecting) and when. */
     private int iconsSent = -1;
@@ -264,6 +266,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             clearsSent = 0;
             iconsSent = -1;
             Hub.bikeCapabilities = null;
+            decoder = new BikeFrames.Decoder();
             ble.write(KawaProtocol.CAPABILITIES_REQUEST, "capabilities request");
             writePhoneName();
             tick();
@@ -273,8 +276,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     @Override
     public void onNotify(java.util.UUID characteristic, byte[] value) {
-        KawaProtocol.Capabilities c = KawaProtocol.parseCapabilities(value);
-        if (c == null) return;
+        BikeFrames.Frame f = decoder.decode(value);
+        if (!(f instanceof BikeFrames.GeneralCaps)) return;
+        BikeFrames.GeneralCaps c = (BikeFrames.GeneralCaps) f;
         Hub.bikeCapabilities = c;
         Logger.log("Bike display: turn-by-turn " + (c.turnByTurn ? "supported" : "NOT supported")
                 + ", status icons " + (c.statusIcons ? "supported" : "NOT supported"));

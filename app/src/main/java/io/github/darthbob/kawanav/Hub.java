@@ -59,7 +59,7 @@ public final class Hub {
     /** Progress of pairing the bike from KawaNav ("" = not pairing). */
     public static String pairStatus = "";
     /** What the connected meter says it can show (null: not known yet). */
-    public static KawaProtocol.Capabilities bikeCapabilities;
+    public static BikeFrames.GeneralCaps bikeCapabilities;
     /** Debug: the meter's Bluetooth services, read once per connect while the debug card is shown. */
     public static String gattDump = "";
     /** Status icons last sent to the meter, for the debug card. */

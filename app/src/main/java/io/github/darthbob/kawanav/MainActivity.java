@@ -854,7 +854,7 @@ public class MainActivity extends KawaActivity {
 
     private void updateUi() {
         if (debugCard != null && debugCard.getVisibility() == View.VISIBLE) {
-            KawaProtocol.Capabilities caps = Hub.bikeCapabilities;
+            BikeFrames.GeneralCaps caps = Hub.bikeCapabilities;
             debugIconsStatus.setText("Bike display: " + (caps == null ? "–" : "turn-by-turn "
                     + (caps.turnByTurn ? "yes" : "no") + ", status icons " + (caps.statusIcons ? "yes" : "no"))
                     + "\nLast sent: " + Hub.iconsStatus);

@@ -1,6 +1,7 @@
 package io.github.darthbob.kawanav;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -151,44 +152,94 @@ public final class KawaProtocol {
     /** Asks the meter what it can show; it answers with a {@link #CAPABILITIES} frame. */
     public static final byte[] CAPABILITIES_REQUEST = {CAPABILITIES, 0, 0};
 
-    /** What the meter says it can show, from its 0x1A answer (Rideology: qe/a.java case 2, oh/b.java). */
-    public static final class Capabilities {
-        public final boolean turnByTurn;
-        public final boolean statusIcons;
+    /** Payload-less read request {@code <id> 00 00}. */
+    public static byte[] readRequest(int id) {
+        return new byte[]{(byte) id, 0, 0};
+    }
 
-        Capabilities(boolean turnByTurn, boolean statusIcons) {
-            this.turnByTurn = turnByTurn;
-            this.statusIcons = statusIcons;
+    /** A request frame of {@code length} bytes, FF-filled, with header {@code id, length - 3, counter, FF, FF}. */
+    private static byte[] request(int id, int length, int counter) {
+        byte[] b = new byte[length];
+        Arrays.fill(b, (byte) 0xFF);
+        b[0] = (byte) id;
+        b[1] = (byte) (length - 3);
+        b[2] = (byte) counter;
+        return b;
+    }
+
+    /** Asks for one settings block: {@code 05 <block> 00} at {@code offset}. */
+    private static void readBlock(byte[] b, int offset, int block) {
+        b[offset] = 5;
+        b[offset + 1] = (byte) block;
+        b[offset + 2] = 0;
+    }
+
+    /** 0x1B: reads the general settings (meter clock, shift lamp), block 0x0A. 15 bytes. */
+    public static byte[] generalSettingsRead() {
+        byte[] b = request(BikeFrames.GENERAL_SETTINGS, 15, 0);
+        readBlock(b, 5, 0x0A);
+        return b;
+    }
+
+    /** 0x48: reads the vehicle settings (riding mode, power, KTRC, KQS…), block 0x09. 45 bytes. */
+    public static byte[] vehicleSettingsRead() {
+        byte[] b = request(BikeFrames.VEHICLE_SETTINGS, 45, 0);
+        readBlock(b, 5, 0x09);
+        return b;
+    }
+
+    /** 0x1E: reads the three maintenance reminders, blocks 0x0C, 0x0D, 0x0E. 45 bytes, counter 01 as captured. */
+    public static byte[] serviceIndicatorRead() {
+        byte[] b = request(BikeFrames.SERVICE_INDICATOR, 45, 1);
+        readBlock(b, 5, 0x0C);
+        readBlock(b, 15, 0x0D);
+        readBlock(b, 25, 0x0E);
+        return b;
+    }
+
+    /**
+     * 0x08 "meter indication init" exactly as Rideology sends it: block 0A, command 08, enabled, then
+     * 120, 1000, 200, 100 (meaning not known yet, possibly riding-log stream periods).
+     */
+    public static byte[] meterInitFrame() {
+        return new byte[]{0x08, 0x0C, 0x00, (byte) 0xFF, (byte) 0xFF, 0x0A, 0x08, 0x01, 0x78, 0x03, (byte) 0xE8,
+                0x00, (byte) 0xC8, 0x00, 0x64};
+    }
+
+    /** Connect sequence: off (KawaNav v0.3: only the capability request), read-only, or Rideology's full one. */
+    public static final int INIT_NONE = 0, INIT_READ = 1, INIT_FULL = 2;
+
+    /**
+     * The requests sent after connecting, in Rideology's order (03, 40, 1A, 1D, 47, 0B, 41, 1B, 48, 1E,
+     * 08, 45; 42 left out, it is for EV/HEV bikes). {@link #INIT_READ} only asks for information; the
+     * full sequence also sends the phone name and the 0x08 init and starts the 0x45 riding-log frames.
+     */
+    public static List<BikeRequests.Request> startup(int level, String phoneModel, BikeRequests.Done done) {
+        List<BikeRequests.Request> l = new java.util.ArrayList<>();
+        int p = BikeRequests.STARTUP;
+        if (level == INIT_NONE) {
+            l.add(new BikeRequests.Request(CAPABILITIES_REQUEST, "capabilities request", BikeRequests.DATA_OR_ACK, p, done));
+            return l;
         }
+        boolean full = level >= INIT_FULL;
+        l.add(new BikeRequests.Request(readRequest(BikeFrames.MODEL_INFO), "model info request", BikeRequests.DATA_OR_ACK, p, done));
+        l.add(new BikeRequests.Request(readRequest(BikeFrames.INFO_CONFIG), "vehicle info config request", BikeRequests.DATA_OR_ACK, p, done));
+        l.add(new BikeRequests.Request(CAPABILITIES_REQUEST, "capabilities request", BikeRequests.DATA_OR_ACK, p, done));
+        l.add(new BikeRequests.Request(readRequest(BikeFrames.SERVICE_CONFIG), "maintenance config request", BikeRequests.DATA_OR_ACK, p, done));
+        l.add(new BikeRequests.Request(readRequest(BikeFrames.TUNING_CONFIG), "tuning config request", BikeRequests.DATA_OR_ACK, p, done));
+        if (full && phoneModel != null && !phoneModel.isEmpty()) {
+            l.add(new BikeRequests.Request(phoneNameFrame(phoneModel), "phone name \"" + phoneModel + "\"", BikeRequests.ANY_ACK, p, done));
+        }
+        l.add(new BikeRequests.Request(readRequest(BikeFrames.VEHICLE_INFO), "vehicle info request", BikeRequests.DATA_OR_ACK, p, done));
+        l.add(new BikeRequests.Request(generalSettingsRead(), "general settings read", BikeRequests.DATA_OR_ACK, p, done));
+        l.add(new BikeRequests.Request(vehicleSettingsRead(), "vehicle settings read", BikeRequests.DATA_OR_ACK, p, done));
+        l.add(new BikeRequests.Request(serviceIndicatorRead(), "maintenance read", BikeRequests.DATA_OR_ACK, p, done));
+        if (full) {
+            l.add(new BikeRequests.Request(meterInitFrame(), "meter indication init", BikeRequests.ACK_ONLY, p, done));
+            l.add(new BikeRequests.Request(readRequest(BikeFrames.RIDING_LOG_EXT), "riding log ext request", BikeRequests.ACK_ONLY, p, done));
+        }
+        return l;
     }
-
-    /**
-     * Parses the meter's 0x1A answer, null for any other frame. Turn-by-turn: high nibble of byte 12
-     * is not 15 (Ble5Value.b.l, Rideology sends no navigation frames when it is). Status icons: not all
-     * of byte 11 low nibble = 15 and the 2-bit fields of byte 12 (bits 3-0) and byte 13 (bits 7-4) = 3.
-     */
-    public static Capabilities parseCapabilities(byte[] v) {
-        if (v == null || v.length < 14 || (v[0] & 0xFF) != CAPABILITIES) return null;
-        int b11 = v[11] & 0xFF, b12 = v[12] & 0xFF, b13 = v[13] & 0xFF;
-        boolean turnByTurn = (b12 >>> 4) != 15;
-        boolean noIcons = (b11 & 0x0F) == 15 && ((b12 >>> 2) & 3) == 3 && (b12 & 3) == 3
-                && ((b13 >>> 6) & 3) == 3 && ((b13 >>> 4) & 3) == 3;
-        return new Capabilities(turnByTurn, !noIcons);
-    }
-
-    /**
-     * Payload-less requests Rideology queues right after connecting (ne/c.java case 2).
-     * They ask the bike for model / vehicle info; none of them carry settings.
-     */
-    public static final byte[][] INIT_REQUESTS = {
-            {0x03, 0, 0},
-            {0x40, 0, 0},
-            {0x1A, 0, 0},
-            {0x1D, 0, 0},
-            {0x47, 0, 0},
-            {0x41, 0, 0},
-            {0x45, 0, 0},
-    };
 
     public static String hex(byte[] data) {
         StringBuilder sb = new StringBuilder(data.length * 3);

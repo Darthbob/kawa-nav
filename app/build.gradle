@@ -51,3 +51,8 @@ android {
         }
     }
 }
+
+// Parser and recorder tests run on the JVM (app/src/test); the app itself has no dependencies.
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}
