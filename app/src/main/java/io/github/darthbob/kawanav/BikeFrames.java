@@ -144,7 +144,11 @@ public final class BikeFrames {
     /** 0x1A: what the meter can show and which general settings (clock, shift lamp) it takes. */
     public static final class GeneralCaps extends Frame {
         public final boolean valid;
-        public final int shiftLampType, shiftLampMin, shiftLampMax;
+        /** Byte 7 bits 7-6: 0 = the app may set the meter clock; anything else: leave the clock alone. */
+        public final int clockGate;
+        /** Byte 7 bits 1-0: shift-lamp mode (0 = off/tach/LED list, 3 = off/on, 1-2: not settable). */
+        public final int shiftLampMode;
+        public final int shiftLampMin, shiftLampMax;
         public final boolean shiftLampSettable;
         /** Clock fields the app may set: day, month, year, hour, minute, second. */
         public final boolean[] clockSettable = new boolean[6];
@@ -158,13 +162,17 @@ public final class BikeFrames {
         GeneralCaps(byte[] v) {
             super(v);
             valid = v.length < 15 || !retryRequired(v, 5, 6, 14);
-            shiftLampType = bits(v, 7, 0xC0);
+            clockGate = bits(v, 7, 0xC0);
+            shiftLampMode = bits(v, 7, 0x03);
             shiftLampMax = u8(v, 8);
             shiftLampMin = u8(v, 9);
-            shiftLampSettable = valid && shiftLampMin >= 1 && shiftLampMax <= 61 && shiftLampMin <= shiftLampMax;
+            shiftLampSettable = valid && (shiftLampMode == 0 || shiftLampMode == 3)
+                    && shiftLampMin >= 1 && shiftLampMax <= 61 && shiftLampMin <= shiftLampMax;
             int[][] clock = {{10, 0xC0}, {10, 0x30}, {10, 0x0C}, {10, 0x03}, {11, 0xC0}, {11, 0x30}};
-            // as Zen3515: the clock flags count even while the config is flagged not ready
-            for (int i = 0; i < 6; i++) clockSettable[i] = bits(v, clock[i][0], clock[i][1]) == 0;
+            // the clock may be set only when the gate allows it and the field's own flag is 0
+            for (int i = 0; i < 6; i++) {
+                clockSettable[i] = clockGate == 0 && bits(v, clock[i][0], clock[i][1]) == 0;
+            }
             meterIndication = bits(v, 11, 0x0F);
             navi = bits(v, 12, 0xF0);
             indicatorSubcaps[0] = bits(v, 12, 0x0C);
@@ -383,55 +391,69 @@ public final class BikeFrames {
     }
 
     /**
-     * 0x4A: live riding data (speed, rpm, gear, throttle, lean…), streamed by the meter. Speed, rpm,
-     * throttle and lean have two candidate scalings in Zen3515's code; both are kept until the right one
-     * is confirmed on a BLE5 TFT bike (the Z500 uses {@link #speedKmhRaw} and {@link #rpmRaw}).
+     * 0x4A: live riding data (speed, rpm, gear, throttle, lean…), streamed by the meter without being
+     * asked for. Which of the two scalings per value applies is decided by that value's 0x40 nibble
+     * (Rideology reads the nibble and branches on it, qe/b.java:91-178) — so the values below are
+     * already the right ones; the other reading of the same bytes is kept for the debug card.
      */
     public static final class Telemetry extends Frame {
-        /** Wheel speed: 9-bit km/h (Z500) and u16 / 81.92. */
-        public final int speedKmhRaw;
-        public final double speedKmhScaled;
-        /** Engine rpm: 15-bit (Z500) and u16 / 4. */
-        public final int rpmRaw, rpmQuarter;
-        /** Gear: 0 neutral (to verify), 1..6. */
+        /** Wheel speed in km/h with the scaling the bike's 0x40 nibble selects, NaN when absent. */
+        public final double speedKmh;
+        /** Engine speed in rpm with the selected scaling, -1 when absent. */
+        public final int rpm;
+        /** Gear: 0 neutral, 1..6, -1 when absent. */
         public final int gear;
-        /** Throttle %: mechanical (b14 / 2.55, Z500) and rider request (b14 × 0.78125). */
-        public final double throttleMech, throttleRider;
+        /** Throttle in % (rider request or mechanical, per the nibble), NaN when absent. */
+        public final double throttlePct;
         public final double fuelInjection;
         public final double accelG;
-        /** Lean in degrees, + right / - left (sign to verify): 11-bit × 0.1953125 - 100, or 12-bit × 0.1. */
-        public final double leanDeg, leanDegAlt;
+        /** Lean in degrees, + right / - left (sign to verify on the bike). */
+        public final double leanDeg;
         public final int wheelie;
         public final double wheelieDeg;
         public final int tcsHigh, tcsLow;
         public final double brakeFrontBar;
         /** ABS bits (b37), -1 when absent: 0x10 inspection mode, 0x0C system error, 0x01 front, 0x02 rear active. */
         public final int abs;
+        /** The other reading of the same bytes, for comparing with the dash (debug card). */
+        public final double speedKmhAlt;
+        public final int rpmAlt;
 
         Telemetry(byte[] v, InfoConfig c) {
             super(v);
             // values sit in 10-byte blocks like the other frames; a block whose header is FF is absent
             boolean blk1 = blockOk(v, 5), blk2 = blockOk(v, 15);
-            boolean b9 = blk1 && v.length > 10 && has(c, InfoConfig.WHEEL_SPEED);
-            speedKmhRaw = b9 ? (u8(v, 9) & 0x01) << 8 | u8(v, 10) : -1;
-            speedKmhScaled = b9 ? be16(v, 9) * 0.01220703125 : Double.NaN;
-            boolean b11 = blk1 && v.length > 12 && has(c, InfoConfig.ENGINE_SPEED);
-            rpmRaw = b11 ? (u8(v, 11) & 0x7F) << 8 | u8(v, 12) : -1;
-            rpmQuarter = b11 ? be16(v, 11) / 4 : -1;
+            int speedMode = mode(c, InfoConfig.WHEEL_SPEED);
+            boolean speedOn = blk1 && speedMode >= 0;
+            double raw9 = ((u8(v, 9) & 0x01) << 8) | u8(v, 10);
+            double scaled = be16(v, 9) * 0.01220703125;
+            speedKmh = speedOn ? (speedMode == 1 ? raw9 : scaled) : Double.NaN;
+            speedKmhAlt = speedOn ? (speedMode == 1 ? scaled : raw9) : Double.NaN;
+            int rpmMode = mode(c, InfoConfig.ENGINE_SPEED);
+            boolean rpmOn = blk1 && rpmMode >= 0;
+            int raw15 = ((u8(v, 11) & 0x7F) << 8) | u8(v, 12);
+            int quarter = be16(v, 11) / 4;
+            rpm = rpmOn ? (rpmMode == 1 ? quarter : raw15) : -1;
+            rpmAlt = rpmOn ? (rpmMode == 1 ? raw15 : quarter) : -1;
             gear = blk1 && v.length > 13 && has(c, InfoConfig.GEAR) ? u8(v, 13) & 0x0F : -1;
-            boolean b14 = blk1 && v.length > 14 && has(c, InfoConfig.THROTTLE);
-            throttleMech = b14 ? u8(v, 14) * 0.3921568627 : Double.NaN;
-            throttleRider = b14 ? u8(v, 14) * 0.78125 : Double.NaN;
-            fuelInjection = blk1 && v.length > 8 && has(c, InfoConfig.FUEL_INJECTION) ? be16(v, 7) * 1e-4 : Double.NaN;
-            accelG = blk2 && v.length > 18 && has(c, InfoConfig.ACCELERATION) ? ((u8(v, 17) & 0x01) << 8 | u8(v, 18)) * 0.01 - 2.0 : Double.NaN;
-            boolean lean = blk2 && v.length > 20 && has(c, InfoConfig.LEAN);
-            leanDeg = lean ? ((u8(v, 19) & 0x07) << 8 | u8(v, 20)) * 0.1953125 - 100.0 : Double.NaN;
-            leanDegAlt = lean ? ((u8(v, 19) & 0x0F) << 8 | u8(v, 20)) * 0.1 : Double.NaN;
+            int thrMode = mode(c, InfoConfig.THROTTLE);
+            throttlePct = blk1 && thrMode >= 0 ? u8(v, 14) * (thrMode == 1 ? 0.3921568627 : 0.78125) : Double.NaN;
+            int fiMode = mode(c, InfoConfig.FUEL_INJECTION);
+            fuelInjection = blk1 && fiMode >= 0 ? be16(v, 7) * 1e-4 * (fiMode == 1 ? 100.0 / 140.0 : 1) : Double.NaN;
+            int accMode = mode(c, InfoConfig.ACCELERATION);
+            double rawAcc = (((u8(v, 17) & 0x01) << 8) | u8(v, 18)) * 0.01;
+            accelG = blk2 && accMode >= 0 ? rawAcc - (accMode == 1 ? 0 : 2.0) : Double.NaN;
+            int leanMode = mode(c, InfoConfig.LEAN);
+            leanDeg = blk2 && leanMode >= 0
+                    ? leanMode == 1 ? (((u8(v, 19) & 0x0F) << 8) | u8(v, 20)) * 0.1
+                    : (((u8(v, 19) & 0x07) << 8) | u8(v, 20)) * 0.1953125 - 100.0
+                    : Double.NaN;
             wheelie = blk2 && v.length > 21 && has(c, InfoConfig.WHEELIE) ? u8(v, 21) & 0x03 : -1;
-            wheelieDeg = blk2 && v.length > 23 && has(c, InfoConfig.WHEELIE_ANGLE) ? ((u8(v, 22) & 0x07) << 8 | u8(v, 23)) * 0.09765625 : Double.NaN;
-            boolean tcs = blk2 && v.length > 24;
-            tcsHigh = tcs && has(c, InfoConfig.TCS_HB) ? (u8(v, 24) & 0xF0) >> 4 : -1;
-            tcsLow = tcs && has(c, InfoConfig.TCS_LB) ? u8(v, 24) & 0x0F : -1;
+            int whMode = mode(c, InfoConfig.WHEELIE_ANGLE);
+            wheelieDeg = blk2 && whMode >= 0
+                    ? (((u8(v, 22) & 0x07) << 8) | u8(v, 23)) * (whMode == 1 ? 0.1 : 0.09765625) : Double.NaN;
+            tcsHigh = blk2 && v.length > 24 && has(c, InfoConfig.TCS_HB) ? (u8(v, 24) & 0xF0) >> 4 : -1;
+            tcsLow = blk2 && v.length > 24 && has(c, InfoConfig.TCS_LB) ? u8(v, 24) & 0x0F : -1;
             boolean absPresent = v.length > 37 && blockOk(v, 35);
             abs = absPresent ? u8(v, 37) : -1;
             brakeFrontBar = absPresent && v.length > 39 && u8(v, 39) != 0xFF ? u8(v, 39) * 0.1953125 : Double.NaN;
@@ -442,14 +464,10 @@ public final class BikeFrames {
             return v.length > offset + 1 && u8(v, offset) != 0xFF && u8(v, offset + 1) != 0xFF;
         }
 
-        /** Speed with the chosen scaling: 0 raw (Z500), 1 scaled. */
-        public double speedKmh(int scale) {
-            return scale == 1 ? speedKmhScaled : speedKmhRaw < 0 ? Double.NaN : speedKmhRaw;
-        }
-
-        /** Rpm with the chosen scaling: 0 raw (Z500), 1 quarter. */
-        public int rpm(int scale) {
-            return scale == 1 ? rpmQuarter : rpmRaw;
+        /** The 0x40 nibble of a value: 0/1 = present and selects the scaling, 2/3 = absent, -1 unknown. */
+        private static int mode(InfoConfig c, Flag f) {
+            int x = c == null ? -1 : c.flag(f);
+            return x >= 0 && x <= 1 ? x : -1;
         }
     }
 
@@ -570,7 +588,9 @@ public final class BikeFrames {
 
         ServiceConfig(byte[] v) {
             super(v);
-            valid = v.length >= 15 && !retryRequired(v, 5, 6, 14);
+            // unlike 0x1A/0x40/0x47 the maintenance config has no "not ready" bit: it counts when its
+            // block is there (Ble5Value.u.java:100-101)
+            valid = v.length >= 15 && blockPresent(v, 5);
         }
 
         /** Fields of a reminder in {@link #has}: capability, notify, month, day, year, distance. */
@@ -603,8 +623,8 @@ public final class BikeFrames {
             /** @param c the maintenance config; only a valid one hides fields (each by its own flag) */
             Reminder(byte[] v, int base, ServiceConfig c, int which) {
                 ServiceConfig cfg = c != null && c.valid ? c : null;
-                supported = cfg == null || cfg.has(which, ServiceConfig.CAPABILITY);
-                boolean b = supported && blockPresent(v, base - 2) && v.length > base + 7;
+                boolean b = blockPresent(v, base - 2) && v.length > base + 7;
+                supported = b && (cfg == null || cfg.has(which, ServiceConfig.CAPABILITY));
                 int n = b ? u8(v, base + 1) : 0xFF;
                 notify = n != 0xFF && field(cfg, which, ServiceConfig.NOTIFY) ? n >> 4 : -1;
                 int m = n & 0x0F;

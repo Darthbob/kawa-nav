@@ -120,7 +120,7 @@ public class BikeActivity extends KawaActivity {
         vin.setVisibility(b.model != null && b.model.vin != null ? View.VISIBLE : View.GONE);
         updated.setText(Hub.bikeConnected ? "Connected" : lastRead(b, now));
 
-        List<String[]> rows = rows(b, now, prefs.getInt(Hub.KEY_SPEED_SCALE, 0), prefs.getInt(Hub.KEY_RPM_SCALE, 0));
+        List<String[]> rows = rows(b, now);
         List<String> labels = new ArrayList<>();
         for (String[] r : rows) labels.add(r[0] + "/" + r[1]);
         if (!labels.equals(shownLabels)) {
@@ -222,7 +222,7 @@ public class BikeActivity extends KawaActivity {
     }
 
     /** All rows to show: {section, label, value}; values the bike does not have are left out. */
-    static List<String[]> rows(BikeData b, long now, int speedScale, int rpmScale) {
+    static List<String[]> rows(BikeData b, long now) {
         List<String[]> r = new ArrayList<>();
         BikeFrames.VehicleInfo i = b.info;
         if (i != null) {
@@ -245,10 +245,10 @@ public class BikeActivity extends KawaActivity {
             String s = "Engine";
             if (live) {
                 BikeFrames.Telemetry t = b.live;
-                add(r, s, "Speed", t.speedKmh(speedScale), "%.0f km/h");
-                if (t.rpm(rpmScale) >= 0) r.add(new String[]{s, "Engine speed", t.rpm(rpmScale) + " rpm"});
+                add(r, s, "Speed", t.speedKmh, "%.0f km/h");
+                if (t.rpm >= 0) r.add(new String[]{s, "Engine speed", t.rpm + " rpm"});
                 if (t.gear >= 0) r.add(new String[]{s, "Gear", t.gear == 0 ? "N" : String.valueOf(t.gear)});
-                add(r, s, "Throttle", t.throttleMech, "%.0f %%");
+                add(r, s, "Throttle", t.throttlePct, "%.0f %%");
                 add(r, s, "Lean angle", t.leanDeg, "%.0f°");
             }
             if (ext) {

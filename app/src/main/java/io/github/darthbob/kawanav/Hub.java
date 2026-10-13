@@ -115,9 +115,6 @@ public final class Hub {
     public static final String KEY_DEBUG_INIT_LEVEL = "debug_init_level";
     /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
     public static final String KEY_DEBUG_CAPTURE = "debug_capture";
-    /** Scaling of the riding log's speed and rpm: 0 as on the Z500 (default), 1 the alternative. */
-    public static final String KEY_SPEED_SCALE = "speed_scale";
-    public static final String KEY_RPM_SCALE = "rpm_scale";
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
 

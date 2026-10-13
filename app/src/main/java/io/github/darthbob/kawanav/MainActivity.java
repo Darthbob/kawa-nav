@@ -872,12 +872,6 @@ public class MainActivity extends KawaActivity {
                         + "it adds the phone name, the 0x08 init and the 0x45 riding log frames",
                 new String[]{"Capabilities only (v0.3)", "Read-only", "Full (like Rideology)"}, Hub.initLevel(this),
                 pos -> prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, pos).apply()));
-        c.addView(choiceRow("Speed scaling", "Riding log (0x4A) wheel speed",
-                new String[]{"9 bit km/h (Z500)", "u16 / 81.92"}, prefs.getInt(Hub.KEY_SPEED_SCALE, 0),
-                pos -> prefs.edit().putInt(Hub.KEY_SPEED_SCALE, pos).apply()));
-        c.addView(choiceRow("Rpm scaling", "Riding log (0x4A) engine speed",
-                new String[]{"15 bit (Z500)", "u16 / 4"}, prefs.getInt(Hub.KEY_RPM_SCALE, 0),
-                pos -> prefs.edit().putInt(Hub.KEY_RPM_SCALE, pos).apply()));
         c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect: "
                 + "adb pull /sdcard/Android/data/" + getPackageName() + "/files/captures/", Hub.KEY_DEBUG_CAPTURE, false));
         LinearLayout reads = row();
@@ -951,8 +945,7 @@ public class MainActivity extends KawaActivity {
                     + "\nLast sent: " + Hub.iconsStatus);
             String gatt = Hub.gattDump.isEmpty() ? "Not read yet: connect the bike with this card shown." : Hub.gattDump;
             if (!gatt.contentEquals(debugGatt.getText())) debugGatt.setText(gatt); // keeps a text selection
-            String bike = "MTU " + Hub.bikeMtu + "\n" + Hub.bike.describe(prefs.getInt(Hub.KEY_SPEED_SCALE, 0),
-                    prefs.getInt(Hub.KEY_RPM_SCALE, 0), System.currentTimeMillis());
+            String bike = "MTU " + Hub.bikeMtu + "\n" + Hub.bike.describe(System.currentTimeMillis());
             if (!debugBike.hasSelection() && !bike.contentEquals(debugBike.getText())) debugBike.setText(bike);
         }
         // --- status

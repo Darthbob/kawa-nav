@@ -102,17 +102,17 @@ public final class BikeData {
     // ------------------------------------------------------------------ debug text
 
     /** Everything decoded so far, for the debug card. */
-    public String describe(int speedScale, int rpmScale, long now) {
+    public String describe(long now) {
         StringBuilder sb = new StringBuilder();
         if (model != null) sb.append("Model ").append(model.model).append(", VIN ").append(maskedVin(model.vin)).append('\n');
         if (live != null) {
             BikeFrames.Telemetry t = live;
             sb.append(String.format(Locale.ROOT,
-                    "Live (%s ago): %s km/h [raw %d | scaled %.1f], %d rpm [raw %d | /4 %d], gear %s, throttle %.0f %% [rider %.0f %%], "
-                            + "lean %.1f° [alt %.1f°], accel %.2f g, TCS %d/%d, ABS %s, brake %.1f\n",
-                    ago(liveAt, now), num(t.speedKmh(speedScale)), t.speedKmhRaw, t.speedKmhScaled, t.rpm(rpmScale),
-                    t.rpmRaw, t.rpmQuarter, t.gear < 0 ? "–" : String.valueOf(t.gear), t.throttleMech, t.throttleRider,
-                    t.leanDeg, t.leanDegAlt, t.accelG, t.tcsHigh, t.tcsLow,
+                    "Live (%s ago): %s km/h (other scaling %s), %d rpm (other %d), gear %s, throttle %.0f %%, "
+                            + "lean %.1f°, accel %.2f g, injection %s, TCS %d/%d, ABS %s, brake %.1f\n",
+                    ago(liveAt, now), num(t.speedKmh), num(t.speedKmhAlt), t.rpm, t.rpmAlt,
+                    t.gear < 0 ? "–" : String.valueOf(t.gear), t.throttlePct,
+                    t.leanDeg, t.accelG, num(t.fuelInjection), t.tcsHigh, t.tcsLow,
                     t.abs < 0 ? "–" : String.format(Locale.ROOT, "%02X", t.abs), t.brakeFrontBar));
         }
         if (info != null) {

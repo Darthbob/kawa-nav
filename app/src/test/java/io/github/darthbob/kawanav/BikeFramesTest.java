@@ -77,7 +77,7 @@ public class BikeFramesTest {
     public void maintenanceNotSupported() {
         BikeFrames.Decoder d = new BikeFrames.Decoder();
         BikeFrames.ServiceConfig c = (BikeFrames.ServiceConfig) d.decode(hx(Z500_1D));
-        assertTrue(c.valid);
+        assertFalse(c.valid); // the Z500's answer carries no 0x1D block
         for (int i = 0; i < 3; i++) assertFalse(c.supported(i));
         BikeFrames.ServiceIndicator s = (BikeFrames.ServiceIndicator) d.decode(hx(Z500_1E));
         for (BikeFrames.ServiceIndicator.Reminder r : s.reminders) {
@@ -185,21 +185,42 @@ public class BikeFramesTest {
 
     // ------------------------------------------------------------------ built frames
 
-    @Test
-    public void telemetryArithmetic() {
+    /** 0x40 config with chosen nibbles: byte 9 = wheel-speed mode (bits 2-3) + rpm mode (bits 0-1), etc. */
+    static byte[] infoConfig(int b9, int b10, int b11) {
+        byte[] v = blank(0x40, 35);
+        put(v, 5, 0x05, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+        put(v, 9, b9, b10, b11);
+        put(v, 14, 0x01); // flags "ready" (bit 0 set): no retry
+        return v;
+    }
+
+    static BikeFrames.Telemetry telemetry(byte[] config, byte[] frame) {
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        if (config != null) d.decode(config);
+        return (BikeFrames.Telemetry) d.decode(frame);
+    }
+
+    /** A 0x4A frame with the values used below: speed 100, rpm 4000, gear 3, throttle byte 255, lean 640. */
+    static byte[] telemetryFrame() {
         byte[] v = blank(0x4A, 55);
         put(v, 5, 0x05, 0x15, 0x27, 0x10, 0x00, 0x64, 0x0F, 0xA0, 0x03, 0xFF);
         put(v, 15, 0x05, 0x16, 0x00, 0xC8, 0x02, 0x80, 0x00, 0xFF, 0xFF, 0x21);
         put(v, 35, 0x05, 0x18, 0x03, 0xFF, 0x80);
-        BikeFrames.Telemetry t = (BikeFrames.Telemetry) new BikeFrames.Decoder().decode(v);
-        assertEquals(100, t.speedKmhRaw);
-        assertEquals(100.0, t.speedKmh(0), 0);
-        assertEquals(100 * 0.01220703125, t.speedKmh(1), 1e-9);
-        assertEquals(4000, t.rpmRaw);
-        assertEquals(1000, t.rpmQuarter);
+        return v;
+    }
+
+    @Test
+    public void telemetryScalingFromNibbles() {
+        // speed nibble 1 (raw 9 bit), rpm nibble 0 (15 bit), throttle nibble 1 (mechanical),
+        // acceleration nibble 1 (no -2 offset), lean nibble 0 (11 bit)
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x04, 0x05, 0x00), telemetryFrame());
+        assertEquals(100.0, t.speedKmh, 1e-9);
+        assertEquals(100 * 0.01220703125, t.speedKmhAlt, 1e-9);
+        assertEquals(4000, t.rpm);
+        assertEquals(1000, t.rpmAlt);
         assertEquals(3, t.gear);
-        assertEquals(100.0, t.throttleMech, 1e-6);
-        assertEquals(0.0, t.accelG, 1e-9);
+        assertEquals(100.0, t.throttlePct, 1e-6);
+        assertEquals(200 * 0.01, t.accelG, 1e-9); // bytes 17-18 = 0x00C8, nibble 1: no -2 g offset
         assertEquals(25.0, t.leanDeg, 1e-9);
         assertEquals(2, t.tcsHigh);
         assertEquals(1, t.tcsLow);
@@ -208,25 +229,51 @@ public class BikeFramesTest {
     }
 
     @Test
+    public void telemetryOtherScalings() {
+        // speed nibble 0 (scaled), rpm nibble 1 (quarter), throttle nibble 0 (rider), accel nibble 0 (-2 g)
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x01, 0x00, 0x00), telemetryFrame());
+        assertEquals(100 * 0.01220703125, t.speedKmh, 1e-9);
+        assertEquals(100.0, t.speedKmhAlt, 1e-9);
+        assertEquals(1000, t.rpm);
+        assertEquals(4000, t.rpmAlt);
+        assertEquals(255 * 0.78125, t.throttlePct, 1e-6);
+        assertEquals(200 * 0.01 - 2.0, t.accelG, 1e-9);
+    }
+
+    @Test
+    public void telemetryAbsentValues() {
+        // nibbles 3 = absent for speed, rpm, throttle, acceleration and lean
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x0F, 0xFF, 0xFF), telemetryFrame());
+        assertTrue(Double.isNaN(t.speedKmh));
+        assertEquals(-1, t.rpm);
+        assertEquals(-1, t.gear);
+        assertTrue(Double.isNaN(t.throttlePct));
+        assertTrue(Double.isNaN(t.accelG));
+        assertTrue(Double.isNaN(t.leanDeg));
+        assertTrue(Double.isNaN(t.wheelieDeg));
+    }
+
+    @Test
     public void telemetryAbsentBlocks() {
-        BikeFrames.Telemetry t = (BikeFrames.Telemetry) new BikeFrames.Decoder().decode(blank(0x4A, 55));
-        assertEquals(-1, t.speedKmhRaw);
-        assertEquals(-1, t.rpmRaw);
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x04, 0x05, 0x00), blank(0x4A, 55));
+        assertTrue(Double.isNaN(t.speedKmh));
+        assertEquals(-1, t.rpm);
         assertEquals(-1, t.gear);
         assertTrue(Double.isNaN(t.leanDeg));
         assertEquals(-1, t.abs);
     }
 
     @Test
-    public void telemetryRespectsInfoConfig() {
+    public void telemetryZ500SampleConfig() {
+        // the Z500 sample config: speed nibble 1 (raw 9 bit), rpm nibble 0, throttle nibble 1, no lean
         BikeFrames.Decoder d = new BikeFrames.Decoder();
-        d.decode(hx(Z500_40)); // Z500: no lean angle
-        byte[] v = blank(0x4A, 55);
-        put(v, 5, 0x05, 0x15, 0x27, 0x10, 0x00, 0x64, 0x0F, 0xA0, 0x03, 0x80);
-        put(v, 15, 0x05, 0x16, 0x00, 0xC8, 0x02, 0x80);
+        d.decode(hx(Z500_40));
+        byte[] v = telemetryFrame();
         BikeFrames.Telemetry t = (BikeFrames.Telemetry) d.decode(v);
-        assertEquals(4000, t.rpmRaw);
+        assertEquals(100.0, t.speedKmh, 1e-9);
+        assertEquals(4000, t.rpm);
         assertTrue(Double.isNaN(t.leanDeg));
+        assertTrue(Double.isNaN(t.accelG));
     }
 
     @Test
@@ -277,6 +324,8 @@ public class BikeFramesTest {
         put(v, 5, 0x05, 0x0A, 0x00, 0x40 | 25, 13, 10, 26, 18, 30, 5);
         BikeFrames.Decoder d = new BikeFrames.Decoder();
         BikeFrames.GeneralCaps c = (BikeFrames.GeneralCaps) d.decode(caps);
+        assertEquals(0, c.clockGate);
+        assertEquals(0, c.shiftLampMode);
         assertTrue(c.shiftLampSettable);
         assertTrue(c.clockSettable());
         BikeFrames.GeneralSettings g = (BikeFrames.GeneralSettings) d.decode(v);
@@ -290,6 +339,19 @@ public class BikeFramesTest {
         assertEquals(18, g.hour);
         assertEquals(30, g.minute);
         assertEquals(5, g.second);
+    }
+
+    @Test
+    public void clockGateAndLampMode() {
+        byte[] caps = blank(0x1A, 15);
+        put(caps, 5, 0x05, 0x0A, 0x40, 61, 1, 0x00, 0x00, 0x00, 0x00, 0x01); // gate 1, lamp mode 0
+        BikeFrames.GeneralCaps c = (BikeFrames.GeneralCaps) new BikeFrames.Decoder().decode(caps);
+        assertEquals(1, c.clockGate);
+        assertFalse(c.clockSettable());
+        assertTrue(c.shiftLampSettable);
+        put(caps, 7, 0x01); // lamp mode 1: not settable
+        c = (BikeFrames.GeneralCaps) new BikeFrames.Decoder().decode(caps);
+        assertFalse(c.shiftLampSettable);
     }
 
     @Test
