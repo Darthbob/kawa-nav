@@ -74,6 +74,25 @@ public final class SettingsWrite {
         return out;
     }
 
+    /** Shift-lamp levels the meter takes: code 1..61, each step a 250 rpm step from 3000 rpm up. */
+    public static final int LAMP_MIN_RPM = 3000, LAMP_RPM_STEP = 250, LAMP_LEVELS = 61;
+
+    /** Rotations per minute the meter lights the shift lamp at, from its level code. */
+    public static int lampRpm(int level) {
+        return (Math.max(1, Math.min(LAMP_LEVELS, level)) - 1) * LAMP_RPM_STEP + LAMP_MIN_RPM;
+    }
+
+    /** The level code for a wanted rpm, clamped to what the meter takes. */
+    public static int lampLevel(int rpm) {
+        return Math.max(1, Math.min(LAMP_LEVELS, (rpm - LAMP_MIN_RPM) / LAMP_RPM_STEP + 1));
+    }
+
+    /** The shift-lamp kinds the meter offers: four when it has a tachometer and an LED, two otherwise. */
+    public static String[] lampStatusNames(int shiftLampMode) {
+        return shiftLampMode == 3 ? new String[]{"Off", "On"}
+                : new String[]{"Off", "Tachometer", "LED", "LED + tachometer"};
+    }
+
     /** The result of a write answer (byte 7 of the 0x48 reply), or -1 when the frame is not one. */
     public static int result(byte[] v) {
         if (v == null || v.length < 8 || (v[0] & 0xFF) != BikeFrames.VEHICLE_SETTINGS) return -1;

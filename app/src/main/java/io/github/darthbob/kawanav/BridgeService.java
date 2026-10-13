@@ -276,6 +276,42 @@ public class BridgeService extends Service implements KawaBle.Listener {
         instance.updateNotification();
     }
 
+    /**
+     * Sets the shift lamp on the meter: when it lights (status) and at which engine speed (level code
+     * 1..61). The clock is left as it is, the way Rideology's lamp-only write does it. The meter's answer
+     * carries the result in byte 7 and is read back afterwards. Debug builds only until it has been tried.
+     */
+    public static String writeShiftLamp(int status, int level) {
+        if (!Hub.DEBUG_TOOLS) return "writing to the dash is not enabled in this build yet";
+        if (instance == null || !instance.ble.isReady()) return "the bike is not connected";
+        BikeFrames.GeneralCaps caps = Hub.bike.caps;
+        if (caps == null || !caps.shiftLampSettable) return "this dash does not take shift-lamp settings";
+        if (level < caps.shiftLampMin || level > caps.shiftLampMax) {
+            return "the dash takes levels " + caps.shiftLampMin + " to " + caps.shiftLampMax;
+        }
+        if (!instance.requests.idle()) return "the bike is still answering another request, try again";
+        byte[] frame = KawaProtocol.shiftLampWrite(status, level);
+        Logger.log("Bike: sending shift lamp (status " + status + ", " + SettingsWrite.lampRpm(level) + " rpm)");
+        settingsJob = "Sending the shift lamp…";
+        instance.requests.submit(new BikeRequests.Request(frame, "shift lamp write", BikeRequests.DATA_OR_ACK,
+                BikeRequests.USER, (r, ok, result) -> instance.afterShiftLamp(ok)));
+        return null;
+    }
+
+    /** The meter answered the shift-lamp write: read the general settings back to show what it holds now. */
+    private void afterShiftLamp(boolean answered) {
+        BikeFrames.GeneralSettings g = Hub.bike.general;
+        int result = g == null ? -1 : g.result;
+        settingsJob = "";
+        if (!answered || result != 0) {
+            Logger.log("Bike: shift lamp " + (answered ? "refused (" + result + ")" : "not answered"));
+            return;
+        }
+        Logger.log("Bike: shift lamp accepted, reading back");
+        requests.submit(new BikeRequests.Request(KawaProtocol.generalSettingsRead(), "general settings read",
+                BikeRequests.DATA_OR_ACK, BikeRequests.USER, null));
+    }
+
     /** Shows or clears a dash icon (call, mail); false when the bike is not connected. */
     public static boolean sendDashAlert(int category, int event) {
         if (instance == null || !instance.ble.isReady()) return false;

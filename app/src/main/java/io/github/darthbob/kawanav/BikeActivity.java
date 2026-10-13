@@ -35,6 +35,13 @@ public class BikeActivity extends KawaActivity {
     private android.widget.Spinner modeSpinner, powerSpinner, ktrcSpinner, kqsSpinner;
     private TextView settingsStatus;
     private Button settingsSend;
+    private LinearLayout lampCard;
+    private android.widget.Spinner lampStatusSpinner, lampRpmSpinner;
+    private TextView lampStatusText;
+    private Button lampSend;
+    private int lampMinLevel = 1;
+    /** The ride-settings pickers were filled from the bike once. */
+    private boolean settingsPrefilled;
     private LinearLayout parkedCard;
     private TextView parkedText;
     private Button parkedNavigate;
@@ -76,6 +83,7 @@ public class BikeActivity extends KawaActivity {
         sections = column();
         root.addView(sections);
         root.addView(settingsCard());
+        root.addView(lampCard());
         root.addView(parkedCard());
         TextView note = note("Values as the bike reported them when it was last connected. Tap the VIN to show "
                 + "all of it.");
@@ -168,6 +176,76 @@ public class BikeActivity extends KawaActivity {
                 .show();
     }
 
+    /**
+     * The dash's shift lamp: when it lights and at which engine speed. Like the ride-settings write this
+     * is a debug-build tool until the write has been tried on a bike; the meter's own limits (0x1A) decide
+     * which statuses and levels are offered.
+     */
+    private LinearLayout lampCard() {
+        LinearLayout section = column();
+        LinearLayout headRow = row();
+        headRow.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"), weight());
+        headRow.addView(pill("DEBUG", 0x336BBE45, Ui.accentText(night)));
+        section.addView(headRow);
+        LinearLayout c = group();
+        c.addView(secondary("Writes only the shift lamp; the dash clock stays as it is. The bike must be "
+                + "connected (it does not have to be standing still)."));
+        lampStatusSpinner = spinner(new String[]{"Off"}, 0);
+        lampRpmSpinner = spinner(new String[]{"3,000 rpm"}, 0);
+        addRow(c, settingRowWith("Lights up", lampStatusSpinner));
+        addRow(c, settingRowWith("At", lampRpmSpinner));
+        lampStatusText = secondary("");
+        lampStatusText.setPadding(0, dp(Ui.SPACE2), 0, dp(10));
+        c.addView(lampStatusText);
+        lampSend = primaryButton("Send to the dash", v -> confirmShiftLamp());
+        c.addView(lampSend, matchWrap());
+        section.addView(c);
+        section.setVisibility(View.GONE);
+        lampCard = section;
+        return section;
+    }
+
+    /** Builds the two drop-downs from what the meter said it takes (0x1A capability). */
+    private void fillLampChoices(BikeFrames.GeneralCaps caps) {
+        if (caps == null || !caps.shiftLampSettable) return;
+        lampMinLevel = caps.shiftLampMin;
+        int levels = Math.max(1, caps.shiftLampMax - caps.shiftLampMin + 1);
+        String[] rpm = new String[levels];
+        for (int i = 0; i < levels; i++) {
+            rpm[i] = String.format(Locale.ROOT, "%,d rpm", SettingsWrite.lampRpm(caps.shiftLampMin + i));
+        }
+        lampRpmSpinner.setAdapter(new android.widget.ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, rpm));
+        String[] statuses = SettingsWrite.lampStatusNames(caps.shiftLampMode);
+        lampStatusSpinner.setAdapter(new android.widget.ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, statuses));
+        BikeFrames.GeneralSettings g = Hub.bike.general;
+        if (g != null) {
+            if (g.shiftLampStatus >= 0 && g.shiftLampStatus < statuses.length) {
+                lampStatusSpinner.setSelection(g.shiftLampStatus);
+            }
+            if (g.shiftLampLevel >= caps.shiftLampMin) {
+                lampRpmSpinner.setSelection(Math.min(levels - 1, g.shiftLampLevel - caps.shiftLampMin));
+            }
+        }
+    }
+
+    private void confirmShiftLamp() {
+        int status = lampStatusSpinner.getSelectedItemPosition();
+        int level = lampMinLevel + lampRpmSpinner.getSelectedItemPosition();
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Send the shift lamp to the dash?")
+                .setMessage("The dash will light its shift lamp at "
+                        + String.format(Locale.ROOT, "%,d rpm", SettingsWrite.lampRpm(level))
+                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + "."))
+                .setPositiveButton("Send", (d, w) -> {
+                    String problem = BridgeService.writeShiftLamp(status, level);
+                    if (problem != null) lampStatusText.setText("Not sent: " + problem);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private LinearLayout parkedCard() {
         LinearLayout section = column();
         section.addView(sectionHeader(R.drawable.ic_pin, "Parked"));
@@ -218,16 +296,37 @@ public class BikeActivity extends KawaActivity {
             }
         }
 
-        boolean canWrite = Hub.DEBUG_TOOLS && Hub.bikeConnected && b.tuning != null && b.tuning.any();
+        BikeFrames.GeneralCaps caps = b.caps;
+        // "connected" or data that just arrived (a replay, or a link that dropped a moment ago)
+        boolean live = Hub.bikeConnected || now - b.liveAt < 5000 || now - b.settingsAt < 5000;
+        boolean canLamp = Hub.DEBUG_TOOLS && live && caps != null && caps.shiftLampSettable;
+        lampCard.setVisibility(canLamp ? View.VISIBLE : View.GONE);
+        if (canLamp) {
+            if (lampRpmSpinner.getAdapter() == null || lampRpmSpinner.getAdapter().getCount() <= 1) {
+                fillLampChoices(caps);
+            }
+            String job = BridgeService.settingsJob;
+            lampStatusText.setText(job.isEmpty()
+                    ? (b.general != null && b.general.shiftLampRpm() > 0
+                    ? String.format(Locale.ROOT, "On the dash now: %s, %,d rpm",
+                    SettingsWrite.lampStatusNames(caps.shiftLampMode)[Math.max(0,
+                            Math.min(b.general.shiftLampStatus, SettingsWrite.lampStatusNames(caps.shiftLampMode).length - 1))],
+                    b.general.shiftLampRpm())
+                    : "Not read yet: switch the ignition on with KawaNav running")
+                    : job);
+        }
+
+        boolean canWrite = Hub.DEBUG_TOOLS && live && b.tuning != null && b.tuning.any();
         settingsCard.setVisibility(canWrite ? View.VISIBLE : View.GONE);
         if (canWrite) {
             BikeFrames.VehicleSettings s = b.settings;
-            if (s != null && !settingsSend.isEnabled()) { // prefill from the bike right after connecting
+            if (s != null && !settingsPrefilled) { // prefill once, from what the bike reported
                 if (s.ridingMode >= 0 && s.ridingMode < SettingsWrite.MODES.length) modeSpinner.setSelection(s.ridingMode);
                 if (s.power >= 0 && s.power < SettingsWrite.POWER.length) powerSpinner.setSelection(s.power);
                 int k = SettingsWrite.ktrcFromWire(s.ktrc);
                 if (k >= 0) ktrcSpinner.setSelection(k);
                 if (s.kqs >= 0 && s.kqs < SettingsWrite.ON_OFF.length) kqsSpinner.setSelection(s.kqs);
+                settingsPrefilled = true;
             }
             settingsSend.setEnabled(true);
             String job = BridgeService.settingsJob;

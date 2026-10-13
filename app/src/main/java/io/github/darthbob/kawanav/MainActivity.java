@@ -631,25 +631,32 @@ public class MainActivity extends KawaActivity {
         handler.postDelayed(this::updateUi, 300);
     }
 
-    /** The bike's last values (odometer, fuel, range, battery) and the way to its own screen. */
+    /**
+     * The bike's last values (odometer, fuel, range, battery); the whole row opens the bike's own screen,
+     * which carries everything else (engine, temperatures, maintenance, riding modes, settings).
+     */
     private LinearLayout bikeCard() {
-        LinearLayout c = group();
-        LinearLayout head = row();
-        head.setPadding(0, dp(10), 0, 0);
-        bikeTitle = itemTitle("Your bike");
-        head.addView(icon(R.drawable.ic_moto, false), iconGap());
-        head.addView(bikeTitle, weight());
+        LinearLayout section = column();
+        section.addView(sectionHeader(R.drawable.ic_moto, "Your bike"));
+        LinearLayout row = settingRow();
+        row.setMinimumHeight(dp(Ui.TOUCH_MIN));
+        LinearLayout t = column();
+        bikeTitle = itemTitle("");
+        t.addView(bikeTitle);
+        bikeSummary = secondary("");
+        t.addView(bikeSummary);
         bikeUpdated = secondary("");
-        head.addView(bikeUpdated);
-        c.addView(head);
-        bikeSummary = value("");
-        bikeSummary.setGravity(Gravity.START);
-        bikeSummary.setTextSize(15);
-        bikeSummary.setPadding(0, dp(Ui.SPACE1), 0, dp(10));
-        c.addView(bikeSummary);
-        addRow(c, listRow("Bike details", "Odometer, fuel, temperatures, maintenance, riding modes",
-                null, true, v -> startActivity(new Intent(this, BikeActivity.class))));
-        return c;
+        t.addView(bikeUpdated);
+        row.addView(t, weight());
+        TextView chev = text(20, false);
+        chev.setText("›");
+        chev.setTextColor(Ui.inkMuted(night));
+        row.addView(chev);
+        row.setOnClickListener(v -> startActivity(new Intent(this, BikeActivity.class)));
+        LinearLayout c = group();
+        c.addView(row);
+        section.addView(c);
+        return section;
     }
 
     /** Legal notes at the bottom: riding safety, affiliation, map data credit, licence (GPL-3.0 §5d). */
@@ -1129,8 +1136,7 @@ public class MainActivity extends KawaActivity {
         // --- bike
         bikeTitle.setText(BikeActivity.name(Hub.bike, prefs.getString(Hub.KEY_BIKE_NAME, null)));
         String summary = BikeActivity.summary(Hub.bike);
-        bikeSummary.setText(summary);
-        bikeSummary.setVisibility(summary.isEmpty() ? View.GONE : View.VISIBLE);
+        bikeSummary.setText(summary.isEmpty() ? "Odometer, fuel, temperatures, maintenance, riding modes" : summary);
         bikeUpdated.setText(Hub.bikeConnected && !summary.isEmpty() ? "Connected"
                 : BikeActivity.lastRead(Hub.bike, System.currentTimeMillis()));
 
