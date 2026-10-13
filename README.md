@@ -97,6 +97,8 @@ The app's own screen is in English.
 
 1. Download the APK from the [Releases](../../releases) page and open it on the phone (allow
    installing apps from your browser or file manager when Android asks).
+   This fork's app (`io.github.jackyes.kawanav`) installs next to Darthbob's KawaNav rather than over
+   it. Keep only one of them connected to the bike: uninstall the other or turn off its autostart.
 2. Open KawaNav. On the first start it walks you through pairing, permissions and notification
    access, explaining each step. Anything missing later shows up in an **orange banner** at the top
    of the app, each item with a button that fixes it.
@@ -315,7 +317,9 @@ The Start/Stop button is only a manual fallback (autostart missed, testing).
 
 ## 📜 License
 
-KawaNav © 2026 Darthbob. This program is free software: you can redistribute it and/or modify it
+KawaNav © 2026 Darthbob. This version is modified by jackyes (from October 2026: bike data, ride
+recording, dash icons and clock, settings on the bike, CI); the changes are in the git history of
+[jackyes/kawa-nav](https://github.com/jackyes/kawa-nav). This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free Software Foundation,
 version 3 (GPL-3.0-only). It is distributed in the hope that it will be useful,
 but **without any warranty**; without even the implied warranty of merchantability or fitness for a

@@ -14,7 +14,7 @@ import java.util.Locale;
 
 /**
  * App-wide log: logcat (tag KawaNav) and a file readable with
- * {@code adb shell run-as io.github.darthbob.kawanav cat files/kawanav.log} (rotated to .1 at 2 MB).
+ * {@code adb shell run-as io.github.jackyes.kawanav cat files/kawanav.log} (rotated to .1 at 2 MB).
  * Lines are stamped on the main thread (keeps their order) and written to the file on a background
  * thread, so logging never blocks the bike link or the UI.
  */

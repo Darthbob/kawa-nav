@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Debug builds: every frame to and from the meter, one line each ({@code epochMs RX|TX uuid8 hex}), in
- * Android/data/io.github.darthbob.kawanav/files/captures/ (readable with adb pull, and replayed with
+ * Android/data/io.github.jackyes.kawanav/files/captures/ (readable with adb pull, and replayed with
  * {@link FrameReplay}). One file per connection, all captures together at most {@link #MAX_BYTES}.
  * Written on a background thread.
  */

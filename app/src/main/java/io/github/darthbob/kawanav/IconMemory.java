@@ -147,7 +147,7 @@ public final class IconMemory {
     /**
      * Saves each notification icon not seen before as files/icons/&lt;id&gt;.png plus a line in
      * index.tsv (id, hash, parsed turn, instruction), for checking the library against real
-     * notifications: adb shell run-as io.github.darthbob.kawanav tar c files/icons | tar x
+     * notifications: adb shell run-as io.github.jackyes.kawanav tar c files/icons | tar x
      */
     public void collect(String hash, Bitmap icon, int parsedTurn, String instruction) {
         if (hash == null || icon == null) return;

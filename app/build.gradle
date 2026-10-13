@@ -13,7 +13,9 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId 'io.github.darthbob.kawanav'
+        // this fork's own app id (the code keeps its package): it installs next to Darthbob's KawaNav
+        // instead of clashing with it, as the two are signed with different keys
+        applicationId 'io.github.jackyes.kawanav'
         minSdk 33
         targetSdk 36
         versionCode 4
@@ -44,6 +46,9 @@ android {
     buildTypes {
         debug {
             minifyEnabled false
+            // with the release key where there is one (not in CI): the debug APK of a release then
+            // installs over the normal one and back, keeping rides and settings
+            if (keystoreFile.exists()) signingConfig signingConfigs.release
         }
         release {
             minifyEnabled false

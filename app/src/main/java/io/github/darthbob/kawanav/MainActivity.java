@@ -156,7 +156,7 @@ public class MainActivity extends KawaActivity {
 
     /**
      * Test switches from a PC, e.g.
-     * adb shell am start -n io.github.darthbob.kawanav/.MainActivity --ez bridge true|false
+     * adb shell am start -n io.github.jackyes.kawanav/io.github.darthbob.kawanav.MainActivity --ez bridge true|false
      * Also: --ez free_mode true|false, --es offline_region bayern, --ez offline_cancel true
      */
     /**
@@ -666,8 +666,9 @@ public class MainActivity extends KawaActivity {
         TextView t = secondary(RIDING_NOTICE + "\n\n" + AFFILIATION_NOTICE
                 + "\n\nRoad data © OpenStreetMap contributors, available under the Open Database License (ODbL), "
                 + "downloaded from Geofabrik."
-                + "\n\nKawaNav © 2026 Darthbob. Free software under the GNU General Public License v3, "
-                + "without any warranty. Source code: github.com/Darthbob/kawa-nav");
+                + "\n\nKawaNav © 2026 Darthbob; this version modified by jackyes (2026). Free software under "
+                + "the GNU General Public License v3, without any warranty. Source code: github.com/jackyes/kawa-nav "
+                + "(based on github.com/Darthbob/kawa-nav)");
         t.setTextSize(12);
         t.setTextColor(Ui.inkMuted(night));
         t.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE5), dp(Ui.SPACE1), dp(Ui.SPACE2));
