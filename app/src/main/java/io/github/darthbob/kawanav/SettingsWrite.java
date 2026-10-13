@@ -74,6 +74,24 @@ public final class SettingsWrite {
         return out;
     }
 
+    /** KECS modes and preload settings as Rideology names them (ph/d.java, values 1..3). */
+    public static final String[] KECS_MODES = {"Hard", "Normal", "Soft"};
+    public static final String[] KECS_PRELOAD = {"Rider", "Rider + L", "Rider + P + L"};
+
+    /** A value with the number the bike sent in brackets: honest while the names are unverified. */
+    public static String named(String[] names, int value) {
+        if (value < 0) return null;
+        String name = value >= 1 && value <= names.length ? names[value - 1] : "?";
+        return name + " (" + value + ")";
+    }
+
+    /** The KECS load adjustment: the meter sends 0..10, Rideology shows it as -5..+5. */
+    public static String adjustment(int value) {
+        if (value < 0) return null;
+        int shown = value - 5;
+        return (shown > 0 ? "+" : "") + shown + " (" + value + ")";
+    }
+
     /** Shift-lamp levels the meter takes: code 1..61, each step a 250 rpm step from 3000 rpm up. */
     public static final int LAMP_MIN_RPM = 3000, LAMP_RPM_STEP = 250, LAMP_LEVELS = 61;
 

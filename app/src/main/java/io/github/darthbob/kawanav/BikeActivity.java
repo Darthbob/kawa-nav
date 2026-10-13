@@ -365,7 +365,8 @@ public class BikeActivity extends KawaActivity {
                 LinearLayout container = column();
                 container.addView(sectionHeader(sectionIcon(section), section));
                 if (section.startsWith("Riding modes")) {
-                    container.addView(note("Numbers as the bike reports them, until the values are confirmed."));
+                    container.addView(note("Names come from Rideology; the number the bike sent is in brackets. "
+                            + "Shown only where the bike says it has the setting."));
                 }
                 group = group();
                 container.addView(group);
@@ -518,15 +519,24 @@ public class BikeActivity extends KawaActivity {
                 r.add(new String[]{"Maintenance", BikeFrames.ServiceIndicator.NAMES[k], String.join(" or ", due)});
             }
         }
-        BikeFrames.VehicleSettings v = Hub.DEBUG_TOOLS ? b.settings : null; // raw numbers: for checking the protocol
+        BikeFrames.VehicleSettings v = b.settings;
         if (v != null) {
             String s = "Riding modes";
-            if (v.ridingMode >= 0) r.add(new String[]{s, "Riding mode", String.valueOf(v.ridingMode)});
-            if (v.power >= 0) r.add(new String[]{s, "Power mode", String.valueOf(v.power)});
-            if (v.ktrc >= 0) r.add(new String[]{s, "KTRC", String.valueOf(v.ktrc)});
-            if (v.kqs >= 0) r.add(new String[]{s, "KQS", String.valueOf(v.kqs)});
-            if (v.kebc >= 0) r.add(new String[]{s, "KEBC", String.valueOf(v.kebc)});
-            if (v.kecsMode >= 0) r.add(new String[]{s, "KECS mode", String.valueOf(v.kecsMode)});
+            // the names come from Rideology's own tables; the number the bike sent stays in brackets until
+            // this has been checked on a bike with these settings
+            if (v.ridingMode >= 0) r.add(new String[]{s, "Riding mode", SettingsWrite.named(SettingsWrite.MODES, v.ridingMode + 1)});
+            if (v.power >= 0) r.add(new String[]{s, "Power mode", SettingsWrite.named(SettingsWrite.POWER, v.power + 1)});
+            int ktrc = SettingsWrite.ktrcFromWire(v.ktrc);
+            if (ktrc >= 0) r.add(new String[]{s, "KTRC", SettingsWrite.KTRC[ktrc] + " (field " + v.ktrc + ")"});
+            if (v.kqs >= 0) r.add(new String[]{s, "Quickshifter (KQS)", SettingsWrite.named(SettingsWrite.ON_OFF, v.kqs + 1)});
+            if (v.kebc >= 0) r.add(new String[]{s, "Engine brake (KEBC)", SettingsWrite.named(SettingsWrite.ON_OFF, v.kebc + 1)});
+            if (v.kecsMode >= 0) r.add(new String[]{s, "Suspension mode (KECS)", SettingsWrite.named(SettingsWrite.KECS_MODES, v.kecsMode)});
+            if (v.kecsPreload >= 0) r.add(new String[]{s, "KECS preload", SettingsWrite.named(SettingsWrite.KECS_PRELOAD, v.kecsPreload)});
+            if (v.kecsLoad >= 0) r.add(new String[]{s, "KECS load adjustment", SettingsWrite.adjustment(v.kecsLoad)});
+            if (v.kecsFrontCom >= 0) r.add(new String[]{s, "Front compression", level(v.kecsFrontCom)});
+            if (v.kecsFrontTen >= 0) r.add(new String[]{s, "Front rebound", level(v.kecsFrontTen)});
+            if (v.kecsRearCom >= 0) r.add(new String[]{s, "Rear compression", level(v.kecsRearCom)});
+            if (v.kecsRearTen >= 0) r.add(new String[]{s, "Rear rebound", level(v.kecsRearTen)});
         }
         BikeFrames.GeneralSettings g = b.general;
         if (g != null) {
@@ -538,6 +548,11 @@ public class BikeActivity extends KawaActivity {
             if (g.shiftLampRpm() > 0) r.add(new String[]{s, "Shift lamp", String.format(Locale.ROOT, "%,d rpm", g.shiftLampRpm())});
         }
         return r;
+    }
+
+    /** A damping level the bike reports; Rideology's scale for it is not known yet, so the number stands. */
+    private static String level(int value) {
+        return String.valueOf(value);
     }
 
     private static void add(List<String[]> r, String section, String label, double value, String fmt) {
