@@ -115,6 +115,10 @@ public final class Hub {
     public static final String KEY_DEBUG_INIT_LEVEL = "debug_init_level";
     /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
     public static final String KEY_DEBUG_CAPTURE = "debug_capture";
+    /** Call icon on the dash (Rideology's notification icons). */
+    public static final String KEY_DASH_CALLS = "dash_calls";
+    /** Mail/message icon on the dash. */
+    public static final String KEY_DASH_MAIL = "dash_mail";
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
 

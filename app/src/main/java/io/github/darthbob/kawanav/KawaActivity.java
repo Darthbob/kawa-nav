@@ -152,6 +152,11 @@ public abstract class KawaActivity extends Activity {
     }
 
     protected View switchRow(String title, String sub, String key, boolean byDefault) {
+        return switchRow(title, sub, key, byDefault, null);
+    }
+
+    /** @param after run after the setting was stored (e.g. to tell the listener about a dash-icon change) */
+    protected View switchRow(String title, String sub, String key, boolean byDefault, java.util.function.Consumer<Boolean> after) {
         LinearLayout r = settingRow();
         LinearLayout t = column();
         t.addView(itemTitle(title));
@@ -162,6 +167,7 @@ public abstract class KawaActivity extends Activity {
         s.setOnCheckedChangeListener((b, on) -> {
             prefs.edit().putBoolean(key, on).apply();
             BridgeService.settingsChanged();
+            if (after != null) after.accept(on);
         });
         r.addView(s);
         return r;

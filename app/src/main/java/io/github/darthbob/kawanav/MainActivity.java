@@ -767,6 +767,10 @@ public class MainActivity extends KawaActivity {
                 pos -> prefs.edit().putInt(Hub.KEY_LOOKAHEAD, LOOKAHEADS[pos]).apply()));
         c.addView(switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging",
                 Hub.KEY_PHONE_BATTERY, true));
+        c.addView(switchRow("Call icon on the dash", "An icon while a call comes in; needs notification access. No numbers or names are sent",
+                Hub.KEY_DASH_CALLS, false, v -> MapsListener.alertsChanged(this)));
+        c.addView(switchRow("Mail and message icon on the dash", "An icon while a mail or message arrives (Gmail, Messages, LINE…); needs notification access",
+                Hub.KEY_DASH_MAIL, false, v -> MapsListener.alertsChanged(this)));
         c.addView(switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
         c.addView(switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
         return c;
@@ -1010,7 +1014,8 @@ public class MainActivity extends KawaActivity {
         missing += show(pairRow, btOn && BridgeService.pairedBike(this) == null);
         pairSub.setText(Hub.pairStatus.isEmpty() ? PAIR_HINT : Hub.pairStatus);
         missing += show(gpsRow, curves && !getSystemService(android.location.LocationManager.class).isLocationEnabled());
-        missing += show(accessRow, Hub.mapsEnabled(this) && !hasNotificationAccess());
+        boolean dashAlerts = prefs.getBoolean(Hub.KEY_DASH_CALLS, false) || prefs.getBoolean(Hub.KEY_DASH_MAIL, false);
+        missing += show(accessRow, (Hub.mapsEnabled(this) || dashAlerts) && !hasNotificationAccess());
         missing += show(batteryRow, !batteryUnrestricted());
         missing += show(bgLocRow, curves && anyAuto && !hasBackgroundLocation());
         banner.setVisibility(missing > 0 ? View.VISIBLE : View.GONE);

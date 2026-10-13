@@ -149,6 +149,13 @@ public class BridgeService extends Service implements KawaBle.Listener {
         return true;
     }
 
+    /** Shows or clears a dash icon (call, mail); false when the bike is not connected. */
+    public static boolean sendDashAlert(int category, int event) {
+        if (instance == null || !instance.ble.isReady()) return false;
+        byte[] frame = DashAlerts.frame(category, event);
+        return instance.ble.write(frame, "dash alert: " + DashAlerts.describe(category, event), true);
+    }
+
     /** Debug: plays a capture file back as if the bike sent it (bridge running, bike data screens update). */
     public static boolean replay(java.io.File f) {
         if (instance == null || !f.isFile()) return false;
