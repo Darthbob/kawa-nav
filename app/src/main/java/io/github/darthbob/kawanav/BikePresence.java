@@ -42,6 +42,7 @@ public class BikePresence extends CompanionDeviceService {
     // ------------------------------------------------------------------ presence events
 
     @Override
+    @SuppressLint("NewApi") // Android calls this only from Android 16 (API 36) on
     public void onDevicePresenceEvent(DevicePresenceEvent event) {
         int e = event.getEvent();
         Logger.init(this);

@@ -110,18 +110,19 @@ public class OfflineService extends Service {
         }
         long t0 = System.currentTimeMillis();
         // a complete file from a cancelled conversion today is reused
-        if (!pbf.exists() || System.currentTimeMillis() - pbf.lastModified() > 12 * 3600_000L)
-        Geofabrik.download(r.pbfUrl, pbf, new Geofabrik.Progress() {
-            @Override
-            public void bytes(long done, long total) {
-                status(String.format(Locale.ROOT, "%s: downloading %.0f / %.0f MB", label, done / 1e6, total / 1e6));
-            }
+        if (!pbf.exists() || System.currentTimeMillis() - pbf.lastModified() > 12 * 3600_000L) {
+            Geofabrik.download(r.pbfUrl, pbf, new Geofabrik.Progress() {
+                @Override
+                public void bytes(long done, long total) {
+                    status(String.format(Locale.ROOT, "%s: downloading %.0f / %.0f MB", label, done / 1e6, total / 1e6));
+                }
 
-            @Override
-            public boolean cancelled() {
-                return cancel;
-            }
-        });
+                @Override
+                public boolean cancelled() {
+                    return cancel;
+                }
+            });
+        }
         Logger.log(String.format(Locale.ROOT, "Offline region: %.0f MB downloaded in %d s", pbf.length() / 1e6,
                 (System.currentTimeMillis() - t0) / 1000));
         long t1 = System.currentTimeMillis();

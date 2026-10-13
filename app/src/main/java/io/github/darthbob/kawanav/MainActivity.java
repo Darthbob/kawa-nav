@@ -703,7 +703,7 @@ public class MainActivity extends KawaActivity {
         permRow = bannerRow("Allow Bluetooth, location and notifications",
                 "To talk to the bike and find the curves ahead", "Allow", v -> requestMissingPermissions());
         bluetoothRow = bannerRow("Turn on Bluetooth", "KawaNav cannot reach the bike while it is off", "Turn on",
-                v -> startActivity(new Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)));
+                v -> enableBluetooth());
         pairRow = bannerRow("Pair your bike", PAIR_HINT, "Pair", v -> pairBike());
         pairSub = (TextView) pairRow.getTag();
         gpsRow = bannerRow("Turn on location", "Upcoming curves need GPS", "Open",
@@ -757,6 +757,18 @@ public class MainActivity extends KawaActivity {
     private static final String PAIR_HINT = "Ignition on and Rideology closed, then pick your bike";
 
     /** Pairs the phone with the bike (and sets up autostart), see {@link BikePresence#pair}. */
+    /**
+     * Asks Android to switch Bluetooth on. The row only shows with the Bluetooth permission, but the
+     * permission can be taken back while the screen is open: ask for it again then.
+     */
+    private void enableBluetooth() {
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            requestMissingPermissions();
+            return;
+        }
+        startActivity(new Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE));
+    }
+
     private void pairBike() {
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             requestMissingPermissions();
