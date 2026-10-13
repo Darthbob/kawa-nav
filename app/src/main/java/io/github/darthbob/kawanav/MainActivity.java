@@ -1126,6 +1126,8 @@ public class MainActivity extends KawaActivity {
         rideStatus.setText(recording
                 ? (Hub.rideState == RideRecorder.PAUSED ? "Paused · " : "Recording · ") + Hub.rideText
                 : (Hub.serviceRunning ? "Not recording" : "Start KawaNav before recording a ride"));
+        rideStatus.setTextColor(!recording ? Ui.inkSecondary(night)
+                : Hub.rideState == RideRecorder.PAUSED ? Ui.warn(night) : Ui.accentText(night));
 
         // --- folded groups: their one-line summaries, and offline maps opens itself while downloading
         boolean freeOn = Hub.freeMode(this);

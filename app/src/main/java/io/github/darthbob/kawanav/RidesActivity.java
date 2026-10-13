@@ -23,7 +23,7 @@ public class RidesActivity extends KawaActivity {
     private TextView totals;
     private LinearLayout totalsTiles;
     private LinearLayout list;
-    private TextView empty;
+    private LinearLayout empty;
     private boolean loading;
 
     @Override
@@ -43,7 +43,7 @@ public class RidesActivity extends KawaActivity {
         root.addView(totals);
         totalsTiles = column();
         root.addView(totalsTiles);
-        empty = secondary("");
+        empty = column();
         root.addView(empty);
         list = column();
         root.addView(list);
@@ -117,8 +117,15 @@ public class RidesActivity extends KawaActivity {
                 : String.format(Locale.ROOT, "%d rides · %s this week · %.0f km altogether",
                 rides.size(), minutes(weekMs), all));
         empty.setVisibility(rides.isEmpty() ? View.VISIBLE : View.GONE);
-        empty.setText("No rides recorded yet. Start one on the main screen before you ride; the values come "
-                + "from the bike while it is connected" + (rides.isEmpty() ? "." : ""));
+        empty.removeAllViews();
+        if (rides.isEmpty()) {
+            LinearLayout card = emptyState("No rides recorded yet",
+                    "Start one on the main screen before you ride. The bike's values (speed, engine, gear, "
+                            + "throttle, lean, temperatures) and the phone's track are written to the phone once a "
+                            + "second while it is connected.");
+            card.addView(icon(R.drawable.ic_route, false), iconGap());
+            empty.addView(card);
+        }
         LinearLayout group = null;
         if (!rides.isEmpty()) {
             group = group();
