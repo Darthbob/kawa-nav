@@ -1,15 +1,12 @@
 package io.github.darthbob.kawanav;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -19,7 +16,6 @@ import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -39,7 +35,7 @@ import java.util.Locale;
  * missing), autostart, riding options and offline maps. Test switches are adb-only, see
  * {@link #handleAdbIntent}; the log is in files/kawanav.log.
  */
-public class MainActivity extends Activity {
+public class MainActivity extends KawaActivity {
 
     private static final int REQ_PERMS = 1;
     private static final int REQ_BG_LOCATION = 3;
@@ -60,22 +56,14 @@ public class MainActivity extends Activity {
             + "• Sharp: 100° or more, or tighter than 30 m\n"
             + "• Hairpin (U-turn arrow): 150° or more and tighter than 35 m";
     /** Turn ids that make sense on the Z900 meter (0-43); 44-55 (waypoints) show nothing. */
-    private static final int KAWASAKI_GREEN = 0xFF6BBE45;
-    private static final int OK_GREEN = 0xFF43A047;
-    private static final int WARN_ORANGE = 0xFFFB8C00;
-    /** Dark text on the orange banner (white on orange is hard to read in sunlight). */
-    private static final int BANNER_TEXT = 0xFF1A1A1A;
-    private static final int ERROR_RED = 0xFFE53935;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private SharedPreferences prefs;
     private RoadStore roadStore;
     private OfflineRegions offlineRegions;
     /** Server data date per downloaded region (ms, 0 = unknown), checked once per app start. */
     private static final java.util.Map<String, Long> serverDates = new java.util.concurrent.ConcurrentHashMap<>();
     private LinearLayout regionsList;
     private boolean offlineWasRunning;
-    private boolean night;
 
     // status
     private TextView statusDot;
@@ -488,8 +476,7 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ UI
 
     private View buildUi() {
-        night = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                == Configuration.UI_MODE_NIGHT_YES;
+        night = isNight();
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(20), dp(16), dp(24));
@@ -510,19 +497,7 @@ public class MainActivity extends Activity {
         if (Hub.DEBUG_TOOLS) root.addView(debugCard());
         root.addView(footer());
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(night ? 0xFF111214 : 0xFFF4F5F7);
-        scroll.addView(root);
-        // Android draws apps behind the status and navigation bar: keep the content out of them
-        // (clipped at the padding, so nothing scrolls underneath the status bar), also above the keyboard
-        scroll.setClipToPadding(true);
-        scroll.setOnApplyWindowInsetsListener((v, insets) -> {
-            android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars()
-                    | android.view.WindowInsets.Type.displayCutout() | android.view.WindowInsets.Type.ime());
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-            return android.view.WindowInsets.CONSUMED;
-        });
-        return scroll;
+        return page(root);
     }
 
     private LinearLayout statusCard() {
@@ -1209,186 +1184,5 @@ public class MainActivity extends Activity {
         } else {
             OfflineService.startRegion(this, id);
         }
-    }
-    // ------------------------------------------------------------------ view helpers
-
-    private interface OnPos {
-        void on(int pos);
-    }
-
-    private AdapterView.OnItemSelectedListener onSelect(OnPos f) {
-        return new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                f.on(position);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
-        };
-    }
-
-    private int dp(int v) {
-        return Math.round(v * getResources().getDisplayMetrics().density);
-    }
-
-    private LinearLayout card() {
-        LinearLayout c = column();
-        c.setPadding(dp(16), dp(14), dp(16), dp(14));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(night ? 0xFF1E2024 : 0xFFFFFFFF);
-        bg.setCornerRadius(dp(16));
-        c.setBackground(bg);
-        LinearLayout.LayoutParams lp = matchWrap();
-        lp.setMargins(0, dp(6), 0, dp(6));
-        c.setLayoutParams(lp);
-        return c;
-    }
-
-    private TextView cardTitle(String s) {
-        TextView t = text(17, true);
-        t.setText(s);
-        t.setPadding(0, dp(2), 0, dp(4));
-        return t;
-    }
-
-    private TextView itemTitle(String s) {
-        TextView t = text(15, false);
-        t.setText(s);
-        return t;
-    }
-
-    private TextView secondary(String s) {
-        TextView t = text(13, false);
-        t.setText(s);
-        t.setAlpha(0.65f);
-        return t;
-    }
-
-    /** A row of a card: text on the left, a control on the right. */
-    private LinearLayout settingRow() {
-        LinearLayout r = row();
-        r.setPadding(0, dp(10), 0, dp(4));
-        return r;
-    }
-
-    private View choiceRow(String title, String sub, String[] items, int selected, OnPos f) {
-        return choiceRow(title, sub, null, items, selected, f);
-    }
-
-    /** With info: a link under the text opens it as explanation of the options. */
-    private View choiceRow(String title, String sub, String info, String[] items, int selected, OnPos f) {
-        LinearLayout r = settingRow();
-        LinearLayout t = column();
-        t.addView(itemTitle(title));
-        t.addView(secondary(sub));
-        if (info != null) {
-            TextView more = text(13, false);
-            more.setText("What do the options mean?");
-            more.setTextColor(KAWASAKI_GREEN);
-            more.setPadding(0, dp(4), 0, dp(4));
-            more.setOnClickListener(v -> new AlertDialog.Builder(this)
-                    .setTitle(title)
-                    .setMessage(info)
-                    .setPositiveButton("OK", null)
-                    .show());
-            t.addView(more);
-        }
-        r.addView(t, weight());
-        Spinner s = spinner(items, selected);
-        s.setOnItemSelectedListener(onSelect(f));
-        r.addView(s, controlWidth());
-        return r;
-    }
-
-    private View switchRow(String title, String sub, String key, boolean byDefault) {
-        LinearLayout r = settingRow();
-        LinearLayout t = column();
-        t.addView(itemTitle(title));
-        t.addView(secondary(sub));
-        r.addView(t, weight());
-        Switch s = new Switch(this);
-        s.setChecked(prefs.getBoolean(key, byDefault));
-        s.setOnCheckedChangeListener((b, on) -> {
-            prefs.edit().putBoolean(key, on).apply();
-            BridgeService.settingsChanged();
-        });
-        r.addView(s);
-        return r;
-    }
-
-    private LinearLayout row() {
-        LinearLayout r = new LinearLayout(this);
-        r.setOrientation(LinearLayout.HORIZONTAL);
-        r.setGravity(Gravity.CENTER_VERTICAL);
-        return r;
-    }
-
-    private LinearLayout column() {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(LinearLayout.VERTICAL);
-        return c;
-    }
-
-    private LinearLayout.LayoutParams weight() {
-        return new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-    }
-
-    /** Drop-downs next to a setting's text: fixed width, so the text keeps its room. */
-    private LinearLayout.LayoutParams controlWidth() {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(150), ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(dp(8), 0, 0, 0);
-        return lp;
-    }
-
-    private LinearLayout.LayoutParams matchWrap() {
-        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    }
-
-    private Button button(String text, View.OnClickListener l) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setAllCaps(false);
-        b.setOnClickListener(l);
-        return b;
-    }
-
-    /** Big filled button for the main action of a card. */
-    private Button primaryButton(String text, View.OnClickListener l) {
-        Button b = button(text, l);
-        b.setTextColor(0xFFFFFFFF);
-        b.setTextSize(16);
-        b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setMinHeight(dp(52));
-        b.setStateListAnimator(null);
-        tint(b, KAWASAKI_GREEN);
-        return b;
-    }
-
-    private void tint(Button b, int color) {
-        if (Integer.valueOf(color).equals(b.getTag())) return; // called on every refresh
-        b.setTag(color);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(color);
-        bg.setCornerRadius(dp(26));
-        b.setBackground(new android.graphics.drawable.RippleDrawable(
-                android.content.res.ColorStateList.valueOf(0x33FFFFFF), bg, null));
-    }
-
-    private Spinner spinner(String[] items, int selected) {
-        Spinner s = new Spinner(this);
-        // compact closed view (wraps its text), full-width rows only in the open list
-        ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, items);
-        a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        s.setAdapter(a);
-        s.setSelection(selected);
-        return s;
-    }
-
-    private TextView text(int size, boolean bold) {
-        TextView t = new TextView(this);
-        t.setTextSize(size);
-        if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
-        return t;
     }
 }
