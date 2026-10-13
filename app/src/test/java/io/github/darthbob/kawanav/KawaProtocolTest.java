@@ -61,7 +61,7 @@ public class KawaProtocolTest {
 
     @Test
     public void clockSyncWrite() {
-        assertEquals("1b0c00ffff054a01590d0a1a121e0505",
+        assertEquals("1b0c00ffff054a01590d0a1a121e05",
                 hex(KawaProtocol.generalSettingsWrite(1, 25, 13, 10, 2026, 18, 30, 5)));
     }
 
