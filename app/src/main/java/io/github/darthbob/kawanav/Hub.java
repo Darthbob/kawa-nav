@@ -123,6 +123,13 @@ public final class Hub {
     public static final String KEY_DASH_CALLS = "dash_calls";
     /** Mail/message icon on the dash. */
     public static final String KEY_DASH_MAIL = "dash_mail";
+    /** Start recording by itself when the bike is moving (off by default). */
+    public static final String KEY_RIDE_AUTO = "ride_auto";
+    /** Set while the bridge is being started only because a ride was asked for. */
+    public static final String KEY_RIDE_WANTED = "ride_wanted";
+    /** Ride state ({@link RideRecorder#IDLE}, RECORDING, PAUSED) and its "3.4 km · 12 min" text, for the UI. */
+    public static int rideState;
+    public static String rideText = "";
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
 

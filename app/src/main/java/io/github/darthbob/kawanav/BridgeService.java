@@ -57,6 +57,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private KawaBle ble;
     private CurveEngine curve;
+    private RideRecorder recorder;
     /** Decodes the meter's frames; new per connection (it remembers the bike's config frames). */
     private BikeFrames.Decoder decoder = new BikeFrames.Decoder();
     private BikeRequests requests;
@@ -239,6 +240,42 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 || (askedLevel == 0 && onBike >= 1 && onBike <= 5 && onBike != 0);
     }
 
+    /** "1 h 05 min" for the ride card and the notification. */
+    private static String rideDuration(long ms) {
+        long min = ms / 60_000;
+        return min >= 60 ? min / 60 + " h " + String.format(java.util.Locale.ROOT, "%02d", min % 60) + " min"
+                : min + " min";
+    }
+
+    // ------------------------------------------------------------------ ride recording
+
+    /** Starts recording a ride; starts the bridge first when it is not running. */
+    public static String startRide(Context c) {
+        if (instance == null) {
+            Hub.prefs(c).edit().putBoolean(Hub.KEY_RIDE_WANTED, true).apply();
+            start(c); // onStartCommand picks the wish up once the service runs
+            return null;
+        }
+        String problem = instance.recorder.start(true);
+        instance.updateNotification();
+        return problem;
+    }
+
+    /** Pause or continue the ride. */
+    public static void toggleRidePause() {
+        if (instance == null) return;
+        if (instance.recorder.state() == RideRecorder.PAUSED) instance.recorder.resume();
+        else instance.recorder.pause();
+        instance.updateNotification();
+    }
+
+    /** Ends the ride and saves it. */
+    public static void stopRide() {
+        if (instance == null) return;
+        instance.recorder.finish("stopped by hand");
+        instance.updateNotification();
+    }
+
     /** Shows or clears a dash icon (call, mail); false when the bike is not connected. */
     public static boolean sendDashAlert(int category, int event) {
         if (instance == null || !instance.ble.isReady()) return false;
@@ -309,6 +346,16 @@ public class BridgeService extends Service implements KawaBle.Listener {
             }
         });
         curve = new CurveEngine(this);
+        recorder = new RideRecorder(this);
+        Ride open = recorder.store().resumeCandidate();
+        if (open != null) {
+            // a ride was still running when the app was killed: carry on with it
+            Logger.log("Ride: " + (recorder.adopt(open) == null ? "carried on" : "could not carry on"));
+        }
+        if (Hub.prefs(this).getBoolean(Hub.KEY_RIDE_WANTED, false)) {
+            Hub.prefs(this).edit().putBoolean(Hub.KEY_RIDE_WANTED, false).apply();
+            Logger.log("Ride: " + (recorder.start(true) == null ? "started" : "could not start"));
+        }
         openAudioProfiles();
         applySettings();
         connectBike();
@@ -364,6 +411,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         handler.removeCallbacksAndMessages(null);
         requests.clear();
         RawCapture.stop();
+        recorder.finish("bridge stopped");
         if (wasReady) {
             rememberParked();
             BikeStore.save(this);
@@ -459,6 +507,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             wasReady = true;
             configRetries.clear();
             clockSynced = false;
+            recorder.linkBack();
             if (RawCapture.enabled(this)) RawCapture.start(this);
             tick(); // the arrow first
             handler.postDelayed(startup, STARTUP_DELAY_MS);
@@ -528,6 +577,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     @Override
     public void onLinkLost() {
         if (destroyed) return;
+        recorder.linkLost();
         requests.clear();
         handler.removeCallbacks(startup);
         RawCapture.stop();
@@ -580,6 +630,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
             }
         }
 
+        // the ride state is for the UI, so it is updated whether or not the bike is connected
+        Hub.rideState = recorder.state();
+        Hub.rideText = recorder.state() == RideRecorder.IDLE ? "" : String.format(java.util.Locale.ROOT,
+                "%.1f km · %s", recorder.distanceM() / 1000, rideDuration(recorder.activeMs()));
+
         Hub.Output out = decide();
         Hub.output = out;
         // log every change of what the meter shows (also without bike)
@@ -595,6 +650,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         }
         sendIcons(now);
         pollVehicleInfo(now);
+        if (Hub.prefs(this).getBoolean(Hub.KEY_RIDE_AUTO, false)) recorder.autoCheck();
         if (out == null) {
             Hub.outputStatus = "Nothing to show";
             if (clearsSent < CLEAR_REPEATS) {
@@ -629,7 +685,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
         int battery = icon(Hub.KEY_ICON_BATTERY, batteryOn ? KawaProtocol.batteryLevel(percent, charging) : KawaProtocol.BATTERY_NONE);
         int voice = icon(Hub.KEY_ICON_VOICE, 0);
         int headset = icon(Hub.KEY_ICON_HEADSET, helmetConnected() ? 1 : 0);
-        int ridingLog = icon(Hub.KEY_ICON_RIDING_LOG, 0);
+        // the dash riding-log icon follows the recorder (the debug card can still override it)
+        int ridingLog = icon(Hub.KEY_ICON_RIDING_LOG, recorder.state() == RideRecorder.RECORDING ? 1
+                : recorder.state() == RideRecorder.PAUSED ? 2 : 0);
         int icons = battery << 12 | voice << 8 | headset << 4 | ridingLog;
         if (icons == iconsSent && now - iconsSentAt < ICONS_MS) return;
         byte[] frame = KawaProtocol.meterIndicationFrame(battery, voice, headset, ridingLog);

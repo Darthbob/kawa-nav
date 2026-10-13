@@ -77,6 +77,10 @@ public class MainActivity extends KawaActivity {
     private TextView bikeTitle;
     private TextView bikeSummary;
     private TextView bikeUpdated;
+    // ride recording
+    private TextView rideStatus;
+    private Button rideButton;
+    private Button ridePauseButton;
     // setup
     // banner: settings that keep KawaNav from working fully
     private LinearLayout banner;
@@ -523,6 +527,7 @@ public class MainActivity extends KawaActivity {
         root.addView(banner());
         root.addView(statusCard());
         root.addView(bikeCard());
+        root.addView(rideCard());
         root.addView(autostartCard());
         root.addView(ridingCard());
         root.addView(offlineCard());
@@ -564,6 +569,45 @@ public class MainActivity extends KawaActivity {
         startButton = primaryButton("", v -> toggleBridge());
         c.addView(startButton, matchWrap());
         return c;
+    }
+
+    /** Record a ride: the button, the running time and distance, and the way to the recorded rides. */
+    private LinearLayout rideCard() {
+        LinearLayout c = card();
+        c.addView(cardTitle("Rides"));
+        c.addView(secondary("While a ride is recorded, the bike's values (speed, engine, gear, throttle, lean, "
+                + "temperatures) and the phone's track are written to the phone once a second."));
+        rideStatus = itemTitle("");
+        rideStatus.setPadding(0, dp(8), 0, dp(2));
+        c.addView(rideStatus);
+        LinearLayout buttons = row();
+        buttons.setPadding(0, dp(4), 0, 0);
+        rideButton = primaryButton("Record", v -> toggleRide());
+        ridePauseButton = button("Pause", v -> {
+            BridgeService.toggleRidePause();
+            handler.postDelayed(this::updateUi, 300);
+        });
+        ridePauseButton.setVisibility(View.GONE);
+        buttons.addView(rideButton, weight());
+        buttons.addView(ridePauseButton, weight());
+        c.addView(buttons);
+        LinearLayout more = row();
+        more.setPadding(0, dp(8), 0, 0);
+        more.addView(button("Recorded rides", v -> startActivity(new Intent(this, RidesActivity.class))), weight());
+        c.addView(more);
+        return c;
+    }
+
+    private void toggleRide() {
+        if (Hub.rideState != RideRecorder.IDLE) {
+            BridgeService.stopRide();
+        } else {
+            String problem = BridgeService.startRide(this);
+            if (problem != null) {
+                android.widget.Toast.makeText(this, "Not started: " + problem, android.widget.Toast.LENGTH_LONG).show();
+            }
+        }
+        handler.postDelayed(this::updateUi, 300);
     }
 
     /** The bike's last values (odometer, fuel, range, battery) and the way to its own screen. */
@@ -1002,6 +1046,16 @@ public class MainActivity extends KawaActivity {
         bikeSummary.setVisibility(summary.isEmpty() ? View.GONE : View.VISIBLE);
         bikeUpdated.setText(Hub.bikeConnected && !summary.isEmpty() ? "Connected"
                 : BikeActivity.lastRead(Hub.bike, System.currentTimeMillis()));
+
+        // --- rides
+        boolean recording = Hub.rideState != RideRecorder.IDLE;
+        rideButton.setText(recording ? "Stop" : "Record");
+        tint(rideButton, recording ? 0xFF616161 : KAWASAKI_GREEN);
+        ridePauseButton.setVisibility(recording ? View.VISIBLE : View.GONE);
+        ridePauseButton.setText(Hub.rideState == RideRecorder.PAUSED ? "Continue" : "Pause");
+        rideStatus.setText(recording
+                ? (Hub.rideState == RideRecorder.PAUSED ? "Paused · " : "Recording · ") + Hub.rideText
+                : (Hub.serviceRunning ? "Not recording" : "Start KawaNav before recording a ride"));
 
         // --- banner: what still keeps KawaNav from working fully
         android.companion.AssociationInfo bike = BikePresence.association(this);

@@ -49,6 +49,18 @@
         </activity>
 
         <activity
+            android:name=".RidesActivity"
+            android:exported="false"
+            android:label="Recorded rides"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".RideActivity"
+            android:exported="false"
+            android:label="Ride"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".BikeActivity"
             android:exported="false"
             android:label="Your bike"

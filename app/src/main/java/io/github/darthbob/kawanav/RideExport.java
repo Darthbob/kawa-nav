@@ -1,0 +1,121 @@
+package io.github.darthbob.kawanav;
+
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Turns a recorded ride into a file: a CSV with Rideology's column layout (so the ride can be loaded
+ * into the tools people already use for Rideology exports) and a GPX track with the bike's values as
+ * extensions. Pure Java, so the output can be unit-tested.
+ */
+public final class RideExport {
+    private RideExport() {}
+
+    /**
+     * Rideology's CSV for a BLE5 engine bike: seven metadata rows, then the quoted header, then one row
+     * per recorded second (sf/c.java). Rideology writes it as Shift-JIS with LF line endings; KawaNav
+     * writes the same layout, with a real value in every column it has.
+     */
+    public static String csv(Ride ride, List<RideTsv.Sample> samples, String userName, String comment) {
+        StringBuilder sb = new StringBuilder(samples.size() * 120);
+        double km = (ride.distBikeM > 0 ? ride.distBikeM : ride.distGpsM) / 1000;
+        sb.append("UserAccount Name,").append(cell(userName)).append('\n');
+        sb.append("Title,").append(cell(ride.name)).append('\n');
+        sb.append("Comment,").append(cell(comment)).append('\n');
+        sb.append("Vehicle Nickname,").append(cell(ride.hasBike ? "KawaNav" : "")).append('\n');
+        sb.append(String.format(Locale.ROOT, "Distance(km),%.1f%n", km));
+        sb.append(String.format(Locale.ROOT, "Time(min),%d%n", Math.round(ride.activeMs / 60_000.0)));
+        sb.append("R.Score,\n");
+        sb.append("\"elapsed_msec\",\"gps_latitude\",\"gps_longitude\",\"instant_fuel_consumption\",")
+                .append("\"water_temperature\",\"boost_temperature\",\"engine_RPM\",\"wheel_speed\",\"acceleration\",")
+                .append("\"throttle_position\",\"boost_pressure\",\"gear_position\",\"lean_angle\",\"rideology_score\"\n");
+        for (RideTsv.Sample s : samples) {
+            sb.append(s.tMs).append(',');
+            sb.append(num(s.lat, "%.6f")).append(',');
+            sb.append(num(s.lon, "%.6f")).append(',');
+            sb.append(num(s.fuelInst, "%.1f")).append(',');
+            sb.append(num(s.waterC, "%.0f")).append(',');
+            sb.append(','); // boost temperature: this bike has none
+            sb.append(num(s.rpm, "%.0f")).append(',');
+            sb.append(num(s.kmh, "%.0f")).append(',');
+            sb.append(num(s.accG, "%.2f")).append(',');
+            sb.append(num(s.thrPct, "%.0f")).append(',');
+            sb.append(','); // boost pressure: this bike has none
+            sb.append(gear(s.gear)).append(',');
+            sb.append(num(s.lean, "%.1f")).append(',');
+            sb.append('\n'); // rideology_score: computed by Kawasaki's cloud, not here
+        }
+        return sb.toString();
+    }
+
+    /** "N" for neutral, 1-6, empty when unknown. */
+    private static String gear(double g) {
+        if (g != g) return "";
+        int gear = (int) Math.round(g);
+        return gear == 0 ? "N" : gear >= 1 && gear <= 6 ? String.valueOf(gear) : "Error";
+    }
+
+    private static String num(double v, String fmt) {
+        return v != v ? "" : String.format(Locale.ROOT, fmt, v);
+    }
+
+    private static String cell(String s) {
+        if (s == null || s.isEmpty()) return "";
+        return s.contains(",") || s.contains("\"") ? '"' + s.replace("\"", "\"\"") + '"' : s;
+    }
+
+    /** The CSV as bytes in the encoding Rideology uses (Shift-JIS, falling back to UTF-8). */
+    public static byte[] csvBytes(String csv) {
+        try {
+            return csv.getBytes(java.nio.charset.Charset.forName("Shift_JIS"));
+        } catch (Exception e) {
+            return csv.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
+
+    /** A GPX 1.1 track with speed, rpm and gear as extensions (standard, readable by map tools). */
+    public static String gpx(Ride ride, List<RideTsv.Sample> samples) {
+        StringBuilder sb = new StringBuilder(samples.size() * 120 + 400);
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        sb.append("<gpx version=\"1.1\" creator=\"KawaNav\" xmlns=\"http://www.topografix.com/GPX/1/1\" ")
+                .append("xmlns:kawanav=\"https://github.com/Darthbob/kawa-nav\">\n");
+        sb.append("  <metadata><name>").append(xml(ride.name)).append("</name>")
+                .append("<time>").append(iso(ride.start)).append("</time></metadata>\n");
+        sb.append("  <trk><name>").append(xml(ride.name)).append("</name><trkseg>\n");
+        for (RideTsv.Sample s : samples) {
+            if (!s.hasGps()) continue;
+            sb.append("    <trkpt lat=\"").append(String.format(Locale.ROOT, "%.6f", s.lat))
+                    .append("\" lon=\"").append(String.format(Locale.ROOT, "%.6f", s.lon)).append("\">");
+            if (s.altM == s.altM) sb.append("<ele>").append(String.format(Locale.ROOT, "%.1f", s.altM)).append("</ele>");
+            sb.append("<time>").append(iso(s.epochMs)).append("</time>");
+            if (s.kmh == s.kmh || s.rpm == s.rpm || s.gear == s.gear) {
+                sb.append("<extensions><kawanav:data>");
+                if (s.kmh == s.kmh) sb.append("<kawanav:speed>").append(String.format(Locale.ROOT, "%.0f", s.kmh)).append("</kawanav:speed>");
+                if (s.rpm == s.rpm) sb.append("<kawanav:rpm>").append(Math.round(s.rpm)).append("</kawanav:rpm>");
+                if (s.gear == s.gear) sb.append("<kawanav:gear>").append(gear(s.gear)).append("</kawanav:gear>");
+                if (s.lean == s.lean) sb.append("<kawanav:lean>").append(String.format(Locale.ROOT, "%.1f", s.lean)).append("</kawanav:lean>");
+                sb.append("</kawanav:data></extensions>");
+            }
+            sb.append("</trkpt>\n");
+        }
+        sb.append("  </trkseg></trk>\n</gpx>\n");
+        return sb.toString();
+    }
+
+    /** ISO-8601 in UTC, as GPX wants it. */
+    static String iso(long epochMs) {
+        java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT);
+        f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+        return f.format(new java.util.Date(epochMs));
+    }
+
+    private static String xml(String s) {
+        return s == null ? "" : s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    /** A file name that is safe on every phone and in every file manager. */
+    public static String fileName(Ride ride, String extension) {
+        String base = ride.name == null || ride.name.isEmpty() ? ride.id : ride.name;
+        return base.replaceAll("[^A-Za-z0-9._-]+", "_") + "." + extension;
+    }
+}
