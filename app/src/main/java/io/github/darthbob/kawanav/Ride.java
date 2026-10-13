@@ -37,10 +37,12 @@ public final class Ride {
         return m >= 1000 ? String.format(Locale.ROOT, "%.1f km", m / 1000) : String.format(Locale.ROOT, "%.0f m", m);
     }
 
-    /** "1 h 05 min" / "12 min". */
+    /** "1 h 05 min", "12 min" or, for a short ride, "34 s". */
     public String duration() {
         long min = activeMs / 60_000;
-        return min >= 60 ? String.format(Locale.ROOT, "%d h %02d min", min / 60, min % 60) : min + " min";
+        if (min >= 60) return String.format(Locale.ROOT, "%d h %02d min", min / 60, min % 60);
+        if (min > 0) return min + " min";
+        return Math.max(1, activeMs / 1000) + " s";
     }
 
     /** A ride named after where and when it started, e.g. "Ride 13 Oct 18:40". */

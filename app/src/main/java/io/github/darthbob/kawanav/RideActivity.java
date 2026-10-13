@@ -2,6 +2,7 @@ package io.github.darthbob.kawanav;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -32,6 +33,7 @@ public class RideActivity extends KawaActivity {
     private TextView title;
     private LinearLayout summary;
     private LinearLayout chartCard;
+    private LinearLayout trackCard;
     private TrackView track;
     private ChartView chart;
     private TextView cursor;
@@ -57,7 +59,8 @@ public class RideActivity extends KawaActivity {
         root.addView(when);
         summary = column();
         root.addView(summary);
-        root.addView(trackCard());
+        trackCard = trackCard();
+        root.addView(trackCard);
         root.addView(chartCard());
         root.addView(actionsCard());
         setContentView(page(root));
@@ -81,9 +84,11 @@ public class RideActivity extends KawaActivity {
                         java.text.DateFormat.SHORT).format(new java.util.Date(r.start))
                         + (r.endReason.isEmpty() ? "" : " · ended: " + r.endReason));
                 showSummary(r);
-                boolean gps = r.hasGps && samples.stream().anyMatch(RideTsv.Sample::hasGps);
+                // a track needs at least two positions, else there is nothing to draw
+                long gpsPoints = samples.stream().filter(RideTsv.Sample::hasGps).count();
+                boolean gps = r.hasGps && gpsPoints >= 2;
                 track.set(gps ? samples : null, -1);
-                ((View) track.getParent()).setVisibility(gps ? View.VISIBLE : View.GONE);
+                trackCard.setVisibility(gps ? View.VISIBLE : View.GONE);
                 chartCard.setVisibility(hasSeriesData() ? View.VISIBLE : View.GONE);
                 showChart(0);
             });
@@ -102,7 +107,10 @@ public class RideActivity extends KawaActivity {
         LinearLayout c = card();
         c.addView(iconTitle(R.drawable.ic_route, cardTitle("Track")));
         track = new TrackView(this);
-        track.setBackgroundColor(Ui.surfaceSunken(night));
+        GradientDrawable well = new GradientDrawable();
+        well.setColor(Ui.surfaceSunken(night));
+        well.setCornerRadius(dp(Ui.RADIUS_TILE));
+        track.setBackground(well);
         LinearLayout.LayoutParams lp = matchWrap();
         lp.height = dp(220);
         lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
@@ -182,15 +190,19 @@ public class RideActivity extends KawaActivity {
                         ? statTile("Max lean", String.format(Locale.ROOT, "%.0f° / %.0f°", Math.abs(r.maxLeanL), r.maxLeanR))
                         : null,
                 r.fuelUsedL > 0 ? statTile("Fuel used", String.format(Locale.ROOT, "%.1f L", r.fuelUsedL)) : null);
+        LinearLayout tileSurface = group();
+        tileSurface.setPadding(dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2));
+        tileSurface.addView(tiles);
         LinearLayout.LayoutParams lp = matchWrap();
         lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
-        section.addView(tiles, lp);
+        section.addView(tileSurface, lp);
         LinearLayout c = group();
         if (r.maxRpm > 0) add(c, "Highest engine speed", String.format(Locale.ROOT, "%,d rpm", r.maxRpm));
         if (r.odoStartKm == r.odoStartKm && r.odoEndKm == r.odoEndKm) {
             add(c, "Odometer", String.format(Locale.ROOT, "%,.0f → %,.0f km", r.odoStartKm, r.odoEndKm));
         }
-        add(c, "Recorded", r.samples + " s" + (r.hasGps ? "" : ", without a GPS track"));
+        add(c, "Recorded", r.duration() + ", " + r.samples + " samples"
+                + (r.hasGps ? "" : ", without a GPS track"));
         section.addView(c);
         summary.addView(section);
     }
@@ -209,18 +221,20 @@ public class RideActivity extends KawaActivity {
         c.addView(iconTitle(R.drawable.ic_share, cardTitle("Keep or share")));
         LinearLayout e = row();
         e.setPadding(0, dp(6), 0, 0);
-        e.addView(primaryButton("Export CSV", v -> export("csv")), weight());
+        e.addView(iconButton(primaryButton("Export CSV", v -> export("csv")), R.drawable.ic_download), weight());
         e.addView(gap());
-        e.addView(secondaryButton("Export GPX", v -> export("gpx")), weight());
+        e.addView(iconButton(secondaryButton("Export GPX", v -> export("gpx")), R.drawable.ic_download), weight());
         c.addView(e);
         LinearLayout r = row();
-        r.setPadding(0, dp(Ui.SPACE3), 0, 0);
-        r.addView(secondaryButton("Rename", v -> rename()), weight());
+        r.setPadding(0, dp(Ui.SPACE2), 0, 0);
+        r.addView(iconButton(secondaryButton("Rename", v -> rename()), R.drawable.ic_edit), weight());
         r.addView(gap());
-        r.addView(destructiveButton("Delete", v -> confirmDelete()), weight());
+        r.addView(iconButton(destructiveButton("Delete", v -> confirmDelete()), R.drawable.ic_trash), weight());
         c.addView(r);
-        c.addView(note("CSV has Rideology's columns, so the existing tools can read the ride. GPX is a "
-                + "track for map programs. Both go to Download/KawaNav."));
+        TextView caption = note("CSV has Rideology's columns, so the existing tools can read the ride. GPX is a "
+                + "track for map programs. Both go to Download/KawaNav.");
+        caption.setPadding(0, dp(Ui.SPACE2), 0, 0);
+        c.addView(caption);
         return c;
     }
 

@@ -55,9 +55,18 @@ public final class TrackView extends View {
         float pad = getResources().getDisplayMetrics().density * 12;
         float w = getWidth() - 2 * pad, h = getHeight() - 2 * pad;
         // keep the shape's proportions, as with a map
-        double scale = Math.min(w / spanX, h / spanY);
-        float offX = (float) (pad + (w - spanX * scale) / 2);
-        float offY = (float) (pad + (h - spanY * scale) / 2);
+        float offX;
+        float offY;
+        double scale;
+        if (spanX <= 1e-6 && spanY <= 1e-6) { // one point (or none moved): put it in the middle
+            offX = getWidth() / 2f;
+            offY = getHeight() / 2f;
+            scale = 0;
+        } else {
+            scale = Math.min(w / spanX, h / spanY);
+            offX = (float) (pad + (w - spanX * scale) / 2);
+            offY = (float) (pad + (h - spanY * scale) / 2);
+        }
 
         double maxSpeed = 1;
         for (RideTsv.Sample s : samples) if (s.kmh == s.kmh) maxSpeed = Math.max(maxSpeed, s.kmh);

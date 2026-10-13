@@ -211,6 +211,17 @@ public class MainActivity extends KawaActivity {
                 prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, level).apply();
             }
             if (i.hasExtra("raw_capture")) prefs.edit().putBoolean(Hub.KEY_DEBUG_CAPTURE, i.getBooleanExtra("raw_capture", false)).apply();
+            // open a screen directly, e.g. --es screen rides | bike | ride --es ride <id>
+            if (i.hasExtra("screen")) {
+                String screen = i.getStringExtra("screen");
+                Intent target = "rides".equals(screen) ? new Intent(this, RidesActivity.class)
+                        : "bike".equals(screen) ? new Intent(this, BikeActivity.class)
+                        : "ride".equals(screen) ? new Intent(this, RideActivity.class) : null;
+                if (target != null) {
+                    if (i.hasExtra("ride")) target.putExtra(RideActivity.EXTRA_ID, i.getStringExtra("ride"));
+                    startActivity(target);
+                }
+            }
             if (i.hasExtra("replay")) {
                 // a capture of this phone, or a file copied into the app's files/ (adb push + run-as cp)
                 java.io.File f = new java.io.File(RawCapture.dir(this), i.getStringExtra("replay"));
@@ -724,7 +735,9 @@ public class MainActivity extends KawaActivity {
         bb.setCornerRadius(dp(22));
         b.setBackground(bb);
         b.setPadding(dp(16), 0, dp(16), 0);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        b.setMinHeight(dp(Ui.TOUCH_MIN));
         lp.setMargins(dp(10), 0, 0, 0);
         r.addView(b, lp);
         r.setOnClickListener(l);
@@ -1089,11 +1102,12 @@ public class MainActivity extends KawaActivity {
         statusHint.setVisibility(statusHint.getText().length() > 0 ? View.VISIBLE : View.GONE);
         Hub.Output out = Hub.output;
         if (!Hub.serviceRunning) {
-            meterArrow.setText("–");
+            meterArrow.setVisibility(View.GONE);
+            meterSource.setVisibility(View.GONE);
             meterText.setText("Nothing sent to the bike");
-            meterSource.setText("");
         } else if (out == null) {
-            meterArrow.setText("–");
+            meterArrow.setVisibility(View.GONE);
+            meterSource.setVisibility(View.VISIBLE);
             meterText.setText("Nothing to show");
             boolean maps = Hub.mapsEnabled(this);
             meterSource.setText(maps && Hub.maps != null ? "Google Maps is starting…"
@@ -1101,13 +1115,16 @@ public class MainActivity extends KawaActivity {
                     : maps ? "Start navigation in Google Maps, or turn on upcoming curves"
                     : "Turn on Google Maps directions or upcoming curves");
         } else {
+            meterArrow.setVisibility(View.VISIBLE);
+            meterSource.setVisibility(View.VISIBLE);
             meterArrow.setText(arrow(out.turn));
             meterText.setText(turnName(out.turn) + (out.distanceM >= 0 ? " · " + distance(out.distanceM) : ""));
             meterSource.setText("Maps".equals(out.source) ? "From Google Maps" : "Curve ahead on your road");
         }
         meterArrow.setTextColor(out != null && Hub.serviceRunning ? KAWASAKI_GREEN : 0xFF9E9E9E);
-        startButton.setText(Hub.serviceRunning ? "Stop" : "Start");
-        tint(startButton, Hub.serviceRunning ? 0xFF616161 : KAWASAKI_GREEN);
+        startButton.setText(Hub.serviceRunning ? "Stop KawaNav" : "Start KawaNav");
+        if (Hub.serviceRunning) tint(startButton, Ui.solidNeutral(night));
+        else tint(startButton, KAWASAKI_GREEN);
 
         // --- bike
         bikeTitle.setText(BikeActivity.name(Hub.bike, prefs.getString(Hub.KEY_BIKE_NAME, null)));
@@ -1118,9 +1135,12 @@ public class MainActivity extends KawaActivity {
                 : BikeActivity.lastRead(Hub.bike, System.currentTimeMillis()));
 
         // --- rides
+        // only the screen's main action is green: the ride button goes quiet while the app is not running
         boolean recording = Hub.rideState != RideRecorder.IDLE;
-        rideButton.setText(recording ? "Stop" : "Record");
-        tint(rideButton, recording ? 0xFF616161 : KAWASAKI_GREEN);
+        rideButton.setText(recording ? "Stop ride" : "Record ride");
+        if (recording) tint(rideButton, Ui.solidNeutral(night));
+        else if (Hub.serviceRunning) tint(rideButton, KAWASAKI_GREEN);
+        else quiet(rideButton);
         ridePauseButton.setVisibility(recording ? View.VISIBLE : View.GONE);
         ridePauseButton.setText(Hub.rideState == RideRecorder.PAUSED ? "Continue" : "Pause");
         rideStatus.setText(recording

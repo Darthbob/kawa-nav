@@ -265,6 +265,9 @@ public class BikeActivity extends KawaActivity {
                 section = r[0];
                 LinearLayout container = column();
                 container.addView(sectionHeader(sectionIcon(section), section));
+                if (section.startsWith("Riding modes")) {
+                    container.addView(note("Numbers as the bike reports them, until the values are confirmed."));
+                }
                 group = group();
                 container.addView(group);
                 sections.addView(container);
@@ -369,8 +372,8 @@ public class BikeActivity extends KawaActivity {
         if (i != null) {
             String s = "On the dash";
             if (i.odometerKm >= 0) r.add(new String[]{s, "Odometer", String.format(Locale.ROOT, "%,d km", i.odometerKm)});
-            add(r, s, "Trip A", i.tripAKm, "%.1f km");
-            add(r, s, "Trip B", i.tripBKm, "%.1f km");
+            add(r, s, "Trip A", i.tripAKm, "%,.1f km");
+            add(r, s, "Trip B", i.tripBKm, "%,.1f km");
             if (i.fuelBars >= 0) r.add(new String[]{s, "Fuel", i.fuelBars + (i.fuelBars == 1 ? " bar" : " bars")});
             if (i.rangeKm >= 0) r.add(new String[]{s, "Range", i.rangeKm + " km"});
             add(r, s, "Average fuel economy", i.avgMileage, "%.1f (dash units)");
@@ -416,9 +419,9 @@ public class BikeActivity extends KawaActivity {
                 r.add(new String[]{"Maintenance", BikeFrames.ServiceIndicator.NAMES[k], String.join(" or ", due)});
             }
         }
-        BikeFrames.VehicleSettings v = b.settings;
+        BikeFrames.VehicleSettings v = Hub.DEBUG_TOOLS ? b.settings : null; // raw numbers: for checking the protocol
         if (v != null) {
-            String s = "Riding modes (as numbers until verified)";
+            String s = "Riding modes";
             if (v.ridingMode >= 0) r.add(new String[]{s, "Riding mode", String.valueOf(v.ridingMode)});
             if (v.power >= 0) r.add(new String[]{s, "Power mode", String.valueOf(v.power)});
             if (v.ktrc >= 0) r.add(new String[]{s, "KTRC", String.valueOf(v.ktrc)});

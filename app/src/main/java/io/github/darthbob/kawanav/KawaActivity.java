@@ -387,6 +387,19 @@ public abstract class KawaActivity extends Activity {
         return b;
     }
 
+    /** A button with a small icon in front of its label. */
+    protected Button iconButton(Button b, int drawable) {
+        android.graphics.drawable.Drawable icon = getDrawable(drawable);
+        if (icon != null) {
+            int size = dp(18);
+            icon.setBounds(0, 0, size, size);
+            icon.setTint(b.getCurrentTextColor());
+            b.setCompoundDrawablesRelative(icon, null, null, null);
+            b.setCompoundDrawablePadding(dp(Ui.SPACE2));
+        }
+        return b;
+    }
+
     /** Gives a button the rounded filled look; cached in the tag because refresh runs often. */
     protected void tint(Button b, int color) {
         if (Integer.valueOf(color).equals(b.getTag())) return; // called on every refresh
@@ -395,6 +408,17 @@ public abstract class KawaActivity extends Activity {
         bg.setColor(color);
         bg.setCornerRadius(dp(28));
         b.setBackground(new RippleDrawable(ColorStateList.valueOf(Ui.rippleOnFill()), bg, null));
+    }
+
+    /** A filled button with a quiet grey ink: used when it is not the main action of the screen. */
+    protected void quiet(Button b) {
+        if (Integer.valueOf(Ui.solidNeutral(night)).equals(b.getTag())) return; // already quiet
+        b.setTag(null); // invalidates the tint cache
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Ui.surfaceSunken(night));
+        bg.setCornerRadius(dp(28));
+        b.setTextColor(Ui.ink(night));
+        b.setBackground(new RippleDrawable(ColorStateList.valueOf(Ui.rippleOnPlain(night)), bg, null));
     }
 
     /** The outlined look of {@link #secondaryButton}. */

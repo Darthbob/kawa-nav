@@ -142,6 +142,7 @@ public class RidesActivity extends KawaActivity {
     private View row(Ride r, long today) {
         LinearLayout row = settingRow();
         row.setMinimumHeight(dp(Ui.TOUCH_MIN));
+        row.addView(icon(R.drawable.ic_flag, false), iconGap());
         LinearLayout t = column();
         TextView name = itemTitle(r.name.isEmpty() ? Ride.defaultName(r.start) : r.name);
         t.addView(name);
