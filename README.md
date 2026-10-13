@@ -242,7 +242,9 @@ left behind is marked "recovered" and its summary rebuilt from the file.
 Distance comes from the bike's odometer when the bike reports one, else from the GPS track. The dash's
 riding-log icon (the small "log" symbol) follows the recorder: recording, paused, or off.
 
-Everything stays on the phone: no account, no upload.
+Everything stays on the phone: no account, no upload. Only Android's own backup takes the rides, the
+settings and the bike's last values along to a new phone, and the cloud backup only when it is
+end-to-end encrypted (phone with a screen lock); offline maps and the log are left out.
 
 ### 🔧 Settings on the bike
 

@@ -29,7 +29,10 @@
         <package android:name="com.google.android.apps.maps" />
     </queries>
 
+    <!-- backup: only rides, settings and the bike's last values, see res/xml/data_extraction_rules.xml -->
     <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="KawaNav"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
