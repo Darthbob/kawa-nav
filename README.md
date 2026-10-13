@@ -1,10 +1,11 @@
 # 🏍️ KawaNav
 
 Android app that shows **Google Maps turn-by-turn directions** or the **upcoming curves of the road
-you are on** on the TFT dash of a Kawasaki motorcycle. It talks to the dash (Kawasaki calls it the
-"meter", hence the name in the code and protocol notes) the same way Kawasaki's
-Rideology app does (Bluetooth LE, see [docs/PROTOCOL.md](docs/PROTOCOL.md)) and replaces Rideology's
-link to the bike.
+you are on** on the TFT dash of a Kawasaki motorcycle, and that reads the bike's own data (odometer,
+fuel, temperatures, settings) and **records your rides** with a track, charts and an export.
+It talks to the dash (Kawasaki calls it the "meter", hence the name in the code and protocol notes) the
+same way Kawasaki's Rideology app does (Bluetooth LE, see [docs/PROTOCOL.md](docs/PROTOCOL.md)) and
+replaces Rideology's link to the bike.
 
 Independent project, not affiliated with or endorsed by Kawasaki or Google. Tested on a Kawasaki
 Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
@@ -15,7 +16,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 > own risk; there is no warranty (see [License](#-license)).
 
 **Contents:** [Features](#-features) · [Compatibility](#-compatibility) · [Install](#-install) ·
-[Using KawaNav](#-using-kawanav) ·
+[Using KawaNav](#-using-kawanav) · [Bike data](#-bike-data) · [Recording rides](#-recording-rides) ·
+[Settings on the bike](#-settings-on-the-bike) ·
 [Known limitations](#-known-limitations) · [License](#-license)
 
 ## ✨ Features
@@ -32,6 +34,19 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   intercom is connected.
 - 🔑 **Starts by itself** when the bike is switched on (or the helmet intercom connects), also with the
   phone locked in a pocket, and stops 5 minutes after the bike is switched off.
+- 📊 **The bike's own data**: odometer, trip A/B, fuel and range, battery voltage, outside and engine
+  temperatures, maintenance reminders, VIN, and live values while riding (speed, engine speed, gear,
+  throttle, lean angle). The last values are kept, so they are there with the ignition off, and the
+  phone remembers where the bike was parked ("Walk to the bike").
+- 🗺️ **Ride recording**: records once a second — the bike's values and the phone's GPS track — and keeps
+  the rides with a summary, a track coloured by speed, charts for any value (touch to see where you were)
+  and export as Rideology's CSV or as GPX. A ride survives the app being killed.
+- 🔔 **Call and mail icons on the dash**: the dash shows an icon while a call comes in or a mail or
+  message arrives. Only the fact there is one is sent: no numbers, no names, nothing stored.
+- 🕐 **Dash clock from the phone**: optional, once per connection, like Rideology.
+- 🔧 **Settings on the bike**: reads the ride settings (riding mode, power, KTRC, quickshifter, and the
+  suspension settings on bikes that have them) and, in debug builds, writes riding mode/power/KTRC/KQS
+  and the dash shift lamp after a confirmation.
 - 🌍 **Offline maps**: download regions (country, state, district) from Geofabrik, see their data date,
   update and delete them one by one.
 
@@ -120,6 +135,10 @@ Once a second KawaNav decides what goes on the dash:
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° (explained in the app) |
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
+| [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
+| Set the dash clock from the phone | Off | Sets the dash clock once per connection |
+| Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
+| Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Messages, LINE, …) |
 | [Distances in feet](#distances-in-feet) | Off | Imperial distances |
 | [Left-hand traffic](#left-hand-traffic) | Off | For countries driving on the left (UK, Ireland, …) |
 
@@ -179,6 +198,71 @@ roundabout is then shown clockwise, a roundabout exit without a number ("turn ri
 roundabout") counts from the other side, and a U-turn without a direction turns right. Free ride
 reads the direction of a roundabout from the road itself and needs no setting.
 
+### 📊 Bike data
+
+The main screen shows the bike's last values in one row ("Your bike"); tapping it opens the bike's own
+screen, which groups everything the dash reported when it was last connected:
+
+- **On the dash**: odometer, trip A/B, fuel bars, range, average fuel economy and consumption, average
+  speed, total engine hours, battery voltage, outside temperature. Values the bike does not have (it
+  says so in the frame it sends) are left out rather than shown as zero.
+- **Engine**: while the bike is connected and sending, the live values (speed, engine speed, gear,
+  throttle, lean angle, acceleration) and the temperatures; they are gone a few seconds after the bike
+  stops sending.
+- **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
+  their date and distance.
+- **Dash**: the clock the dash has (and the shift lamp setting), as last read.
+- **Parked**: after the link is lost, the phone's position at that moment, with a "Walk to the bike"
+  button that opens Maps in walking mode. It appears only if the phone had a recent position (curves or
+  a recorded ride were using GPS).
+
+The page ends with the VIN, masked. Tap it to show all of it.
+
+Values are shown with the names Rideology uses; where the name could not be verified against a real
+bike yet, the number the bike sent is printed in brackets next to it.
+
+### 🗺️ Recording rides
+
+"Record ride" on the main screen (or turning "Start recording by itself" on) records one line per
+second: the bike's values that second and the phone's position. Pause and continue work while the ride
+goes on; a ride that was running when the app was killed is continued after a restart, and one that was
+left behind is marked "recovered" and its summary rebuilt from the file.
+
+"Recorded rides" lists them with totals for this week, this month and this year. A ride has:
+
+- a summary (distance, time, average and top speed, highest engine speed, max lean left/right, fuel
+  used, odometer start and end);
+- the track, coloured by speed, with a dot where the ride started;
+- charts for speed, engine speed, gear, throttle, lean angle, coolant temperature and acceleration —
+  picking one and touching the line marks that second on the track;
+- rename, delete, and export: **CSV** with Rideology's column layout (so the tools people already use
+  for Rideology exports can read it) or **GPX** with the values as extensions for map programs. Both
+  are written to `Download/KawaNav` and offered for sharing.
+
+Distance comes from the bike's odometer when the bike reports one, else from the GPS track. The dash's
+riding-log icon (the small "log" symbol) follows the recorder: recording, paused, or off.
+
+Everything stays on the phone: no account, no upload.
+
+### 🔧 Settings on the bike
+
+The bike's screen reads the ride settings (riding mode, power, KTRC, quickshifter, engine brake, and the
+suspension settings on bikes that have them) and shows them with the name and the number the bike sent.
+
+**Writing them back is in debug builds only for now** — it has not been tried on a bike yet — and the
+card is marked `DEBUG`:
+
+- **Ride settings**: riding mode, power, KTRC and quickshifter. KawaNav refuses to send unless the bike
+  is connected, standing still, in neutral and with the throttle closed (Rideology itself only asks for
+  standing still), asks for confirmation, waits for the meter's answer and reads the settings back to
+  compare.
+- **Dash shift lamp**: when the lamp lights (off / tachometer / LED / both, as the dash allows) and at
+  which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
+  dash clock stays as it is.
+
+Rideology does not write the suspension settings (KECS) on these dashes either, so KawaNav only reads
+them.
+
 ### 🌍 Offline maps
 
 Curves only work where a region is downloaded; nothing is fetched while riding. The app says
@@ -214,6 +298,18 @@ The Start/Stop button is only a manual fallback (autostart missed, testing).
 - Only German and English Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
+- **Writing settings and the shift lamp is debug builds only** until it has been tried on a bike, and the
+  names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
+  number the bike sent, not instead of it.
+- The **scaling of the riding-log values** (speed, engine speed, throttle, lean angle) is chosen from
+  what the bike reports about itself. It matched the frames in tests, but it has not been compared with
+  the dash for a whole ride yet.
+- The **battery and headset icons**, the **call/mail icons** and the **dash clock** have never been seen
+  on a real dash. They follow the protocol Rideology uses.
+- **R.Score** (Rideology's ride score) is not computed: Kawasaki's cloud does that, and the formula is
+  not published. The exported CSV leaves that column empty.
+- The phone and the bike must be in range; while the bike is connected, **Rideology must stay closed**
+  (the bike talks to one app at a time).
 
 ## 📜 License
 
@@ -226,6 +322,11 @@ particular purpose. See [LICENSE](LICENSE) for the full text.
 Road data: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, available under
 the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/), downloaded by the app
 from [Geofabrik](https://download.geofabrik.de). The repository and the APK contain no map data.
+
+Frame layouts for the bike's data, settings and riding log were cross-checked against
+[Zen3515's Home Assistant integration for Rideology bikes](https://github.com/Zen3515/homeassistant-kawasaki-rideology-ble)
+(Apache License 2.0). Kawasaki's own app was decompiled **for interoperability only**; no Kawasaki code
+is used here, and the extracted facts are in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 Kawasaki, Rideology, Ninja, Versys and the model names are trademarks of Kawasaki Motors, Ltd.;
 Google Maps is a trademark of Google LLC. They are used here only to describe compatibility.

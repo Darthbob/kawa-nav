@@ -613,6 +613,8 @@ public class MainActivity extends KawaActivity {
         buttons.addView(ridePauseButton, weight());
         c.addView(buttons);
 
+        addRow(c, switchRow("Start recording by itself", "As soon as the bike is connected and moving",
+                Hub.KEY_RIDE_AUTO, false));
         addRow(c, listRow(R.drawable.ic_list, "Recorded rides",
                 "Everything you have recorded, with track and charts", null, true,
                 v -> startActivity(new Intent(this, RidesActivity.class))));

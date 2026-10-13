@@ -104,8 +104,7 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 
 - TCS high/low nibbles at byte 24, ABS status byte 37 and front brake pressure byte 39 (mask `0x0F` /
   guarded by FF) as KawaNav decodes them. (verified for the layout, not for the brake scaling)
-- KawaNav `BikeFrames.Telemetry` now selects the mode **from the 0x40 nibble per value** (the debug
-  "speed/rpm scaling" switches are only for comparing against the dash).
+- KawaNav `BikeFrames.Telemetry` selects the mode **from the 0x40 nibble, per value**, like the app.
 
 ### 0x4B – suspension / IMU (`Ble5Value.r`)
 
@@ -339,6 +338,21 @@ KawaNav never logs this frame.)
   parses the settings result (byte 7 of a 0x48 reply) and its generic ACK wrapper is raw.
 - Frame types not decoded by KawaNav: 0x01, 0x07, 0x12/0x0A (app→meter), and the EV/HEV family
   (0x11, 0x16, 0x23, 0x24, 0x31, 0x32, 0x35, 0x42, 0x52, 0x62, 0x0E).
+
+## What KawaNav implements today
+
+| Part | Frames | State |
+|---|---|---|
+| Turn-by-turn | 0x14, 0x13 | works on the bike (v0.1–v0.3, verified) |
+| Bike data | 0x03, 0x40, 0x41, 0x45, 0x4A, 0x4B, 0x1A, 0x1B, 0x1D, 0x1E, 0x47, 0x48 | decoded and shown; the scaling comes from the 0x40 nibbles, not yet compared with a dash over a whole ride |
+| Connect sequence | 03, 40, 1A, 1D, 47, 0B, 41, 1B, 48, 1E, 08, 45 | sent after connecting (read-only level in release; the full one, with 0x08 and the phone name, in debug builds) |
+| Ride recording | 0x45, 0x4A + GPS | records locally; nothing on the meter drives it (the app sends no start/stop frame, and neither does KawaNav) |
+| Dash icons | 0x13 (battery, headset, riding log), 0x12 (call, mail) | sent; the riding-log icon follows the recorder. Not yet seen on a dash |
+| Clock | 0x1B write | optional setting, off by default; preserves the shift lamp |
+| Settings write | 0x48 (block 09, byte 7 = 1) | debug builds only until tried on a bike: riding mode, power, KTRC, KQS |
+| Shift lamp write | 0x1B (block 0x4A) | debug builds only; range and modes taken from the meter's 0x1A answer |
+
+Everything else in this document is protocol knowledge KawaNav does not use yet.
 
 ## Verified on the bike (Z900 2026 "Kawasaki-ZR900S", 2026-10-10)
 
