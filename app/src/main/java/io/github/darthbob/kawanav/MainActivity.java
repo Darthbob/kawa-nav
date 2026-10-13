@@ -99,6 +99,8 @@ public class MainActivity extends KawaActivity {
     private TextView freeModeStatus;
     // debug
     private LinearLayout debugCard;
+    private LinearLayout bikeDebugCard;
+    private TextView debugBike;
     private TextView debugIconsStatus;
     private TextView debugGatt;
     private int titleTaps;
@@ -180,6 +182,19 @@ public class MainActivity extends KawaActivity {
         if (i.getBooleanExtra("offline_cancel", false)) OfflineService.stop(this);
         if (i.getBooleanExtra("export_log", false)) Logger.afterWrites(this::exportLog);
         if (i.hasExtra(OfflineService.EXTRA_REGION)) OfflineService.startRegion(this, i.getStringExtra(OfflineService.EXTRA_REGION));
+        if (Hub.DEBUG_TOOLS) {
+            // debug builds: vehicle data tests, e.g. --es bike_read 41, --ei init_level 2, --es replay 20261013-190000.txt
+            if (i.hasExtra("bike_read")) {
+                Logger.log("adb: read " + i.getStringExtra("bike_read") + ": "
+                        + BridgeService.read(Integer.parseInt(i.getStringExtra("bike_read"), 16)));
+            }
+            if (i.hasExtra("init_level")) prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, i.getIntExtra("init_level", 1)).apply();
+            if (i.hasExtra("raw_capture")) prefs.edit().putBoolean(Hub.KEY_DEBUG_CAPTURE, i.getBooleanExtra("raw_capture", false)).apply();
+            if (i.hasExtra("replay")) {
+                java.io.File f = new java.io.File(RawCapture.dir(this), i.getStringExtra("replay"));
+                Logger.log("adb: replay " + f.getName() + ": " + BridgeService.replay(f));
+            }
+        }
         if (i.hasExtra("bridge")) {
             if (i.getBooleanExtra("bridge", false)) {
                 if (!Hub.serviceRunning) BridgeService.start(this);
@@ -495,6 +510,7 @@ public class MainActivity extends KawaActivity {
         root.addView(ridingCard());
         root.addView(offlineCard());
         if (Hub.DEBUG_TOOLS) root.addView(debugCard());
+        if (Hub.DEBUG_TOOLS) root.addView(bikeDebugCard());
         root.addView(footer());
 
         return page(root);
@@ -777,6 +793,7 @@ public class MainActivity extends KawaActivity {
         boolean show = !prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false);
         prefs.edit().putBoolean(Hub.KEY_DEBUG_ICONS, show).apply();
         debugCard.setVisibility(show ? View.VISIBLE : View.GONE);
+        bikeDebugCard.setVisibility(show ? View.VISIBLE : View.GONE);
         android.widget.Toast.makeText(this, show ? "Debug options shown" : "Debug options hidden",
                 android.widget.Toast.LENGTH_SHORT).show();
     }
@@ -805,6 +822,46 @@ public class MainActivity extends KawaActivity {
         c.addView(debugGatt);
         c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
         debugCard = c;
+        return c;
+    }
+
+    /**
+     * Hidden card for the vehicle data: which requests go out after connecting, the scaling of speed and
+     * rpm, frame capture, and everything decoded so far next to the raw frames, to check against the dash.
+     */
+    private LinearLayout bikeDebugCard() {
+        LinearLayout c = card();
+        c.addView(cardTitle("Bike data (debug)"));
+        c.addView(secondary("Decoded values next to the last raw frame of each type. Compare them with the dash "
+                + "to check the scaling (PROTOCOL.md)."));
+        c.addView(choiceRow("Requests after connecting", "Applies on the next connect. Full is Rideology's sequence: "
+                        + "it adds the phone name, the 0x08 init and the 0x45 riding log frames",
+                new String[]{"Capabilities only (v0.3)", "Read-only", "Full (like Rideology)"}, Hub.initLevel(this),
+                pos -> prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, pos).apply()));
+        c.addView(choiceRow("Speed scaling", "Riding log (0x4A) wheel speed",
+                new String[]{"9 bit km/h (Z500)", "u16 / 81.92"}, prefs.getInt(Hub.KEY_SPEED_SCALE, 0),
+                pos -> prefs.edit().putInt(Hub.KEY_SPEED_SCALE, pos).apply()));
+        c.addView(choiceRow("Rpm scaling", "Riding log (0x4A) engine speed",
+                new String[]{"15 bit (Z500)", "u16 / 4"}, prefs.getInt(Hub.KEY_RPM_SCALE, 0),
+                pos -> prefs.edit().putInt(Hub.KEY_RPM_SCALE, pos).apply()));
+        c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect: "
+                + "adb pull /sdcard/Android/data/" + getPackageName() + "/files/captures/", Hub.KEY_DEBUG_CAPTURE, false));
+        LinearLayout reads = row();
+        reads.setPadding(0, dp(6), 0, 0);
+        for (int[] r : new int[][]{{BikeFrames.VEHICLE_INFO}, {BikeFrames.VEHICLE_SETTINGS}, {BikeFrames.SERVICE_INDICATOR}}) {
+            int id = r[0];
+            reads.addView(button("Read " + String.format(Locale.ROOT, "%02X", id), v -> android.widget.Toast.makeText(this,
+                    BridgeService.read(id) ? "Asked the bike for " + BikeFrames.name(id) : "Bike not connected",
+                    android.widget.Toast.LENGTH_SHORT).show()), weight());
+        }
+        c.addView(reads);
+        debugBike = secondary("");
+        debugBike.setTypeface(Typeface.MONOSPACE);
+        debugBike.setTextIsSelectable(true);
+        debugBike.setPadding(0, dp(10), 0, 0);
+        c.addView(debugBike);
+        c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
+        bikeDebugCard = c;
         return c;
     }
 
@@ -860,6 +917,9 @@ public class MainActivity extends KawaActivity {
                     + "\nLast sent: " + Hub.iconsStatus);
             String gatt = Hub.gattDump.isEmpty() ? "Not read yet: connect the bike with this card shown." : Hub.gattDump;
             if (!gatt.contentEquals(debugGatt.getText())) debugGatt.setText(gatt); // keeps a text selection
+            String bike = "MTU " + Hub.bikeMtu + "\n" + Hub.bike.describe(prefs.getInt(Hub.KEY_SPEED_SCALE, 0),
+                    prefs.getInt(Hub.KEY_RPM_SCALE, 0), System.currentTimeMillis());
+            if (!debugBike.hasSelection() && !bike.contentEquals(debugBike.getText())) debugBike.setText(bike);
         }
         // --- status
         int color;

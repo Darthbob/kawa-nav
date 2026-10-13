@@ -212,13 +212,17 @@ public final class KawaProtocol {
     /**
      * The requests sent after connecting, in Rideology's order (03, 40, 1A, 1D, 47, 0B, 41, 1B, 48, 1E,
      * 08, 45; 42 left out, it is for EV/HEV bikes). {@link #INIT_READ} only asks for information; the
-     * full sequence also sends the phone name and the 0x08 init and starts the 0x45 riding-log frames.
+     * full sequence also sends the 0x08 init and starts the 0x45 riding-log frames. The phone name (0B)
+     * is sent when one is given (Rideology sends Build.MODEL).
      */
     public static List<BikeRequests.Request> startup(int level, String phoneModel, BikeRequests.Done done) {
         List<BikeRequests.Request> l = new java.util.ArrayList<>();
         int p = BikeRequests.STARTUP;
         if (level == INIT_NONE) {
             l.add(new BikeRequests.Request(CAPABILITIES_REQUEST, "capabilities request", BikeRequests.DATA_OR_ACK, p, done));
+            if (phoneModel != null && !phoneModel.isEmpty()) {
+                l.add(new BikeRequests.Request(phoneNameFrame(phoneModel), "phone name \"" + phoneModel + "\"", BikeRequests.ANY_ACK, p, done));
+            }
             return l;
         }
         boolean full = level >= INIT_FULL;
@@ -227,7 +231,7 @@ public final class KawaProtocol {
         l.add(new BikeRequests.Request(CAPABILITIES_REQUEST, "capabilities request", BikeRequests.DATA_OR_ACK, p, done));
         l.add(new BikeRequests.Request(readRequest(BikeFrames.SERVICE_CONFIG), "maintenance config request", BikeRequests.DATA_OR_ACK, p, done));
         l.add(new BikeRequests.Request(readRequest(BikeFrames.TUNING_CONFIG), "tuning config request", BikeRequests.DATA_OR_ACK, p, done));
-        if (full && phoneModel != null && !phoneModel.isEmpty()) {
+        if (phoneModel != null && !phoneModel.isEmpty()) {
             l.add(new BikeRequests.Request(phoneNameFrame(phoneModel), "phone name \"" + phoneModel + "\"", BikeRequests.ANY_ACK, p, done));
         }
         l.add(new BikeRequests.Request(readRequest(BikeFrames.VEHICLE_INFO), "vehicle info request", BikeRequests.DATA_OR_ACK, p, done));

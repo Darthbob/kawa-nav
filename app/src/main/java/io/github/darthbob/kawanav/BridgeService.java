@@ -42,6 +42,12 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private static final long ICONS_MS = 5000;
     /** After an autostart: stop again when the bike has not been connected for this long. */
     private static final long AUTO_STOP_MS = 5 * 60_000;
+    /** After connecting: the arrow goes out first, the vehicle-data requests this much later. */
+    private static final long STARTUP_DELAY_MS = 1000;
+    /** Vehicle info (odometer, fuel…) is asked for again when the last answer is this old. */
+    private static final long INFO_POLL_MS = 20_000;
+    /** Frame types that may be read on request (debug card, adb): reads only, never settings writes. */
+    private static final int[] READABLE = {0x03, 0x1A, 0x1B, 0x1D, 0x1E, 0x40, 0x41, 0x45, 0x47, 0x48};
 
     private static BridgeService instance;
 
@@ -50,6 +56,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private CurveEngine curve;
     /** Decodes the meter's frames; new per connection (it remembers the bike's config frames). */
     private BikeFrames.Decoder decoder = new BikeFrames.Decoder();
+    private BikeRequests requests;
+    /** The connect sequence was queued on this connection (vehicle info polling waits for it). */
+    private boolean startupQueued;
+    private boolean modelLogged;
+    private long infoPolledAt;
     private int clearsSent;
     /** Status icon fields last sent to the meter (one per 4 bits, -1: none since connecting) and when. */
     private int iconsSent = -1;
@@ -109,6 +120,33 @@ public class BridgeService extends Service implements KawaBle.Listener {
         return instance.writePhoneName();
     }
 
+    /**
+     * Debug and adb: asks the bike for one frame type (reads only, see {@link #READABLE}); false if the
+     * bike is not connected or the type is not readable.
+     */
+    public static boolean read(int id) {
+        if (instance == null || !instance.ble.isReady()) return false;
+        boolean ok = false;
+        for (int r : READABLE) ok |= r == id;
+        if (!ok) return false;
+        byte[] frame = id == BikeFrames.GENERAL_SETTINGS ? KawaProtocol.generalSettingsRead()
+                : id == BikeFrames.VEHICLE_SETTINGS ? KawaProtocol.vehicleSettingsRead()
+                : id == BikeFrames.SERVICE_INDICATOR ? KawaProtocol.serviceIndicatorRead()
+                : KawaProtocol.readRequest(id);
+        int expect = id == BikeFrames.RIDING_LOG_EXT ? BikeRequests.ACK_ONLY : BikeRequests.DATA_OR_ACK;
+        instance.requests.submit(new BikeRequests.Request(frame, BikeFrames.name(id) + " read", expect, BikeRequests.USER, null));
+        return true;
+    }
+
+    /** Debug: plays a capture file back as if the bike sent it (bridge running, bike data screens update). */
+    public static boolean replay(java.io.File f) {
+        if (instance == null || !f.isFile()) return false;
+        Hub.bike.connected();
+        instance.decoder = new BikeFrames.Decoder();
+        FrameReplay.start(f, instance.handler, instance::onFrame);
+        return true;
+    }
+
     /** New data from Maps: update the meter now instead of waiting for the next tick. */
     public static void poke() {
         if (instance != null) instance.tick();
@@ -135,6 +173,33 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
         Hub.serviceRunning = true;
         ble = new KawaBle(this, this);
+        requests = new BikeRequests(new BikeRequests.Io() {
+            @Override
+            public boolean send(byte[] frame, String label) {
+                if (RawCapture.enabled(BridgeService.this) && ble.isReady()) RawCapture.tx(frame);
+                return ble.write(frame, label);
+            }
+
+            @Override
+            public long now() {
+                return android.os.SystemClock.elapsedRealtime();
+            }
+
+            @Override
+            public void schedule(Runnable r, long delayMs) {
+                handler.postDelayed(r, delayMs);
+            }
+
+            @Override
+            public void cancel(Runnable r) {
+                handler.removeCallbacks(r);
+            }
+
+            @Override
+            public void log(String line) {
+                Logger.log(line);
+            }
+        });
         curve = new CurveEngine(this);
         openAudioProfiles();
         applySettings();
@@ -187,6 +252,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.serviceRunning = false;
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         handler.removeCallbacksAndMessages(null);
+        requests.clear();
+        FrameReplay.stop();
+        RawCapture.stop();
         curve.stop();
         closeAudioProfiles();
         KawaBle b = ble;
@@ -266,17 +334,49 @@ public class BridgeService extends Service implements KawaBle.Listener {
             clearsSent = 0;
             iconsSent = -1;
             Hub.bikeCapabilities = null;
+            Hub.bikeMtu = ble.mtu();
+            Hub.bike.connected();
             decoder = new BikeFrames.Decoder();
-            ble.write(KawaProtocol.CAPABILITIES_REQUEST, "capabilities request");
-            writePhoneName();
-            tick();
+            requests.clear();
+            startupQueued = false;
+            modelLogged = false;
+            if (RawCapture.enabled(this)) RawCapture.start(this);
+            tick(); // the arrow first
+            handler.postDelayed(startup, STARTUP_DELAY_MS);
         }
         updateNotification();
     }
 
+    /**
+     * Queues the connect sequence: the read requests Rideology sends (capabilities, vehicle info,
+     * settings, maintenance), see {@link KawaProtocol#startup}.
+     */
+    private final Runnable startup = () -> {
+        if (!ble.isReady()) return;
+        int level = Hub.initLevel(this);
+        String name = Hub.DEBUG_TOOLS ? Hub.prefs(this).getString(Hub.KEY_DEBUG_PHONE_NAME, "") : "";
+        String phone = !name.isEmpty() ? name : level >= KawaProtocol.INIT_FULL ? android.os.Build.MODEL : null;
+        for (BikeRequests.Request r : KawaProtocol.startup(level, phone, null)) requests.submit(r);
+        startupQueued = true;
+        Logger.log("Bike: connect sequence queued (" + new String[]{"capabilities only", "read-only", "full"}[level] + ")");
+    };
+
     @Override
     public void onNotify(java.util.UUID characteristic, byte[] value) {
+        if (RawCapture.enabled(this)) RawCapture.rx(characteristic, value);
+        requests.onFrame(value);
+        onFrame(characteristic, value);
+    }
+
+    /** A frame from the meter (or from a replay): decoded into {@link Hub#bike}. */
+    private void onFrame(java.util.UUID characteristic, byte[] value) {
         BikeFrames.Frame f = decoder.decode(value);
+        Hub.bike.apply(f, System.currentTimeMillis());
+        if (f instanceof BikeFrames.ModelInfo && !modelLogged && ((BikeFrames.ModelInfo) f).model != null) {
+            modelLogged = true;
+            BikeFrames.ModelInfo m = (BikeFrames.ModelInfo) f;
+            Logger.log("Bike: model " + m.model + ", VIN " + BikeData.maskedVin(m.vin));
+        }
         if (!(f instanceof BikeFrames.GeneralCaps)) return;
         BikeFrames.GeneralCaps c = (BikeFrames.GeneralCaps) f;
         Hub.bikeCapabilities = c;
@@ -296,6 +396,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     @Override
     public void onLinkLost() {
+        requests.clear();
+        handler.removeCallbacks(startup);
+        RawCapture.stop();
         Hub.bikeCapabilities = null;
         Hub.bikeStatus = "Connection lost, reconnecting…";
         Hub.bikeHint = "";
@@ -354,6 +457,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             return;
         }
         sendIcons(now);
+        pollVehicleInfo(now);
         if (out == null) {
             Hub.outputStatus = "Nothing to show";
             if (clearsSent < CLEAR_REPEATS) {
@@ -398,6 +502,16 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.iconsStatus = label + "\n" + KawaProtocol.hex(frame);
         iconsSent = icons;
         iconsSentAt = now;
+    }
+
+    /** Asks for the vehicle info (odometer, fuel, range…) again when the last answer is older than {@link #INFO_POLL_MS}. */
+    private void pollVehicleInfo(long now) {
+        if (!startupQueued || Hub.initLevel(this) == KawaProtocol.INIT_NONE
+                || requests.unsupported(BikeFrames.VEHICLE_INFO) || now - Hub.bike.infoAt < INFO_POLL_MS
+                || now - infoPolledAt < INFO_POLL_MS) return;
+        infoPolledAt = now;
+        requests.submitIfIdle(new BikeRequests.Request(KawaProtocol.readRequest(BikeFrames.VEHICLE_INFO),
+                "vehicle info request", BikeRequests.DATA_OR_ACK, BikeRequests.POLL, null));
     }
 
     /** Debug: the text set in the debug card as the phone's name, if any (Rideology sends Build.MODEL). */

@@ -64,6 +64,10 @@ public final class Hub {
     public static String gattDump = "";
     /** Status icons last sent to the meter, for the debug card. */
     public static String iconsStatus = "–";
+    /** Vehicle data and settings from the meter (last values, also after the bike is switched off). */
+    public static final BikeData bike = new BikeData();
+    /** ATT MTU of the current connection, for the debug card. */
+    public static int bikeMtu;
 
     // --- settings
     public static final String PREFS = "settings";
@@ -103,8 +107,13 @@ public final class Hub {
     public static final String KEY_ICON_RIDING_LOG = "icon_riding_log";
     /** Debug: text sent to the meter as the phone's name on every connect ("" = none). */
     public static final String KEY_DEBUG_PHONE_NAME = "debug_phone_name";
-    /** Debug builds: riding log icon on until changed in the debug card, to see how it looks on the dash. */
-    public static final int RIDING_LOG_DEFAULT = 1;
+    /** Debug: requests sent after connecting, {@link KawaProtocol#INIT_NONE} / INIT_READ / INIT_FULL. */
+    public static final String KEY_DEBUG_INIT_LEVEL = "debug_init_level";
+    /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
+    public static final String KEY_DEBUG_CAPTURE = "debug_capture";
+    /** Scaling of the riding log's speed and rpm: 0 as on the Z500 (default), 1 the alternative. */
+    public static final String KEY_SPEED_SCALE = "speed_scale";
+    public static final String KEY_RPM_SCALE = "rpm_scale";
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
 
@@ -121,7 +130,13 @@ public final class Hub {
     /** Debug value of a status icon field (-1 = automatic, always in release builds). */
     public static int iconSetting(Context c, String key) {
         if (!DEBUG_TOOLS) return -1;
-        return prefs(c).getInt(key, KEY_ICON_RIDING_LOG.equals(key) ? RIDING_LOG_DEFAULT : -1);
+        return prefs(c).getInt(key, -1);
+    }
+
+    /** Requests sent to the bike after connecting (release builds: read-only). */
+    public static int initLevel(Context c) {
+        if (!DEBUG_TOOLS) return KawaProtocol.INIT_READ;
+        return prefs(c).getInt(KEY_DEBUG_INIT_LEVEL, KawaProtocol.INIT_READ);
     }
 
     /**
