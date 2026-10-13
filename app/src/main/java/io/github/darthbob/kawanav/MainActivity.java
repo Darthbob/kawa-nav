@@ -44,6 +44,21 @@ public class MainActivity extends Activity {
     private static final int REQ_PERMS = 1;
     private static final int REQ_BG_LOCATION = 3;
     private static final int[] LOOKAHEADS = {500, 1000, 1500, 2000};
+    /** Explanation of "Which curves count"; values from CurveDetector.Sensitivity and its arrow choice. */
+    private static final String CURVES_INFO =
+            "The angle is the total change of direction through the whole bend: 90° is a right-angle turn, "
+            + "180° a hairpin. A bend also has to be tight enough; long sweeping highway bends are not curves.\n\n"
+            + "Only tight ones: from 45°, radius up to ~170 m. Only bends you really have to brake for.\n\n"
+            + "Normal: from 30°, radius up to ~250 m.\n\n"
+            + "Also gentle ones: from 20°, radius up to ~350 m. Two bends in the same direction close "
+            + "together can merge into one.\n\n"
+            + "All over 15°: from 16°, radius up to ~570 m. Everything except the faintest bends; bends close "
+            + "together stay separate. Recommended.\n\n"
+            + "Arrow on the bike's display:\n"
+            + "• Slight: under 55° and wider than 60 m radius\n"
+            + "• Normal: 55° or more, or tighter than 60 m\n"
+            + "• Sharp: 100° or more, or tighter than 30 m\n"
+            + "• Hairpin (U-turn arrow): 150° or more and tighter than 35 m";
     /** Turn ids that make sense on the Z900 meter (0-43); 44-55 (waypoints) show nothing. */
     private static final int KAWASAKI_GREEN = 0xFF6BBE45;
     private static final int OK_GREEN = 0xFF43A047;
@@ -714,7 +729,7 @@ public class MainActivity extends Activity {
                     prefs.edit().putInt(Hub.KEY_NAV_CURVES, pos).apply();
                     BridgeService.settingsChanged();
                 }));
-        c.addView(choiceRow("Which curves count", "How much a bend must turn to be shown",
+        c.addView(choiceRow("Which curves count", "How much a bend must turn to be shown", CURVES_INFO,
                 new String[]{"Only tight ones", "Normal", "Also gentle ones", "All over 15°"}, prefs.getInt(Hub.KEY_SENSITIVITY, 1),
                 pos -> prefs.edit().putInt(Hub.KEY_SENSITIVITY, pos).apply()));
         String[] la = new String[LOOKAHEADS.length];
@@ -1258,10 +1273,27 @@ public class MainActivity extends Activity {
     }
 
     private View choiceRow(String title, String sub, String[] items, int selected, OnPos f) {
+        return choiceRow(title, sub, null, items, selected, f);
+    }
+
+    /** With info: a link under the text opens it as explanation of the options. */
+    private View choiceRow(String title, String sub, String info, String[] items, int selected, OnPos f) {
         LinearLayout r = settingRow();
         LinearLayout t = column();
         t.addView(itemTitle(title));
         t.addView(secondary(sub));
+        if (info != null) {
+            TextView more = text(13, false);
+            more.setText("What do the options mean?");
+            more.setTextColor(KAWASAKI_GREEN);
+            more.setPadding(0, dp(4), 0, dp(4));
+            more.setOnClickListener(v -> new AlertDialog.Builder(this)
+                    .setTitle(title)
+                    .setMessage(info)
+                    .setPositiveButton("OK", null)
+                    .show());
+            t.addView(more);
+        }
         r.addView(t, weight());
         Spinner s = spinner(items, selected);
         s.setOnItemSelectedListener(onSelect(f));
