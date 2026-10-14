@@ -570,7 +570,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         int level = Hub.initLevel(this);
         String name = Hub.DEBUG_TOOLS ? Hub.prefs(this).getString(Hub.KEY_DEBUG_PHONE_NAME, "") : "";
         String phone = !name.isEmpty() ? name : level >= KawaProtocol.INIT_FULL ? android.os.Build.MODEL : null;
-        for (BikeRequests.Request r : KawaProtocol.startup(level, phone, null)) requests.submit(r);
+        for (BikeRequests.Request r : KawaProtocol.startup(level, phone, Hub.askRidingLogExt(this), null)) requests.submit(r);
         startupQueued = true;
         Logger.log("Bike: connect sequence queued (" + new String[]{"capabilities only", "read-only", "full"}[level] + ")");
     };

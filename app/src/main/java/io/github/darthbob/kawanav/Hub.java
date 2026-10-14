@@ -127,6 +127,8 @@ public final class Hub {
     public static final String KEY_DEBUG_PHONE_NAME = "debug_phone_name";
     /** Debug: requests sent after connecting, {@link KawaProtocol#INIT_NONE} / INIT_READ / INIT_FULL. */
     public static final String KEY_DEBUG_INIT_LEVEL = "debug_init_level";
+    /** Debug: leave the 0x45 riding log request out of the read-only connect sequence and ride start. */
+    public static final String KEY_DEBUG_NO_EXT = "debug_no_ext_request";
     /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
     public static final String KEY_DEBUG_CAPTURE = "debug_capture";
     /** Debug: notifications are written down, to see what an app like Waze puts in them. */
@@ -188,6 +190,11 @@ public final class Hub {
         if (!DEBUG_TOOLS) return KawaProtocol.INIT_READ;
         int level = prefs(c).getInt(KEY_DEBUG_INIT_LEVEL, KawaProtocol.INIT_READ);
         return Math.max(KawaProtocol.INIT_NONE, Math.min(KawaProtocol.INIT_FULL, level));
+    }
+
+    /** KawaNav asks for the 0x45 riding log at connect and at ride start, as Rideology does (release: always). */
+    public static boolean askRidingLogExt(Context c) {
+        return !DEBUG_TOOLS || !prefs(c).getBoolean(KEY_DEBUG_NO_EXT, false);
     }
 
     /**

@@ -480,9 +480,11 @@ public class SettingsActivity extends KawaActivity {
         c.addView(secondary("Decoded values next to the last raw frame of each type. Compare them with the dash "
                 + "to check the scaling (PROTOCOL.md)."));
         c.addView(choiceRow("Requests after connecting", "Applies on the next connect. Full is Rideology's sequence: "
-                        + "it adds the phone name, the 0x08 init and the 0x45 riding log frames",
+                        + "it adds the phone name and the 0x08 init",
                 new String[]{"Capabilities only (v0.3)", "Read-only", "Full (like Rideology)"}, Hub.initLevel(this),
                 pos -> prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, pos).apply()));
+        c.addView(switchRow("Skip the riding log request", "Read-only connect and ride start leave out 45 00 00 "
+                + "(as KawaNav 0.6 and before did; Rideology always sends it)", Hub.KEY_DEBUG_NO_EXT, false));
         c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect: "
                 + "adb pull /sdcard/Android/data/" + getPackageName() + "/files/captures/", Hub.KEY_DEBUG_CAPTURE, false));
         LinearLayout reads = row();

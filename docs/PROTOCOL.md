@@ -371,7 +371,7 @@ KawaNav never logs this frame.)
 | Turn-by-turn | 0x14, 0x13 | works on the bike (v0.1–v0.3, verified) |
 | Bike data | 0x03, 0x40, 0x41, 0x45, 0x4A, 0x4B, 0x1A, 0x1B, 0x1D, 0x1E, 0x47, 0x48 | decoded and shown; the scaling comes from the 0x40 nibbles, not yet compared with a dash over a whole ride |
 | Connect sequence | 03, 40, 1A, 1D, 47, 0B, 41, 1B, 48, 1E, 08, 45 | sent after connecting (read-only level in release; the full one, with 0x08 and the phone name, in debug builds) |
-| Ride recording | 0x45, 0x4A + GPS | records locally; nothing on the meter drives it (the app sends no start/stop frame, and neither does KawaNav) |
+| Ride recording | 0x45, 0x4A + GPS | records locally; nothing on the meter drives it (no start/stop frame); like Rideology, KawaNav asks for 0x45 at connect and when a recording starts without one |
 | Dash icons | 0x13 (battery, headset, riding log), 0x12 (call, mail) | sent; the riding-log icon follows the recorder. Not yet seen on a dash |
 | Clock | 0x1B write | optional setting, off by default; preserves the shift lamp |
 | Settings write | 0x48 (block 09, byte 7 = 1) | debug builds only until tried on a bike: riding mode, power, KTRC, KQS |

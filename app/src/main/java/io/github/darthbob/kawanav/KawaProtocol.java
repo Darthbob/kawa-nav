@@ -256,11 +256,16 @@ public final class KawaProtocol {
 
     /**
      * The requests sent after connecting, in Rideology's order (03, 40, 1A, 1D, 47, 0B, 41, 1B, 48, 1E,
-     * 08, 45; 42 left out, it is for EV/HEV bikes). {@link #INIT_READ} only asks for information; the
-     * full sequence also sends the 0x08 init and starts the 0x45 riding-log frames. The phone name (0B)
-     * is sent when one is given (Rideology sends Build.MODEL).
+     * 08, 45; 42 left out, it is for EV/HEV bikes). {@link #INIT_READ} only asks for information, the
+     * 0x45 riding log request included (a read like the others, Rideology sends it on every connect) unless
+     * {@code askExt} is off; the full sequence also sends the 0x08 init. The phone name (0B) is sent when
+     * one is given (Rideology sends Build.MODEL).
      */
     public static List<BikeRequests.Request> startup(int level, String phoneModel, BikeRequests.Done done) {
+        return startup(level, phoneModel, true, done);
+    }
+
+    public static List<BikeRequests.Request> startup(int level, String phoneModel, boolean askExt, BikeRequests.Done done) {
         List<BikeRequests.Request> l = new java.util.ArrayList<>();
         int p = BikeRequests.STARTUP;
         if (level == INIT_NONE) {
@@ -285,6 +290,8 @@ public final class KawaProtocol {
         l.add(new BikeRequests.Request(serviceIndicatorRead(), "maintenance read", BikeRequests.DATA_OR_ACK, p, done));
         if (full) {
             l.add(new BikeRequests.Request(meterInitFrame(), "meter indication init", BikeRequests.ACK_ONLY, p, done));
+        }
+        if (full || askExt) {
             l.add(new BikeRequests.Request(readRequest(BikeFrames.RIDING_LOG_EXT), "riding log ext request", BikeRequests.ACK_ONLY, p, done));
         }
         return l;

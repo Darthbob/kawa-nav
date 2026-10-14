@@ -55,6 +55,11 @@ public class KawaProtocolTest {
         for (BikeRequests.Request r : KawaProtocol.startup(KawaProtocol.INIT_READ, null, null)) {
             ids.add(String.format("%02X", r.id()));
         }
+        assertEquals(List.of("03", "40", "1A", "1D", "47", "41", "1B", "48", "1E", "45"), ids);
+        ids.clear();
+        for (BikeRequests.Request r : KawaProtocol.startup(KawaProtocol.INIT_READ, null, false, null)) {
+            ids.add(String.format("%02X", r.id()));
+        }
         assertEquals(List.of("03", "40", "1A", "1D", "47", "41", "1B", "48", "1E"), ids);
         assertTrue(KawaProtocol.startup(KawaProtocol.INIT_NONE, null, null).size() == 1);
     }
