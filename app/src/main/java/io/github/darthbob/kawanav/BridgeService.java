@@ -36,6 +36,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private static final String CHANNEL = "bridge";
     /** A speed camera warning: its own channel, so it can be silenced on its own. */
     private static final String CHANNEL_ALERTS = "alerts";
+    /** Rides and refuels: things that happened, not things that are wrong. */
+    private static final String CHANNEL_RIDES = "rides";
     private static final int CAMERA_NOTIFICATION_ID = 2;
     /** While navigating, a camera takes the arrow over only this close (the maneuver matters more). */
     private static final double CAMERA_NAV_M = 250;
@@ -356,6 +358,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Bike connection", NotificationManager.IMPORTANCE_LOW));
         nm.createNotificationChannel(new NotificationChannel(CHANNEL_ALERTS, "Warnings",
+                NotificationManager.IMPORTANCE_DEFAULT));
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL_RIDES, "Rides and refuels",
                 NotificationManager.IMPORTANCE_DEFAULT));
         locationAllowed = false;
         enableLocation();
@@ -1077,12 +1081,34 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private long batteryWarnedAt;
 
+    /**
+     * Tells the rider what a finished ride came to. Called by the recorder, which is not a service: this
+     * is the only part of the app that has a notification channel.
+     */
+    public static void announceRide(Context c, String name, String line, String rideId) {
+        if (c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
+        Intent open = new Intent(c, RideActivity.class).putExtra(RideActivity.EXTRA_ID, rideId);
+        PendingIntent tap = PendingIntent.getActivity(c, rideId.hashCode(), open,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification n = new Notification.Builder(c, CHANNEL_RIDES)
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentTitle(name)
+                .setContentText(line)
+                .setStyle(new Notification.BigTextStyle().bigText(line))
+                .setContentIntent(tap)
+                .setAutoCancel(true)
+                .build();
+        c.getSystemService(NotificationManager.class).notify(RIDE_NOTIFICATION_ID, n);
+    }
+
+    private static final int RIDE_NOTIFICATION_ID = 9_002;
+
     /** A short confirmation on the warnings channel (the alert itself, not a warning about the bike). */
     private void announce(String title, String text) {
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification n = new Notification.Builder(this, CHANNEL_ALERTS)
+        Notification n = new Notification.Builder(this, CHANNEL_RIDES)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentTitle(title)
                 .setContentText(text)

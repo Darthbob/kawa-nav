@@ -133,6 +133,7 @@ public class RidesActivity extends KawaActivity {
             LinearLayout.LayoutParams lp = matchWrap();
             lp.setMargins(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE2));
             totalsTiles.addView(tiles, lp);
+            totalsTiles.addView(records(rides), lp);
         }
         totals.setText(rides.isEmpty() ? ""
                 : String.format(Locale.ROOT, "%d %s · %s this week · %.0f km altogether",
@@ -147,6 +148,42 @@ public class RidesActivity extends KawaActivity {
             empty.addView(card);
         }
         for (Ride r : rides) list.addView(row(r, today));
+    }
+
+    /** The best of what has been recorded, and the distance per year. */
+    private View records(List<Ride> rides) {
+        RideStats stats = RideStats.of(rides);
+        LinearLayout c = card();
+        c.addView(iconTitle(R.drawable.ic_gauge, cardTitle("Records")));
+        if (stats.fastest.known()) {
+            c.addView(secondary("Fastest: " + String.format(Locale.ROOT, "%.0f km/h", stats.fastest.value)
+                    + " on " + when(stats.fastest.ride)));
+        }
+        if (stats.maxLeanLeft.known() || stats.maxLeanRight.known()) {
+            double l = stats.maxLeanLeft.value, r = stats.maxLeanRight.value;
+            c.addView(secondary(String.format(Locale.ROOT, "Most lean: %.0f° left, %.0f° right", l, r)
+                    + (l >= r ? " on " + when(stats.maxLeanLeft.ride) : " on " + when(stats.maxLeanRight.ride))));
+        }
+        if (stats.longest.known()) {
+            c.addView(secondary(String.format(Locale.ROOT, "Longest ride: %.0f km on ", stats.longest.value)
+                    + when(stats.longest.ride)));
+        }
+        // the same wording the totals use: "48 min", not "0 h", when the log is young
+        c.addView(secondary(String.format(Locale.ROOT, "Altogether %,.0f km in %s",
+                stats.totalKm, minutes((long) (stats.totalHours * 3_600_000)))));
+        List<RideStats.Year> years = RideStats.byYear(rides);
+        if (years.size() > 1) {
+            for (RideStats.Year y : years) {
+                c.addView(secondary(String.format(Locale.ROOT, "%d: %,.0f km · %d %s", y.year, y.km, y.rides,
+                        y.rides == 1 ? "ride" : "rides")));
+            }
+        }
+        return c;
+    }
+
+    private static String when(Ride r) {
+        return java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+                .format(new java.util.Date(r.start));
     }
 
     private static String minutes(long ms) {

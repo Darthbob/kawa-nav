@@ -173,8 +173,16 @@ public final class RideRecorder implements android.location.LocationListener {
         stopGps();
         Logger.log("Ride: finished (" + reason + "), " + ride.samples + " samples, " + ride.distance()
                 + ", " + ride.duration());
+        String name = ride.name;
+        String line = RideStats.summaryLine(ride);
+        Ride finished = ride;
         ride = null;
         state = IDLE;
+        // what the ride came to, where the rider will see it (the recording itself is over by then)
+        if (!line.isEmpty()) {
+            BridgeService.announceRide(context, name.isEmpty() ? Ride.defaultName(finished.start) : name,
+                    line, finished.id);
+        }
     }
 
     /** Called when the link to the bike was lost: a ride with bike data pauses until it is back. */
