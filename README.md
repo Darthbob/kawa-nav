@@ -7,6 +7,15 @@ It talks to the dash (Kawasaki calls it the "meter", hence the name in the code 
 same way Kawasaki's Rideology app does (Bluetooth LE, see [docs/PROTOCOL.md](docs/PROTOCOL.md)) and
 replaces Rideology's link to the bike.
 
+<p align="center">
+  <img src="docs/screenshots/home-dark.png" width="200" alt="Home in dark mode: link status, what the dash shows, the bike's range, fuel and odometer, and the menu">
+  <img src="docs/screenshots/bike-dark.png" width="200" alt="The bike's screen in dark mode: remaining range, fuel gauge, battery and the dash's values">
+  <img src="docs/screenshots/rides-light.png" width="200" alt="Riding log in light mode: totals for the week, month and year and the recorded rides">
+  <img src="docs/screenshots/ride-light.png" width="200" alt="A ride in light mode: the track coloured by speed and the speed chart">
+</p>
+<p align="center"><sub>Home and the bike in dark mode, the riding log and a ride in light mode. Android emulator with
+sample data.</sub></p>
+
 Independent project, not affiliated with or endorsed by Kawasaki or Google. Tested on a Kawasaki
 Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 [GNU GPL v3](LICENSE).
