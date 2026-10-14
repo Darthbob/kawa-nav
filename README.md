@@ -2,7 +2,8 @@
 
 Android app that shows **Google Maps turn-by-turn directions** or the **upcoming curves of the road
 you are on** on the TFT dash of a Kawasaki motorcycle, and that reads the bike's own data (odometer,
-fuel, temperatures, settings) and **records your rides** with a track, charts and an export.
+fuel, temperatures, settings), **records your rides** with a track, charts and an export, and keeps a
+diary of refuels, battery readings and maintenance.
 It talks to the dash (Kawasaki calls it the "meter", hence the name in the code and protocol notes) the
 same way Kawasaki's Rideology app does (Bluetooth LE, see [docs/PROTOCOL.md](docs/PROTOCOL.md)) and
 replaces Rideology's link to the bike.
@@ -26,6 +27,7 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 
 **Contents:** [Features](#-features) · [Compatibility](#-compatibility) · [Install](#-install) ·
 [Using KawaNav](#-using-kawanav) · [Bike data](#-bike-data) · [Recording rides](#-recording-rides) ·
+[Diary](#-diary) ·
 [Settings on the bike](#-settings-on-the-bike) ·
 [Speed cameras](#-speed-cameras) ·
 [Known limitations](#-known-limitations) · [License](#-license)
@@ -64,6 +66,14 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - 🚨 **Speed camera warnings** (optional, off by default): taken from the same offline map data, shown on
   the phone and with the distance on the dash. Announcing cameras is illegal in some countries — read
   [Speed cameras](#-speed-cameras) before switching it on.
+- ⛽ **Refuel diary**: a fill is noticed while you stand at the pump (the gauge and the range jumping up)
+  and kept with the fuel used between fills; correct the litres or add one by hand.
+- 🔋 **12 V battery over time**: the voltage at rest, read once per stop, charted — with a warning when it
+  has been sliding for a while. Tapping the battery figure on the bike screen opens it.
+- 🔧 **Maintenance log**: what you had done, when and at what odometer, next to the reminders the dash
+  keeps.
+- 🏆 **Records**: fastest ride, most lean each way, longest ride and the distance per year in the riding
+  log; a ride ends with a summary notification (distance, time, fuel, lean).
 
 ## 📱 Compatibility
 
@@ -241,11 +251,17 @@ Home shows the bike's last values under "My vehicle" (range, fuel bars, odometer
 gauge and the battery voltage, then groups everything the dash reported when it was last connected:
 
 - **Basic information**: odometer, trip A/B, average fuel economy and consumption, average speed, total
-  engine hours, outside temperature. Values the bike does not have (it says so in the frame it sends)
-  are left out rather than shown as zero.
+  engine hours, outside temperature, the largest lean of the trip each way, the fuel burned in total, both
+  12 V batteries (engine control unit and dash) and the distance in total. Values the bike does not have
+  (it says so in the frame it sends) are left out rather than shown as zero, and the all-ones values it
+  fills in when it has nothing to report are dropped rather than shown as numbers.
 - **Engine**: while the bike is connected and sending, the live values (speed, engine speed, gear,
-  throttle, lean angle, acceleration) and the temperatures; they are gone a few seconds after the bike
-  stops sending.
+  throttle, lean angle, acceleration), the front brake pressure, the traction control and ABS state, the
+  cruise control, the torque the throttle asks for and the engine gives, the filtered wheel speeds and the
+  suspension unit's traction control and quick shifter state, then the temperatures and tyre pressures;
+  they are gone a few seconds after the bike stops sending.
+- **Suspension** (bikes with the electronic suspension): travel, the three rotation rates and the body's
+  acceleration, and where the damping stands.
 - **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
   their date and distance.
 - **Dash**: the clock the dash has (and the shift lamp setting), as last read.
@@ -258,6 +274,16 @@ asks the bike for its values again.
 
 Values are shown with the names Rideology uses; where the name could not be verified against a real
 bike yet, the number the bike sent is printed in brackets next to it.
+
+### ⛽ Diary
+
+Under the bike's values, three cards keep what the dash cannot: **Refuels** (a fill is noticed while the
+bike stands at the pump — the gauge and the range jumping up — with the litres estimated from the tank
+size you set and the fuel used between fills; correct anything by tapping it, add a fill by hand, or
+long-press to delete), **12 V battery** (tapping the battery figure on the bike screen opens the
+readings taken at rest with the engine off, charted, with a warning once they have slid for a while) and
+**Maintenance** (what you had done, when and at what odometer, next to the reminders the dash keeps).
+They are kept on the phone and included in Android's backup.
 
 ### 🗺️ Recording rides
 
@@ -279,10 +305,14 @@ has:
   are written to `Download/KawaNav` and offered for sharing.
 
 Distance comes from the bike's odometer when the bike reports one, else from the GPS track. The dash's
-riding-log icon (the small "log" symbol) follows the recorder: recording, paused, or off.
+riding-log icon (the small "log" symbol) follows the recorder: recording, paused, or off. The tab also
+keeps your **records** (fastest ride, most lean each way, longest ride, distance per year), and a ride
+that ends announces its summary — distance, time, fuel, best lean, top speed — in a notification that
+opens it.
 
 Everything stays on the phone: no account, no upload. Only Android's own backup takes the rides, the
-settings and the bike's last values along to a new phone, and the cloud backup only when it is
+refuels, the battery readings, the maintenance log, the settings and the bike's last values along to a new
+phone, and the cloud backup only when it is
 end-to-end encrypted (phone with a screen lock); offline maps and the log are left out.
 
 ### 🔧 Settings on the bike
@@ -370,12 +400,21 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
 - The camera warning is what OpenStreetMap has, nothing else: no mobile or temporary checks, and no
   camera icon on the dash (it shows the destination flag with the distance). Not tried on the bike yet.
+- The refuel diary, the battery log and the ride records never touch the bike; they are kept on the phone
+  (and included in Android's backup).
 - **Writing settings and the shift lamp is debug builds only** until it has been tried on a bike, and the
   names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
   number the bike sent, not instead of it.
 - The **scaling of the riding-log values** (speed, engine speed, throttle, lean angle) is chosen from
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with
-  the dash for a whole ride yet.
+  the dash for a whole ride yet. The same goes for the values added in 0.7 (torque, brake pressures, ABS
+  target, suspension damping, cruise control, rotation rates, wheel speeds), which are decoded exactly as
+  Rideology decodes them.
+- The **refuel diary** estimates the litres: the bike never says how many went in, only what the gauge
+  and the range show. Correct them on the Refuels screen to get a true figure.
+- The **12 V battery** warning rule (0.4 V lost over three days of readings) is a sensible guess, not a
+  manufacturer's figure, and needs a few weeks of readings before it says anything.
+- **One app at a time**: only one of KawaNav and Darthbob's KawaNav should stay connected to the bike.
 - The **battery and headset icons**, the **call/mail icons** and the **dash clock** have never been seen
   on a real dash. They follow the protocol Rideology uses.
 - **R.Score** (Rideology's ride score) is not computed: Kawasaki's cloud does that, and the formula is

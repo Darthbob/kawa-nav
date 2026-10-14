@@ -18,8 +18,8 @@ android {
         applicationId 'io.github.jackyes.kawanav'
         minSdk 33
         targetSdk 36
-        versionCode 7
-        versionName '0.6'
+        versionCode 8
+        versionName '0.7'
     }
 
     // BuildConfig.DEBUG: the debug card (dash icon tests, phone name, Bluetooth service list) only in debug builds
