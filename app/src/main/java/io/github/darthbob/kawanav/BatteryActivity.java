@@ -73,6 +73,15 @@ public class BatteryActivity extends KawaActivity {
 
     private void refresh() {
         List<BatteryLog.Reading> readings = store.list();
+        if (readings == null) {
+            summary.setText("");
+            verdict.setText("");
+            chart.set(new ArrayList<>(), ChartView.Series.BATTERY, null);
+            list.removeAllViews();
+            list.addView(emptyState("The battery log could not be read",
+                    "The file is kept as battery.json.bad and nothing is written over it."));
+            return;
+        }
         if (readings.isEmpty()) {
             summary.setText("No readings yet");
             verdict.setText("");

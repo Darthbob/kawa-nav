@@ -82,6 +82,8 @@ public final class Hub {
     public static BridgeService.PendingSettings settingsWritePending;
     /** Warnings the bike's values show right now (tyres, ABS, battery), see {@link BikeAlerts}. */
     public static java.util.List<BikeAlerts.Alert> bikeAlerts = java.util.Collections.emptyList();
+    /** When the 12 V battery warning was last shown, so it does not repeat every day the app starts. */
+    public static final String KEY_BATTERY_WARNED_AT = "battery_warned_at";
     /** Maintenance entries: work the dash cannot know about, see {@link MaintenanceLog}. */
     public static java.util.List<MaintenanceLog.Entry> maintenanceEntries = java.util.Collections.emptyList();
     /** The 12 V readings at rest, oldest first, see {@link BatteryLog}. */

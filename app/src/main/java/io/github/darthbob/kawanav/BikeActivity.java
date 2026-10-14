@@ -94,6 +94,16 @@ public class BikeActivity extends KawaActivity {
         Logger.init(this);
         prefs = Hub.prefs(this);
         BikeStore.load(this);
+        // the diary cards are filled by the bridge: opened without it (or before it has loaded) they
+        // would claim there is nothing while the diary screens show the log
+        if (Hub.fuelEntries.isEmpty()) {
+            java.util.List<FuelLog.Entry> fuel = new FuelStore(this).list();
+            if (fuel != null) Hub.fuelEntries = fuel;
+        }
+        if (Hub.maintenanceEntries.isEmpty()) {
+            java.util.List<MaintenanceLog.Entry> work = new MaintenanceStore(this).list();
+            if (work != null) Hub.maintenanceEntries = work;
+        }
         night = isNight();
         LinearLayout root = column();
         root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));

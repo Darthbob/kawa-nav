@@ -12,7 +12,10 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** The 12 V readings in {@code files/battery.json}, written whole on a background thread. */
+/**
+ * The 12 V readings in {@code files/battery.json}, written whole on a background thread. A file that
+ * cannot be parsed is kept as battery.json.bad rather than overwritten with an empty log.
+ */
 public final class BatteryStore {
     private static final String FILE = "battery.json";
     private static final ExecutorService io = Executors.newSingleThreadExecutor(r -> new Thread(r, "battery-io"));
@@ -23,7 +26,7 @@ public final class BatteryStore {
         file = new File(c.getFilesDir(), FILE);
     }
 
-    /** The readings, oldest first. */
+    /** The readings, oldest first; null when the file is there but cannot be read. */
     public List<BatteryLog.Reading> list() {
         List<BatteryLog.Reading> out = new ArrayList<>();
         if (!file.isFile()) return out;
@@ -36,16 +39,25 @@ public final class BatteryStore {
                 out.add(new BatteryLog.Reading(o.optLong("at"), o.optDouble("volts", Double.NaN)));
             }
         } catch (Exception e) {
-            Logger.log("Battery: unreadable log: " + e);
+            Logger.log("Battery: unreadable log, kept as .bad: " + e);
+            keepAside();
+            return null;
         }
         return out;
+    }
+
+    /** Moves a file that could not be read out of the way, so a later save cannot erase it. */
+    private void keepAside() {
+        File bad = new File(file.getParentFile(), file.getName() + ".bad");
+        if (bad.exists()) bad.delete();
+        if (!file.renameTo(bad)) Logger.log("Battery: cannot keep the unreadable file aside");
     }
 
     /** Writes the readings (background; the file is small, so it is rewritten rather than appended). */
     public void save(List<BatteryLog.Reading> readings) {
         JSONArray a = new JSONArray();
         for (BatteryLog.Reading r : readings) {
-            if (r.volts != r.volts) continue;
+            if (!Double.isFinite(r.volts)) continue;
             JSONObject o = new JSONObject();
             try {
                 o.put("at", r.at);

@@ -164,6 +164,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
         return true; // true also when the same read was already queued
     }
 
+    /** A log that could not be read counts as empty here: the screens are the ones that say so. */
+    private static <T> java.util.List<T> orEmpty(java.util.List<T> list) {
+        return list == null ? java.util.Collections.emptyList() : list;
+    }
+
     /** Progress of a settings write, "" when none is running; shown on the bike screen. */
     public static String settingsJob = "";
 
@@ -415,9 +420,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
         applySettings();
         connectBike();
         handler.post(tickLoop);
-        Hub.fuelEntries = new FuelStore(this).list();
-        Hub.batteryReadings = new BatteryStore(this).list();
-        Hub.maintenanceEntries = new MaintenanceStore(this).list();
+        // null means the file is there but could not be read: those screens then refuse to save over it
+        Hub.fuelEntries = orEmpty(new FuelStore(this).list());
+        Hub.batteryReadings = orEmpty(new BatteryStore(this).list());
+        Hub.maintenanceEntries = orEmpty(new MaintenanceStore(this).list());
         Logger.log("Bridge started");
     }
 
@@ -1034,6 +1040,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private final FuelLog.Detector refuel = new FuelLog.Detector();
 
     private void refuelCheck(long now) {
+        // no link check here: what matters is that the meter sent something a moment ago, which is the
+        // same condition a replay satisfies (debug). The freshness checks below are the cheap part.
         BikeFrames.VehicleInfo info = Hub.bike.info;
         BikeFrames.Telemetry live = Hub.bike.live;
         if (info == null || now - Hub.bike.infoAt > BikeAlerts.FRESH_MS) return;
@@ -1051,7 +1059,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.fuelEntries = FuelLog.sorted(entries);
         new FuelStore(this).save(entries);
         Logger.log("Fuel: refuel recorded at " + e.odoKm + " km: " + e.describe());
-        announce("Refuel recorded", e.describe() + " — correct the litres on the Refuels screen if they are wrong.");
+        announceOn(CHANNEL_RIDES, REFUEL_NOTIFICATION_ID, "Refuel recorded", FuelActivity.class,
+                e.describe() + " — correct the litres if they are wrong.");
     }
 
     /**
@@ -1062,24 +1071,29 @@ public class BridgeService extends Service implements KawaBle.Listener {
         BikeFrames.VehicleInfo info = Hub.bike.info;
         BikeFrames.Telemetry live = Hub.bike.live;
         if (info == null || now - Hub.bike.infoAt > BikeAlerts.FRESH_MS) return;
-        boolean running = live != null && now - Hub.bike.liveAt <= BikeAlerts.FRESH_MS
-                && live.rpm == live.rpm && live.rpm > BikeAlerts.RUNNING_RPM;
+        // a reading only means something with the engine known to be off: without a live frame the
+        // voltage may be the charging voltage, which says nothing about the battery's health
+        if (live == null || now - Hub.bike.liveAt > BikeAlerts.FRESH_MS) return;
+        if (live.rpm != live.rpm) return;
+        boolean running = live.rpm > BikeAlerts.RUNNING_RPM;
         double v = BikeAlerts.battery(info);
         List<BatteryLog.Reading> readings = BatteryLog.record(Hub.batteryReadings, now, v, running);
         if (readings.size() == Hub.batteryReadings.size()) return;
         Hub.batteryReadings = readings;
         new BatteryStore(this).save(readings);
         Logger.log(String.format(java.util.Locale.ROOT, "Battery: %.1f V at rest (%d readings)", v, readings.size()));
-        if (BatteryLog.declining(readings) && now - batteryWarnedAt > 24 * 60 * 60_000L) {
-            batteryWarnedAt = now;
+        long warned = Hub.prefs(this).getLong(Hub.KEY_BATTERY_WARNED_AT, 0);
+        if (BatteryLog.declining(readings) && now - warned > 24 * 60 * 60_000L) {
+            Hub.prefs(this).edit().putLong(Hub.KEY_BATTERY_WARNED_AT, now).apply();
             double decline = BatteryLog.decline(readings);
-            announce("Battery is going down", String.format(java.util.Locale.ROOT,
-                    "The 12 V battery has lost %.1f V over the time logged: have it checked before it leaves you "
-                            + "somewhere.", decline));
+            // a warning about the bike, on the warnings channel, with an id of its own: the refuel
+            // confirmation is not a warning and must not replace it
+            announceOn(CHANNEL_ALERTS, BIKE_ALERT_NOTIFICATION_BASE + 1, "Battery is going down",
+                    BatteryActivity.class, String.format(java.util.Locale.ROOT,
+                            "The 12 V battery has lost %.1f V over the time logged: have it checked before "
+                                    + "it leaves you somewhere.", decline));
         }
     }
-
-    private long batteryWarnedAt;
 
     /**
      * Tells the rider what a finished ride came to. Called by the recorder, which is not a service: this
@@ -1103,12 +1117,15 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private static final int RIDE_NOTIFICATION_ID = 9_002;
 
-    /** A short confirmation on the warnings channel (the alert itself, not a warning about the bike). */
-    private void announce(String title, String text) {
+    /**
+     * A short note about something that happened. Opening it goes to the screen it is about, since that
+     * is where the rider has to do something about it.
+     */
+    private void announceOn(String channel, int id, String title, Class<?> screen, String text) {
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
+        PendingIntent open = PendingIntent.getActivity(this, id, new Intent(this, screen),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification n = new Notification.Builder(this, CHANNEL_RIDES)
+        Notification n = new Notification.Builder(this, channel)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentTitle(title)
                 .setContentText(text)
@@ -1116,7 +1133,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .build();
-        getSystemService(NotificationManager.class).notify(REFUEL_NOTIFICATION_ID, n);
+        getSystemService(NotificationManager.class).notify(id, n);
     }
 
     private static final int REFUEL_NOTIFICATION_ID = 9_001;

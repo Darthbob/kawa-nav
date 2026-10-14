@@ -23,7 +23,7 @@ public final class MaintenanceStore {
         file = new File(c.getFilesDir(), FILE);
     }
 
-    /** The entries, oldest first. */
+    /** The entries, oldest first; null when the file is there but cannot be read. */
     public List<MaintenanceLog.Entry> list() {
         List<MaintenanceLog.Entry> out = new ArrayList<>();
         if (!file.isFile()) return out;
@@ -41,9 +41,18 @@ public final class MaintenanceStore {
                 if (!e.item.isEmpty()) out.add(e);
             }
         } catch (Exception e) {
-            Logger.log("Maintenance: unreadable log: " + e);
+            Logger.log("Maintenance: unreadable log, kept as .bad: " + e);
+            keepAside();
+            return null;
         }
         return MaintenanceLog.sorted(out);
+    }
+
+    /** Moves a file that could not be read out of the way, so a later save cannot erase it. */
+    private void keepAside() {
+        File bad = new File(file.getParentFile(), file.getName() + ".bad");
+        if (bad.exists()) bad.delete();
+        if (!file.renameTo(bad)) Logger.log("Maintenance: cannot keep the unreadable file aside");
     }
 
     public void save(List<MaintenanceLog.Entry> entries) {
@@ -52,7 +61,7 @@ public final class MaintenanceStore {
             JSONObject o = new JSONObject();
             try {
                 o.put("at", e.at);
-                if (e.odoKm == e.odoKm) o.put("odoKm", e.odoKm);
+                if (Double.isFinite(e.odoKm)) o.put("odoKm", e.odoKm);
                 o.put("item", e.item);
                 if (!e.note.isEmpty()) o.put("note", e.note);
             } catch (org.json.JSONException ignored) {

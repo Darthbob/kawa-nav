@@ -762,6 +762,30 @@ public abstract class KawaActivity extends Activity {
     }
 
     /**
+     * A row showing a date, opening the phone's date picker on tap and writing the day chosen (midday, so
+     * time zones cannot move it) into {@code day}. For entries about something that happened before the
+     * rider got round to writing it down.
+     */
+    protected View dateRow(long[] day) {
+        Button b = neutralButton("", null);
+        java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
+        b.setText(df.format(new java.util.Date(day[0])));
+        b.setOnClickListener(v -> {
+            java.util.Calendar c = java.util.Calendar.getInstance();
+            c.setTimeInMillis(day[0]);
+            new android.app.DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+                java.util.Calendar picked = java.util.Calendar.getInstance();
+                picked.clear();
+                picked.set(year, month, dayOfMonth, 12, 0, 0);
+                day[0] = picked.getTimeInMillis();
+                b.setText(df.format(new java.util.Date(day[0])));
+            }, c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH),
+                    c.get(java.util.Calendar.DAY_OF_MONTH)).show();
+        });
+        return b;
+    }
+
+    /**
      * Asks for a number, with the phone's keyboard (a typed value wins over the spinner's choices). The
      * field starts on {@code before} and is checked against the range; an empty field calls
      * {@code ok} with {@code before}.

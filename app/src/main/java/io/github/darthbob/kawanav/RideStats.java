@@ -67,8 +67,10 @@ public final class RideStats {
                 fastestKmh = r.maxKmh;
                 fastest = r;
             }
-            if (r.maxLeanL > leanL) {
-                leanL = r.maxLeanL;
+            // a lean to the left is recorded as a negative number: compare magnitudes
+            double l = Math.abs(r.maxLeanL);
+            if (l > leanL) {
+                leanL = l;
                 left = r;
             }
             if (r.maxLeanR > leanR) {
@@ -119,7 +121,7 @@ public final class RideStats {
             if (sb.length() > 0) sb.append(" · ");
             sb.append(String.format(java.util.Locale.ROOT, "%.1f L/100 km", r.fuelUsedL / km * 100));
         }
-        double lean = Math.max(r.maxLeanL, r.maxLeanR);
+        double lean = Math.max(Math.abs(r.maxLeanL), r.maxLeanR);
         if (lean > 1) {
             if (sb.length() > 0) sb.append(" · ");
             sb.append(String.format(java.util.Locale.ROOT, "%.0f° of lean", lean));

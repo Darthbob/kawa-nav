@@ -36,9 +36,10 @@ public class RideStatsTest {
     @Test
     public void bestOfEach() {
         List<Ride> rides = new ArrayList<>();
-        rides.add(ride(at(2025, 5, 1), 100, 90, 140, 40, 45, 6));
-        rides.add(ride(at(2026, 3, 2), 310, 240, 187, 52, 40, 18));
-        rides.add(ride(at(2026, 9, 9), 60, 30, 120, 30, 35, 0));
+        // a lean to the left is negative, the way the recorder stores it
+        rides.add(ride(at(2025, 5, 1), 100, 90, 140, -40, 45, 6));
+        rides.add(ride(at(2026, 3, 2), 310, 240, 187, -52, 40, 18));
+        rides.add(ride(at(2026, 9, 9), 60, 30, 120, -30, 35, 0));
         RideStats s = RideStats.of(rides);
         assertEquals(3, s.rides);
         assertEquals(470.0, s.totalKm, 1e-9);
@@ -49,6 +50,23 @@ public class RideStatsTest {
         assertEquals(52, s.maxLeanLeft.value, 1e-9);
         assertEquals(45, s.maxLeanRight.value, 1e-9);   // the 2025 ride leans further right
         assertEquals(310, s.longest.value, 1e-9);
+    }
+
+    @Test
+    public void aLeftLeanCounts() {
+        // the record used to compare a negative number against zero, so a left lean was never found
+        List<Ride> rides = new ArrayList<>();
+        rides.add(ride(at(2026, 1, 1), 10, 10, 50, -48, 12, 0));
+        RideStats s = RideStats.of(rides);
+        assertTrue(s.maxLeanLeft.known());
+        assertEquals(48, s.maxLeanLeft.value, 1e-9);
+        assertTrue(RideStats.summaryLine(rides.get(0)).contains("48"));
+    }
+
+    @Test
+    public void theSummaryCountsTheLeftLeanToo() {
+        Ride r = ride(at(2026, 1, 1), 10, 10, 50, -55, 20, 0);
+        assertTrue(RideStats.summaryLine(r).contains("55"));
     }
 
     @Test

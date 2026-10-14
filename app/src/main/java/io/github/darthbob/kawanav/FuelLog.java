@@ -18,6 +18,16 @@ public final class FuelLog {
     public static final double STILL_KMH = 5;
     /** A jump of less than a bar is the gauge settling, not a fill. */
     static final int MIN_BARS = 1;
+    /**
+     * The gauge has to hold still this long before what it says is taken as the level after filling: at
+     * the pump it climbs a bar at a time over a few seconds, and only where it stops is the full tank.
+     */
+    static final long DWELL_MS = 20_000;
+    /**
+     * Two fills closer together than this, with the bike not having moved, are one fill the gauge climbed
+     * through in steps rather than two.
+     */
+    static final long SAME_FILL_MS = 15 * 60_000;
     /** Below this the gauge reading is noise (the bike may still be on the side stand). */
     static final int MIN_RANGE_KM = 20;
 
@@ -56,12 +66,18 @@ public final class FuelLog {
      * jumping up between two readings at a standstill; the odometer then says where it happened.
      */
     public static final class Detector {
+        /** The newest reading, the settled one it is compared with, and the largest range ever seen. */
         private double bars = Double.NaN, rangeKm = Double.NaN, odoKm = Double.NaN;
+        private double baseBars = Double.NaN, baseRangeKm = Double.NaN, rangeFullKm = Double.NaN;
+        /** When the reading last changed: a fill is only read once the gauge has stopped moving. */
+        private long changedAt, lastEntryAt;
         private boolean have;
 
         /** Clears what is remembered: a new connection, or a ride that ended. */
         public void reset() {
             have = false;
+            baseBars = baseRangeKm = Double.NaN;
+            changedAt = 0;
         }
 
         /**
@@ -72,32 +88,60 @@ public final class FuelLog {
             if (barsNow != barsNow || barsNow < 0) barsNow = Double.NaN;
             double range = rangeNow >= 0 ? rangeNow : Double.NaN;
             double odo = odoNow >= 0 ? odoNow : Double.NaN;
+            // the largest range ever seen is what a full tank gives, for turning a range jump into litres
+            if (range == range && (rangeFullKm != rangeFullKm || range > rangeFullKm)) rangeFullKm = range;
             if (!have) {
                 bars = barsNow;
                 rangeKm = range;
                 odoKm = odo;
+                baseBars = barsNow;
+                baseRangeKm = range;
+                changedAt = now;
                 have = true;
                 return null;
             }
-            boolean barsUp = jumped(bars, barsNow, MIN_BARS);
-            boolean rangeUp = jumped(rangeKm, range, MIN_RANGE_KM);
+            if (!same(bars, barsNow) || !same(rangeKm, range)) changedAt = now;
+            // only where the gauge has stopped moving: at the pump it climbs a bar at a time, and logging
+            // each step would give one refuel per step, each with a fraction of the fuel that went in
+            boolean settled = now - changedAt >= DWELL_MS;
+            boolean barsUp = jumped(baseBars, barsNow, MIN_BARS);
+            boolean rangeUp = jumped(baseRangeKm, range, MIN_RANGE_KM);
             Entry e = null;
-            if (barsUp || rangeUp) {
+            if (settled && (barsUp || rangeUp) && !sameFill(now, odo)) {
                 e = new Entry();
                 e.at = now;
                 e.odoKm = odo == odo ? odo : odoKm;
-                e.barsBefore = bars;
+                e.barsBefore = baseBars;
                 e.barsAfter = barsNow;
-                e.rangeBeforeKm = rangeKm;
+                e.rangeBeforeKm = baseRangeKm;
                 e.rangeAfterKm = range;
-                e.litres = litres(barsUp, bars, barsNow, rangeKm, range, tankL);
+                e.litres = litres(barsUp, baseBars, barsNow, baseRangeKm, range, tankL, rangeFullKm);
                 e.estimated = e.litres == e.litres;
+                lastEntryAt = now;
             }
-            // the newest reading is what the next one is compared with, jump or not
+            if (settled) {
+                // the settled reading becomes what the next jump is measured from
+                baseBars = barsNow;
+                baseRangeKm = range;
+            }
+            // the newest reading is what the next one is compared with, settled or not
             if (barsNow == barsNow) bars = barsNow;
             if (range == range) rangeKm = range;
             if (odo == odo) odoKm = odo;
             return e;
+        }
+
+        /** True when the newest reading is the one seen before: the gauge has stopped moving. */
+        private static boolean same(double before, double after) {
+            if (before != before || after != after) return false;
+            return Math.abs(before - after) < 1e-9;
+        }
+
+        /** A jump right after the last entry, with the bike not having moved, is the same fill. */
+        private boolean sameFill(long now, double odo) {
+            if (lastEntryAt == 0) return false;
+            if (now - lastEntryAt >= SAME_FILL_MS) return false;
+            return !(odo == odo && odoKm == odoKm && odo > odoKm);
         }
 
         /** A reading that went up by at least {@code min}; an empty one is the dash waking up, not a fill. */
@@ -113,11 +157,14 @@ public final class FuelLog {
          * full range, so that fraction of the tank. NaN when the tank size is not known either way.
          */
         private static double litres(boolean barsUp, double barsBefore, double barsAfter,
-                                     double rangeBefore, double rangeAfter, double tankL) {
+                                     double rangeBefore, double rangeAfter, double tankL, double rangeFullKm) {
             if (tankL <= 0) return Double.NaN;
             if (barsUp) return round1((barsAfter - barsBefore) / FULL_BARS * tankL);
             if (rangeBefore == rangeBefore && rangeAfter == rangeAfter && rangeAfter > rangeBefore) {
-                return round1((rangeAfter - rangeBefore) / rangeAfter * tankL);
+                // measured against the range a full tank gives: the range in the tank before the fill says
+                // nothing about how much the tank holds, so a part top-up must not be read as a full one
+                double full = Math.max(rangeFullKm == rangeFullKm ? rangeFullKm : 0, rangeAfter);
+                return round1((rangeAfter - rangeBefore) / full * tankL);
             }
             return Double.NaN;
         }

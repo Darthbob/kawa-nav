@@ -26,7 +26,10 @@ public final class FuelStore {
         file = new File(c.getFilesDir(), FILE);
     }
 
-    /** The refuels, oldest first. */
+    /**
+     * The refuels, oldest first, or null when the file is there but cannot be read: the caller must then
+     * not save over it. Nothing is ever written on top of a file that could not be parsed.
+     */
     public List<FuelLog.Entry> list() {
         List<FuelLog.Entry> out = new ArrayList<>();
         String text = read();
@@ -49,7 +52,9 @@ public final class FuelStore {
                 out.add(e);
             }
         } catch (Exception e) {
-            Logger.log("Fuel: unreadable log: " + e);
+            Logger.log("Fuel: unreadable log, kept as .bad: " + e);
+            keepAside();
+            return null;
         }
         return FuelLog.sorted(out);
     }
@@ -79,15 +84,20 @@ public final class FuelStore {
             File tmp = new File(file.getParentFile(), file.getName() + ".tmp");
             try {
                 java.nio.file.Files.write(tmp.toPath(), text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                if (!file.exists() || file.delete()) {
-                    if (tmp.renameTo(file)) return;
-                }
+                // move over the old file: never delete it first, a failure here would lose the whole log
                 java.nio.file.Files.move(tmp.toPath(), file.toPath(),
                         java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 Logger.log("Fuel: cannot save the log: " + e);
             }
         });
+    }
+
+    /** Moves a file that could not be read out of the way, so a later save cannot erase it. */
+    private void keepAside() {
+        File bad = new File(file.getParentFile(), file.getName() + ".bad");
+        if (bad.exists()) bad.delete();
+        if (!file.renameTo(bad)) Logger.log("Fuel: cannot keep the unreadable file aside");
     }
 
     private String read() {
@@ -102,7 +112,7 @@ public final class FuelStore {
     }
 
     private static void put(JSONObject o, String key, double v) throws org.json.JSONException {
-        if (v == v) o.put(key, v);
+        if (Double.isFinite(v)) o.put(key, v);
     }
 
     private static double num(JSONObject o, String key) {
