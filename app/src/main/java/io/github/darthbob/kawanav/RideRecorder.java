@@ -238,8 +238,10 @@ public final class RideRecorder implements android.location.LocationListener {
         }
 
         BikeData b = Hub.bike;
+        // what counts is that the meter sent this a moment ago, not that the link flag is still up: a
+        // replay (debug) has no link at all, and after a blip the values would be dropped for no reason
         boolean bikeFresh = now - b.liveAt <= BIKE_MS;
-        if (bikeFresh && Hub.bikeConnected) {
+        if (bikeFresh) {
             BikeFrames.Telemetry t = b.live;
             if (t != null) {
                 s.kmh = t.speedKmh;
