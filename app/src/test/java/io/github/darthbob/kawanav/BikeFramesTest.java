@@ -219,7 +219,7 @@ public class BikeFramesTest {
         assertEquals(4000, t.rpm);
         assertEquals(1000, t.rpmAlt);
         assertEquals(3, t.gear);
-        assertEquals(100.0, t.throttlePct, 1e-6);
+        assertEquals(100.0, t.throttlePct, 1e-6); // mode 1: FF is a full throttle
         assertEquals(200 * 0.01, t.accelG, 1e-9); // bytes 17-18 = 0x00C8, nibble 1: no -2 g offset
         assertEquals(25.0, t.leanDeg, 1e-9);
         assertEquals(2, t.tcsHigh);
@@ -236,7 +236,8 @@ public class BikeFramesTest {
         assertEquals(100.0, t.speedKmhAlt, 1e-9);
         assertEquals(1000, t.rpm);
         assertEquals(4000, t.rpmAlt);
-        assertEquals(255 * 0.78125, t.throttlePct, 1e-6);
+        // mode 0 counts to 128: an FF byte is the meter's "no value", not 199 %
+        assertTrue(Double.isNaN(t.throttlePct));
         assertEquals(200 * 0.01 - 2.0, t.accelG, 1e-9);
     }
 
@@ -312,6 +313,41 @@ public class BikeFramesTest {
         BikeFrames.Telemetry s = telemetry(cfg, telemetryFrame());
         assertEquals(-1, s.riderTorque);
         assertEquals(-1, s.cruiseOn);
+    }
+
+    @Test
+    public void allOnesMeansNoValue() {
+        // a meter that has the blocks but no values fills them with FF: none of it may read as a number
+        byte[] v = blank(0x4A, 93);
+        put(v, 5, 0x05, 0x15);
+        put(v, 15, 0x05, 0x16);
+        put(v, 25, 0x05, 0x17);
+        put(v, 35, 0x05, 0x18);
+        put(v, 45, 0x05, 0x19);
+        put(v, 75, 0x05, 0x1C);
+        put(v, 85, 0x05, 0x1D);
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x00, 0x00, 0x00), v);
+        assertEquals(-1, t.gear);            // not 15
+        assertTrue(Double.isNaN(t.throttlePct)); // not 199 %
+        assertEquals(-1, t.wheelie);
+        assertEquals(-1, t.tcsHigh);
+        assertEquals(-1, t.abs);             // not "fault"
+        assertEquals(-1, t.brakeFrontMaster);
+        assertEquals(-1, t.riderTorque);
+        assertEquals(-1, t.absTarget);
+        assertEquals(-1, t.damping);
+        assertEquals(-1, t.cruiseOn);
+        assertEquals(-1, t.cruiseKmh);
+        byte[] m = blank(0x4B, 53);
+        put(m, 5, 0x05, 0x01);
+        put(m, 15, 0x05, 0x02);
+        put(m, 25, 0x05, 0x03);
+        put(m, 35, 0x05, 0x04);
+        put(m, 45, 0x05, 0x19);
+        BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(m);
+        assertEquals(-1, i.tcsHigh);
+        assertEquals(-1, i.wheelie);
+        assertTrue(Double.isNaN(i.frontWheelKmh));
     }
 
     @Test

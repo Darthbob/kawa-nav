@@ -63,7 +63,12 @@ public final class FrameReplay {
             } catch (Exception e) {
                 Logger.log("Replay failed: " + e);
             } finally {
-                if (running == Thread.currentThread()) running = null;
+                // clear the marker on the main thread: nulling it here would drop frames this thread has
+                // already posted but the main thread has not run yet (the last one of a file, often)
+                Thread self = Thread.currentThread();
+                main.post(() -> {
+                    if (running == self) running = null;
+                });
             }
         }, "replay");
         running = t;

@@ -511,53 +511,72 @@ public final class BikeFrames {
             int quarter = be16(v, 11) / 4;
             rpm = rpmOn ? (rpmMode == 1 ? quarter : raw15) : -1;
             rpmAlt = rpmOn ? (rpmMode == 1 ? raw15 : quarter) : -1;
-            gear = blk1 && v.length > 13 && has(c, InfoConfig.GEAR) ? u8(v, 13) & 0x0F : -1;
+            // single bytes the meter leaves at FF when it has no value: FF would read as gear 15,
+            // throttle 199 % and so on, so they count as absent (the dash shows dashes there)
+            int gearByte = blk1 && v.length > 13 ? u8(v, 13) : 0xFF;
+            gear = gearByte != 0xFF && (gearByte & 0x0F) != 0x0F && has(c, InfoConfig.GEAR) ? gearByte & 0x0F : -1;
             int thrMode = mode(c, InfoConfig.THROTTLE);
-            throttlePct = blk1 && thrMode >= 0 ? u8(v, 14) * (thrMode == 1 ? 0.3921568627 : 0.78125) : Double.NaN;
+            // mode 1 counts the byte out of 255 (FF is a full throttle), mode 0 out of 128: past that
+            // the byte is the meter's "no value", which would otherwise read as 199 %
+            throttlePct = blk1 && thrMode == 1 ? u8(v, 14) * 0.3921568627
+                    : blk1 && thrMode == 0 && u8(v, 14) <= 128 ? u8(v, 14) * 0.78125 : Double.NaN;
             int fiMode = mode(c, InfoConfig.FUEL_INJECTION);
             fuelInjection = blk1 && fiMode >= 0 ? be16(v, 7) * 1e-4 * (fiMode == 1 ? 100.0 / 140.0 : 1) : Double.NaN;
             int accMode = mode(c, InfoConfig.ACCELERATION);
             double rawAcc = (((u8(v, 17) & 0x01) << 8) | u8(v, 18)) * 0.01;
-            accelG = blk2 && accMode >= 0 ? rawAcc - (accMode == 1 ? 0 : 2.0) : Double.NaN;
+            accelG = blk2 && accMode >= 0 && (u8(v, 17) != 0xFF || u8(v, 18) != 0xFF)
+                    ? rawAcc - (accMode == 1 ? 0 : 2.0) : Double.NaN;
             int leanMode = mode(c, InfoConfig.LEAN);
-            leanDeg = blk2 && leanMode >= 0
+            leanDeg = blk2 && leanMode >= 0 && (u8(v, 19) != 0xFF || u8(v, 20) != 0xFF)
                     ? leanMode == 1 ? (((u8(v, 19) & 0x0F) << 8) | u8(v, 20)) * 0.1
                     : (((u8(v, 19) & 0x07) << 8) | u8(v, 20)) * 0.1953125 - 100.0
                     : Double.NaN;
-            wheelie = blk2 && v.length > 21 && has(c, InfoConfig.WHEELIE) ? u8(v, 21) & 0x03 : -1;
+            int wheelieBits = blk2 && v.length > 21 ? u8(v, 21) : 0xFF;
+            // a flag has two states: the "value" 3 is an all-ones byte, not a wheelie
+            wheelie = wheelieBits != 0xFF && (wheelieBits & 0x03) != 0x03 && has(c, InfoConfig.WHEELIE)
+                    ? wheelieBits & 0x03 : -1;
             int whMode = mode(c, InfoConfig.WHEELIE_ANGLE);
-            wheelieDeg = blk2 && whMode >= 0
+            wheelieDeg = blk2 && whMode >= 0 && (u8(v, 22) != 0xFF || u8(v, 23) != 0xFF)
                     ? (((u8(v, 22) & 0x07) << 8) | u8(v, 23)) * (whMode == 1 ? 0.1 : 0.09765625) : Double.NaN;
-            tcsHigh = blk2 && v.length > 24 && has(c, InfoConfig.TCS_HB) ? (u8(v, 24) & 0xF0) >> 4 : -1;
-            tcsLow = blk2 && v.length > 24 && has(c, InfoConfig.TCS_LB) ? u8(v, 24) & 0x0F : -1;
+            int tcsByte = blk2 && v.length > 24 ? u8(v, 24) : 0xFF;
+            tcsHigh = tcsByte != 0xFF && has(c, InfoConfig.TCS_HB) ? (tcsByte & 0xF0) >> 4 : -1;
+            tcsLow = tcsByte != 0xFF && has(c, InfoConfig.TCS_LB) ? tcsByte & 0x0F : -1;
             boolean absPresent = v.length > 37 && blockOk(v, 35);
-            abs = absPresent ? u8(v, 37) : -1;
+            // an all-ones byte is "no value", not a fault: the error bits are 0x0C
+            abs = absPresent && u8(v, 37) != 0xFF ? u8(v, 37) : -1;
             brakeFrontBar = absPresent && v.length > 39 && u8(v, 39) != 0xFF ? u8(v, 39) * 0.1953125 : Double.NaN;
-            brakeFrontMaster = absPresent && v.length > 38 ? u8(v, 38) : -1;
-            brakeRearMaster = absPresent && v.length > 40 ? u8(v, 40) : -1;
-            brakeRearCaliper = absPresent && v.length > 41 ? u8(v, 41) : -1;
+            brakeFrontMaster = pressure(v, 38, absPresent);
+            brakeRearMaster = pressure(v, 40, absPresent);
+            brakeRearCaliper = pressure(v, 41, absPresent);
             // torque: 0x40 nibble 0 = 14 bits × 0.2, 1 = 12 bits raw (qe/b.java)
             boolean blk3 = v.length > 32 && blockOk(v, 25);
             riderTorque = torque(v, 27, blk3, mode(c, InfoConfig.RIDER_TORQUE));
             engineTorqueRequest = torque(v, 29, blk3, mode(c, InfoConfig.ENGINE_TORQUE_REQUEST));
             engineTorque = torque(v, 31, blk3, mode(c, InfoConfig.ENGINE_TORQUE));
             boolean blk5 = v.length > 48 && blockOk(v, 45);
-            absTarget = blk5 ? (u8(v, 47) & 0xE0) >> 5 : -1;
-            absIndicator = blk5 ? u8(v, 47) & 0x07 : -1;
-            absSwitching = blk5 ? u8(v, 48) & 0x01 : -1;
+            absTarget = blk5 && u8(v, 47) != 0xFF ? (u8(v, 47) & 0xE0) >> 5 : -1;
+            absIndicator = blk5 && u8(v, 47) != 0xFF ? u8(v, 47) & 0x07 : -1;
+            absSwitching = blk5 && u8(v, 48) != 0xFF ? u8(v, 48) & 0x01 : -1;
             boolean blk8 = v.length > 78 && blockOk(v, 75);
-            damping = blk8 ? u8(v, 77) : -1;
-            suspCalibration = blk8 ? (u8(v, 78) & 0x04) >> 2 : -1;
-            suspStatus = blk8 ? (u8(v, 78) & 0x02) >> 1 : -1;
-            suspEcu = blk8 ? u8(v, 78) & 0x01 : -1;
+            damping = blk8 && u8(v, 77) != 0xFF ? u8(v, 77) : -1;
+            int suspBits = blk8 ? u8(v, 78) : 0xFF;
+            suspCalibration = suspBits != 0xFF ? (suspBits & 0x04) >> 2 : -1;
+            suspStatus = suspBits != 0xFF ? (suspBits & 0x02) >> 1 : -1;
+            suspEcu = suspBits != 0xFF ? suspBits & 0x01 : -1;
             boolean blk9 = v.length > 87 && blockOk(v, 85);
-            cruiseOn = blk9 ? (u8(v, 87) & 0x02) >> 1 : -1;
-            cruiseMode = blk9 ? u8(v, 87) & 0x01 : -1;
-            cruiseKmh = blk9 && v.length > 88 ? u8(v, 88) : -1;
+            int cruise = blk9 ? u8(v, 87) : 0xFF;
+            cruiseOn = cruise != 0xFF ? (cruise & 0x02) >> 1 : -1;
+            cruiseMode = cruise != 0xFF ? cruise & 0x01 : -1;
+            cruiseKmh = blk9 && v.length > 88 && u8(v, 88) != 0xFF ? u8(v, 88) : -1;
+        }
+
+        /** A raw brake pressure byte, -1 when the block is absent or the byte is all ones. */
+        private static int pressure(byte[] v, int i, boolean block) {
+            return block && v.length > i && u8(v, i) != 0xFF ? u8(v, i) : -1;
         }
 
         private static int torque(byte[] v, int i, boolean block, int mode) {
-            if (!block || mode < 0) return -1;
+            if (!block || mode < 0 || u8(v, i) == 0xFF && u8(v, i + 1) == 0xFF) return -1;
             return mode == 1 ? ((u8(v, i) & 0x0F) << 8) | u8(v, i + 1)
                     : (int) ((((u8(v, i) & 0x3F) << 8) | u8(v, i + 1)) * 0.2);
         }
@@ -603,17 +622,21 @@ public final class BikeFrames {
             rate3 = rate(v, 35, 36, 38, 37);
             // block 45: Rideology treats it as absent only when both header bytes are FF (qe/a.java)
             boolean blk5 = v.length > 46 && !(u8(v, 45) == 0xFF && u8(v, 46) == 0xFF);
-            frontWheelKmh = blk5 && v.length > 48 ? be16(v, 47) * 400.0 / 32768.0 : Double.NaN;
-            rearWheelKmh = blk5 && v.length > 50 ? be16(v, 49) * 400.0 / 32768.0 : Double.NaN;
-            boolean b51 = blk5 && v.length > 51;
-            tcsHigh = b51 ? (u8(v, 51) & 0xE0) >> 5 : -1;
-            tcsLow = b51 ? (u8(v, 51) & 0x1C) >> 2 : -1;
-            kqsDown = b51 ? (u8(v, 51) & 0x02) >> 1 : -1;
-            kqsUp = b51 ? u8(v, 51) & 0x01 : -1;
-            wheelie = blk5 && v.length > 52 ? u8(v, 52) & 0x01 : -1;
+            boolean wheels = blk5 && (u8(v, 47) != 0xFF || u8(v, 48) != 0xFF);
+            frontWheelKmh = wheels && v.length > 48 ? be16(v, 47) * 400.0 / 32768.0 : Double.NaN;
+            rearWheelKmh = wheels && v.length > 50 && (u8(v, 49) != 0xFF || u8(v, 50) != 0xFF)
+                    ? be16(v, 49) * 400.0 / 32768.0 : Double.NaN;
+            int flags = blk5 && v.length > 51 ? u8(v, 51) : 0xFF;
+            tcsHigh = flags != 0xFF ? (flags & 0xE0) >> 5 : -1;
+            tcsLow = flags != 0xFF ? (flags & 0x1C) >> 2 : -1;
+            kqsDown = flags != 0xFF ? (flags & 0x02) >> 1 : -1;
+            kqsUp = flags != 0xFF ? flags & 0x01 : -1;
+            wheelie = blk5 && v.length > 52 && u8(v, 52) != 0xFF ? u8(v, 52) & 0x01 : -1;
         }
 
         /** Centered rotation rate (hi byte after lo byte), span 163.84. */
+
+
         private static double rate(byte[] v, int a, int b, int hi, int lo) {
             if (!present(v, a, b, Math.max(hi, lo))) return Double.NaN;
             int x = u8(v, hi) << 8 | u8(v, lo);
