@@ -16,9 +16,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The bike's own values, like Rideology's vehicle info: what the dash shows (odometer, trips, fuel,
- * range), live engine values while connected, maintenance reminders, riding modes, the dash clock, and
- * where the bike was parked. Shows the last values read, also while the bike is off.
+ * The Bike tab, like Rideology's vehicle information: the range big in the middle with the fuel gauge
+ * and the battery under it, then the dash's values (odometer, trips…), live engine values while
+ * connected, maintenance reminders, riding modes, the dash clock, and where the bike was parked.
+ * Shows the last values read, also while the bike is off.
  */
 public class BikeActivity extends KawaActivity {
 
@@ -29,6 +30,10 @@ public class BikeActivity extends KawaActivity {
     private TextView title;
     private TextView vin;
     private TextView updated;
+    private Hero range;
+    private SegmentBar fuel;
+    private TextView fuelText;
+    private TextView battery;
     private LinearLayout sections;
     // ride settings (debug builds until this has been tried on a bike)
     private LinearLayout settingsCard;
@@ -48,7 +53,7 @@ public class BikeActivity extends KawaActivity {
     /** The icon of a value group: what the rows behind it are about. Unknown groups get none. */
     private static int sectionIcon(String section) {
         switch (section) {
-            case "On the dash": return R.drawable.ic_speed;
+            case BASIC: return R.drawable.ic_gauge;
             case "Engine": return R.drawable.ic_thermo;
             case "Maintenance": return R.drawable.ic_sliders;
             case "Dash": return R.drawable.ic_clock;
@@ -57,9 +62,27 @@ public class BikeActivity extends KawaActivity {
         }
     }
 
+    /** The icon in front of a value, by what it is. */
+    private static int rowIcon(String label) {
+        switch (label) {
+            case "Odometer": case "Engine speed": return R.drawable.ic_gauge;
+            case "Trip A": case "Trip B": return R.drawable.ic_route;
+            case "Average fuel economy": case "Fuel consumption": return R.drawable.ic_fuel;
+            case "Average speed": case "Speed": return R.drawable.ic_speed;
+            case "Total time": case "Clock (when read)": return R.drawable.ic_clock;
+            case "Battery": return R.drawable.ic_battery;
+            case "Outside temperature": case "Coolant temperature": case "Oil temperature":
+            case "Intake air temperature": return R.drawable.ic_thermo;
+            default: return 0;
+        }
+    }
+
+    /** The dash's values, under the range and the fuel gauge (Rideology's "Basic information"). */
+    static final String BASIC = "Basic information";
+
     /** Row labels shown now; the sections are only rebuilt when they change (keeps the scroll position). */
     private List<String> shownLabels = new ArrayList<>();
-    private final List<TextView> valueViews = new ArrayList<>();
+    private final List<Figure> valueViews = new ArrayList<>();
     private boolean vinShown;
 
     @Override
@@ -71,15 +94,13 @@ public class BikeActivity extends KawaActivity {
         BikeStore.load(this);
         night = isNight();
         LinearLayout root = column();
-        root.setPadding(dp(16), dp(20), dp(16), dp(24));
-        title = display("");
-        root.addView(title);
-        vin = secondary("");
-        vin.setOnClickListener(v -> vinShown = !vinShown);
-        root.addView(vin);
-        updated = secondary("");
-        updated.setPadding(0, dp(2), 0, dp(Ui.SPACE2));
-        root.addView(updated);
+        root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
+        root.addView(headerBar("Your bike", null, headerAction(R.drawable.ic_refresh, "Read the values again", v -> {
+            boolean asked = BridgeService.read(BikeFrames.VEHICLE_INFO);
+            android.widget.Toast.makeText(this, asked ? "Asked the bike for its values" : "The bike is not connected",
+                    android.widget.Toast.LENGTH_SHORT).show();
+        })));
+        root.addView(rangeCard());
         sections = column();
         root.addView(sections);
         root.addView(settingsCard());
@@ -89,7 +110,55 @@ public class BikeActivity extends KawaActivity {
                 + "all of it.");
         note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE5), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
-        setContentView(page(root));
+        setContentView(tabPage(TAB_BIKE, root));
+    }
+
+    /**
+     * The top of the screen, like Rideology's vehicle information: the bike's name and VIN, the range
+     * big in the middle, the fuel gauge in segments, the battery and when the values were read.
+     */
+    private LinearLayout rangeCard() {
+        LinearLayout c = card();
+        c.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        title = text(17, false);
+        title.setTypeface(Ui.titles());
+        title.setGravity(android.view.Gravity.CENTER);
+        c.addView(title);
+        vin = note("");
+        vin.setGravity(android.view.Gravity.CENTER);
+        vin.setOnClickListener(v -> vinShown = !vinShown);
+        c.addView(vin);
+        range = hero(52);
+        range.view.setPadding(0, dp(Ui.SPACE4), 0, dp(Ui.SPACE3));
+        c.addView(range.view, matchWrap());
+
+        LinearLayout fuelRow = row();
+        fuelRow.setPadding(0, dp(Ui.SPACE1), 0, dp(Ui.SPACE2));
+        fuelRow.addView(icon(R.drawable.ic_fuel, true), iconGap());
+        fuel = new SegmentBar(this);
+        fuelRow.addView(fuel, new LinearLayout.LayoutParams(0, dp(16), 1f));
+        fuelText = secondary("");
+        fuelText.setPadding(dp(Ui.SPACE3), 0, 0, 0);
+        fuelText.setMinWidth(dp(56));
+        fuelRow.addView(fuelText);
+        c.addView(fuelRow, matchWrap());
+
+        LinearLayout batteryRow = row();
+        batteryRow.setPadding(0, dp(Ui.SPACE1), 0, 0);
+        batteryRow.addView(icon(R.drawable.ic_battery, true), iconGap());
+        battery = secondary("");
+        batteryRow.addView(battery, weight());
+        c.addView(batteryRow, matchWrap());
+        updated = note("");
+        updated.setGravity(android.view.Gravity.CENTER);
+        updated.setPadding(0, dp(Ui.SPACE3), 0, 0);
+        c.addView(updated, matchWrap());
+        return c;
+    }
+
+    /** Segments of the fuel gauge: six, or as many bars as the bike reports if that is more. */
+    static int fuelSegments(int bars) {
+        return Math.max(6, bars);
     }
 
     @Override
@@ -121,7 +190,7 @@ public class BikeActivity extends KawaActivity {
         LinearLayout section = column();
         LinearLayout headRow = row();
         headRow.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"), weight());
-        headRow.addView(pill("DEBUG", 0x336BBE45, Ui.accentText(night)));
+        headRow.addView(debugPill());
         section.addView(headRow);
         LinearLayout c = group();
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
@@ -185,7 +254,7 @@ public class BikeActivity extends KawaActivity {
         LinearLayout section = column();
         LinearLayout headRow = row();
         headRow.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"), weight());
-        headRow.addView(pill("DEBUG", 0x336BBE45, Ui.accentText(night)));
+        headRow.addView(debugPill());
         section.addView(headRow);
         LinearLayout c = group();
         c.addView(secondary("Writes only the shift lamp; the dash clock stays as it is. The bike must be "
@@ -277,11 +346,24 @@ public class BikeActivity extends KawaActivity {
     private void update() {
         BikeData b = Hub.bike;
         long now = System.currentTimeMillis();
+        updateTabBar();
         title.setText(name(b, prefs.getString(Hub.KEY_BIKE_NAME, null)));
-        title.setTextSize(26);
         vin.setText(vinText(b, vinShown));
         vin.setVisibility(b.model != null && b.model.vin != null ? View.VISIBLE : View.GONE);
-        updated.setText(Hub.bikeConnected ? "Connected" : lastRead(b, now));
+        updated.setText(Hub.bikeConnected ? "Connected · values update while the bike is on" : lastRead(b, now));
+        BikeFrames.VehicleInfo info = b.info;
+        if (info != null && info.rangeKm >= 0) {
+            range.figure.set(info.rangeKm + " km");
+            range.caption.setText("Remaining range");
+        } else {
+            range.figure.set("–");
+            range.caption.setText(info == null ? "Remaining range: not read yet" : "Remaining range");
+        }
+        int bars = info == null ? -1 : info.fuelBars;
+        fuel.set(Math.max(0, bars), fuelSegments(bars));
+        fuelText.setText(bars < 0 ? "Fuel –" : bars + (bars == 1 ? " bar" : " bars"));
+        double v = info == null ? Double.NaN : battery(info);
+        battery.setText(Double.isNaN(v) ? "Battery –" : String.format(Locale.ROOT, "Battery %.1f V", v));
 
         List<String[]> rows = rows(b, now);
         List<String> labels = new ArrayList<>();
@@ -290,10 +372,7 @@ public class BikeActivity extends KawaActivity {
             shownLabels = labels;
             buildSections(rows);
         } else {
-            for (int i = 0; i < rows.size(); i++) {
-                String v = rows.get(i)[2];
-                if (!v.contentEquals(valueViews.get(i).getText())) valueViews.get(i).setText(v);
-            }
+            for (int i = 0; i < rows.size(); i++) valueViews.get(i).set(rows.get(i)[2]);
         }
 
         BikeFrames.GeneralCaps caps = b.caps;
@@ -343,7 +422,7 @@ public class BikeActivity extends KawaActivity {
         }
     }
 
-    /** Rebuilds the values: a section header and a group of rows per group; the first four dash values as tiles. */
+    /** Rebuilds the values: a section header and a group of value rows per group. */
     private void buildSections(List<String[]> rows) {
         sections.removeAllViews();
         valueViews.clear();
@@ -354,68 +433,26 @@ public class BikeActivity extends KawaActivity {
         }
         String section = null;
         LinearLayout group = null;
-        LinearLayout tiles = null;
-        List<View> tileList = new ArrayList<>();
-        int sectionIndex = -1;
-        int inSection = 0;
-        for (int i = 0; i < rows.size(); i++) {
-            String[] r = rows.get(i);
+        for (String[] r : rows) {
             if (!r[0].equals(section)) {
                 section = r[0];
                 LinearLayout container = column();
                 container.addView(sectionHeader(sectionIcon(section), section));
                 if (section.startsWith("Riding modes")) {
-                    container.addView(note("Names come from Rideology; the number the bike sent is in brackets. "
-                            + "Shown only where the bike says it has the setting."));
+                    TextView n = note("Names come from Rideology; the number the bike sent is in brackets. "
+                            + "Shown only where the bike says it has the setting.");
+                    n.setPadding(dp(Ui.SPACE1), 0, dp(Ui.SPACE1), dp(Ui.SPACE2));
+                    container.addView(n);
                 }
                 group = group();
                 container.addView(group);
                 sections.addView(container);
-                sectionIndex++;
-                tiles = null;
-                tileList = new ArrayList<>();
-                inSection = 0;
             }
-            // the handful of numbers a rider checks at a glance, right at the top of the first group
-            // only the first group ("On the dash") starts with tiles; the rest stay quiet rows
-            if (sectionIndex == 0 && tiles == null && inSection < 4) {
-                LinearLayout tile = column();
-                tile.setPadding(dp(Ui.SPACE3), dp(10), dp(Ui.SPACE3), dp(10));
-                tile.setMinimumHeight(dp(Ui.TOUCH_MIN));
-                GradientDrawable bg = new GradientDrawable();
-                bg.setColor(Ui.surfaceSunken(night));
-                bg.setCornerRadius(dp(Ui.RADIUS_TILE));
-                tile.setBackground(bg);
-                TextView v = text(20, true);
-                v.setText(r[2]);
-                TextView l = text(12, false);
-                l.setText(r[1]);
-                l.setTextColor(Ui.inkSecondary(night));
-                tile.addView(v);
-                tile.addView(l);
-                tileList.add(tile);
-                valueViews.add(v);
-                inSection++;
-                if (tileList.size() == 4 || i == rows.size() - 1) {
-                    View[] arr = tileList.toArray(new View[0]);
-                    tiles = statGrid(2, arr);
-                    LinearLayout holder = column();
-                    holder.setPadding(0, dp(10), 0, dp(10));
-                    holder.addView(tiles);
-                    group.addView(holder);
-                }
-                continue;
-            }
-            inSection++;
-            LinearLayout line = row();
-            line.setPadding(0, dp(Ui.ROW_PAD_V), 0, dp(Ui.ROW_PAD_V));
-            line.setMinimumHeight(dp(Ui.TOUCH_MIN));
-            line.addView(itemTitle(r[1]), weight());
-            TextView value = value(r[2]);
-            value.setTextSize(15);
-            line.addView(value);
-            addRow(group, line);
-            valueViews.add(value);
+            ValueRow line = valueRow(rowIcon(r[1]), r[1], r[2]);
+            // temperatures and the live engine values in the second value colour, like Rideology's cyan
+            if ("Engine".equals(section)) line.figure.color(Ui.highlight(night));
+            addRow(group, line.view);
+            valueViews.add(line.figure);
         }
     }
 
@@ -470,17 +507,15 @@ public class BikeActivity extends KawaActivity {
         List<String[]> r = new ArrayList<>();
         BikeFrames.VehicleInfo i = b.info;
         if (i != null) {
-            String s = "On the dash";
+            // range, fuel and battery are at the top of the screen
+            String s = BASIC;
             if (i.odometerKm >= 0) r.add(new String[]{s, "Odometer", String.format(Locale.ROOT, "%,d km", i.odometerKm)});
             add(r, s, "Trip A", i.tripAKm, "%,.1f km");
             add(r, s, "Trip B", i.tripBKm, "%,.1f km");
-            if (i.fuelBars >= 0) r.add(new String[]{s, "Fuel", i.fuelBars + (i.fuelBars == 1 ? " bar" : " bars")});
-            if (i.rangeKm >= 0) r.add(new String[]{s, "Range", i.rangeKm + " km"});
             add(r, s, "Average fuel economy", i.avgMileage, "%.1f (dash units)");
             add(r, s, "Fuel consumption", i.fuelConsumption, "%.1f (dash units)");
             if (i.avgSpeedKmh >= 0) r.add(new String[]{s, "Average speed", i.avgSpeedKmh + " km/h"});
             if (i.totalTime >= 0) r.add(new String[]{s, "Total time", i.totalTime + " h"});
-            add(r, s, "Battery", battery(i), "%.1f V");
             add(r, s, "Outside temperature", i.outsideC, "%.0f °C");
         }
         boolean live = b.live != null && now - b.liveAt < LIVE_MS;

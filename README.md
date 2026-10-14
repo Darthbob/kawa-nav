@@ -101,7 +101,7 @@ The app's own screen is in English.
    it. Keep only one of them connected to the bike: uninstall the other or turn off its autostart.
 2. Open KawaNav. On the first start it walks you through pairing, permissions and notification
    access, explaining each step. Anything missing later shows up in an **orange banner** at the top
-   of the app, each item with a button that fixes it.
+   of Home, each item with a button that fixes it.
 
 🔒 **Notification access greyed out?** Android 13 and newer protect notification access ("Restricted
 setting") for apps installed from a downloaded APK instead of an app store. Unlock it once:
@@ -117,6 +117,22 @@ KawaNav shows these steps itself ("Switch greyed out?") when it notices the situ
 
 ## 🏁 Using KawaNav
 
+### 📱 The app
+
+Laid out like Rideology: a bar at the bottom with **Home**, **Bike**, the round **record button**,
+**Rides** and **Settings**. It follows the phone's dark or light mode (black with lime green, or white
+with violet).
+
+- **Home**: the link to the bike and what the dash shows right now, the ride being recorded, the bike's
+  last values ("My vehicle") and a menu of shortcuts. The orange banner shows up here too.
+- **Bike**: everything the bike reported, see [Bike data](#-bike-data).
+- **Record button**: green starts recording a ride, red while recording, orange while paused. Tapped
+  while a ride runs, it offers to pause, continue or stop.
+- **Rides**: the riding log, see [Recording rides](#-recording-rides).
+- **Settings**: everything below that can be switched; the shortcuts on Home jump to their group.
+
+Back from Bike, Rides or Settings goes to Home.
+
 ### 📟 What the dash shows
 
 Once a second KawaNav decides what goes on the dash:
@@ -129,7 +145,9 @@ Once a second KawaNav decides what goes on the dash:
 
 ### 🔧 Settings
 
-| Setting ("On the road") | Default | Effect |
+In the **Settings** tab:
+
+| Setting | Default | Effect |
 |---|---|---|
 | [Google Maps directions](#google-maps-directions) | On | Off: Maps is ignored, free ride also runs during navigation |
 | [Show upcoming curves](#show-upcoming-curves) | On | Free ride when Maps is not navigating |
@@ -185,8 +203,8 @@ icon is removed. Not yet tried on the bike.
 
 #### Headset icon
 
-The dash shows its headset icon while the helmet picked under "Start automatically" → "When my
-helmet connects" is connected to the phone (as headset or for audio). With "Off" there, the icon
+The dash shows its headset icon while the helmet picked under Settings → "Start automatically" → "When
+my helmet connects" is connected to the phone (as headset or for audio). With "Off" there, the icon
 stays off. Not yet tried on the bike.
 
 #### Distances in feet
@@ -202,12 +220,13 @@ reads the direction of a roundabout from the road itself and needs no setting.
 
 ### 📊 Bike data
 
-The main screen shows the bike's last values in one row ("Your bike"); tapping it opens the bike's own
-screen, which groups everything the dash reported when it was last connected:
+Home shows the bike's last values under "My vehicle" (range, fuel bars, odometer); tapping them, or the
+**Bike** tab, opens the bike's own screen. It starts with the remaining range in big figures, the fuel
+gauge and the battery voltage, then groups everything the dash reported when it was last connected:
 
-- **On the dash**: odometer, trip A/B, fuel bars, range, average fuel economy and consumption, average
-  speed, total engine hours, battery voltage, outside temperature. Values the bike does not have (it
-  says so in the frame it sends) are left out rather than shown as zero.
+- **Basic information**: odometer, trip A/B, average fuel economy and consumption, average speed, total
+  engine hours, outside temperature. Values the bike does not have (it says so in the frame it sends)
+  are left out rather than shown as zero.
 - **Engine**: while the bike is connected and sending, the live values (speed, engine speed, gear,
   throttle, lean angle, acceleration) and the temperatures; they are gone a few seconds after the bike
   stops sending.
@@ -218,26 +237,28 @@ screen, which groups everything the dash reported when it was last connected:
   button that opens Maps in walking mode. It appears only if the phone had a recent position (curves or
   a recorded ride were using GPS).
 
-The page ends with the VIN, masked. Tap it to show all of it.
+The VIN is shown masked under the bike's name; tap it to show all of it. The button at the top right
+asks the bike for its values again.
 
 Values are shown with the names Rideology uses; where the name could not be verified against a real
 bike yet, the number the bike sent is printed in brackets next to it.
 
 ### 🗺️ Recording rides
 
-"Record ride" on the main screen (or turning "Start recording by itself" on) records one line per
-second: the bike's values that second and the phone's position. Pause and continue work while the ride
-goes on; a ride that was running when the app was killed is continued after a restart, and one that was
+The round button in the middle of the bottom bar (or turning "Start recording by itself" on) records one
+line per second: the bike's values that second and the phone's position. Tapping it again pauses,
+continues or stops the ride (Home shows the same buttons while a ride runs); a ride that was running when the app was killed is continued after a restart, and one that was
 left behind is marked "recovered" and its summary rebuilt from the file.
 
-"Recorded rides" lists them with totals for this week, this month and this year. A ride has:
+The **Rides** tab ("Riding log") lists them with totals for this week, this month and this year. A ride
+has:
 
 - a summary (distance, time, average and top speed, highest engine speed, max lean left/right, fuel
   used, odometer start and end);
 - the track, coloured by speed, with a dot where the ride started;
 - charts for speed, engine speed, gear, throttle, lean angle, coolant temperature and acceleration —
   picking one and touching the line marks that second on the track;
-- rename, delete, and export: **CSV** with Rideology's column layout (so the tools people already use
+- rename (the pencil at the top), delete, and export: **CSV** with Rideology's column layout (so the tools people already use
   for Rideology exports can read it) or **GPX** with the values as extensions for map programs. Both
   are written to `Download/KawaNav` and offered for sharing.
 
@@ -271,7 +292,7 @@ them.
 
 Curves only work where a region is downloaded; nothing is fetched while riding. The app says
 "No offline roads…" when the current area is missing. Download the regions you ride in under
-"Offline maps", preferably over Wi-Fi.
+Settings → "Offline maps", preferably over Wi-Fi.
 
 - Regions come from [Geofabrik](https://download.geofabrik.de) (OpenStreetMap extracts, rebuilt
   daily). The download is resumable and asks first on mobile data. Converting needs temporary free
@@ -285,7 +306,7 @@ Curves only work where a region is downloaded; nothing is fetched while riding. 
 
 ### 🔑 Autostart
 
-Set it up under "Start automatically" → "When the bike is switched on" → **Set up** (ignition on,
+Set it up under Settings → "Start automatically" → "When the bike is switched on" → **Set up** (ignition on,
 Rideology closed). Optionally pick your helmet intercom under "When my helmet connects" as a
 fallback.
 
@@ -295,7 +316,7 @@ fallback.
 - **Stop** by hand (button or notification) pauses autostart until the bike has been switched off
   (gone for at least 20 s) or for at most 1 hour; **Start** ends the pause.
 
-The Start/Stop button is only a manual fallback (autostart missed, testing).
+The Start/Stop button on Home is only a manual fallback (autostart missed, testing).
 
 ## 🚧 Known limitations
 

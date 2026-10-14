@@ -31,6 +31,7 @@ public class RideActivity extends KawaActivity {
     private Ride ride;
     private List<RideTsv.Sample> samples;
     private TextView title;
+    private Hero distance;
     private LinearLayout summary;
     private LinearLayout chartCard;
     private LinearLayout trackCard;
@@ -50,13 +51,20 @@ public class RideActivity extends KawaActivity {
         id = getIntent().getStringExtra(EXTRA_ID);
 
         LinearLayout root = column();
-        root.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE5), dp(Ui.SPACE4), dp(Ui.SPACE6));
-        title = display("");
-        root.addView(title);
+        root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
+        LinearLayout header = headerBar("", v -> finish(),
+                headerAction(R.drawable.ic_edit, "Rename this ride", v -> rename()));
+        title = header.findViewWithTag("title");
+        root.addView(header);
+        LinearLayout top = card();
+        top.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
         TextView when = secondary("");
-        when.setId(View.generateViewId());
-        when.setPadding(0, 0, 0, dp(8));
-        root.addView(when);
+        when.setGravity(android.view.Gravity.CENTER);
+        top.addView(when, matchWrap());
+        distance = hero(52);
+        distance.view.setPadding(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE1));
+        top.addView(distance.view, matchWrap());
+        root.addView(top);
         summary = column();
         root.addView(summary);
         trackCard = trackCard();
@@ -77,8 +85,11 @@ public class RideActivity extends KawaActivity {
                 samples = s;
                 if (r == null) {
                     title.setText("Ride not found");
+                    distance.view.setVisibility(View.GONE);
                     return;
                 }
+                distance.figure.set(r.distance());
+                distance.caption.setText("Distance · " + r.duration());
                 title.setText(r.name.isEmpty() ? Ride.defaultName(r.start) : r.name);
                 when.setText(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.FULL,
                         java.text.DateFormat.SHORT).format(new java.util.Date(r.start))
@@ -182,7 +193,6 @@ public class RideActivity extends KawaActivity {
         LinearLayout section = column();
         section.addView(sectionHeader(R.drawable.ic_speed, "Summary"));
         LinearLayout tiles = statGrid(2,
-                statTile("Distance", r.distance()),
                 statTile("Time", r.duration()),
                 r.avgKmh > 0 ? statTile("Average", String.format(Locale.ROOT, "%.0f km/h", r.avgKmh)) : null,
                 r.maxKmh > 0 ? statTile("Top speed", String.format(Locale.ROOT, "%.0f km/h", r.maxKmh)) : null,
@@ -227,8 +237,6 @@ public class RideActivity extends KawaActivity {
         c.addView(e);
         LinearLayout r = row();
         r.setPadding(0, dp(Ui.SPACE2), 0, 0);
-        r.addView(iconButton(secondaryButton("Rename", v -> rename()), R.drawable.ic_edit), weight());
-        r.addView(gap());
         r.addView(iconButton(destructiveButton("Delete", v -> confirmDelete()), R.drawable.ic_trash), weight());
         c.addView(r);
         TextView caption = note("CSV has Rideology's columns, so the existing tools can read the ride. GPX is a "

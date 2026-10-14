@@ -49,7 +49,7 @@ public final class ChartView extends View {
         line.setStyle(Paint.Style.STROKE);
         line.setStrokeWidth(d * 2);
         boolean night = Ui.night(context);
-        line.setColor(night ? Ui.accent() : Ui.accentText(false));
+        line.setColor(Ui.accent(night));
         grid.setColor(Ui.chartGrid(night));
         grid.setStrokeWidth(1);
         text.setColor(Ui.chartInk(night));

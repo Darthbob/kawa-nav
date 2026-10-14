@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The recorded rides: a summary on top (this week, this month, this year) and one row per ride with its
- * length, distance and when it was. Tapping a row opens the ride; exports write the ride as a CSV
- * (Rideology's column layout) or a GPX track into Download/KawaNav.
+ * The Rides tab, Rideology's riding log: the distance of this week, month and year on top, then one
+ * card per ride with its distance, length and when it was. Tapping a ride opens it; exports write the
+ * ride as a CSV (Rideology's column layout) or a GPX track into Download/KawaNav.
  */
 public class RidesActivity extends KawaActivity {
 
@@ -25,6 +25,7 @@ public class RidesActivity extends KawaActivity {
     private LinearLayout list;
     private LinearLayout empty;
     private boolean loading;
+    private int lastRideState = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,10 +37,11 @@ public class RidesActivity extends KawaActivity {
         night = isNight();
 
         LinearLayout root = column();
-        root.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE5), dp(Ui.SPACE4), dp(Ui.SPACE6));
-        root.addView(display("Recorded rides"));
+        root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
+        root.addView(headerBar("Riding log", null, null));
         totals = secondary("");
-        totals.setPadding(0, dp(2), 0, dp(Ui.SPACE2));
+        totals.setGravity(android.view.Gravity.CENTER);
+        totals.setPadding(0, 0, 0, dp(Ui.SPACE2));
         root.addView(totals);
         totalsTiles = column();
         root.addView(totalsTiles);
@@ -50,7 +52,7 @@ public class RidesActivity extends KawaActivity {
         TextView note = note("Rides are stored on the phone only. Nothing is uploaded anywhere.");
         note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE5), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
-        setContentView(page(root));
+        setContentView(tabPage(TAB_RIDES, root));
         refresh();
     }
 
@@ -58,7 +60,26 @@ public class RidesActivity extends KawaActivity {
     protected void onResume() {
         super.onResume();
         refresh(); // a ride may have been exported, renamed or deleted in the ride screen
+        handler.post(tick);
     }
+
+    @Override
+    protected void onPause() {
+        handler.removeCallbacks(tick);
+        super.onPause();
+    }
+
+    /** Keeps the record button current, and lists a ride as soon as its recording ends. */
+    private final Runnable tick = new Runnable() {
+        @Override
+        public void run() {
+            updateTabBar();
+            int state = Hub.rideState;
+            if (lastRideState != -1 && state != lastRideState) refresh();
+            lastRideState = state;
+            handler.postDelayed(this, 1000);
+        }
+    };
 
     private void refresh() {
         if (loading) return;
@@ -114,24 +135,18 @@ public class RidesActivity extends KawaActivity {
             totalsTiles.addView(tiles, lp);
         }
         totals.setText(rides.isEmpty() ? ""
-                : String.format(Locale.ROOT, "%d rides · %s this week · %.0f km altogether",
-                rides.size(), minutes(weekMs), all));
+                : String.format(Locale.ROOT, "%d %s · %s this week · %.0f km altogether",
+                rides.size(), rides.size() == 1 ? "ride" : "rides", minutes(weekMs), all));
         empty.setVisibility(rides.isEmpty() ? View.VISIBLE : View.GONE);
         empty.removeAllViews();
         if (rides.isEmpty()) {
-            LinearLayout card = emptyState("No rides recorded yet",
-                    "Start one on the main screen before you ride. The bike's values (speed, engine, gear, "
+            LinearLayout card = emptyState("Record your first ride",
+                    "Tap the round button below before you ride. The bike's values (speed, engine, gear, "
                             + "throttle, lean, temperatures) and the phone's track are written to the phone once a "
                             + "second while it is connected.");
-            card.addView(icon(R.drawable.ic_route, false), iconGap());
             empty.addView(card);
         }
-        LinearLayout group = null;
-        if (!rides.isEmpty()) {
-            group = group();
-            list.addView(group);
-        }
-        for (Ride r : rides) addRow(group, row(r, today));
+        for (Ride r : rides) list.addView(row(r, today));
     }
 
     private static String minutes(long ms) {
@@ -139,31 +154,48 @@ public class RidesActivity extends KawaActivity {
         return min >= 60 ? min / 60 + " h " + String.format(Locale.ROOT, "%02d", min % 60) : min + " min";
     }
 
+    /** One ride as a card: a route icon, its name and when, and its distance big. */
     private View row(Ride r, long today) {
-        LinearLayout row = settingRow();
-        row.setMinimumHeight(dp(Ui.TOUCH_MIN));
-        row.addView(icon(R.drawable.ic_flag, false), iconGap());
+        LinearLayout card = card();
+        card.setPadding(dp(Ui.SPACE3), dp(Ui.SPACE3), dp(Ui.SPACE3), dp(Ui.SPACE3));
+        LinearLayout line = row();
+        android.widget.FrameLayout badge = new android.widget.FrameLayout(this);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(Ui.surfaceSunken(night));
+        bg.setCornerRadius(dp(Ui.RADIUS_TILE));
+        badge.setBackground(bg);
+        android.widget.ImageView route = icon(R.drawable.ic_route, true);
+        badge.addView(route, new android.widget.FrameLayout.LayoutParams(dp(26), dp(26), android.view.Gravity.CENTER));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(52), dp(52));
+        blp.rightMargin = dp(Ui.SPACE3);
+        line.addView(badge, blp);
+
         LinearLayout t = column();
         TextView name = itemTitle(r.name.isEmpty() ? Ride.defaultName(r.start) : r.name);
+        name.setTypeface(Ui.titles());
+        name.setMaxLines(1);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         t.addView(name);
         String when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                 .format(new java.util.Date(r.start));
         String state = "recovered".equals(r.state) ? " · recovered after a restart" : "";
-        t.addView(secondary(String.format(Locale.ROOT, "%s · %s · %s%s", when, r.distance(), r.duration(), state)));
-        String detail = String.format(Locale.ROOT, "%d samples%s", r.samples,
-                r.maxKmh > 0 ? String.format(Locale.ROOT, " · max %.0f km/h", r.maxKmh) : "")
+        t.addView(secondary(when + state));
+        Figure distance = figure(24, android.view.Gravity.START);
+        distance.set(r.distance());
+        distance.view.setPadding(0, dp(Ui.SPACE1), 0, 0);
+        t.addView(distance.view);
+        String detail = r.duration()
+                + (r.maxKmh > 0 ? String.format(Locale.ROOT, " · max %.0f km/h", r.maxKmh) : "")
                 + (r.hasGps ? "" : " · no GPS track");
-        t.addView(secondary(detail));
-        row.addView(t, weight());
-        TextView chev = text(20, false);
-        chev.setText("›");
-        chev.setTextColor(Ui.inkMuted(night));
-        row.addView(chev);
-        row.setOnClickListener(v -> {
+        t.addView(note(detail));
+        line.addView(t, weight());
+        line.addView(chevron());
+        card.addView(line);
+        card.setOnClickListener(v -> {
             android.content.Intent i = new android.content.Intent(this, RideActivity.class);
             i.putExtra(RideActivity.EXTRA_ID, r.id);
             startActivity(i);
         });
-        return row;
+        return card;
     }
 }

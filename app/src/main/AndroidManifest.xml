@@ -37,7 +37,8 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:largeHeap="true"
-        android:theme="@android:style/Theme.DeviceDefault.DayNight">
+        android:theme="@android:style/Theme.DeviceDefault.DayNight"
+        android:enableOnBackInvokedCallback="true">
 
         <activity
             android:name=".MainActivity"
@@ -51,10 +52,11 @@
             </intent-filter>
         </activity>
 
+        <!-- the tabs: Home (MainActivity), Bike, Rides, Settings; brought back as they were when reopened -->
         <activity
             android:name=".RidesActivity"
             android:exported="false"
-            android:label="Recorded rides"
+            android:label="Riding log"
             android:screenOrientation="portrait" />
 
         <activity
@@ -68,6 +70,13 @@
             android:exported="false"
             android:label="Your bike"
             android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="Settings"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <service
             android:name=".BridgeService"

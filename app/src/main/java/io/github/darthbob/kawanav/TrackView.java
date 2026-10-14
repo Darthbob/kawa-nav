@@ -97,7 +97,7 @@ public final class TrackView extends View {
         // where the ride started
         for (RideTsv.Sample s : samples) {
             if (!s.hasGps()) continue;
-            marker.setColor(Ui.accent());
+            marker.setColor(Ui.recordIdle()); // the green start dot
             float r = getResources().getDisplayMetrics().density * 6;
             canvas.drawCircle((float) (offX + (s.lon - minLon) * Math.cos(centerLat) * scale),
                     (float) (offY + (maxLat - s.lat) * scale), r, marker);
