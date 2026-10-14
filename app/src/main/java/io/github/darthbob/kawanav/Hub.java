@@ -80,6 +80,8 @@ public final class Hub {
     public static int bikeMtu;
     /** Settings write waiting for the meter's answer, see {@link BridgeService#writeSettings}. */
     public static BridgeService.PendingSettings settingsWritePending;
+    /** Warnings the bike's values show right now (tyres, ABS, battery), see {@link BikeAlerts}. */
+    public static java.util.List<BikeAlerts.Alert> bikeAlerts = java.util.Collections.emptyList();
     /** Last GPS fix any part of KawaNav got (curves, ride recorder), or null. */
     public static android.location.Location lastFix;
 

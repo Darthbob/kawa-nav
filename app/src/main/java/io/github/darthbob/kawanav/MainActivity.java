@@ -44,6 +44,9 @@ public class MainActivity extends KawaActivity {
     // speed camera warning (offline map data)
     private LinearLayout cameraCard;
     private TextView cameraText;
+    // warnings the bike sends: tyres, ABS, battery
+    private LinearLayout alertCard;
+    private TextView alertText;
     private LinearLayout meterTextBlock;
     private Button startButton;
     // ride being recorded
@@ -419,6 +422,7 @@ public class MainActivity extends KawaActivity {
         root.addView(head);
 
         root.addView(banner());
+        root.addView(bikeAlertCard());
         root.addView(cameraWarning());
         root.addView(dashPanel());
         root.addView(rideStrip());
@@ -427,6 +431,30 @@ public class MainActivity extends KawaActivity {
         root.addView(sectionHeader(R.drawable.ic_grid, "Menu"));
         root.addView(menu());
         return tabPage(TAB_HOME, root);
+    }
+
+    /** Warnings from the bike (tyre pressure, TPMS sensor, ABS, 12 V battery), while they last. */
+    private LinearLayout bikeAlertCard() {
+        alertCard = column();
+        alertCard.setPadding(dp(16), dp(12), dp(16), dp(12));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Ui.dangerFill(night));
+        bg.setCornerRadius(dp(16));
+        alertCard.setBackground(bg);
+        LinearLayout r = row();
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        android.widget.ImageView warn = icon(R.drawable.ic_alert, false);
+        warn.setColorFilter(0xFFFFFFFF);
+        r.addView(warn, iconGap());
+        alertText = text(15, true);
+        alertText.setTextColor(0xFFFFFFFF);
+        r.addView(alertText, weight());
+        alertCard.addView(r);
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, dp(6), 0, dp(6));
+        alertCard.setLayoutParams(lp);
+        alertCard.setVisibility(View.GONE);
+        return alertCard;
     }
 
     /**
@@ -615,6 +643,17 @@ public class MainActivity extends KawaActivity {
         statusChip.setTextColor(chipInk);
 
         Hub.Output out = Hub.output;
+        // the bike's own warnings, one line each, while they last
+        java.util.List<BikeAlerts.Alert> alerts = Hub.bikeAlerts;
+        alertCard.setVisibility(alerts.isEmpty() ? View.GONE : View.VISIBLE);
+        if (!alerts.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (BikeAlerts.Alert a : alerts) {
+                if (sb.length() > 0) sb.append('\n');
+                sb.append(a.title).append(" — ").append(a.detail);
+            }
+            if (!sb.toString().contentEquals(alertText.getText())) alertText.setText(sb);
+        }
         // the camera warning is shown while the bridge says one is ahead (it also goes to the dash)
         boolean camera = out != null && out.alert != null;
         cameraCard.setVisibility(camera ? View.VISIBLE : View.GONE);

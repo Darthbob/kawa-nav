@@ -350,7 +350,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Logger.init(this);
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Bike connection", NotificationManager.IMPORTANCE_LOW));
-        nm.createNotificationChannel(new NotificationChannel(CHANNEL_ALERTS, "Speed cameras",
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL_ALERTS, "Warnings",
                 NotificationManager.IMPORTANCE_DEFAULT));
         locationAllowed = false;
         enableLocation();
@@ -686,6 +686,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.output = out;
         if (out != null && out.cameraId >= 0) cameraAlert(out);
         else cameraGone();
+        bikeAlerts(now);
         // log every change of what the meter shows (also without bike)
         String key = out == null ? "nothing" : out.source + ":" + out.turn;
         if (!key.equals(lastShownKey)) {
@@ -944,6 +945,47 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 .build();
         getSystemService(NotificationManager.class).notify(CAMERA_NOTIFICATION_ID, n);
     }
+
+    /** Tyre, ABS and battery warnings: shown on Home while they last, announced once each. */
+    private void bikeAlerts(long now) {
+        java.util.List<BikeAlerts.Alert> alerts = BikeAlerts.current(Hub.bike, now);
+        Hub.bikeAlerts = alerts;
+        // a warning that went away (tyre pumped up, "low" became "not charging") leaves no stale notification
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (BikeAlerts.Alert a : alerts) ids.add(a.id);
+        for (java.util.Iterator<String> it = postedAlerts.iterator(); it.hasNext(); ) {
+            String id = it.next();
+            if (ids.contains(id)) continue;
+            getSystemService(NotificationManager.class).cancel(alertNotificationId(id));
+            it.remove();
+        }
+        for (BikeAlerts.Alert a : alertTracker.fresh(alerts)) {
+            Logger.log("Bike warning: " + a.title + " (" + a.detail + ")");
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) continue;
+            PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            Notification n = new Notification.Builder(this, CHANNEL_ALERTS)
+                    .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                    .setContentTitle(a.title)
+                    .setContentText(a.detail)
+                    .setStyle(new Notification.BigTextStyle().bigText(a.detail))
+                    .setContentIntent(open)
+                    .setAutoCancel(true)
+                    .build();
+            // one notification per kind of warning, so a tyre and the battery do not replace each other
+            getSystemService(NotificationManager.class).notify(alertNotificationId(a.id), n);
+            postedAlerts.add(a.id);
+        }
+    }
+
+    private static int alertNotificationId(String id) {
+        return BIKE_ALERT_NOTIFICATION_BASE + Math.floorMod(id.hashCode(), 1000);
+    }
+
+    private final java.util.Set<String> postedAlerts = new java.util.HashSet<>();
+
+    private final BikeAlerts.Tracker alertTracker = new BikeAlerts.Tracker();
+    private static final int BIKE_ALERT_NOTIFICATION_BASE = 10_000;
 
     /** The camera no longer ahead: the next one is announced again. */
     private void cameraGone() {
