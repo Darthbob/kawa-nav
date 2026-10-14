@@ -44,18 +44,6 @@ The debug build can write it down.
 
 ## What to do
 
-KawaNav reads Google Maps' turn-by-turn notification. Waze is different: everything found so far
-says it does **not** put the next maneuver into its notification at all — its notification only
-keeps the app alive and gives a way back into it (a competing motorcycle-dash app states this
-outright and reads Waze by machine-learning on the screen instead). Three independent checks of the
-research agreed. What is *not* known is what Waze does show on the lock screen (its "Lock screen
-navigation", on by default since 2024) and in Android 16's live updates.
-
-So before writing any Waze support, look at what Waze really posts, on a real phone, while riding.
-The debug build can write it down.
-
-## What to do
-
 1. Install the **debug APK** (`KawaNav-vX.Y-debug.apk`). It installs over the normal one and keeps
    rides and settings; the signed release key is the same.
 2. Settings → tap the title "Settings" **seven times** → the hidden cards appear.
