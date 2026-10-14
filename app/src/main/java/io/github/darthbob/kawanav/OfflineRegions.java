@@ -33,23 +33,28 @@ public final class OfflineRegions {
         /** Date of the downloaded data (the extract's Last-Modified), ms. */
         public final long dataDate;
         public final Set<String> tiles;
+        /** The import looked for speed cameras too (regions from before that have none stored). */
+        public final boolean hazards;
 
-        Region(String id, String label, String pbfUrl, long dataDate, Set<String> tiles) {
+        Region(String id, String label, String pbfUrl, long dataDate, Set<String> tiles, boolean hazards) {
             this.id = id;
             this.label = label;
             this.pbfUrl = pbfUrl;
             this.dataDate = dataDate;
             this.tiles = tiles;
+            this.hazards = hazards;
         }
     }
 
     private final File dir;
     private final RoadStore store;
+    private final HazardStore hazards;
 
-    public OfflineRegions(Context context, RoadStore store) {
+    public OfflineRegions(Context context, RoadStore store, HazardStore hazards) {
         this.dir = new File(context.getApplicationContext().getFilesDir(), "regions");
         if (!dir.isDirectory()) dir.mkdirs();
         this.store = store;
+        this.hazards = hazards;
     }
 
     /** All downloaded regions, sorted by label. */
@@ -64,7 +69,7 @@ public final class OfflineRegions {
                 Set<String> tiles = new HashSet<>(t.length() * 2);
                 for (int i = 0; i < t.length(); i++) tiles.add(t.getString(i));
                 out.add(new Region(o.getString("id"), o.getString("label"), o.getString("pbfUrl"),
-                        o.getLong("dataDate"), tiles));
+                        o.getLong("dataDate"), tiles, o.optBoolean("hazards", false)));
             } catch (Exception e) {
                 Logger.log("Region record " + f.getName() + " unreadable: " + e);
             }
@@ -77,7 +82,8 @@ public final class OfflineRegions {
      * Stores the record of a finished (re)download. Tiles the old download of this region wrote and
      * the new one did not are deleted, unless another region uses them.
      */
-    public synchronized void save(String id, String label, String pbfUrl, long dataDate, Set<String> tiles) throws Exception {
+    public synchronized void save(String id, String label, String pbfUrl, long dataDate, Set<String> tiles,
+                                 boolean hazards) throws Exception {
         Region old = find(id);
         JSONObject o = new JSONObject();
         o.put("id", id);
@@ -85,6 +91,7 @@ public final class OfflineRegions {
         o.put("pbfUrl", pbfUrl);
         o.put("dataDate", dataDate);
         o.put("tiles", new JSONArray(tiles));
+        o.put("hazards", hazards);
         File tmp = new File(dir, id + ".tmp");
         try (OutputStream out = new FileOutputStream(tmp)) {
             out.write(o.toString().getBytes(StandardCharsets.UTF_8));
@@ -114,7 +121,10 @@ public final class OfflineRegions {
 
     public synchronized void deleteUnassigned() {
         Set<String> keys = unassigned();
-        for (String k : keys) store.delete(k);
+        for (String k : keys) {
+            store.delete(k);
+            if (hazards != null) hazards.delete(k);   // camera tiles use the same keys
+        }
         Logger.log("Deleted " + keys.size() + " tiles of no region");
     }
 
@@ -132,7 +142,11 @@ public final class OfflineRegions {
     private void deleteUnused(Set<String> candidates) {
         Set<String> used = new HashSet<>();
         for (Region r : list()) used.addAll(r.tiles);
-        for (String k : candidates) if (!used.contains(k)) store.delete(k);
+        for (String k : candidates) {
+            if (used.contains(k)) continue;
+            store.delete(k);
+            if (hazards != null) hazards.delete(k);
+        }
     }
 
     private static String read(File f) throws Exception {

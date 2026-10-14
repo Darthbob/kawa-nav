@@ -30,11 +30,21 @@ public final class Hub {
         public final int turn;
         public final int distanceM;
         public final String source;
+        /** Speed camera warning: the OpenStreetMap node id, or -1 when this is not one. */
+        public final long cameraId;
+        /** "Speed camera in 350 m (50 km/h)"; only with a camera warning. */
+        public final String alert;
 
         public Output(int turn, int distanceM, String source) {
+            this(turn, distanceM, source, -1, null);
+        }
+
+        public Output(int turn, int distanceM, String source, long cameraId, String alert) {
             this.turn = turn;
             this.distanceM = distanceM;
             this.source = source;
+            this.cameraId = cameraId;
+            this.alert = alert;
         }
 
         public String describe() {
@@ -127,6 +137,14 @@ public final class Hub {
     public static final String KEY_DASH_CALLS = "dash_calls";
     /** Mail/message icon on the dash. */
     public static final String KEY_DASH_MAIL = "dash_mail";
+    /**
+     * Speed camera warnings from the offline OpenStreetMap data, on the phone and on the dash.
+     * Off by default: announcing cameras is restricted in some countries (see README).
+     */
+    public static final String KEY_CAMERAS = "speed_cameras";
+    /** Warn about a camera from this many metres on (the value of {@link #CAMERA_WARN_CHOICES}). */
+    public static final String KEY_CAMERA_WARN = "camera_warn_m";
+    public static final int CAMERA_WARN_DEFAULT = 500;
     /** Start recording by itself when the bike is moving (off by default). */
     public static final String KEY_RIDE_AUTO = "ride_auto";
     /** Set while the bridge is being started only because a ride was asked for. */
@@ -138,6 +156,16 @@ public final class Hub {
     public static final String KEY_NAV_CURVES = "nav_curves";
 
     /** Free mode (show upcoming curves) is on unless turned off; Google Maps navigation takes priority. */
+    /** Speed camera warnings are on. */
+    public static boolean camerasEnabled(Context c) {
+        return prefs(c).getBoolean(KEY_CAMERAS, false);
+    }
+
+    /** Distance from which a camera is announced, metres. */
+    public static int cameraWarnM(Context c) {
+        return prefs(c).getInt(KEY_CAMERA_WARN, CAMERA_WARN_DEFAULT);
+    }
+
     public static boolean freeMode(Context c) {
         return prefs(c).getBoolean(KEY_FREE_MODE, true);
     }

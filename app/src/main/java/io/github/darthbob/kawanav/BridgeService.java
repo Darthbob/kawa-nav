@@ -33,6 +33,11 @@ import java.util.Locale;
 public class BridgeService extends Service implements KawaBle.Listener {
 
     private static final String CHANNEL = "bridge";
+    /** A speed camera warning: its own channel, so it can be silenced on its own. */
+    private static final String CHANNEL_ALERTS = "alerts";
+    private static final int CAMERA_NOTIFICATION_ID = 2;
+    /** While navigating, a camera takes the arrow over only this close (the maneuver matters more). */
+    private static final double CAMERA_NAV_M = 250;
     private static final int NOTIFICATION_ID = 1;
     private static final long TICK_MS = 1000;
     private static final long NO_BIKE_RETRY_MS = 15_000;
@@ -342,6 +347,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Logger.init(this);
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Bike connection", NotificationManager.IMPORTANCE_LOW));
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL_ALERTS, "Speed cameras",
+                NotificationManager.IMPORTANCE_DEFAULT));
         locationAllowed = false;
         enableLocation();
         if (!locationAllowed) {
@@ -635,7 +642,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private void applySettings() {
         boolean free = Hub.freeMode(this);
         boolean navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, 0) > 0;
-        if ((free || navCurves) && locationAllowed) {
+        boolean cameras = Hub.camerasEnabled(this);
+        if ((free || navCurves || cameras) && locationAllowed) {
             curve.start();
         } else {
             curve.stop();
@@ -673,6 +681,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
         Hub.Output out = decide();
         Hub.output = out;
+        if (out != null && out.cameraId >= 0) cameraAlert(out);
         // log every change of what the meter shows (also without bike)
         String key = out == null ? "nothing" : out.source + ":" + out.turn;
         if (!key.equals(lastShownKey)) {
@@ -875,6 +884,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private Hub.Output decide() {
         Hub.MapsTurn m = Hub.mapsEnabled(this) ? Hub.maps : null;
+        // a camera warning comes first: it is short, and it is the one thing the rider cannot see coming
+        Hub.Output cam = cameraWarning(m != null);
+        if (cam != null) return cam;
         if (m != null) {
             // e.g. "Navigation wird gestartet…": nothing useful to show yet
             if (m.turn == KawaProtocol.TURN_NONE && m.distanceM < 0) return null;
@@ -889,6 +901,44 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (Hub.freeMode(this)) return curve.current();
         return null;
     }
+
+    /**
+     * The camera ahead, when the warnings are on and it is close enough: the whole warning distance
+     * in free mode, {@link #CAMERA_NAV_M} while navigating (the Maps arrow matters more there).
+     */
+    private Hub.Output cameraWarning(boolean navigating) {
+        if (!Hub.camerasEnabled(this) || !locationAllowed) return null;
+        Hazards.Ahead a = curve.cameraAhead();
+        if (a == null) return null;
+        double window = navigating ? Math.min(Hub.cameraWarnM(this), CAMERA_NAV_M) : Hub.cameraWarnM(this);
+        if (a.distanceM > window) return null;
+        return new Hub.Output(KawaProtocol.CAMERA_TURN, CurveEngine.roundDistance(a.distanceM), "Camera",
+                a.camera.id, Hazards.describe(a.camera, a.distanceM));
+    }
+
+    /** One notification per camera (a short sound; the phone is usually in a pocket). */
+    private void cameraAlert(Hub.Output out) {
+        long now = System.currentTimeMillis();
+        if (out.cameraId == lastCameraId && now - lastCameraAt < CAMERA_ALERT_AGAIN_MS) return;
+        lastCameraId = out.cameraId;
+        lastCameraAt = now;
+        Logger.log("Camera: " + out.alert);
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
+        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification n = new Notification.Builder(this, CHANNEL_ALERTS)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(out.alert)
+                .setContentText("From the offline map data of KawaNav")
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build();
+        getSystemService(NotificationManager.class).notify(CAMERA_NOTIFICATION_ID, n);
+    }
+
+    private long lastCameraId = -1;
+    private long lastCameraAt;
+    private static final long CAMERA_ALERT_AGAIN_MS = 120_000;
 
     private boolean hasLocationPermission() {
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;

@@ -27,6 +27,7 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 **Contents:** [Features](#-features) · [Compatibility](#-compatibility) · [Install](#-install) ·
 [Using KawaNav](#-using-kawanav) · [Bike data](#-bike-data) · [Recording rides](#-recording-rides) ·
 [Settings on the bike](#-settings-on-the-bike) ·
+[Speed cameras](#-speed-cameras) ·
 [Known limitations](#-known-limitations) · [License](#-license)
 
 ## ✨ Features
@@ -59,6 +60,9 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   and the dash shift lamp after a confirmation.
 - 🌍 **Offline maps**: download regions (country, state, district) from Geofabrik, see their data date,
   update and delete them one by one.
+- 🚨 **Speed camera warnings** (optional, off by default): taken from the same offline map data, shown on
+  the phone and with the distance on the dash. Announcing cameras is illegal in some countries — read
+  [Speed cameras](#-speed-cameras) before switching it on.
 
 ## 📱 Compatibility
 
@@ -169,6 +173,7 @@ In the **Settings** tab:
 | Set the dash clock from the phone | Off | Sets the dash clock once per connection |
 | Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
 | Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Messages, LINE, …) |
+| [Speed camera warnings](#-speed-cameras) | Off | Cameras on the phone and on the dash |
 | [Distances in feet](#distances-in-feet) | Off | Imperial distances |
 | [Left-hand traffic](#left-hand-traffic) | Off | For countries driving on the left (UK, Ireland, …) |
 
@@ -314,6 +319,31 @@ Settings → "Offline maps", preferably over Wi-Fi.
   30 days newer; **Delete** removes the region's tiles, except tiles another downloaded region also
   uses (regions overlap, e.g. a state inside its country, and share border tiles).
 
+### 🚨 Speed cameras
+
+**Off by default, and it is your decision whether to switch it on.** Announcing speed cameras while
+driving is illegal in some countries: Germany (StVO §23(1c): a device with that function must not use it
+while driving), France (only broad "zones de danger" may be announced) and Switzerland (warnings are
+banned outright). In Italy, Austria and the UK, GPS-based warnings are in common use. Check the rules
+where you ride — KawaNav does no more than show what is in the map data.
+
+Switched on ("On the road" → "Speed camera warnings"), the phone shows a card and a notification while a
+camera is inside the chosen distance, and the dash gets the distance — it has no camera icon, so it
+shows its destination flag with the metres. While navigating, the arrow of the next turn is only taken
+over within 250 m, so the maneuver stays visible longer.
+
+- **Where the data comes from**: the OpenStreetMap extract of the downloaded regions
+  (`highway=speed_camera`, `camera:type`, `enforcement`), converted on the phone like the roads. No
+  server is asked while riding, and nothing is uploaded.
+- **Regions downloaded before this version have no camera data**: download them again (Settings →
+  Offline maps); the app says so on the region.
+- The warning distance is a setting (300 / 500 / 800 m, 500 m by default). A camera that is right beside
+  the rider or behind is not warned again, so passing one does not repeat.
+- Fixed cameras, red-light cameras and average-speed sections are told apart by the data; where
+  OpenStreetMap knows the limit, it is shown with it.
+- Camera data in OpenStreetMap is incomplete, sometimes outdated, and can be missing where you ride:
+  **this is not a radar detector and no reason to rely on it.** Speed limits and road signs always apply.
+
 ### 🔑 Autostart
 
 Set it up under Settings → "Start automatically" → "When the bike is switched on" → **Set up** (ignition on,
@@ -336,6 +366,8 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
 - Only German and English Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
+- The camera warning is what OpenStreetMap has, nothing else: no mobile or temporary checks, and no
+  camera icon on the dash (it shows the destination flag with the distance). Not tried on the bike yet.
 - **Writing settings and the shift lamp is debug builds only** until it has been tried on a bike, and the
   names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
   number the bike sent, not instead of it.

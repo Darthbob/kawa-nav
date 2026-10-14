@@ -82,6 +82,10 @@ public final class PbfImporter {
 
     private boolean deleteWhenRead;
 
+    /** Speed cameras seen while the nodes are read (they are read once: in the first round). */
+    private final Map<Long, Hazards.Camera> cameras = new java.util.LinkedHashMap<>();
+    private boolean scanCameras;
+
     /** Delete the PBF file once it is read completely (before the tiles are written). */
     public PbfImporter deleteWhenRead() {
         deleteWhenRead = true;
@@ -94,6 +98,11 @@ public final class PbfImporter {
         this.store = store;
         this.tmpDir = tmpDir;
         this.progress = progress;
+    }
+
+    /** Speed cameras inside the region, for {@link HazardStore}. */
+    public java.util.List<Hazards.Camera> cameras() {
+        return new java.util.ArrayList<>(cameras.values());
     }
 
     /** @return {roads, complete tiles, partial tiles} */
@@ -422,6 +431,8 @@ public final class PbfImporter {
         File coords = null;
         WayHead h = new WayHead();
         for (int k = 0; k < rounds; k++) {
+            // the node blobs are read once: look for cameras then (the other rounds read them again)
+            scanCameras = k == 0;
             String round = rounds > 1 ? " (round " + (k + 1) + "/" + rounds + ")" : "";
             progress.status("Collecting road points" + round + "…");
             LongList ids = new LongList((int) Math.min(Integer.MAX_VALUE - 16, totalRefs / rounds + totalRefs / 20 + 16));
@@ -532,7 +543,7 @@ public final class PbfImporter {
 
     private int dense(Block bl, int start, int end) {
         Pb p = new Pb(bl.b, start, end);
-        int idS = -1, idE = 0, laS = -1, laE = 0, loS = -1, loE = 0;
+        int idS = -1, idE = 0, laS = -1, laE = 0, loS = -1, loE = 0, kvS = -1, kvE = 0;
         while (p.more()) {
             int k = p.key();
             int field = k >>> 3;
@@ -541,6 +552,7 @@ public final class PbfImporter {
                 if (field == 1) { idS = p.pos; idE = p.pos + l; }
                 else if (field == 8) { laS = p.pos; laE = p.pos + l; }
                 else if (field == 9) { loS = p.pos; loE = p.pos + l; }
+                else if (field == 10) { kvS = p.pos; kvE = p.pos + l; }   // tags of the dense nodes
                 p.pos += l;
             } else {
                 p.skip(k);
@@ -548,13 +560,16 @@ public final class PbfImporter {
         }
         if (idS < 0 || laS < 0 || loS < 0) return 0;
         Pb ip = new Pb(bl.b, idS, idE), ap = new Pb(bl.b, laS, laE), op = new Pb(bl.b, loS, loE);
+        Pb kp = scanCameras && kvS >= 0 ? new Pb(bl.b, kvS, kvE) : null;
         long id = 0, la = 0, lo = 0;
         int n = 0;
         while (ip.more()) {
             id += ip.sint();
             la += ap.sint();
             lo += op.sint();
-            n += store(id, bl.lat7(la), bl.lon7(lo));
+            int la7 = bl.lat7(la), lo7 = bl.lon7(lo);
+            n += store(id, la7, lo7);
+            if (kp != null) denseTags(bl, kp, id, la7, lo7);
         }
         return n;
     }
@@ -562,15 +577,110 @@ public final class PbfImporter {
     private int node(Block bl, int start, int end) {
         Pb p = new Pb(bl.b, start, end);
         long id = 0, la = 0, lo = 0;
+        int keysS = -1, keysE = 0, valsS = -1, valsE = 0;
         while (p.more()) {
             int k = p.key();
             int field = k >>> 3;
             if (field == 1) id = p.sint();
             else if (field == 8) la = p.sint();
             else if (field == 9) lo = p.sint();
-            else p.skip(k);
+            else if ((k & 7) == 2 && (field == 2 || field == 3)) {
+                int l = (int) p.varint();
+                if (field == 2) { keysS = p.pos; keysE = p.pos + l; }
+                else { valsS = p.pos; valsE = p.pos + l; }
+                p.pos += l;
+            } else {
+                p.skip(k);
+            }
         }
-        return store(id, bl.lat7(la), bl.lon7(lo));
+        int la7 = bl.lat7(la), lo7 = bl.lon7(lo);
+        if (scanCameras && keysS >= 0 && valsS >= 0) {
+            cameraTags(bl, new Pb(bl.b, keysS, keysE), new Pb(bl.b, valsS, valsE), id, la7, lo7);
+        }
+        return store(id, la7, lo7);
+    }
+
+    // ------------------------------------------------------------------ speed cameras
+
+    /**
+     * One dense node's tags: string ids as key/value pairs one after the other, a 0 ending the node.
+     * Every node of the block has its entry, also the ones without any tag.
+     */
+    private void denseTags(Block bl, Pb kp, long id, int lat7, int lon7) {
+        int[] keys = new int[8], vals = new int[8];
+        int n = 0;
+        while (kp.more()) {
+            long k = kp.varint();
+            if (k == 0) break;                      // next node
+            if (!kp.more()) break;
+            long v = kp.varint();
+            if (n == keys.length) {
+                keys = Arrays.copyOf(keys, n * 2);
+                vals = Arrays.copyOf(vals, n * 2);
+            }
+            keys[n] = (int) k;
+            vals[n] = (int) v;
+            n++;
+        }
+        cameraTags(bl, keys, vals, n, id, lat7, lon7);
+    }
+
+    /**
+     * Keeps the node when its tags say it is a camera: OpenStreetMap has fixed ones as
+     * {@code highway=speed_camera}, red-light ones as {@code camera:type=red_light} (or
+     * {@code enforcement=traffic_signals}), and sections as {@code camera:type=average_speed}.
+     */
+    private void cameraTags(Block bl, int[] keys, int[] vals, int n, long id, int lat7, int lon7) {
+        String highway = null, type = null, enforcement = null, maxspeed = null;
+        for (int i = 0; i < n; i++) {
+            if (keys[i] < 0 || keys[i] >= bl.strings.length || vals[i] < 0 || vals[i] >= bl.strings.length) continue;
+            String key = bl.strings[keys[i]], val = bl.strings[vals[i]];
+            switch (key) {
+                case "highway": highway = val; break;
+                case "camera:type": type = val; break;
+                case "enforcement": enforcement = val; break;
+                case "maxspeed": maxspeed = val; break;
+                default: break;
+            }
+        }
+        String kind = null;
+        if ("speed_camera".equals(highway)) kind = type != null ? type : "fixed";
+        else if (type != null) kind = type;
+        else if ("maxspeed".equals(enforcement)) kind = "fixed";
+        else if ("traffic_signals".equals(enforcement)) kind = "red_light";
+        if (kind == null || kind.isEmpty()) return;
+        if (!region.contains(lat7 / 1e7, lon7 / 1e7)) return;
+        cameras.put(id, new Hazards.Camera(id, lat7, lon7, kind, maxspeedKmh(maxspeed)));
+    }
+
+    /** Key/value ids of a plain node, without separators. */
+    private void cameraTags(Block bl, Pb kp, Pb vp, long id, int lat7, int lon7) {
+        int[] keys = new int[8], vals = new int[8];
+        int n = 0;
+        while (kp.more() && vp.more()) {
+            if (n == keys.length) {
+                keys = Arrays.copyOf(keys, n * 2);
+                vals = Arrays.copyOf(vals, n * 2);
+            }
+            keys[n] = (int) kp.varint();
+            vals[n] = (int) vp.varint();
+            n++;
+        }
+        cameraTags(bl, keys, vals, n, id, lat7, lon7);
+    }
+
+    /** "50" or "50 km/h" → 50; "50;70" → 50; anything else → 0. */
+    static int maxspeedKmh(String s) {
+        if (s == null) return 0;
+        int i = 0;
+        while (i < s.length() && !Character.isDigit(s.charAt(i))) i++;
+        int v = 0, digits = 0;
+        while (i < s.length() && Character.isDigit(s.charAt(i)) && digits < 4) {
+            v = v * 10 + (s.charAt(i) - '0');
+            i++;
+            digits++;
+        }
+        return v;
     }
 
     // ------------------------------------------------------------------ tiles

@@ -27,6 +27,11 @@ public final class KawaProtocol {
     public static final String[] UNIT_NAMES = {"km", "m", "mile", "ft", "yd"};
 
     public static final int TURN_NONE = 0xFF;
+    /**
+     * What KawaNav sends for a speed camera warning: the dash has no camera icon, so it shows the
+     * destination flag (43) with the distance, the closest thing its turn set has.
+     */
+    public static final int CAMERA_TURN = 43;
 
     /** Turn type (Ble5Value.o), index == id on the wire. */
     public static final String[] TURN_NAMES = {

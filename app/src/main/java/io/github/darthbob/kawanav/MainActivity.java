@@ -41,6 +41,9 @@ public class MainActivity extends KawaActivity {
     private Figure meterDistance;
     private TextView meterText;
     private TextView meterSource;
+    // speed camera warning (offline map data)
+    private LinearLayout cameraCard;
+    private TextView cameraText;
     private LinearLayout meterTextBlock;
     private Button startButton;
     // ride being recorded
@@ -109,7 +112,8 @@ public class MainActivity extends KawaActivity {
      * Test switches from a PC, e.g.
      * adb shell am start -n io.github.jackyes.kawanav/io.github.darthbob.kawanav.MainActivity --ez bridge true|false
      * Also: --ez free_mode true|false, --es offline_region bayern, --ez offline_cancel true, --ez export_log true,
-     * --ez notif_capture true|false, --ez notif_capture_all true|false (debug builds)
+     * --ez notif_capture true|false, --ez notif_capture_all true|false, --ez cameras true|false,
+     * --ei camera_warn 500 (debug builds)
      */
     private void handleAdbIntent(Intent i) {
         if (i == null) return;
@@ -136,6 +140,13 @@ public class MainActivity extends KawaActivity {
                 prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, level).apply();
             }
             if (i.hasExtra("raw_capture")) prefs.edit().putBoolean(Hub.KEY_DEBUG_CAPTURE, i.getBooleanExtra("raw_capture", false)).apply();
+            if (i.hasExtra("cameras")) {
+                prefs.edit().putBoolean(Hub.KEY_CAMERAS, i.getBooleanExtra("cameras", false)).apply();
+                BridgeService.settingsChanged();
+            }
+            if (i.hasExtra("camera_warn")) {
+                prefs.edit().putInt(Hub.KEY_CAMERA_WARN, i.getIntExtra("camera_warn", Hub.CAMERA_WARN_DEFAULT)).apply();
+            }
             if (i.hasExtra("notif_capture")) {
                 prefs.edit().putBoolean(Hub.KEY_DEBUG_NOTIF_CAPTURE, i.getBooleanExtra("notif_capture", false)).apply();
                 if (!i.getBooleanExtra("notif_capture", false)) NotifCapture.stop();
@@ -408,6 +419,7 @@ public class MainActivity extends KawaActivity {
         root.addView(head);
 
         root.addView(banner());
+        root.addView(cameraWarning());
         root.addView(dashPanel());
         root.addView(rideStrip());
         root.addView(sectionHeader(R.drawable.ic_moto, "My vehicle"));
@@ -415,6 +427,37 @@ public class MainActivity extends KawaActivity {
         root.addView(sectionHeader(R.drawable.ic_grid, "Menu"));
         root.addView(menu());
         return tabPage(TAB_HOME, root);
+    }
+
+    /**
+     * The speed camera ahead, while it is inside the warning distance: the one thing the rider cannot
+     * see coming. Hidden the rest of the time (the dash shows it too, see BridgeService).
+     */
+    private LinearLayout cameraWarning() {
+        cameraCard = column();
+        cameraCard.setPadding(dp(16), dp(12), dp(16), dp(12));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Ui.warnFill());
+        bg.setCornerRadius(dp(16));
+        cameraCard.setBackground(bg);
+        LinearLayout r = row();
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.addView(icon(R.drawable.ic_camera, false), iconGap());
+        LinearLayout t = column();
+        cameraText = itemTitle("");
+        cameraText.setTextColor(Ui.bannerInk());
+        cameraText.setTextSize(16);
+        t.addView(cameraText);
+        TextView sub = secondary("From the offline map data");
+        sub.setTextColor(Ui.bannerInk());
+        t.addView(sub);
+        r.addView(t, weight());
+        cameraCard.addView(r);
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, 0, 0, dp(Ui.SPACE3));
+        cameraCard.setLayoutParams(lp);
+        cameraCard.setVisibility(View.GONE);
+        return cameraCard;
     }
 
     /**
@@ -572,6 +615,10 @@ public class MainActivity extends KawaActivity {
         statusChip.setTextColor(chipInk);
 
         Hub.Output out = Hub.output;
+        // the camera warning is shown while the bridge says one is ahead (it also goes to the dash)
+        boolean camera = out != null && out.alert != null;
+        cameraCard.setVisibility(camera ? View.VISIBLE : View.GONE);
+        if (camera && !out.alert.contentEquals(cameraText.getText())) cameraText.setText(out.alert);
         if (!Hub.serviceRunning || out == null) {
             meterArrow.setVisibility(View.GONE);
             meterDistance.view.setVisibility(View.GONE);
@@ -589,7 +636,9 @@ public class MainActivity extends KawaActivity {
             meterDistance.view.setVisibility(dist ? View.VISIBLE : View.GONE);
             if (dist) meterDistance.set(distance(out.distanceM));
             meterText.setText(turnName(out.turn));
-            meterSource.setText("Maps".equals(out.source) ? "From Google Maps" : "Curve ahead on your road");
+            meterSource.setText("Maps".equals(out.source) ? "From Google Maps"
+                    : "Camera".equals(out.source) ? "Speed camera from the offline map data"
+                    : "Curve ahead on your road");
         }
         meterSource.setVisibility(meterSource.getText().length() > 0 ? View.VISIBLE : View.GONE);
         // the text sits next to the arrow, or flush left when there is none

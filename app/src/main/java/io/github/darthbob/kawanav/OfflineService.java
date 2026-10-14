@@ -127,31 +127,42 @@ public class OfflineService extends Service {
                 (System.currentTimeMillis() - t0) / 1000));
         long t1 = System.currentTimeMillis();
         RoadStore store = new RoadStore(this);
+        HazardStore hazardStore = new HazardStore(this);
         Set<String> tiles = new HashSet<>();
         store.record(tiles);
         int[] res;
-        try {
-            res = new PbfImporter(pbf, PbfImporter.Polygon.read(poly), store, new File(dir, "tmp"), new PbfImporter.Progress() {
-                @Override
-                public void status(String s) {
-                    OfflineService.this.status(label + ": " + s);
-                }
+        int cameras = 0;
+        PbfImporter.Polygon polygon = PbfImporter.Polygon.read(poly);
+        PbfImporter importer = new PbfImporter(pbf, polygon, store, new File(dir, "tmp"), new PbfImporter.Progress() {
+            @Override
+            public void status(String s) {
+                OfflineService.this.status(label + ": " + s);
+            }
 
-                @Override
-                public boolean cancelled() {
-                    return cancel;
-                }
-            }).deleteWhenRead().run();
+            @Override
+            public boolean cancelled() {
+                return cancel;
+            }
+        });
+        try {
+            res = importer.deleteWhenRead().run();
         } finally {
             if (!cancel) {
                 pbf.delete(); // converted (or broken): the next run downloads a fresh one
                 poly.delete();
             }
         }
-        OfflineRegions regions = new OfflineRegions(this, store);
-        regions.save(id, r.label(), r.pbfUrl, dataDate, tiles);
-        String msg = String.format(Locale.ROOT, "Done: %s, %d roads in %d tiles (+%d border tiles) · %.1f MB · %d s",
-                label, res[0], res[1], res[2], regions.bytes(tiles) / 1e6, (System.currentTimeMillis() - t1) / 1000);
+        if (!cancel) {
+            // speed cameras, from the same extract: a few small tiles, only where there is one
+            status(label + ": storing speed cameras…");
+            int[] hz = hazardStore.write(polygon, importer.cameras());
+            cameras = hz[0];
+        }
+        OfflineRegions regions = new OfflineRegions(this, store, hazardStore);
+        regions.save(id, r.label(), r.pbfUrl, dataDate, tiles, !cancel);
+        String msg = String.format(Locale.ROOT,
+                "Done: %s, %d roads in %d tiles (+%d border tiles), %d speed cameras · %.1f MB · %d s",
+                label, res[0], res[1], res[2], cameras, regions.bytes(tiles) / 1e6, (System.currentTimeMillis() - t1) / 1000);
         status(msg);
         Logger.log("Offline region " + msg);
     }

@@ -34,6 +34,12 @@ import java.util.Map;
 public class SettingsActivity extends KawaActivity {
 
     private static final int[] LOOKAHEADS = {500, 1000, 1500, 2000};
+    /** Distances a camera is announced from, metres. */
+    private static final int[] CAMERA_WARNS = {300, 500, 800};
+    private static final String CAMERAS_INFO =
+            "From the offline map data: the phone shows it and the bike's display gets the distance. "
+                    + "Download the region again if it was downloaded before this version. Using camera "
+                    + "warnings while driving is illegal in some countries (Germany, France, Switzerland)";
     /** Explanation of "Which curves count"; values from CurveDetector.Sensitivity and its arrow choice. */
     private static final String CURVES_INFO =
             "The angle is the total change of direction through the whole bend: 90° is a right-angle turn, "
@@ -52,6 +58,7 @@ public class SettingsActivity extends KawaActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private RoadStore roadStore;
+    private HazardStore hazardStore;
     private OfflineRegions offlineRegions;
     /** Server data date per downloaded region (ms, 0 = unknown), checked once per app start. */
     private static final Map<String, Long> serverDates = new java.util.concurrent.ConcurrentHashMap<>();
@@ -94,7 +101,8 @@ public class SettingsActivity extends KawaActivity {
         Logger.init(this);
         prefs = Hub.prefs(this);
         roadStore = new RoadStore(this);
-        offlineRegions = new OfflineRegions(this, roadStore);
+        hazardStore = new HazardStore(this);
+        offlineRegions = new OfflineRegions(this, roadStore, hazardStore);
         setContentView(buildUi());
         pendingSection = getIntent().getStringExtra(EXTRA_SECTION);
     }
@@ -272,6 +280,16 @@ public class SettingsActivity extends KawaActivity {
                 pos -> prefs.edit().putInt(Hub.KEY_LOOKAHEAD, LOOKAHEADS[pos]).apply()));
         addRow(c, switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
         addRow(c, switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
+        addRow(c, switchRow("Speed camera warnings", CAMERAS_INFO, Hub.KEY_CAMERAS, false,
+                on -> BridgeService.settingsChanged()));
+        String[] warn = new String[CAMERA_WARNS.length];
+        int warnSel = 1;
+        for (int i = 0; i < CAMERA_WARNS.length; i++) {
+            warn[i] = CAMERA_WARNS[i] + " m";
+            if (CAMERA_WARNS[i] == prefs.getInt(Hub.KEY_CAMERA_WARN, Hub.CAMERA_WARN_DEFAULT)) warnSel = i;
+        }
+        addRow(c, choiceRow("Warn about a camera", "How far before it the warning comes",
+                warn, warnSel, pos -> prefs.edit().putInt(Hub.KEY_CAMERA_WARN, CAMERA_WARNS[pos]).apply()));
         return c;
     }
 
@@ -628,8 +646,9 @@ public class SettingsActivity extends KawaActivity {
                     : server == 0 ? "Could not check for newer data (offline?)"
                     : update ? "Newer data available from " + df.format(new java.util.Date(server))
                     : "Up to date";
-            String sub = String.format(Locale.ROOT, "Data from %s · %.0f MB\n%s",
-                    df.format(new java.util.Date(r.dataDate)), Math.max(1, sizes.get(r.id) / 1e6), state);
+            String sub = String.format(Locale.ROOT, "Data from %s · %.0f MB\n%s%s",
+                    df.format(new java.util.Date(r.dataDate)), Math.max(1, sizes.get(r.id) / 1e6), state,
+                    r.hazards ? "" : "\nNo speed cameras in this data yet: download the region again");
             regionsList.addView(regionRow(r.label, sub, update ? () -> updateRegion(r) : null,
                     () -> confirmDeleteRegion(r)));
         }
