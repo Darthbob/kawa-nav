@@ -16,6 +16,11 @@ No distance, no maneuver, no street name, and no bitmap icon that could be an ar
 even called `CLOSE_WAZE_CHANNEL` ("Waze is running"). Every update would have been written down as a
 changed block, so a turn instruction appearing there would have been caught.
 
+**Caveat on this run:** the phone was standing still and never reached the first turn, and the screen
+was not locked. A turn only appears once there is one to announce, and Waze's "Lock screen navigation"
+(the surface most likely to hold it) only shows while the phone is locked. A run that actually moves
+past a turn with the screen locked is therefore still missing before the result is final.
+
 That matches what the research found before the test: Waze does not use notifications for turns, and
 the apps that do show Waze turns (wazeology, wazetripper) patch the Waze APK instead. **So KawaNav
 cannot read Waze, and there is no honest way to add it:** a patched Waze would break its terms of use
