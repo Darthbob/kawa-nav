@@ -117,6 +117,10 @@ public final class Hub {
     public static final String KEY_DEBUG_INIT_LEVEL = "debug_init_level";
     /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
     public static final String KEY_DEBUG_CAPTURE = "debug_capture";
+    /** Debug: notifications are written down, to see what an app like Waze puts in them. */
+    public static final String KEY_DEBUG_NOTIF_CAPTURE = "debug_notif_capture";
+    /** Debug: capture every app's notifications, not only Waze and the shell. */
+    public static final String KEY_DEBUG_NOTIF_CAPTURE_ALL = "debug_notif_capture_all";
     /** The meter clock is set from the phone once per connection (off until tried on the bike). */
     public static final String KEY_CLOCK_SYNC = "clock_sync";
     /** Call icon on the dash (Rideology's notification icons). */

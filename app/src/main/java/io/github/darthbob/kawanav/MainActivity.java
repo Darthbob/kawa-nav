@@ -100,36 +100,16 @@ public class MainActivity extends KawaActivity {
         pendingIntent = intent; // onResume follows
     }
 
-    /**
-     * Copies the log to Download/KawaNav (readable by adb and file managers, also from a release build):
-     * {@code adb pull /sdcard/Download/KawaNav/}. Runs on the log's own thread, so no line is written or
-     * the file rotated while it is copied.
-     */
+    /** Copies the log (and a notification capture) to Download/KawaNav, see {@link LogExport}. */
     private void exportLog() {
-        android.content.ContentResolver cr = getContentResolver();
-        String stamp = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(new java.util.Date());
-        for (String name : new String[]{"kawanav.log.1", "kawanav.log"}) {
-            java.io.File f = new java.io.File(getFilesDir(), name);
-            if (!f.exists()) continue;
-            android.content.ContentValues v = new android.content.ContentValues();
-            v.put(android.provider.MediaStore.Downloads.DISPLAY_NAME, stamp + "-" + name + ".txt");
-            v.put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain");
-            v.put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "Download/KawaNav");
-            android.net.Uri uri = cr.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
-            if (uri == null) continue;
-            try (java.io.OutputStream out = cr.openOutputStream(uri)) {
-                java.nio.file.Files.copy(f.toPath(), out);
-            } catch (java.io.IOException e) {
-                Logger.log("Log export failed: " + e);
-            }
-        }
-        Logger.log("Log exported to Download/KawaNav");
+        LogExport.export(this);
     }
 
     /**
      * Test switches from a PC, e.g.
      * adb shell am start -n io.github.jackyes.kawanav/io.github.darthbob.kawanav.MainActivity --ez bridge true|false
-     * Also: --ez free_mode true|false, --es offline_region bayern, --ez offline_cancel true, --ez export_log true
+     * Also: --ez free_mode true|false, --es offline_region bayern, --ez offline_cancel true, --ez export_log true,
+     * --ez notif_capture true|false, --ez notif_capture_all true|false (debug builds)
      */
     private void handleAdbIntent(Intent i) {
         if (i == null) return;
@@ -156,6 +136,13 @@ public class MainActivity extends KawaActivity {
                 prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, level).apply();
             }
             if (i.hasExtra("raw_capture")) prefs.edit().putBoolean(Hub.KEY_DEBUG_CAPTURE, i.getBooleanExtra("raw_capture", false)).apply();
+            if (i.hasExtra("notif_capture")) {
+                prefs.edit().putBoolean(Hub.KEY_DEBUG_NOTIF_CAPTURE, i.getBooleanExtra("notif_capture", false)).apply();
+                if (!i.getBooleanExtra("notif_capture", false)) NotifCapture.stop();
+            }
+            if (i.hasExtra("notif_capture_all")) {
+                prefs.edit().putBoolean(Hub.KEY_DEBUG_NOTIF_CAPTURE_ALL, i.getBooleanExtra("notif_capture_all", false)).apply();
+            }
             // open a screen directly, e.g. --es screen rides | bike | settings | ride --es ride <id>
             if (i.hasExtra("screen")) {
                 String screen = i.getStringExtra("screen");

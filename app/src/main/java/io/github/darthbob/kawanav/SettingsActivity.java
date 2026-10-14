@@ -79,6 +79,8 @@ public class SettingsActivity extends KawaActivity {
     // debug
     private LinearLayout debugCard;
     private LinearLayout bikeDebugCard;
+    private LinearLayout notifDebugCard;
+    private TextView notifStatus;
     private TextView debugBike;
     private TextView debugIconsStatus;
     private TextView debugGatt;
@@ -169,6 +171,7 @@ public class SettingsActivity extends KawaActivity {
         root.addView(section("maps", R.drawable.ic_map, "Offline maps", offlineGroup()));
         if (Hub.DEBUG_TOOLS) root.addView(debugCard());
         if (Hub.DEBUG_TOOLS) root.addView(bikeDebugCard());
+        if (Hub.DEBUG_TOOLS) root.addView(notifDebugCard());
         root.addView(section("about", R.drawable.ic_info, "About", aboutGroup()));
         return tabPage(TAB_SETTINGS, root);
     }
@@ -374,6 +377,7 @@ public class SettingsActivity extends KawaActivity {
         prefs.edit().putBoolean(Hub.KEY_DEBUG_ICONS, show).apply();
         debugCard.setVisibility(show ? View.VISIBLE : View.GONE);
         bikeDebugCard.setVisibility(show ? View.VISIBLE : View.GONE);
+        notifDebugCard.setVisibility(show ? View.VISIBLE : View.GONE);
         android.widget.Toast.makeText(this, show ? "Debug options shown" : "Debug options hidden",
                 android.widget.Toast.LENGTH_SHORT).show();
     }
@@ -405,6 +409,39 @@ public class SettingsActivity extends KawaActivity {
         c.addView(debugGatt);
         c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
         debugCard = c;
+        return c;
+    }
+
+    /**
+     * Hidden card to write down what other apps put in their notifications, for a navigation app that
+     * cannot be read like Google Maps (Waze). The file leaves the phone with the log export.
+     */
+    private LinearLayout notifDebugCard() {
+        LinearLayout c = card();
+        LinearLayout head = row();
+        head.addView(cardTitle("Notifications"), weight());
+        head.addView(debugPill());
+        c.addView(head);
+        c.addView(secondary("Writes down what other apps put in their notifications, to check what a navigation "
+                + "app shows there before KawaNav learns to read it. It copies the text of those notifications, "
+                + "messages included: switch it off after the test and read the file before sending it."));
+        c.addView(switchRow("Capture notifications", "Waze, and anything posted with adb. The file is under "
+                + "Android/data/" + getPackageName() + "/files/notifications", Hub.KEY_DEBUG_NOTIF_CAPTURE, false,
+                on -> { if (!on) NotifCapture.stop(); }));
+        c.addView(switchRow("Every app", "Also log every other app's notifications (more noise, more text)",
+                Hub.KEY_DEBUG_NOTIF_CAPTURE_ALL, false));
+        notifStatus = secondary("");
+        notifStatus.setTypeface(Typeface.MONOSPACE);
+        notifStatus.setPadding(0, dp(10), 0, 0);
+        c.addView(notifStatus);
+        Button export = secondaryButton("Export the log and the capture", v -> Logger.withLogFiles(() -> {
+            int n = LogExport.export(this);
+            runOnUiThread(() -> android.widget.Toast.makeText(this, n + " files in Download/KawaNav",
+                    android.widget.Toast.LENGTH_SHORT).show());
+        }));
+        addRow(c, export);
+        c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
+        notifDebugCard = c;
         return c;
     }
 
@@ -511,6 +548,10 @@ public class SettingsActivity extends KawaActivity {
             if (!gatt.contentEquals(debugGatt.getText())) debugGatt.setText(gatt); // keeps a text selection
             String bike = "MTU " + Hub.bikeMtu + "\n" + Hub.bike.describe(System.currentTimeMillis());
             if (!debugBike.hasSelection() && !bike.contentEquals(debugBike.getText())) debugBike.setText(bike);
+        }
+        if (notifDebugCard != null && notifDebugCard.getVisibility() == View.VISIBLE) {
+            String status = (NotifCapture.enabled(this) ? "Capturing" : "Off") + ": " + NotifCapture.status(this);
+            if (!status.contentEquals(notifStatus.getText())) notifStatus.setText(status);
         }
 
         // --- autostart

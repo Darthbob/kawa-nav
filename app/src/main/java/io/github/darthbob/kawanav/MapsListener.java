@@ -57,6 +57,7 @@ public class MapsListener extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        NotifCapture.onPosted(this, sbn);   // debug builds, switched on in the hidden card
         dashAlert(sbn, true);
         if (!MAPS.equals(sbn.getPackageName())) return;
         Notification n = sbn.getNotification();
@@ -164,6 +165,7 @@ public class MapsListener extends NotificationListenerService {
 
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
+        NotifCapture.onRemoved(this, sbn);
         dashAlert(sbn, false);
         if (MAPS.equals(sbn.getPackageName()) && sbn.getId() == navNotificationId) {
             Logger.log("Maps navigation ended");
