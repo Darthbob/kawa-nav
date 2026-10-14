@@ -1,4 +1,43 @@
-# Waze: what to check on the phone first
+# Waze: what the test on the phone showed
+
+**Result (14 Oct 2026, Waze 5.25.5.0, Android 16 phone): Waze's notification carries no
+turn-by-turn.** The capture of a test run holds exactly one `com.waze` notification, and it is the
+one that keeps the app alive:
+
+```
+com.waze  id=1 channel=CLOSE_WAZE_CHANNEL flags=0x62 ongoing=true
+    TITLE: Waze
+    TEXT: In funzione. Clicca per aprire.      ("Waze is running, tap to open")
+    ACTIONS 1 [Spegni]                        (turn Waze off)
+    ICON small=resource com.waze/2131232483   (the app's own logo, 54x54)
+```
+
+No distance, no maneuver, no street name, and no bitmap icon that could be an arrow; the channel is
+even called `CLOSE_WAZE_CHANNEL` ("Waze is running"). Every update would have been written down as a
+changed block, so a turn instruction appearing there would have been caught.
+
+That matches what the research found before the test: Waze does not use notifications for turns, and
+the apps that do show Waze turns (wazeology, wazetripper) patch the Waze APK instead. **So KawaNav
+cannot read Waze, and there is no honest way to add it:** a patched Waze would break its terms of use
+and cannot be distributed.
+
+The capture tool, the procedure below and `docs/` stay in the project: they are the way to check any
+other navigation app (or a later Waze version, should it ever post turns) with the same ten minutes
+of work.
+
+## How the test was run (for reference)
+
+KawaNav reads Google Maps' turn-by-turn notification. Waze is different: everything found so far
+says it does **not** put the next maneuver into its notification at all — its notification only
+keeps the app alive and gives a way back into it (a competing motorcycle-dash app states this
+outright and reads Waze by machine-learning on the screen instead). Three independent checks of the
+research agreed. What is *not* known is what Waze does show on the lock screen (its "Lock screen
+navigation", on by default since 2024) and in Android 16's live updates.
+
+So before writing any Waze support, look at what Waze really posts, on a real phone, while riding.
+The debug build can write it down.
+
+## What to do
 
 KawaNav reads Google Maps' turn-by-turn notification. Waze is different: everything found so far
 says it does **not** put the next maneuver into its notification at all — its notification only

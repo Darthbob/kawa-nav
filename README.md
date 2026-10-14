@@ -35,7 +35,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - 🧭 **Google Maps directions on the dash**: KawaNav reads Google Maps' navigation notification and sends
   arrow + distance to the dash. The arrow is recognised from Maps' own icon (language independent);
   the text decides roundabout exit numbers and highway ramps/exits. Waze is not supported: its
-  notification has no turn in it (see [docs/WAZE.md](docs/WAZE.md)).
+  notification only says it is running, with no turn in it — checked on a phone, see
+  [docs/WAZE.md](docs/WAZE.md).
 - 🌀 **Free ride: upcoming curves**: without navigation, the dash shows the next curve of the road you
   are on (slight / normal / sharp / hairpin) with its distance, roundabouts with the exit that
   continues the road, and on straights the straight arrow with the distance to the next curve.
@@ -360,9 +361,10 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
 
 ## 🚧 Known limitations
 
-- **Waze is not supported.** Its notification does not carry the next maneuver (unlike Google Maps'), so
-  there is nothing to read. What it does post is being checked on a real phone first: see
-  [docs/WAZE.md](docs/WAZE.md).
+- **Waze is not supported.** It does not put the next maneuver in its notification the way Google Maps
+  does: a capture on a phone with Waze running holds only its "Waze is running" notification (channel
+  `CLOSE_WAZE_CHANNEL`, no distance, no turn, no arrow), so there is nothing to read. Details and the
+  evidence: [docs/WAZE.md](docs/WAZE.md).
 - Only German and English Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
