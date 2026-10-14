@@ -156,8 +156,8 @@ public final class ChartView extends View {
             float x = padL + w * (s.tMs / (float) total);
             canvas.drawLine(x, padT + h - d * 6, x, padT + h, mark);
         }
-        canvas.drawText(minutes(0), padL, padT + h + d * 13, text);
-        String endLabel = minutes(total);
+        canvas.drawText(axisLabel(0, total), padL, padT + h + d * 13, text);
+        String endLabel = axisLabel(total, total);
         canvas.drawText(endLabel, padL + w - text.measureText(endLabel), padT + h + d * 13, text);
         if (marked >= 0 && marked < samples.size()) {
             float x = padL + w * (samples.get(marked).tMs / (float) total);
@@ -171,6 +171,25 @@ public final class ChartView extends View {
                 canvas.drawCircle(x, y, d * 4, p);
             }
         }
+    }
+
+    /** Wall-clock time of the first sample: over days and months the axis then shows dates, not minutes. */
+    private long epochAtZero;
+
+    /** Tells the chart that {@code tMs} 0 is this moment, so a long span can be labelled with dates. */
+    public void setEpochAtZero(long epochMs) {
+        epochAtZero = epochMs;
+        invalidate();
+    }
+
+    /** "12 Oct" when the chart spans days, else the minutes of a ride. */
+    private String axisLabel(long ms, long total) {
+        if (epochAtZero > 0 && total > 3L * 24 * 60 * 60_000) {
+            // the rider's own month names: ROOT has none and falls back to "M10"
+            return new java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault())
+                    .format(new java.util.Date(epochAtZero + ms));
+        }
+        return minutes(ms);
     }
 
     private static String minutes(long ms) {

@@ -72,6 +72,12 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".BatteryActivity"
+            android:exported="false"
+            android:label="12 V battery"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".FuelActivity"
             android:exported="false"
             android:label="Refuels"

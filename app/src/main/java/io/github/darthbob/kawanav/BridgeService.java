@@ -23,6 +23,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -407,6 +408,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         connectBike();
         handler.post(tickLoop);
         Hub.fuelEntries = new FuelStore(this).list();
+        Hub.batteryReadings = new BatteryStore(this).list();
         Logger.log("Bridge started");
     }
 
@@ -689,6 +691,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         else cameraGone();
         bikeAlerts(now);
         refuelCheck(now);
+        batteryCheck(now);
         // log every change of what the meter shows (also without bike)
         String key = out == null ? "nothing" : out.source + ":" + out.turn;
         if (!key.equals(lastShownKey)) {
@@ -1009,6 +1012,33 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Logger.log("Fuel: refuel recorded at " + e.odoKm + " km: " + e.describe());
         announce("Refuel recorded", e.describe() + " — correct the litres on the Refuels screen if they are wrong.");
     }
+
+    /**
+     * Keeps the 12 V readings: one per stop, taken while the engine is off, since a running engine's
+     * 13-14 V says nothing about the battery's health. Warns once a day at most.
+     */
+    private void batteryCheck(long now) {
+        BikeFrames.VehicleInfo info = Hub.bike.info;
+        BikeFrames.Telemetry live = Hub.bike.live;
+        if (info == null || now - Hub.bike.infoAt > BikeAlerts.FRESH_MS) return;
+        boolean running = live != null && now - Hub.bike.liveAt <= BikeAlerts.FRESH_MS
+                && live.rpm == live.rpm && live.rpm > BikeAlerts.RUNNING_RPM;
+        double v = BikeAlerts.battery(info);
+        List<BatteryLog.Reading> readings = BatteryLog.record(Hub.batteryReadings, now, v, running);
+        if (readings.size() == Hub.batteryReadings.size()) return;
+        Hub.batteryReadings = readings;
+        new BatteryStore(this).save(readings);
+        Logger.log(String.format(java.util.Locale.ROOT, "Battery: %.1f V at rest (%d readings)", v, readings.size()));
+        if (BatteryLog.declining(readings) && now - batteryWarnedAt > 24 * 60 * 60_000L) {
+            batteryWarnedAt = now;
+            double decline = BatteryLog.decline(readings);
+            announce("Battery is going down", String.format(java.util.Locale.ROOT,
+                    "The 12 V battery has lost %.1f V over the time logged: have it checked before it leaves you "
+                            + "somewhere.", decline));
+        }
+    }
+
+    private long batteryWarnedAt;
 
     /** A short confirmation on the warnings channel (the alert itself, not a warning about the bike). */
     private void announce(String title, String text) {

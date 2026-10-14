@@ -105,6 +105,7 @@ public class BikeActivity extends KawaActivity {
         sections = column();
         root.addView(sections);
         root.addView(fuelCard());
+        battery.setOnClickListener(v -> openBatteryLog());
         root.addView(settingsCard());
         root.addView(lampCard());
         root.addView(parkedCard());
@@ -349,6 +350,11 @@ public class BikeActivity extends KawaActivity {
                 null, true, v -> startActivity(new Intent(this, FuelActivity.class)));
         c.addView(row);
         return c;
+    }
+
+    /** The 12 V readings, one tap from the battery figure they come from. */
+    private void openBatteryLog() {
+        startActivity(new Intent(this, BatteryActivity.class));
     }
 
     private void updateFuelLine() {
