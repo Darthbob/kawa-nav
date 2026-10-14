@@ -295,10 +295,14 @@ public class SettingsActivity extends KawaActivity {
 
     private LinearLayout dashGroup() {
         LinearLayout c = group();
-        addRow(c, switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging",
-                Hub.KEY_PHONE_BATTERY, true));
+        // what the dash said it can do on the last connection: say so instead of doing nothing quietly
+        BikeFrames.GeneralCaps caps = Hub.bike.caps;
+        String noIcons = caps != null && !caps.statusIcons ? ". Your bike's dash said it shows no status icons" : "";
+        String noClock = caps != null && !caps.clockSettable() ? ". Your bike's dash said the phone may not set its clock" : "";
+        addRow(c, switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging"
+                + noIcons, Hub.KEY_PHONE_BATTERY, true));
         addRow(c, switchRow("Set the dash clock from the phone", "Once per connection, like Rideology. Keeps the "
-                + "shift lamp as it is set on the bike", Hub.KEY_CLOCK_SYNC, false));
+                + "shift lamp as it is set on the bike" + noClock, Hub.KEY_CLOCK_SYNC, false));
         addRow(c, switchRow("Call icon on the dash", "An icon while a call comes in; needs notification access. No numbers or names are sent",
                 Hub.KEY_DASH_CALLS, false, v -> MapsListener.alertsChanged(this)));
         addRow(c, switchRow("Mail and message icon on the dash", "An icon while a mail or message arrives (Gmail, Messages, LINE…); needs notification access",

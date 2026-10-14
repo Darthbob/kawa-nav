@@ -21,6 +21,8 @@ public final class RideTsv {
             "t_ms", "epoch_ms", "lat", "lon", "alt_m", "gps_kmh", "gps_acc_m", "flags",
             "kmh", "rpm", "gear", "thr_pct", "acc_g", "lean_deg", "water_c", "oil_c", "intake_c",
             "fuel_inst", "fuel_rate", "tcs", "abs", "odo_km", "dist_m", "fuel_total_l",
+            // added in 0.7; older files simply lack them (columns are read by name)
+            "tyre_f_kpa", "tyre_r_kpa", "battery_v", "outside_c", "brake_f_bar",
     };
     /** flags: the bike was connected while this second was recorded. */
     public static final int FLAG_BIKE = 1;
@@ -36,7 +38,9 @@ public final class RideTsv {
         public double kmh = Double.NaN, rpm = Double.NaN, gear = Double.NaN, thrPct = Double.NaN, accG = Double.NaN,
                 lean = Double.NaN, waterC = Double.NaN, oilC = Double.NaN, intakeC = Double.NaN,
                 fuelInst = Double.NaN, fuelRate = Double.NaN, tcs = Double.NaN, abs = Double.NaN,
-                odoKm = Double.NaN, distM = Double.NaN, fuelTotalL = Double.NaN;
+                odoKm = Double.NaN, distM = Double.NaN, fuelTotalL = Double.NaN,
+                tyreFrontKpa = Double.NaN, tyreRearKpa = Double.NaN, batteryV = Double.NaN,
+                outsideC = Double.NaN, brakeFrontBar = Double.NaN;
 
         public boolean hasGps() {
             return (flags & FLAG_GPS) != 0 && lat == lat && lon == lon;
@@ -46,7 +50,8 @@ public final class RideTsv {
         public String line() {
             StringBuilder sb = new StringBuilder(160);
             double[] numbers = {tMs, epochMs, lat, lon, altM, gpsKmh, gpsAccM, flags, kmh, rpm, gear, thrPct, accG,
-                    lean, waterC, oilC, intakeC, fuelInst, fuelRate, tcs, abs, odoKm, distM, fuelTotalL};
+                    lean, waterC, oilC, intakeC, fuelInst, fuelRate, tcs, abs, odoKm, distM, fuelTotalL,
+                    tyreFrontKpa, tyreRearKpa, batteryV, outsideC, brakeFrontBar};
             for (int i = 0; i < numbers.length; i++) {
                 if (i > 0) sb.append('\t');
                 sb.append(cell(numbers[i], COLUMNS[i]));
@@ -120,6 +125,11 @@ public final class RideTsv {
             s.odoKm = num(cells, index, "odo_km");
             s.distM = num(cells, index, "dist_m");
             s.fuelTotalL = num(cells, index, "fuel_total_l");
+            s.tyreFrontKpa = num(cells, index, "tyre_f_kpa");
+            s.tyreRearKpa = num(cells, index, "tyre_r_kpa");
+            s.batteryV = num(cells, index, "battery_v");
+            s.outsideC = num(cells, index, "outside_c");
+            s.brakeFrontBar = num(cells, index, "brake_f_bar");
             out.add(s);
         }
         return out;

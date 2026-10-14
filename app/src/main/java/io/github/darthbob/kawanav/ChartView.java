@@ -19,7 +19,10 @@ public final class ChartView extends View {
     /** Which recorded value to draw. */
     public enum Series {
         SPEED("Speed", "km/h"), RPM("Engine", "rpm"), GEAR("Gear", ""), THROTTLE("Throttle", "%"),
-        LEAN("Lean angle", "°"), WATER("Coolant", "°C"), ACCEL("Acceleration", "g");
+        LEAN("Lean angle", "°"), WATER("Coolant", "°C"), ACCEL("Acceleration", "g"),
+        OIL("Oil temperature", "°C"), INTAKE("Intake air", "°C"), FUEL("Fuel economy", ""),
+        TYRE_FRONT("Front tyre", "bar"), TYRE_REAR("Rear tyre", "bar"), BATTERY("Battery", "V"),
+        OUTSIDE("Outside temperature", "°C"), BRAKE("Front brake", "bar"), ALTITUDE("Altitude", "m");
 
         public final String title, unit;
 
@@ -79,6 +82,15 @@ public final class ChartView extends View {
             case LEAN: return s.lean;
             case WATER: return s.waterC;
             case ACCEL: return s.accG;
+            case OIL: return s.oilC;
+            case INTAKE: return s.intakeC;
+            case FUEL: return s.fuelInst;
+            case TYRE_FRONT: return s.tyreFrontKpa / 100;
+            case TYRE_REAR: return s.tyreRearKpa / 100;
+            case BATTERY: return s.batteryV;
+            case OUTSIDE: return s.outsideC;
+            case BRAKE: return s.brakeFrontBar;
+            case ALTITUDE: return s.altM;
             default: return Double.NaN;
         }
     }
@@ -130,6 +142,20 @@ public final class ChartView extends View {
             prevY = y;
         }
         canvas.drawPath(path, line);
+        // where traction control or ABS stepped in: short marks along the bottom
+        Paint mark = null;
+        for (RideTsv.Sample s : samples) {
+            boolean tcs = s.tcs == s.tcs && s.tcs > 0;
+            boolean abs = s.abs == s.abs && ((int) s.abs & 0x03) != 0;
+            if (!tcs && !abs) continue;
+            if (mark == null) {
+                mark = new Paint(Paint.ANTI_ALIAS_FLAG);
+                mark.setStrokeWidth(d * 2);
+            }
+            mark.setColor(abs ? Ui.recording() : Ui.warn(Ui.night(getContext())));
+            float x = padL + w * (s.tMs / (float) total);
+            canvas.drawLine(x, padT + h - d * 6, x, padT + h, mark);
+        }
         canvas.drawText(minutes(0), padL, padT + h + d * 13, text);
         String endLabel = minutes(total);
         canvas.drawText(endLabel, padL + w - text.measureText(endLabel), padT + h + d * 13, text);

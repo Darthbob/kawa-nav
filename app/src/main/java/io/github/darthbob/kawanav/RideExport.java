@@ -73,7 +73,10 @@ public final class RideExport {
         }
     }
 
-    /** A GPX 1.1 track with speed, rpm and gear as extensions (standard, readable by map tools). */
+    /**
+     * A GPX 1.1 track with every value recorded as an extension (speed, rpm, gear, lean, temperatures,
+     * tyres, battery, traction control, ABS…): standard GPX, map tools read the track and skip the rest.
+     */
     public static String gpx(Ride ride, List<RideTsv.Sample> samples) {
         StringBuilder sb = new StringBuilder(samples.size() * 120 + 400);
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -88,18 +91,39 @@ public final class RideExport {
                     .append("\" lon=\"").append(String.format(Locale.ROOT, "%.6f", s.lon)).append("\">");
             if (s.altM == s.altM) sb.append("<ele>").append(String.format(Locale.ROOT, "%.1f", s.altM)).append("</ele>");
             sb.append("<time>").append(iso(s.epochMs)).append("</time>");
-            if (s.kmh == s.kmh || s.rpm == s.rpm || s.gear == s.gear) {
-                sb.append("<extensions><kawanav:data>");
-                if (s.kmh == s.kmh) sb.append("<kawanav:speed>").append(String.format(Locale.ROOT, "%.0f", s.kmh)).append("</kawanav:speed>");
-                if (s.rpm == s.rpm) sb.append("<kawanav:rpm>").append(Math.round(s.rpm)).append("</kawanav:rpm>");
-                if (s.gear == s.gear) sb.append("<kawanav:gear>").append(gear(s.gear)).append("</kawanav:gear>");
-                if (s.lean == s.lean) sb.append("<kawanav:lean>").append(String.format(Locale.ROOT, "%.1f", s.lean)).append("</kawanav:lean>");
-                sb.append("</kawanav:data></extensions>");
+            StringBuilder ext = new StringBuilder();
+            ext(ext, "speed", s.kmh, "%.0f");
+            ext(ext, "rpm", s.rpm, "%.0f");
+            if (s.gear == s.gear) ext.append("<kawanav:gear>").append(gear(s.gear)).append("</kawanav:gear>");
+            ext(ext, "lean", s.lean, "%.1f");
+            ext(ext, "throttle", s.thrPct, "%.0f");
+            ext(ext, "acceleration", s.accG, "%.2f");
+            ext(ext, "coolant", s.waterC, "%.0f");
+            ext(ext, "oil", s.oilC, "%.0f");
+            ext(ext, "intake", s.intakeC, "%.0f");
+            ext(ext, "fuelEconomy", s.fuelInst, "%.1f");
+            ext(ext, "fuelRate", s.fuelRate, "%.2f");
+            ext(ext, "tyreFront", s.tyreFrontKpa / 100, "%.2f");
+            ext(ext, "tyreRear", s.tyreRearKpa / 100, "%.2f");
+            ext(ext, "battery", s.batteryV, "%.1f");
+            ext(ext, "outside", s.outsideC, "%.0f");
+            ext(ext, "brakeFront", s.brakeFrontBar, "%.1f");
+            ext(ext, "tcs", s.tcs, "%.0f");
+            ext(ext, "abs", s.abs, "%.0f");
+            if (ext.length() > 0) {
+                sb.append("<extensions><kawanav:data>").append(ext).append("</kawanav:data></extensions>");
             }
             sb.append("</trkpt>\n");
         }
         sb.append("  </trkseg></trk>\n</gpx>\n");
         return sb.toString();
+    }
+
+    /** One value as a GPX extension element (bar for tyres, V, °C, g…), nothing when the ride has none. */
+    private static void ext(StringBuilder sb, String name, double v, String fmt) {
+        if (v != v) return;
+        sb.append("<kawanav:").append(name).append('>').append(String.format(Locale.ROOT, fmt, v))
+                .append("</kawanav:").append(name).append('>');
     }
 
     /** ISO-8601 in UTC, as GPX wants it. */

@@ -19,7 +19,7 @@ public final class BikeData {
     public BikeFrames.GeneralSettings general;
     public BikeFrames.VehicleSettings settings;
     public BikeFrames.ServiceIndicator service;
-    public long infoAt, extAt, liveAt, settingsAt, serviceAt, generalAt;
+    public long infoAt, extAt, liveAt, imuAt, settingsAt, serviceAt, generalAt;
     /** Where the phone was when the link to the bike was lost (≈ where the bike was parked), or null. */
     public Place parked;
 
@@ -72,6 +72,7 @@ public final class BikeData {
             liveAt = now;
         } else if (f instanceof BikeFrames.ImuSusp) {
             imu = (BikeFrames.ImuSusp) f;
+            imuAt = now;
         } else if (f instanceof BikeFrames.GeneralSettings) {
             BikeFrames.GeneralSettings g = (BikeFrames.GeneralSettings) f;
             if (g.result >= 0) {

@@ -520,7 +520,17 @@ public class BikeActivity extends KawaActivity {
             if (i.avgSpeedKmh >= 0) r.add(new String[]{s, "Average speed", i.avgSpeedKmh + " km/h"});
             if (i.totalTime >= 0) r.add(new String[]{s, "Total time", i.totalTime + " h"});
             add(r, s, "Outside temperature", i.outsideC, "%.0f °C");
+            // the largest lean the dash keeps for the trip (0x41 bytes 53/54)
+            if (i.maxLeanLeft >= 0) r.add(new String[]{s, "Max lean left", i.maxLeanLeft + "°"});
+            if (i.maxLeanRight >= 0) r.add(new String[]{s, "Max lean right", i.maxLeanRight + "°"});
+            add(r, s, "Fuel used in total", i.totalFuelL, "%,.1f L");
+            // both batteries when the bike reports two (the top of the screen shows one of them)
+            if (!Double.isNaN(i.ecuBatteryV) && !Double.isNaN(i.meterBatteryV)) {
+                add(r, s, "Battery (engine control unit)", i.ecuBatteryV, "%.1f V");
+                add(r, s, "Battery (dash)", i.meterBatteryV, "%.1f V");
+            }
         }
+        if (b.ext != null) add(r, BASIC, "Distance in total", b.ext.totalDistanceKm, "%,.1f km");
         boolean live = b.live != null && now - b.liveAt < LIVE_MS;
         boolean ext = b.ext != null && now - b.extAt < 120_000;
         if (live || ext) {
@@ -532,14 +542,37 @@ public class BikeActivity extends KawaActivity {
                 if (t.gear >= 0) r.add(new String[]{s, "Gear", t.gear == 0 ? "N" : String.valueOf(t.gear)});
                 add(r, s, "Throttle", t.throttlePct, "%.0f %%");
                 add(r, s, "Lean angle", t.leanDeg, "%.0f°");
+                add(r, s, "Acceleration", t.accelG, "%+.2f g");
+                // the front brake pressure: scaling taken from Rideology, not yet compared on a bike
+                add(r, s, "Front brake (unverified)", t.brakeFrontBar, "%.1f bar");
+                if (t.tcsHigh >= 0 || t.tcsLow >= 0) {
+                    r.add(new String[]{s, "Traction control working", t.tcsHigh > 0 || t.tcsLow > 0 ? "yes" : "no"});
+                }
+                if (t.abs >= 0) r.add(new String[]{s, "ABS", absText(t.abs)});
+                if (t.wheelie > 0) {
+                    r.add(new String[]{s, "Wheelie", Double.isNaN(t.wheelieDeg) ? "yes"
+                            : String.format(Locale.ROOT, "yes, %.0f°", t.wheelieDeg)});
+                }
             }
             if (ext) {
+                add(r, s, "Fuel use now", b.ext.fuelRate, "%.2f (dash units)");
+                add(r, s, "Fuel economy now", b.ext.instantFuel, "%.1f (dash units)");
                 add(r, s, "Coolant temperature", b.ext.waterC, "%.0f °C");
                 add(r, s, "Oil temperature", b.ext.oilC, "%.0f °C");
                 add(r, s, "Intake air temperature", b.ext.intakeC, "%.0f °C");
                 add(r, s, "Front tyre", b.ext.tyreFrontKpa / 100, "%.2f bar");
                 add(r, s, "Rear tyre", b.ext.tyreRearKpa / 100, "%.2f bar");
             }
+        }
+        // suspension travel and the body's acceleration, on bikes with the electronic suspension (0x4B)
+        BikeFrames.ImuSusp m0 = b.imu;
+        if (m0 != null && now - b.imuAt < LIVE_MS) {
+            String s = "Suspension";
+            add(r, s, "Front travel", m0.frontStrokeMm, "%.0f mm");
+            add(r, s, "Rear travel", m0.rearStrokeMm, "%.0f mm");
+            add(r, s, "Forward acceleration", m0.axG, "%+.2f g");
+            add(r, s, "Sideways acceleration", m0.ayG, "%+.2f g");
+            add(r, s, "Vertical acceleration", m0.azG, "%+.2f g");
         }
         if (b.service != null) {
             java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
@@ -566,7 +599,8 @@ public class BikeActivity extends KawaActivity {
             if (v.power >= 0) r.add(new String[]{s, "Power mode", SettingsWrite.named(SettingsWrite.POWER, v.power)});
             if (v.ktrc >= 0) r.add(new String[]{s, "KTRC", SettingsWrite.ktrcName(v.ktrc)});
             if (v.kqs >= 0) r.add(new String[]{s, "Quickshifter (KQS)", SettingsWrite.named(SettingsWrite.ON_OFF, v.kqs)});
-            if (v.kebc >= 0) r.add(new String[]{s, "Engine brake (KEBC)", SettingsWrite.named(SettingsWrite.KEBC, v.kebc)});
+            // KEBC 0: the bike has no adjustable engine brake (Rideology sends 0 for those)
+            if (v.kebc > 0) r.add(new String[]{s, "Engine brake (KEBC)", SettingsWrite.named(SettingsWrite.KEBC, v.kebc)});
             if (v.kecsMode >= 0) r.add(new String[]{s, "Suspension mode (KECS)", SettingsWrite.named(SettingsWrite.KECS_MODES, v.kecsMode)});
             if (v.kecsPreload >= 0) r.add(new String[]{s, "KECS preload", SettingsWrite.named(SettingsWrite.KECS_PRELOAD, v.kecsPreload)});
             if (v.kecsLoad >= 0) r.add(new String[]{s, "KECS load adjustment", SettingsWrite.adjustment(v.kecsLoad)});
@@ -585,6 +619,16 @@ public class BikeActivity extends KawaActivity {
             if (g.shiftLampRpm() > 0) r.add(new String[]{s, "Shift lamp", String.format(Locale.ROOT, "%,d rpm", g.shiftLampRpm())});
         }
         return r;
+    }
+
+    /** The ABS state bits of 0x4A byte 37 in words (Rideology's split: qe/b.java). */
+    static String absText(int abs) {
+        if ((abs & 0x0C) != 0) return "fault";
+        if ((abs & 0x10) != 0) return "inspection mode";
+        if ((abs & 0x03) == 0x03) return "acting front and rear";
+        if ((abs & 0x01) != 0) return "acting front";
+        if ((abs & 0x02) != 0) return "acting rear";
+        return "ready";
     }
 
     /** A damping level the bike reports; Rideology's scale for it is not known yet, so the number stands. */

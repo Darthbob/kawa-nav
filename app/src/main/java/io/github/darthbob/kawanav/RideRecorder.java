@@ -234,6 +234,7 @@ public final class RideRecorder implements android.location.LocationListener {
                 s.lean = t.leanDeg;
                 s.tcs = t.tcsLow >= 0 ? t.tcsLow : Double.NaN;
                 s.abs = t.abs;
+                s.brakeFrontBar = t.brakeFrontBar;
                 if (t.speedKmh == t.speedKmh) maxKmh = Math.max(maxKmh, t.speedKmh);
                 if (t.rpm >= 0) maxRpm = Math.max(maxRpm, t.rpm);
                 if (t.leanDeg == t.leanDeg) {
@@ -247,10 +248,14 @@ public final class RideRecorder implements android.location.LocationListener {
                 s.intakeC = b.ext.intakeC;
                 s.fuelInst = b.ext.instantFuel;
                 s.fuelRate = b.ext.fuelRate;
+                s.tyreFrontKpa = b.ext.tyreFrontKpa;
+                s.tyreRearKpa = b.ext.tyreRearKpa;
             }
             if (now - b.infoAt <= BIKE_MS && b.info != null) {
                 s.odoKm = b.info.odometerKm >= 0 ? b.info.odometerKm : Double.NaN;
                 s.fuelTotalL = b.info.totalFuelL;
+                s.batteryV = BikeAlerts.battery(b.info);
+                s.outsideC = b.info.outsideC;
                 if (s.odoKm == s.odoKm) ride.odoEndKm = s.odoKm;
             }
             s.flags |= RideTsv.FLAG_BIKE;

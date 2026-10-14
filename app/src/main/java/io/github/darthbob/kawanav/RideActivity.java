@@ -21,9 +21,9 @@ public class RideActivity extends KawaActivity {
 
     public static final String EXTRA_ID = "ride";
 
-    private static final ChartView.Series[] SERIES = {ChartView.Series.SPEED, ChartView.Series.RPM,
-            ChartView.Series.GEAR, ChartView.Series.THROTTLE, ChartView.Series.LEAN, ChartView.Series.WATER,
-            ChartView.Series.ACCEL};
+    /** Every value a ride can have; the list offers the ones this ride recorded. */
+    private static final ChartView.Series[] ALL_SERIES = ChartView.Series.values();
+    private ChartView.Series[] SERIES = ALL_SERIES;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private RideStore store;
@@ -101,6 +101,7 @@ public class RideActivity extends KawaActivity {
                 track.set(gps ? samples : null, -1);
                 trackCard.setVisibility(gps ? View.VISIBLE : View.GONE);
                 chartCard.setVisibility(hasSeriesData() ? View.VISIBLE : View.GONE);
+                refreshSeries();
                 showChart(0);
             });
         }, "ride-load").start();
@@ -156,13 +157,38 @@ public class RideActivity extends KawaActivity {
         ChartView.Series series = SERIES[Math.max(0, Math.min(SERIES.length - 1, which))];
         String availability = missingSeries(series) ? " · this ride has no " + series.title.toLowerCase(Locale.ROOT)
                 : "";
-        cursor.setText("Touch the line to see the second" + availability);
+        cursor.setText("Touch the line to see the second" + availability
+                + (hasInterventions() ? " · marks below: traction control (orange), ABS (red)" : ""));
         chart.set(samples, series, index -> {
             track.set(samples, index);
             RideTsv.Sample s = samples.get(index);
             cursor.setText(String.format(Locale.ROOT, "%s · %.0f km/h · %d rpm · %s · %.0f %% · %.1f°",
                     seconds(s.tMs), num(s.kmh), Math.round(num(s.rpm)), gear(s.gear), num(s.thrPct), num(s.lean)));
         });
+    }
+
+    /** Once the ride is loaded: the list offers only the values this ride recorded. */
+    private void refreshSeries() {
+        java.util.List<ChartView.Series> have = new java.util.ArrayList<>();
+        for (ChartView.Series s : ALL_SERIES) if (!missingSeries(s)) have.add(s);
+        if (have.isEmpty()) have.add(ChartView.Series.SPEED);
+        SERIES = have.toArray(new ChartView.Series[0]);
+        String[] names = new String[SERIES.length];
+        for (int i = 0; i < SERIES.length; i++) names[i] = SERIES[i].title;
+        android.widget.Spinner fresh = spinner(names, 0);
+        fresh.setOnItemSelectedListener(onSelect(this::showChart));
+        android.view.ViewGroup parent = (android.view.ViewGroup) seriesSpinner.getParent();
+        int at = parent.indexOfChild(seriesSpinner);
+        parent.removeViewAt(at);
+        parent.addView(fresh, at, seriesSpinner.getLayoutParams());
+        seriesSpinner = fresh;
+    }
+
+    private boolean hasInterventions() {
+        for (RideTsv.Sample s : samples) {
+            if ((s.tcs == s.tcs && s.tcs > 0) || (s.abs == s.abs && ((int) s.abs & 0x03) != 0)) return true;
+        }
+        return false;
     }
 
     private boolean missingSeries(ChartView.Series series) {
@@ -210,6 +236,11 @@ public class RideActivity extends KawaActivity {
         if (r.maxRpm > 0) add(c, "Highest engine speed", String.format(Locale.ROOT, "%,d rpm", r.maxRpm));
         if (r.odoStartKm == r.odoStartKm && r.odoEndKm == r.odoEndKm) {
             add(c, "Odometer", String.format(Locale.ROOT, "%,.0f → %,.0f km", r.odoStartKm, r.odoEndKm));
+        }
+        // both distances when they disagree: the odometer counts whole wheel turns, GPS cuts corners
+        if (r.distBikeM > 0 && r.distGpsM > 0 && Math.abs(r.distBikeM - r.distGpsM) > 0.03 * r.distBikeM) {
+            add(c, "Distance: odometer / GPS", String.format(Locale.ROOT, "%.1f / %.1f km",
+                    r.distBikeM / 1000, r.distGpsM / 1000));
         }
         add(c, "Recorded", r.duration() + ", " + r.samples + " samples"
                 + (r.hasGps ? "" : ", without a GPS track"));
