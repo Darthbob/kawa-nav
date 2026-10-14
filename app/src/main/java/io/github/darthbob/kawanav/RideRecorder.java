@@ -38,7 +38,9 @@ public final class RideRecorder implements android.location.LocationListener {
 
     private Ride ride;
     private int state = IDLE;
-    private long startedAt, pausedMs, pausedAt, lastSaveAt;
+    private long lastSaveAt;
+    /** Recorded time: runs while recording, not while paused. */
+    private ActiveClock clock = new ActiveClock(0);
     /** Live distance since the ride started (GPS and bike odometer). */
     private double distGpsM, distBikeM, fuelStart = Double.NaN, lastFuel = Double.NaN;
     private double maxKmh, maxLeanL, maxLeanR;
@@ -67,7 +69,7 @@ public final class RideRecorder implements android.location.LocationListener {
     /** Milliseconds recorded so far (pauses not counted). */
     public long activeMs() {
         if (ride == null) return 0;
-        return ride.activeMs + (state == RECORDING ? System.currentTimeMillis() - startedAt - pausedMs : 0);
+        return clock.ms(System.currentTimeMillis());
     }
 
     public double distanceM() {
@@ -88,9 +90,8 @@ public final class RideRecorder implements android.location.LocationListener {
         ride.end = ride.start;
         store.open(ride, false);
         state = RECORDING;
-        startedAt = System.currentTimeMillis();
-        pausedMs = 0;
-        pausedAt = 0;
+        clock = new ActiveClock(0);
+        clock.start(System.currentTimeMillis());
         distGpsM = distBikeM = 0;
         fuelStart = lastFuel = Double.NaN;
         maxKmh = maxLeanL = maxLeanR = 0;
@@ -115,9 +116,8 @@ public final class RideRecorder implements android.location.LocationListener {
         ride.endReason = "";
         store.open(ride, true);
         state = RECORDING;
-        startedAt = System.currentTimeMillis();
-        pausedMs = 0;
-        pausedAt = 0;
+        clock = new ActiveClock(r.activeMs);
+        clock.start(System.currentTimeMillis());
         lastSaveAt = System.currentTimeMillis();
         distGpsM = r.distGpsM;
         distBikeM = r.distBikeM;
@@ -135,8 +135,8 @@ public final class RideRecorder implements android.location.LocationListener {
 
     public void pause() {
         if (state != RECORDING) return;
+        clock.stop(System.currentTimeMillis());
         state = PAUSED;
-        pausedAt = System.currentTimeMillis();
         ride.state = "paused";
         saveSummary();
         Logger.log("Ride: paused");
@@ -144,10 +144,9 @@ public final class RideRecorder implements android.location.LocationListener {
 
     public void resume() {
         if (state != PAUSED) return;
-        pausedMs += System.currentTimeMillis() - pausedAt;
+        clock.start(System.currentTimeMillis());
         state = RECORDING;
         ride.state = "recording";
-        startedAt = System.currentTimeMillis();
         Logger.log("Ride: resumed");
     }
 
@@ -198,7 +197,7 @@ public final class RideRecorder implements android.location.LocationListener {
     /** One recorded second. */
     private void sample() {
         long now = System.currentTimeMillis();
-        if (ride.activeMs + now - startedAt - pausedMs > MAX_RIDE_MS) {
+        if (clock.ms(now) > MAX_RIDE_MS) {
             finish("24 hours reached");
             return;
         }
@@ -207,7 +206,7 @@ public final class RideRecorder implements android.location.LocationListener {
             return;
         }
         RideTsv.Sample s = new RideTsv.Sample();
-        s.tMs = activeMs();
+        s.tMs = clock.ms(now);
         s.epochMs = now;
         s.flags = 0;
 

@@ -65,8 +65,10 @@ public final class Ride {
         this.samples = samples.size();
         start = samples.get(0).epochMs;
         end = samples.get(samples.size() - 1).epochMs;
-        activeMs = Math.max(activeMs, end - start);
+        // each sample carries the recorded time so far: pauses are not in it (end - start would count them)
+        activeMs = Math.max(activeMs, samples.get(samples.size() - 1).tMs);
         distGpsM = distBikeM = 0;
+        fuelUsedL = 0;
         maxKmh = 0;
         maxRpm = 0;
         maxLeanL = maxLeanR = 0;

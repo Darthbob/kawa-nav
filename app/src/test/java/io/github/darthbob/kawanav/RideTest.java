@@ -87,6 +87,30 @@ public class RideTest {
     }
 
     @Test
+    public void summaryLeavesPausesOut() {
+        List<RideTsv.Sample> samples = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            RideTsv.Sample s = sample(i, 50, 4000, 3, 0, 45.0, 7.0);
+            if (i >= 10) s.epochMs += 600_000;   // ten minutes paused after the tenth second
+            samples.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(samples);
+        assertEquals(19_000, r.activeMs);
+    }
+
+    @Test
+    public void summaryTwiceGivesTheSameFuel() {
+        List<RideTsv.Sample> samples = ride100();
+        for (int i = 0; i < samples.size(); i++) samples.get(i).fuelTotalL = 100 + i * 0.01;
+        Ride r = new Ride();
+        r.summarize(samples);
+        assertEquals(0.99, r.fuelUsedL, 1e-6);
+        r.summarize(samples);                    // at the end of a ride, after the summary written during it
+        assertEquals(0.99, r.fuelUsedL, 1e-6);
+    }
+
+    @Test
     public void csvLayout() {
         Ride r = new Ride();
         r.name = "Morning ride";
