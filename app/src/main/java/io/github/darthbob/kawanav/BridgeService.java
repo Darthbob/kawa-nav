@@ -406,6 +406,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         applySettings();
         connectBike();
         handler.post(tickLoop);
+        Hub.fuelEntries = new FuelStore(this).list();
         Logger.log("Bridge started");
     }
 
@@ -687,6 +688,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (out != null && out.cameraId >= 0) cameraAlert(out);
         else cameraGone();
         bikeAlerts(now);
+        refuelCheck(now);
         // log every change of what the meter shows (also without bike)
         String key = out == null ? "nothing" : out.source + ":" + out.turn;
         if (!key.equals(lastShownKey)) {
@@ -984,6 +986,47 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private final java.util.Set<String> postedAlerts = new java.util.HashSet<>();
 
+    /** Litres come from the gauge jumping up while the bike stands still; see {@link FuelLog}. */
+    private final FuelLog.Detector refuel = new FuelLog.Detector();
+
+    private void refuelCheck(long now) {
+        BikeFrames.VehicleInfo info = Hub.bike.info;
+        BikeFrames.Telemetry live = Hub.bike.live;
+        if (info == null || now - Hub.bike.infoAt > BikeAlerts.FRESH_MS) return;
+        // only at a standstill: the gauge moves as the bike leans and as fuel sloshes otherwise
+        if (live == null || now - Hub.bike.liveAt > BikeAlerts.FRESH_MS) return;
+        if (live.speedKmh != live.speedKmh || live.speedKmh >= FuelLog.STILL_KMH) {
+            refuel.reset();
+            return;
+        }
+        FuelLog.Entry e = refuel.offer(info.fuelBars, info.rangeKm, info.odometerKm, now,
+                Hub.prefs(this).getFloat(FuelLog.KEY_TANK_L, (float) FuelLog.DEFAULT_TANK_L));
+        if (e == null) return;
+        java.util.List<FuelLog.Entry> entries = new java.util.ArrayList<>(Hub.fuelEntries);
+        entries.add(e);
+        Hub.fuelEntries = FuelLog.sorted(entries);
+        new FuelStore(this).save(entries);
+        Logger.log("Fuel: refuel recorded at " + e.odoKm + " km: " + e.describe());
+        announce("Refuel recorded", e.describe() + " — correct the litres on the Refuels screen if they are wrong.");
+    }
+
+    /** A short confirmation on the warnings channel (the alert itself, not a warning about the bike). */
+    private void announce(String title, String text) {
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
+        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification n = new Notification.Builder(this, CHANNEL_ALERTS)
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build();
+        getSystemService(NotificationManager.class).notify(REFUEL_NOTIFICATION_ID, n);
+    }
+
+    private static final int REFUEL_NOTIFICATION_ID = 9_001;
     private final BikeAlerts.Tracker alertTracker = new BikeAlerts.Tracker();
     private static final int BIKE_ALERT_NOTIFICATION_BASE = 10_000;
 

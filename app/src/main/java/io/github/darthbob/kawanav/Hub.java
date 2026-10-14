@@ -82,6 +82,8 @@ public final class Hub {
     public static BridgeService.PendingSettings settingsWritePending;
     /** Warnings the bike's values show right now (tyres, ABS, battery), see {@link BikeAlerts}. */
     public static java.util.List<BikeAlerts.Alert> bikeAlerts = java.util.Collections.emptyList();
+    /** Refuels: detected at the pump by the bridge, added or corrected on the fuel screen. */
+    public static java.util.List<FuelLog.Entry> fuelEntries = java.util.Collections.emptyList();
     /** Last GPS fix any part of KawaNav got (curves, ride recorder), or null. */
     public static android.location.Location lastFix;
 

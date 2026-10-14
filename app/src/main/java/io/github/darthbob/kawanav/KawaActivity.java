@@ -17,6 +17,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -25,7 +26,9 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import android.text.InputType;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -752,6 +755,38 @@ public abstract class KawaActivity extends Activity {
 
     protected interface OnPos {
         void on(int pos);
+    }
+
+    protected interface OnNumber {
+        void on(double value);
+    }
+
+    /**
+     * Asks for a number, with the phone's keyboard (a typed value wins over the spinner's choices). The
+     * field starts on {@code before} and is checked against the range; an empty field calls
+     * {@code ok} with {@code before}.
+     */
+    protected void askNumber(String title, double before, double min, double max, String fmt, OnNumber ok) {
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setSingleLine(true);
+        if (before == before) input.setText(String.format(Locale.ROOT, fmt, before));
+        android.widget.LinearLayout box = column();
+        box.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE2), dp(Ui.SPACE4), 0);
+        box.addView(input);
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(box)
+                .setPositiveButton("Save", (d, w) -> {
+                    double v = before;
+                    try {
+                        v = Double.parseDouble(input.getText().toString().trim().replace(',', '.'));
+                    } catch (NumberFormatException ignored) {
+                    }
+                    ok.on(Math.max(min, Math.min(max, v)));
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     protected AdapterView.OnItemSelectedListener onSelect(OnPos f) {

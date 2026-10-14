@@ -72,6 +72,13 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".FuelActivity"
+            android:exported="false"
+            android:label="Refuels"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden" />
+
+        <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="Settings"

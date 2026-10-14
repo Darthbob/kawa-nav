@@ -84,6 +84,7 @@ public class BikeActivity extends KawaActivity {
     private List<String> shownLabels = new ArrayList<>();
     private final List<Figure> valueViews = new ArrayList<>();
     private boolean vinShown;
+    private TextView fuelLine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,6 +104,7 @@ public class BikeActivity extends KawaActivity {
         root.addView(rangeCard());
         sections = column();
         root.addView(sections);
+        root.addView(fuelCard());
         root.addView(settingsCard());
         root.addView(lampCard());
         root.addView(parkedCard());
@@ -334,6 +336,33 @@ public class BikeActivity extends KawaActivity {
         return section;
     }
 
+    /** The refuels, one tap from the numbers they come from. */
+    private LinearLayout fuelCard() {
+        LinearLayout c = card();
+        LinearLayout head = row();
+        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        head.addView(iconTitle(R.drawable.ic_fuel, cardTitle("Refuels")), weight());
+        c.addView(head);
+        fuelLine = secondary("");
+        c.addView(fuelLine);
+        View row = listRow(R.drawable.ic_fuel, "Refuel diary", "Litres, odometer and what the bike used between fills",
+                null, true, v -> startActivity(new Intent(this, FuelActivity.class)));
+        c.addView(row);
+        return c;
+    }
+
+    private void updateFuelLine() {
+        java.util.List<FuelLog.Entry> entries = Hub.fuelEntries;
+        if (entries.isEmpty()) {
+            fuelLine.setText("Nothing recorded yet: fill up with the app connected and it is noticed.");
+            return;
+        }
+        FuelLog.Entry last = entries.get(entries.size() - 1);
+        double per100 = entries.size() > 1 ? FuelLog.consumptionLPer100(entries.get(entries.size() - 2), last) : Double.NaN;
+        fuelLine.setText("Last fill " + last.describe()
+                + (per100 == per100 ? String.format(Locale.ROOT, " · %.1f L/100 km", per100) : ""));
+    }
+
     private void navigateToBike() {
         BikeData.Place p = Hub.bike.parked;
         if (p == null) return;
@@ -350,6 +379,7 @@ public class BikeActivity extends KawaActivity {
         BikeData b = Hub.bike;
         long now = System.currentTimeMillis();
         updateTabBar();
+        updateFuelLine();
         title.setText(name(b, prefs.getString(Hub.KEY_BIKE_NAME, null)));
         vin.setText(vinText(b, vinShown));
         vin.setVisibility(b.model != null && b.model.vin != null ? View.VISIBLE : View.GONE);
