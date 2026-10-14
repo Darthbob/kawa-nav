@@ -169,7 +169,7 @@ public class SettingsActivity extends KawaActivity {
         root.addView(section("maps", R.drawable.ic_map, "Offline maps", offlineGroup()));
         if (Hub.DEBUG_TOOLS) root.addView(debugCard());
         if (Hub.DEBUG_TOOLS) root.addView(bikeDebugCard());
-        root.addView(section("about", 0, "About", aboutGroup()));
+        root.addView(section("about", R.drawable.ic_info, "About", aboutGroup()));
         return tabPage(TAB_SETTINGS, root);
     }
 
