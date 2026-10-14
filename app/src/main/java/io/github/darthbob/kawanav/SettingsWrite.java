@@ -15,11 +15,20 @@ import java.util.Locale;
 public final class SettingsWrite {
     private SettingsWrite() {}
 
-    /** Values as the app labels them (ph/d.java); the wire encoding differs for KTRC, see {@link #ktrcWire}. */
-    public static final String[] MODES = {"Sport", "Road", "Rain", "Rider"};
+    /**
+     * The bike's numbers start at 1, as Rideology's own tables show (ph/d.java, entry 0 is "error"): riding
+     * mode 1 Sport, 2 Road, 3 Rain, 4 Rider (5-7: Rider 2-4 on bikes with four rider modes); power 1 Full,
+     * 2 Medium, 3 Low; KQS and KEBC 1 OFF, 2 ON, KEBC 3 Light. The arrays below are in that order, so the
+     * name of value v is {@code names[v - 1]}; the app passes these numbers through unchanged both ways
+     * (datamodels/b.java and oh/b.java). KTRC is mapped, see {@link #ktrcWire}.
+     */
+    public static final String[] MODES = {"Sport", "Road", "Rain", "Rider", "Rider 2", "Rider 3", "Rider 4"};
+    /** The riding modes a write may set (the four every bike with modes has). */
+    public static final int WRITABLE_MODES = 4;
     public static final String[] POWER = {"Full", "Medium", "Low"};
     public static final String[] KTRC = {"OFF", "1", "2", "3", "4", "5"};
     public static final String[] ON_OFF = {"OFF", "ON"};
+    public static final String[] KEBC = {"OFF", "ON", "Light"};
 
     /** Result codes of the answer's byte 7. */
     public static final int RESULT_OK = 0x00, RESULT_WAIT = 0x10;
@@ -34,15 +43,23 @@ public final class SettingsWrite {
         return 0;
     }
 
-    /** The KTRC field value back to a position in {@link #KTRC}. */
+    /** The KTRC field value back to a position in {@link #KTRC}, or -1 when a write cannot set it. */
     public static int ktrcFromWire(int wire) {
         return wire == 10 ? 0 : wire >= 1 && wire <= 5 ? wire : -1;
     }
 
+    /** KTRC as the bike reports it: OFF, or a level 1-9 (the write takes 1-5 only). */
+    public static String ktrcName(int wire) {
+        if (wire < 0) return null;
+        String name = wire == 10 ? "OFF" : wire >= 1 && wire <= 9 ? String.valueOf(wire) : "?";
+        return name + " (" + wire + ")";
+    }
+
     /**
-     * The 45-byte write frame. {@code ktrc} is the wire value (see {@link #ktrcWire}),
-     * {@code kqs} 0/1, {@code kebc} 0/1 (0 when the bike has no KEBC), {@code power} 0..2 (Full..Low),
-     * {@code mode} 0..3 (Sport/Road/Rain/Rider). {@code name} is the profile name (max 18 UTF-8 bytes).
+     * The 45-byte write frame, with the bike's own numbers: {@code mode} 1..4 (Sport/Road/Rain/Rider),
+     * {@code power} 1..3 (Full..Low), {@code ktrc} the wire value (see {@link #ktrcWire}), {@code kqs} 1/2
+     * (OFF/ON), {@code kebc} 1..3, or 0 on a bike without KEBC. {@code name} is the profile name
+     * (max 18 UTF-8 bytes). Check the values with {@link #invalid} first.
      */
     public static byte[] frame(int mode, int power, int ktrc, int kqs, int kebc, String name) {
         byte[] b = new byte[45];
@@ -85,11 +102,25 @@ public final class SettingsWrite {
         return name + " (" + value + ")";
     }
 
-    /** The KECS load adjustment: the meter sends 0..10, Rideology shows it as -5..+5. */
+    /** The KECS load adjustment: the meter sends 1..11, Rideology shows it as -5..+5 (ph/d.java). */
     public static String adjustment(int value) {
         if (value < 0) return null;
-        int shown = value - 5;
+        if (value < 1 || value > 11) return "? (" + value + ")";
+        int shown = value - 6;
         return (shown > 0 ? "+" : "") + shown + " (" + value + ")";
+    }
+
+    /**
+     * Why these values must not be written, or null when they are all in the ranges Rideology sends.
+     * A 0 or a value off the end would be a setting the bike never offered.
+     */
+    public static String invalid(int mode, int power, int ktrcLevel, int kqs, int kebc) {
+        if (mode < 1 || mode > WRITABLE_MODES) return "riding mode " + mode + " is not one the bike offers";
+        if (power < 1 || power > POWER.length) return "power mode " + power + " is not one the bike offers";
+        if (ktrcLevel < 0 || ktrcLevel >= KTRC.length) return "KTRC level " + ktrcLevel + " cannot be written";
+        if (kqs < 1 || kqs > ON_OFF.length) return "quickshifter value " + kqs + " is not OFF or ON";
+        if (kebc < 0 || kebc > KEBC.length) return "engine brake value " + kebc + " is not one the bike offers";
+        return null;
     }
 
     /** Shift-lamp levels the meter takes: code 1..61, each step a 250 rpm step from 3000 rpm up. */

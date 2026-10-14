@@ -195,7 +195,7 @@ public class BikeActivity extends KawaActivity {
         LinearLayout c = group();
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
                 + "screen. The bike must be standing still, in neutral and with the throttle closed."));
-        modeSpinner = spinner(SettingsWrite.MODES, 0);
+        modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
         powerSpinner = spinner(SettingsWrite.POWER, 0);
         ktrcSpinner = spinner(SettingsWrite.KTRC, 0);
         kqsSpinner = spinner(SettingsWrite.ON_OFF, 0);
@@ -234,9 +234,12 @@ public class BikeActivity extends KawaActivity {
                         + SettingsWrite.KTRC[ktrcSpinner.getSelectedItemPosition()] + ", KQS "
                         + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()] + ".")
                 .setPositiveButton("Send", (d, w) -> {
-                    String problem = BridgeService.writeSettings(modeSpinner.getSelectedItemPosition(),
-                            powerSpinner.getSelectedItemPosition(), ktrcSpinner.getSelectedItemPosition(),
-                            kqsSpinner.getSelectedItemPosition(), 0, "");
+                    // spinner positions start at 0, the bike's numbers at 1; KEBC goes back as the bike has it
+                    BikeFrames.VehicleSettings now2 = Hub.bike.settings;
+                    int kebc = now2 != null && now2.kebc >= 0 ? now2.kebc : 0;
+                    String problem = BridgeService.writeSettings(modeSpinner.getSelectedItemPosition() + 1,
+                            powerSpinner.getSelectedItemPosition() + 1, ktrcSpinner.getSelectedItemPosition(),
+                            kqsSpinner.getSelectedItemPosition() + 1, kebc, "");
                     if (problem != null) {
                         settingsStatus.setText("Not sent: " + problem);
                     }
@@ -400,11 +403,11 @@ public class BikeActivity extends KawaActivity {
         if (canWrite) {
             BikeFrames.VehicleSettings s = b.settings;
             if (s != null && !settingsPrefilled) { // prefill once, from what the bike reported
-                if (s.ridingMode >= 0 && s.ridingMode < SettingsWrite.MODES.length) modeSpinner.setSelection(s.ridingMode);
-                if (s.power >= 0 && s.power < SettingsWrite.POWER.length) powerSpinner.setSelection(s.power);
+                if (s.ridingMode >= 1 && s.ridingMode <= SettingsWrite.WRITABLE_MODES) modeSpinner.setSelection(s.ridingMode - 1);
+                if (s.power >= 1 && s.power <= SettingsWrite.POWER.length) powerSpinner.setSelection(s.power - 1);
                 int k = SettingsWrite.ktrcFromWire(s.ktrc);
                 if (k >= 0) ktrcSpinner.setSelection(k);
-                if (s.kqs >= 0 && s.kqs < SettingsWrite.ON_OFF.length) kqsSpinner.setSelection(s.kqs);
+                if (s.kqs >= 1 && s.kqs <= SettingsWrite.ON_OFF.length) kqsSpinner.setSelection(s.kqs - 1);
                 settingsPrefilled = true;
             }
             settingsSend.setEnabled(true);
@@ -559,12 +562,11 @@ public class BikeActivity extends KawaActivity {
             String s = "Riding modes";
             // the names come from Rideology's own tables; the number the bike sent stays in brackets until
             // this has been checked on a bike with these settings
-            if (v.ridingMode >= 0) r.add(new String[]{s, "Riding mode", SettingsWrite.named(SettingsWrite.MODES, v.ridingMode + 1)});
-            if (v.power >= 0) r.add(new String[]{s, "Power mode", SettingsWrite.named(SettingsWrite.POWER, v.power + 1)});
-            int ktrc = SettingsWrite.ktrcFromWire(v.ktrc);
-            if (ktrc >= 0) r.add(new String[]{s, "KTRC", SettingsWrite.KTRC[ktrc] + " (field " + v.ktrc + ")"});
-            if (v.kqs >= 0) r.add(new String[]{s, "Quickshifter (KQS)", SettingsWrite.named(SettingsWrite.ON_OFF, v.kqs + 1)});
-            if (v.kebc >= 0) r.add(new String[]{s, "Engine brake (KEBC)", SettingsWrite.named(SettingsWrite.ON_OFF, v.kebc + 1)});
+            if (v.ridingMode >= 0) r.add(new String[]{s, "Riding mode", SettingsWrite.named(SettingsWrite.MODES, v.ridingMode)});
+            if (v.power >= 0) r.add(new String[]{s, "Power mode", SettingsWrite.named(SettingsWrite.POWER, v.power)});
+            if (v.ktrc >= 0) r.add(new String[]{s, "KTRC", SettingsWrite.ktrcName(v.ktrc)});
+            if (v.kqs >= 0) r.add(new String[]{s, "Quickshifter (KQS)", SettingsWrite.named(SettingsWrite.ON_OFF, v.kqs)});
+            if (v.kebc >= 0) r.add(new String[]{s, "Engine brake (KEBC)", SettingsWrite.named(SettingsWrite.KEBC, v.kebc)});
             if (v.kecsMode >= 0) r.add(new String[]{s, "Suspension mode (KECS)", SettingsWrite.named(SettingsWrite.KECS_MODES, v.kecsMode)});
             if (v.kecsPreload >= 0) r.add(new String[]{s, "KECS preload", SettingsWrite.named(SettingsWrite.KECS_PRELOAD, v.kecsPreload)});
             if (v.kecsLoad >= 0) r.add(new String[]{s, "KECS load adjustment", SettingsWrite.adjustment(v.kecsLoad)});

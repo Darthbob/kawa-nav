@@ -15,14 +15,15 @@ public class SettingsWriteTest {
 
     @Test
     public void frameLayout() {
-        byte[] f = SettingsWrite.frame(1 /* Road */, 0 /* Full */, SettingsWrite.ktrcWire(2) /* level 2 */, 1, 0, "AB");
+        // the bike's own numbers: Road = 2, Full = 1, KQS ON = 2, KEBC OFF = 1
+        byte[] f = SettingsWrite.frame(2 /* Road */, 1 /* Full */, SettingsWrite.ktrcWire(2) /* level 2 */, 2, 1, "AB");
         assertEquals(45, f.length);
         assertEquals(0x48, f[0] & 0xFF);
         assertEquals(0x2A, f[1] & 0xFF);
         assertEquals(0x09, f[6] & 0xFF);
         assertEquals(1, f[7] & 0xFF);                       // write
-        assertEquals((2 << 3) | 1, f[8] & 0xFF);            // KTRC level 2 -> wire 2, mode Road = 1
-        assertEquals((1 << 5) | (0 << 2) | 0, f[9] & 0xFF); // KQS 1, KEBC 0, power 0
+        assertEquals((2 << 3) | 2, f[8] & 0xFF);            // KTRC level 2 -> wire 2, mode Road = 2
+        assertEquals((2 << 5) | (1 << 2) | 1, f[9] & 0xFF); // KQS ON 2, KEBC OFF 1, power Full 1
         assertEquals(0x05, f[15] & 0xFF);
         assertEquals(0x04, f[16] & 0xFF);
         assertEquals('A', f[17]);
@@ -44,6 +45,37 @@ public class SettingsWriteTest {
         assertEquals(0, SettingsWrite.ktrcFromWire(10));  // OFF back to the list position
         assertEquals(2, SettingsWrite.ktrcFromWire(2));
         assertEquals(-1, SettingsWrite.ktrcFromWire(9));
+    }
+
+    /** Rideology's tables put "error" at 0: the bike's 1 is Sport, Full, OFF. */
+    @Test
+    public void namesStartAtOne() {
+        assertEquals("Sport (1)", SettingsWrite.named(SettingsWrite.MODES, 1));
+        assertEquals("Rider (4)", SettingsWrite.named(SettingsWrite.MODES, 4));
+        assertEquals("Rider 2 (5)", SettingsWrite.named(SettingsWrite.MODES, 5));
+        assertEquals("? (0)", SettingsWrite.named(SettingsWrite.MODES, 0));
+        assertEquals("Full (1)", SettingsWrite.named(SettingsWrite.POWER, 1));
+        assertEquals("OFF (1)", SettingsWrite.named(SettingsWrite.ON_OFF, 1));
+        assertEquals("ON (2)", SettingsWrite.named(SettingsWrite.ON_OFF, 2));
+        assertEquals("Light (3)", SettingsWrite.named(SettingsWrite.KEBC, 3));
+        assertEquals("OFF (10)", SettingsWrite.ktrcName(10));
+        assertEquals("7 (7)", SettingsWrite.ktrcName(7));     // readable even though only 1-5 are writable
+        assertEquals("-5 (1)", SettingsWrite.adjustment(1));
+        assertEquals("0 (6)", SettingsWrite.adjustment(6));
+        assertEquals("+5 (11)", SettingsWrite.adjustment(11));
+    }
+
+    /** A 0 or a number off the end would be a setting the bike never offered: never sent. */
+    @Test
+    public void outOfRangeValuesAreRefused() {
+        assertNull(SettingsWrite.invalid(1, 1, 0, 1, 0));    // Sport, Full, KTRC OFF, KQS OFF, no KEBC
+        assertNull(SettingsWrite.invalid(4, 3, 5, 2, 3));    // Rider, Low, KTRC 5, KQS ON, KEBC Light
+        assertTrue(SettingsWrite.invalid(0, 1, 0, 1, 0).contains("riding mode"));
+        assertTrue(SettingsWrite.invalid(5, 1, 0, 1, 0).contains("riding mode"));
+        assertTrue(SettingsWrite.invalid(1, 0, 0, 1, 0).contains("power"));
+        assertTrue(SettingsWrite.invalid(1, 1, 6, 1, 0).contains("KTRC"));
+        assertTrue(SettingsWrite.invalid(1, 1, 0, 0, 0).contains("quickshifter"));
+        assertTrue(SettingsWrite.invalid(1, 1, 0, 1, 4).contains("engine brake"));
     }
 
     @Test

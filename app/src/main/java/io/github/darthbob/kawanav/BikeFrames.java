@@ -249,11 +249,28 @@ public final class BikeFrames {
         public static final Flag FUEL_CONSUMPTION = new Flag("fuel consumption", 29, 0x0C);
         public static final Flag TOTAL_TIME = new Flag("total time", 29, 0x03);
         public static final Flag INSTANT_FUEL = new Flag("instant fuel consumption", 31, 0x0C);
+        /** The meter keeps the largest lean of the trip (0x41 bytes 53/54); 0 = yes (Ble5Value/i.java K, L). */
+        public static final Flag MAX_LEAN_LEFT = new Flag("max lean left", 32, 0xC0);
+        public static final Flag MAX_LEAN_RIGHT = new Flag("max lean right", 32, 0x30);
+        /**
+         * Whether the 0x41 frame carries a "this value is valid" bit for a value (bytes 33-34, one bit each,
+         * 0 = it does; Ble5Value/i.java M-V). When it does, a value whose bit is set is not current.
+         */
+        public static final Flag ODOMETER_VALID = new Flag("odometer valid bit", 33, 0x80);
+        public static final Flag METER_BATTERY_VALID = new Flag("meter battery valid bit", 33, 0x40);
+        public static final Flag AVG_MILEAGE_VALID = new Flag("average mileage valid bit", 33, 0x20);
+        public static final Flag INSTANT_FUEL_VALID = new Flag("instant fuel valid bit", 33, 0x10);
+        public static final Flag TRIP_A_VALID = new Flag("trip A valid bit", 33, 0x08);
+        public static final Flag TRIP_B_VALID = new Flag("trip B valid bit", 33, 0x04);
+        public static final Flag AVG_SPEED_VALID = new Flag("average speed valid bit", 33, 0x02);
+        public static final Flag RANGE_VALID = new Flag("range valid bit", 34, 0x40);
+        public static final Flag TOTAL_TIME_VALID = new Flag("total time valid bit", 34, 0x20);
         public static final Flag[] ALL = {TOTAL_DISTANCE, TOTAL_FUEL, FUEL_RATE, ECU_BATTERY, WATER_TEMP, OIL_TEMP,
                 INTAKE_TEMP, BOOST_TEMP, BOOST_PRESSURE, FUEL_INJECTION, WHEEL_SPEED, ENGINE_SPEED, GEAR, THROTTLE,
                 ACCELERATION, LEAN, WHEELIE, WHEELIE_ANGLE, TCS_HB, TCS_LB, RIDER_TORQUE, ENGINE_TORQUE_REQUEST,
                 ENGINE_TORQUE, ODOMETER, FUEL_GAUGE, AVG_MILEAGE, METER_BATTERY, TRIP_A, TRIP_B, AVG_SPEED,
-                OUTSIDE_TEMP, RANGE_SYMBOL, RANGE, FUEL_CONSUMPTION, TOTAL_TIME, INSTANT_FUEL};
+                OUTSIDE_TEMP, RANGE_SYMBOL, RANGE, FUEL_CONSUMPTION, TOTAL_TIME, INSTANT_FUEL, MAX_LEAN_LEFT,
+                MAX_LEAN_RIGHT};
 
         public final boolean valid;
 
@@ -278,6 +295,20 @@ public final class BikeFrames {
     /** True unless the config is known and says the bike does not have the value. */
     static boolean has(InfoConfig cfg, Flag f) {
         return cfg == null || cfg.supported(f);
+    }
+
+    /** The config is known and its flag is exactly 0 (the strict reading Rideology uses for these). */
+    static boolean zero(InfoConfig cfg, Flag f) {
+        return cfg != null && cfg.flag(f) == 0;
+    }
+
+    /**
+     * A value's "valid" bit: when the config says the bike sends one ({@code f} is 0), the bit must be 0
+     * for the value to count. Bikes without the bit keep their value (the placeholders still catch it).
+     */
+    static boolean validBit(byte[] v, int i, int bit, InfoConfig cfg, Flag f) {
+        if (!zero(cfg, f)) return true;
+        return in(v, i) && (u8(v, i) & (1 << bit)) == 0;
     }
 
     /** 0x47: which vehicle settings this bike has (Ble5Value.y). */
@@ -336,23 +367,54 @@ public final class BikeFrames {
         /** Fuel gauge bars as on the dash. */
         public final int fuelBars;
         public final int avgSpeedKmh, rangeSymbol, rangeKm, totalTime;
+        /** The largest lean of the trip the meter shows, degrees each way; -1 when the bike has none. */
+        public final int maxLeanLeft, maxLeanRight;
 
+        /**
+         * Values the meter fills with an all-ones placeholder while it has none (Rideology drops these:
+         * qe/b.java), or marks with their "valid" bit, are left out rather than shown as numbers.
+         */
         VehicleInfo(byte[] v, InfoConfig c) {
             super(v);
-            totalFuelL = in(v, 10) && has(c, InfoConfig.TOTAL_FUEL) ? be32(v, 7) * 0.01 : Double.NaN;
-            ecuBatteryV = in(v, 14) && has(c, InfoConfig.ECU_BATTERY) ? u8(v, 14) * 20.0 / 256.0 : Double.NaN;
-            odometerKm = in(v, 29) && has(c, InfoConfig.ODOMETER) ? (u8(v, 27) & 0x0F) << 16 | be16(v, 28) : -1;
-            fuelBars = in(v, 30) && has(c, InfoConfig.FUEL_GAUGE) ? u8(v, 30) & 0x0F : -1;
-            avgMileage = in(v, 33) && has(c, InfoConfig.AVG_MILEAGE) ? ((u8(v, 32) & 0x03) << 8 | u8(v, 33)) * 0.1 : Double.NaN;
-            meterBatteryV = in(v, 34) && has(c, InfoConfig.METER_BATTERY) ? u8(v, 34) * 0.1 : Double.NaN;
-            tripAKm = in(v, 39) && has(c, InfoConfig.TRIP_A) ? ((u8(v, 37) & 0x01) << 16 | be16(v, 38)) * 0.1 : Double.NaN;
-            tripBKm = in(v, 42) && has(c, InfoConfig.TRIP_B) ? ((u8(v, 40) & 0x01) << 16 | be16(v, 41)) * 0.1 : Double.NaN;
-            avgSpeedKmh = in(v, 43) && has(c, InfoConfig.AVG_SPEED) ? u8(v, 43) : -1;
+            totalFuelL = in(v, 10) && has(c, InfoConfig.TOTAL_FUEL) && be32(v, 7) != 0xFFFFFFFFL
+                    ? be32(v, 7) * 0.01 : Double.NaN;
+            ecuBatteryV = in(v, 14) && has(c, InfoConfig.ECU_BATTERY) && u8(v, 14) != 0xFF
+                    ? u8(v, 14) * 20.0 / 256.0 : Double.NaN;
+            int odo = in(v, 29) && has(c, InfoConfig.ODOMETER) ? (u8(v, 27) & 0x0F) << 16 | be16(v, 28) : -1;
+            odometerKm = odo != 0xFFFFF && validBit(v, 27, 6, c, InfoConfig.ODOMETER_VALID) ? odo : -1;
+            int bars = in(v, 30) && has(c, InfoConfig.FUEL_GAUGE) ? u8(v, 30) & 0x0F : -1;
+            fuelBars = bars == 0x0F ? -1 : bars;
+            int mileage = in(v, 33) && has(c, InfoConfig.AVG_MILEAGE) ? (u8(v, 32) & 0x03) << 8 | u8(v, 33) : -1;
+            avgMileage = mileage >= 0 && mileage != 0x3FF && validBit(v, 27, 4, c, InfoConfig.AVG_MILEAGE_VALID)
+                    ? mileage * 0.1 : Double.NaN;
+            int meterBattery = in(v, 34) && has(c, InfoConfig.METER_BATTERY) ? u8(v, 34) : -1;
+            meterBatteryV = meterBattery >= 0 && meterBattery != 0xFF
+                    && validBit(v, 27, 5, c, InfoConfig.METER_BATTERY_VALID) ? meterBattery * 0.1 : Double.NaN;
+            int tripA = in(v, 39) && has(c, InfoConfig.TRIP_A) ? (u8(v, 37) & 0x01) << 16 | be16(v, 38) : -1;
+            tripAKm = tripA >= 0 && tripA != 0x1FFFF && validBit(v, 37, 7, c, InfoConfig.TRIP_A_VALID)
+                    ? tripA * 0.1 : Double.NaN;
+            int tripB = in(v, 42) && has(c, InfoConfig.TRIP_B) ? (u8(v, 40) & 0x01) << 16 | be16(v, 41) : -1;
+            tripBKm = tripB >= 0 && tripB != 0x1FFFF && validBit(v, 37, 6, c, InfoConfig.TRIP_B_VALID)
+                    ? tripB * 0.1 : Double.NaN;
+            int avgSpeed = in(v, 43) && has(c, InfoConfig.AVG_SPEED) ? u8(v, 43) : -1;
+            avgSpeedKmh = avgSpeed != 0xFF && validBit(v, 37, 5, c, InfoConfig.AVG_SPEED_VALID) ? avgSpeed : -1;
             outsideC = in(v, 44) && has(c, InfoConfig.OUTSIDE_TEMP) && u8(v, 44) != 0xFF ? u8(v, 44) - 60 : Double.NaN;
             rangeSymbol = in(v, 47) && has(c, InfoConfig.RANGE_SYMBOL) ? (u8(v, 47) & 0x30) >> 4 : -1;
-            rangeKm = in(v, 48) && has(c, InfoConfig.RANGE) ? (u8(v, 47) & 0x03) << 8 | u8(v, 48) : -1;
-            fuelConsumption = in(v, 50) && has(c, InfoConfig.FUEL_CONSUMPTION) ? ((u8(v, 49) & 0x03) << 8 | u8(v, 50)) * 0.1 : Double.NaN;
-            totalTime = in(v, 52) && has(c, InfoConfig.TOTAL_TIME) ? (u8(v, 51) & 0x1F) << 8 | u8(v, 52) : -1;
+            int range = in(v, 48) && has(c, InfoConfig.RANGE) ? (u8(v, 47) & 0x03) << 8 | u8(v, 48) : -1;
+            rangeKm = range != 0x3FF && validBit(v, 47, 7, c, InfoConfig.RANGE_VALID) ? range : -1;
+            int consumption = in(v, 50) && has(c, InfoConfig.FUEL_CONSUMPTION) ? (u8(v, 49) & 0x03) << 8 | u8(v, 50) : -1;
+            fuelConsumption = consumption >= 0 && consumption != 0x3FF ? consumption * 0.1 : Double.NaN;
+            int time = in(v, 52) && has(c, InfoConfig.TOTAL_TIME) ? (u8(v, 51) & 0x1F) << 8 | u8(v, 52) : -1;
+            totalTime = time != 0x1FFF && validBit(v, 47, 6, c, InfoConfig.TOTAL_TIME_VALID) ? time : -1;
+            // max lean: bytes 53/54 (7 bits, 127 = none), gated by 0x40 byte 32 and their bits in byte 47
+            maxLeanLeft = lean(v, 53, 3, c, InfoConfig.MAX_LEAN_LEFT);
+            maxLeanRight = lean(v, 54, 2, c, InfoConfig.MAX_LEAN_RIGHT);
+        }
+
+        private static int lean(byte[] v, int i, int validBitOf47, InfoConfig c, Flag f) {
+            if (!in(v, i) || !zero(c, f) || !in(v, 47) || (u8(v, 47) & (1 << validBitOf47)) != 0) return -1;
+            int deg = u8(v, i) & 0x7F;
+            return deg == 127 ? -1 : deg;
         }
     }
 
@@ -377,8 +439,9 @@ public final class BikeFrames {
             intakeC = temp(v, 20, 40, c, InfoConfig.INTAKE_TEMP);
             instantFuel = in(v, 28) && has(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF
                     ? ((u8(v, 27) & 0x03) << 8 | u8(v, 28)) * 0.1 : Double.NaN;
-            // TPMS bytes 45-49 as Zen3515 reads them (flag bits, not a 05 block); untested on a bike
-            boolean tpms = v.length > 49 && (u8(v, 45) & 1) == 0 && (u8(v, 46) & 1) == 0;
+            // TPMS bytes 45-49: present unless bytes 45 or 46 are FF, as Rideology reads them (qe/b.java);
+            // an ordinary 05 block marker there must not hide the pressures. Untested on a bike.
+            boolean tpms = v.length > 49 && u8(v, 45) != 0xFF && u8(v, 46) != 0xFF;
             tyreFrontKpa = tpms && u8(v, 47) != 0xFF ? u8(v, 47) * 1.373 + 100 : Double.NaN;
             tyreRearKpa = tpms && u8(v, 48) != 0xFF ? u8(v, 48) * 1.373 + 100 : Double.NaN;
             tpmsWarnings = tpms ? u8(v, 49) & 0x0F : -1;

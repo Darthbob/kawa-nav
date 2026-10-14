@@ -99,6 +99,30 @@ public class RideTest {
         assertEquals(19_000, r.activeMs);
     }
 
+    /** The ride's average is distance over recorded time, as the recorder counts it while riding. */
+    @Test
+    public void averageIsDistanceOverTime() {
+        List<RideTsv.Sample> samples = new ArrayList<>();
+        for (int i = 0; i <= 100; i++) {
+            RideTsv.Sample s = sample(i, i < 50 ? 100 : 0, 4000, 3, 0, Double.NaN, Double.NaN);
+            s.odoKm = 12_000 + Math.min(i, 50) * (100 / 3.6) / 1000;   // 100 km/h for 50 s, then standing
+            samples.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(samples);
+        // ~1.39 km in 100 s: 50 km/h, not the 49.5 km/h mean of the speed samples
+        assertEquals(50.0, r.avgKmh, 0.5);
+    }
+
+    /** The distance column is written and read back. */
+    @Test
+    public void distanceColumnRoundTrip() {
+        RideTsv.Sample s = sample(5, 50, 4000, 3, 0, 45.0, 7.0);
+        s.distM = 1234.5;
+        List<RideTsv.Sample> out = RideTsv.parse(Arrays.asList(RideTsv.magic(), RideTsv.header(), s.line()));
+        assertEquals(1234.5, out.get(0).distM, 0.01);
+    }
+
     @Test
     public void summaryTwiceGivesTheSameFuel() {
         List<RideTsv.Sample> samples = ride100();

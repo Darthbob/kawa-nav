@@ -172,6 +172,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         long age = System.currentTimeMillis() - Hub.bike.liveAt;
         String blocked = SettingsWrite.blockedBecause(Hub.bike.live, age, Hub.bike.tuning);
         if (blocked != null) return blocked;
+        String bad = SettingsWrite.invalid(mode, power, ktrcLevel, kqs, kebc);
+        if (bad != null) return bad;
         int ktrc = SettingsWrite.ktrcWire(ktrcLevel);
         byte[] frame = SettingsWrite.frame(mode, power, ktrc, kqs, kebc, name);
         Hub.settingsWritePending = new PendingSettings(mode, power, ktrcLevel, kqs, kebc, name);
@@ -233,8 +235,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
         settingsJob = "";
         if (p == null || Hub.bike.settings == null) return;
         BikeFrames.VehicleSettings s = Hub.bike.settings;
+        // the bike's own numbers on both sides (1 = Sport / Full / OFF …), as written
         boolean ok = s.ridingMode == p.mode && s.power == p.power && ktrcMatches(s.ktrc, p.ktrc)
-                && (p.kqs == 0 || s.kqs == 1) && SettingsWrite.ktrcFromWire(s.ktrc) >= 0;
+                && s.kqs == p.kqs && SettingsWrite.ktrcFromWire(s.ktrc) >= 0;
         Logger.log("Bike: settings read back: mode " + s.ridingMode + ", power " + s.power + ", KTRC "
                 + s.ktrc + ", KQS " + s.kqs + " -> " + (ok ? "as asked" : "NOT as asked"));
     }

@@ -369,6 +369,88 @@ public class BikeFramesTest {
         assertEquals(-1, s.reminders[BikeFrames.ServiceIndicator.OIL].distanceKm);
     }
 
+    /** A 0x41 frame like vehicleInfoArithmetic's, every value the meter would mark as "not current". */
+    static byte[] vehicleInfoPlaceholders() {
+        byte[] v = blank(0x41, 85);
+        put(v, 5, 0x05, 0x14, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xA0);
+        put(v, 25, 0x05, 0x16, 0x0F, 0xFF, 0xFF, 0x0F, 0xFF, 0x03, 0xFF, 0xFF);
+        put(v, 35, 0x05, 0x17, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0x50);
+        put(v, 45, 0x05, 0x18, 0x03, 0xFF, 0x03, 0xFF, 0x1F, 0xFF, 0x7F, 0x7F);
+        return v;
+    }
+
+    /** The meter's "nothing here" values are left out, not shown as 1023 km of range or 25.5 V. */
+    @Test
+    public void vehicleInfoPlaceholdersAreLeftOut() {
+        BikeFrames.VehicleInfo i = (BikeFrames.VehicleInfo) new BikeFrames.Decoder().decode(vehicleInfoPlaceholders());
+        assertTrue(Double.isNaN(i.totalFuelL));
+        assertEquals(-1, i.odometerKm);
+        assertEquals(-1, i.fuelBars);
+        assertTrue(Double.isNaN(i.avgMileage));
+        assertTrue(Double.isNaN(i.meterBatteryV));
+        assertTrue(Double.isNaN(i.tripAKm));
+        assertTrue(Double.isNaN(i.tripBKm));
+        assertEquals(-1, i.avgSpeedKmh);
+        assertEquals(-1, i.rangeKm);
+        assertTrue(Double.isNaN(i.fuelConsumption));
+        assertEquals(-1, i.totalTime);
+        assertEquals(0xA0 * 20.0 / 256.0, i.ecuBatteryV, 1e-9);   // a real value next to them stays
+        assertEquals(20.0, i.outsideC, 0);
+    }
+
+    /** A 0x40 config where every value of 0x41 exists, with its "valid" bit and the max lean. */
+    static byte[] infoConfigWithValidBits() {
+        byte[] v = blank(0x40, 35);
+        put(v, 5, 0x05, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01);
+        put(v, 25, 0x05, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01);
+        return v;
+    }
+
+    /** With the config saying the bike sends "valid" bits, a set bit hides the value it belongs to. */
+    @Test
+    public void vehicleInfoValidBits() {
+        byte[] v = blank(0x41, 85);
+        put(v, 5, 0x05, 0x14, 0x00, 0x00, 0x30, 0x39, 0xFF, 0xFF, 0xFF, 0xA0);
+        // byte 27: odometer bit 6 set (not current), meter battery bit 5 clear, mileage bit 4 clear
+        put(v, 25, 0x05, 0x16, 0x41, 0x86, 0xA0, 0x05, 0xFF, 0x00, 0xC8, 0x7E);
+        // byte 37: trip A bit 7 clear, trip B bit 6 set
+        put(v, 35, 0x05, 0x17, 0x40, 0x03, 0xE8, 0x00, 0x00, 0x7B, 0x48, 0x50);
+        // byte 47: range bit 7 clear, time bit 6 set, lean left bit 3 clear, lean right bit 2 set; 53/54 lean
+        put(v, 45, 0x05, 0x18, 0x45, 0x2C, 0x00, 0x2D, 0x00, 0x96, 41, 37);
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(infoConfigWithValidBits());
+        BikeFrames.VehicleInfo i = (BikeFrames.VehicleInfo) d.decode(v);
+        assertEquals(-1, i.odometerKm);                    // its bit says not current
+        assertEquals(12.6, i.meterBatteryV, 1e-9);
+        assertEquals(20.0, i.avgMileage, 1e-9);
+        assertEquals(100.0, i.tripAKm, 1e-9);
+        assertTrue(Double.isNaN(i.tripBKm));
+        assertEquals(300, i.rangeKm);
+        assertEquals(-1, i.totalTime);
+        assertEquals(41, i.maxLeanLeft);                   // max lean from bytes 53/54
+        assertEquals(-1, i.maxLeanRight);                  // its bit says not current
+
+        // without a config that announces the bits, the values are kept (only placeholders are dropped)
+        BikeFrames.VehicleInfo plain = (BikeFrames.VehicleInfo) new BikeFrames.Decoder().decode(v);
+        assertEquals(100000, plain.odometerKm);
+        assertEquals(-1, plain.maxLeanLeft);               // max lean needs the config to say it exists
+    }
+
+    /** TPMS counts as present unless byte 45 or 46 is FF — an ordinary 05 block marker included. */
+    @Test
+    public void tpmsPresentWithBlockMarker() {
+        byte[] v = blank(0x45, 55);
+        put(v, 5, 0x05, 0x15, 0x00, 0x01, 0x86, 0xA0, 0x00, 0x32);
+        put(v, 45, 0x05, 0x19, 0x64, 0x6E, 0x05);
+        BikeFrames.LogExt e = (BikeFrames.LogExt) new BikeFrames.Decoder().decode(v);
+        assertEquals(100 * 1.373 + 100, e.tyreFrontKpa, 1e-9);
+        assertEquals(5, e.tpmsWarnings);                   // front pressure drop + front sensor battery
+        put(v, 46, 0xFF);
+        e = (BikeFrames.LogExt) new BikeFrames.Decoder().decode(v);
+        assertTrue(Double.isNaN(e.tyreFrontKpa));
+        assertEquals(-1, e.tpmsWarnings);
+    }
+
     @Test
     public void logExtDistanceAndTyres() {
         byte[] v = blank(0x45, 55);

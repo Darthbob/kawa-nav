@@ -108,7 +108,11 @@ public final class Ride {
                 prevFuel = s.fuelTotalL;
             }
         }
-        avgKmh = speedCount == 0 ? 0 : speedSum / speedCount;
+        // average as the recorder counts it while riding: distance over recorded time (pauses left out),
+        // so the list and the ride agree; the mean of the speed samples is only a fallback without a distance
+        double distM = distBikeM > 0 ? distBikeM : distGpsM;
+        double hours = activeMs / 3_600_000.0;
+        avgKmh = distM > 0 && hours > 0 ? distM / 1000 / hours : speedCount == 0 ? 0 : speedSum / speedCount;
         if (samples.get(0).odoKm == samples.get(0).odoKm) odoStartKm = samples.get(0).odoKm;
         if (samples.get(samples.size() - 1).odoKm == samples.get(samples.size() - 1).odoKm) {
             odoEndKm = samples.get(samples.size() - 1).odoKm;

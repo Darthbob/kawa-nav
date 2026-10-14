@@ -270,6 +270,8 @@ public final class RideRecorder implements android.location.LocationListener {
             lastLon = l.getLongitude();
         }
         if (s.fuelTotalL == s.fuelTotalL) lastFuel = s.fuelTotalL;
+        // distance so far, the way the summary counts it: the bike's odometer when it has one, else GPS
+        s.distM = distanceM();
 
         store.append(s);
         samples++;
