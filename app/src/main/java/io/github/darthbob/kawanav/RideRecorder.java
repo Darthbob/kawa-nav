@@ -101,9 +101,11 @@ public final class RideRecorder implements android.location.LocationListener {
         requestGps();
         // Rideology asks for the riding log extension (temperatures, fuel, tyres) when a recording starts;
         // do the same when none has come in for a while
-        if (Hub.askRidingLogExt(context) && (Hub.bike.ext == null || System.currentTimeMillis() - Hub.bike.extAt > 120_000)
-                && BridgeService.read(BikeFrames.RIDING_LOG_EXT)) {
-            Logger.log("Ride: asked the bike for the riding log extension (0x45)");
+        if (Hub.bike.ext == null || System.currentTimeMillis() - Hub.bike.extAt > 120_000) {
+            // if the bike is not there yet (the ride started the bridge) the ask is kept and sent later
+            if (BridgeService.askRidingLogExt(context)) {
+                Logger.log("Ride: asked the bike for the riding log extension (0x45)");
+            }
         }
         main.post(tick);
         Logger.log("Ride: recording started (" + (manual ? "by hand" : "automatically") + ")");

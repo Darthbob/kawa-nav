@@ -165,6 +165,7 @@ public class MainActivity extends KawaActivity {
                 else if ("settings".equals(screen)) openTab(TAB_SETTINGS, i.getStringExtra(EXTRA_SECTION));
                 else if ("fuel".equals(screen)) startActivity(new Intent(this, FuelActivity.class));
                 else if ("battery".equals(screen)) startActivity(new Intent(this, BatteryActivity.class));
+                else if ("maintenance".equals(screen)) startActivity(new Intent(this, MaintenanceActivity.class));
                 else if ("ride".equals(screen)) {
                     Intent target = new Intent(this, RideActivity.class);
                     if (i.hasExtra("ride")) target.putExtra(RideActivity.EXTRA_ID, i.getStringExtra("ride"));

@@ -72,6 +72,13 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".MaintenanceActivity"
+            android:exported="false"
+            android:label="Maintenance"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden" />
+
+        <activity
             android:name=".BatteryActivity"
             android:exported="false"
             android:label="12 V battery"

@@ -72,7 +72,8 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 - Request `41 00 00`, 85 bytes: total fuel used, ECU and meter battery voltage, odometer, fuel gauge,
   average mileage, trip A/B, average speed, outside temperature, range and its symbol, fuel
   consumption, total time, **and max lean left/right** (`o0.java:434-435`). KawaNav decodes everything
-  except max lean (byte offsets unknown). (verified)
+  including max lean: bytes 53/54 (7 bits, 127 = none), with the gate in 0x40 byte 32 and the "not
+  current" bits in byte 47 (bits 3 and 2). (layout from i.java / o0.java, not yet compared with a dash)
 - Asked for again when the info screen updates, and at connect — **there is no interval poll on BLE5**
   (`oh/b.java:152-177`). (verified)
 
@@ -99,8 +100,12 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 | acceleration | `(((u8(17)&1)<<8) \| u8(18)) × 0.01 − 2.0` g | `… × 0.01` g |
 | lean | `(((u8(19)&7)<<8) \| u8(20)) × 0.1953125 − 100`° (11-bit) | `… × 0.1`° (12-bit) |
 | fuel injection | `u16(7,8) × 1e-4` | `… × 100/140` |
-| wheelie angle | `(((u8(22)&7)<<8) \| u8(23)) × 0.09765625` | `… × 0.1` |
+| wheelie angle | `(((u8(22)&7)<<8) \| u8(23)) × 0.09765625` | `(((u8(22)&0x0F)<<8) \| u8(23)) × 0.1` |
 | rider torque request (27-28), engine torque request (29-30), engine torque (31-32) | `(((hi&0x3F)<<8) \| lo) × 0.2` | `((hi&0x0F)<<8) \| lo` |
+
+Wheelie angle: Rideology's nibble-1 branch masks 0x0F, KawaNav does the same; its nibble-0 branch uses 0x07
+in both. Rideology adds the two bytes there (`(bArr[22] & 7) + bArr[23]`) where every neighbouring value
+shifts the high byte; KawaNav keeps the shift, which the masked nibble makes equivalent for values in range.
 
 - TCS high/low nibbles at byte 24. (verified)
 - Block 35 (absent when byte 35 or 36 is FF): byte 37 ABS bits (0x10 inspection mode, 0x0C system error,
@@ -111,7 +116,12 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 - Block 75: byte 77 damping value; byte 78 bit 2 suspension calibration, bit 1 suspension status, bit 0
   suspension ECU status.
 - Block 85 (frame longer than 87 bytes): byte 87 bit 1 cruise control working, bit 0 cruise mode; byte 88
-  set speed. (layout verified in `qe/b.java:153-174`; no capture from a bike that has these yet)
+  is Rideology's `wheel_speed_setting` — read as a speed, but what it means is inferred. (layout verified
+  in `qe/b.java:153-174`; no capture from a bike that has these yet)
+- KawaNav reads block 1 of 0x4A as absent when either header byte is FF, where Rideology drops the frame
+  only when both are; it also gates the second and third blocks on their headers, which Rideology does not.
+  Deliberately stricter: a frame with a half-FF header is not something the meter sends, and reading it
+  anyway risks values built from FF bytes.
 - KawaNav `BikeFrames.Telemetry` selects the mode **from the 0x40 nibble, per value**, like the app.
 
 ### 0x4B – suspension / IMU (`Ble5Value.r`)
@@ -353,7 +363,6 @@ KawaNav never logs this frame.)
 - Semantics of the 0x08 parameters (120 / 1000 / 200 / 100) and whether the meter needs 0x08 before
   streaming 0x45/0x4A.
 - Riding-log sample rate (meter/frequency controlled).
-- Byte offsets of max lean L/R in 0x41.
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
 - R.Score formula (server side).
 - Whether the meter shows an "Apply on the cluster" step: the `0x10` result suggests a two-stage apply,

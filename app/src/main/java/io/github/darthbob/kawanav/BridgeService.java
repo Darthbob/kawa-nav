@@ -153,9 +153,13 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 : id == BikeFrames.VEHICLE_SETTINGS ? KawaProtocol.vehicleSettingsRead()
                 : id == BikeFrames.SERVICE_INDICATOR ? KawaProtocol.serviceIndicatorRead()
                 : KawaProtocol.readRequest(id);
-        int expect = id == BikeFrames.RIDING_LOG_EXT ? BikeRequests.ACK_ONLY : BikeRequests.DATA_OR_ACK;
-        instance.requests.submit(new BikeRequests.Request(frame, BikeFrames.name(id) + " read", expect, BikeRequests.USER, null));
-        return true;
+        // every read is answered either with the frame itself or with an ACK naming it. The 0x45 ask used
+        // to accept only the ACK: a meter that answers with the 0x45 frame left it retrying for nine seconds
+        if (instance.requests.unsupported(id)) return false;
+        // submitIfIdle: asking twice while one is in flight is the same ask, not a second one
+        instance.requests.submitIfIdle(new BikeRequests.Request(frame, BikeFrames.name(id) + " read",
+                BikeRequests.DATA_OR_ACK, BikeRequests.USER, null));
+        return true; // true also when the same read was already queued
     }
 
     /** Progress of a settings write, "" when none is running; shown on the bike screen. */
@@ -409,6 +413,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         handler.post(tickLoop);
         Hub.fuelEntries = new FuelStore(this).list();
         Hub.batteryReadings = new BatteryStore(this).list();
+        Hub.maintenanceEntries = new MaintenanceStore(this).list();
         Logger.log("Bridge started");
     }
 
@@ -692,6 +697,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         bikeAlerts(now);
         refuelCheck(now);
         batteryCheck(now);
+        askRidingLogExtIfWanted();
         // log every change of what the meter shows (also without bike)
         String key = out == null ? "nothing" : out.source + ":" + out.turn;
         if (!key.equals(lastShownKey)) {
@@ -988,6 +994,37 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     private final java.util.Set<String> postedAlerts = new java.util.HashSet<>();
+
+    /**
+     * A ride asked for the riding log extension before there was anything to talk to (the ride starts the
+     * bridge itself): the ask is kept and sent once the link is up.
+     */
+    private boolean extWanted;
+
+    /** The ride recorder asks for this; true when the request went out now. */
+    public static boolean askRidingLogExt(Context c) {
+        if (!Hub.askRidingLogExt(c)) return false;
+        BridgeService s = instance;
+        if (s == null || !s.ble.isReady()) {
+            if (s != null) s.extWanted = true;
+            return false;
+        }
+        return s.sendExtRequest();
+    }
+
+    private boolean sendExtRequest() {
+        if (!Hub.askRidingLogExt(this) || requests.unsupported(BikeFrames.RIDING_LOG_EXT)) return false;
+        extWanted = false;
+        return requests.submitIfIdle(new BikeRequests.Request(
+                KawaProtocol.readRequest(BikeFrames.RIDING_LOG_EXT), "riding log ext request",
+                BikeRequests.DATA_OR_ACK, BikeRequests.STARTUP, null));
+    }
+
+    private void askRidingLogExtIfWanted() {
+        if (extWanted && ble.isReady() && sendExtRequest()) {
+            Logger.log("Ride: asked the bike for the riding log extension (0x45)");
+        }
+    }
 
     /** Litres come from the gauge jumping up while the bike stands still; see {@link FuelLog}. */
     private final FuelLog.Detector refuel = new FuelLog.Detector();

@@ -85,6 +85,7 @@ public class BikeActivity extends KawaActivity {
     private final List<Figure> valueViews = new ArrayList<>();
     private boolean vinShown;
     private TextView fuelLine;
+    private TextView maintenanceLine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,6 +106,7 @@ public class BikeActivity extends KawaActivity {
         sections = column();
         root.addView(sections);
         root.addView(fuelCard());
+        root.addView(maintenanceCard());
         battery.setOnClickListener(v -> openBatteryLog());
         root.addView(settingsCard());
         root.addView(lampCard());
@@ -357,6 +359,34 @@ public class BikeActivity extends KawaActivity {
         startActivity(new Intent(this, BatteryActivity.class));
     }
 
+    /** The maintenance log, next to the reminders the dash keeps. */
+    private void updateMaintenanceLine() {
+        java.util.List<MaintenanceLog.Entry> entries = Hub.maintenanceEntries;
+        if (entries.isEmpty()) {
+            maintenanceLine.setText("Nothing logged: keep a record of the work the dash cannot see.");
+            return;
+        }
+        MaintenanceLog.Entry last = entries.get(entries.size() - 1);
+        BikeFrames.VehicleInfo info = Hub.bike.info;
+        double km = MaintenanceLog.kmSince(entries, last.item, info != null ? info.odometerKm : Double.NaN);
+        maintenanceLine.setText(last.describe()
+                + (km == km ? String.format(Locale.ROOT, " · %,.0f km ago", km) : ""));
+    }
+
+    private LinearLayout maintenanceCard() {
+        LinearLayout c = card();
+        LinearLayout head = row();
+        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        head.addView(iconTitle(R.drawable.ic_list, cardTitle("Maintenance")), weight());
+        c.addView(head);
+        maintenanceLine = secondary("");
+        c.addView(maintenanceLine);
+        c.addView(listRow(R.drawable.ic_list, "Maintenance log",
+                "What you had done, when and at what odometer", null, true,
+                v -> startActivity(new Intent(this, MaintenanceActivity.class))));
+        return c;
+    }
+
     private void updateFuelLine() {
         java.util.List<FuelLog.Entry> entries = Hub.fuelEntries;
         if (entries.isEmpty()) {
@@ -386,6 +416,7 @@ public class BikeActivity extends KawaActivity {
         long now = System.currentTimeMillis();
         updateTabBar();
         updateFuelLine();
+        updateMaintenanceLine();
         title.setText(name(b, prefs.getString(Hub.KEY_BIKE_NAME, null)));
         vin.setText(vinText(b, vinShown));
         vin.setVisibility(b.model != null && b.model.vin != null ? View.VISIBLE : View.GONE);
@@ -590,12 +621,24 @@ public class BikeActivity extends KawaActivity {
                             : String.format(Locale.ROOT, "yes, %.0f°", t.wheelieDeg)});
                 }
                 if (t.cruiseOn >= 0) {
+                    // the mode and the speed are read but their meaning is not confirmed on a bike yet
                     r.add(new String[]{s, "Cruise control", t.cruiseOn == 1
-                            ? (t.cruiseKmh > 0 ? "on, " + t.cruiseKmh + " km/h" : "on") : "off"});
+                            ? (t.cruiseKmh > 0 ? "on, " + t.cruiseKmh + " km/h (unverified)" : "on") : "off"});
                 }
                 // torque in the bike's own unit: the numbers compare with each other, not with a spec sheet
                 if (t.riderTorque >= 0) r.add(new String[]{s, "Torque asked by the throttle", t.riderTorque + " (bike units)"});
+                if (t.engineTorqueRequest >= 0) r.add(new String[]{s, "Torque the engine control asks for", t.engineTorqueRequest + " (bike units)"});
                 if (t.engineTorque >= 0) r.add(new String[]{s, "Torque from the engine", t.engineTorque + " (bike units)"});
+                // brake pressures: the masters are raw, the caliper scaling comes from Rideology
+                if (t.brakeFrontMaster >= 0) r.add(new String[]{s, "Front brake master (unverified)", String.valueOf(t.brakeFrontMaster)});
+                if (t.brakeRearMaster >= 0) r.add(new String[]{s, "Rear brake master (unverified)", String.valueOf(t.brakeRearMaster)});
+                if (t.brakeRearCaliper >= 0) r.add(new String[]{s, "Rear brake caliper (unverified)", String.valueOf(t.brakeRearCaliper)});
+                if (t.absTarget >= 0 || t.absIndicator >= 0) {
+                    r.add(new String[]{s, "ABS working", "target " + t.absTarget + ", indicator " + t.absIndicator});
+                }
+                if (t.absSwitching >= 0 && t.absSwitching != 0) {
+                    r.add(new String[]{s, "ABS switching", String.valueOf(t.absSwitching)});
+                }
             }
             if (ext) {
                 add(r, s, "Fuel use now", b.ext.fuelRate, "%.2f (dash units)");
@@ -616,11 +659,31 @@ public class BikeActivity extends KawaActivity {
             add(r, s, "Forward acceleration", m0.axG, "%+.2f g");
             add(r, s, "Sideways acceleration", m0.ayG, "%+.2f g");
             add(r, s, "Vertical acceleration", m0.azG, "%+.2f g");
-            add(r, s, "Front wheel speed", m0.frontWheelKmh, "%.0f km/h");
-            add(r, s, "Rear wheel speed", m0.rearWheelKmh, "%.0f km/h");
+            add(r, s, "Rotation rate 1", m0.rate1, "%+.1f");
+            add(r, s, "Rotation rate 2", m0.rate2, "%+.1f");
+            add(r, s, "Rotation rate 3", m0.rate3, "%+.1f");
+        }
+        // the filtered wheel speeds the suspension unit reports: its own reading of what the wheels do
+        if (m0 != null && now - b.imuAt < LIVE_MS && (m0.frontWheelKmh == m0.frontWheelKmh || m0.rearWheelKmh == m0.rearWheelKmh)) {
+            String s = "Engine";
+            add(r, s, "Front wheel speed (filtered)", m0.frontWheelKmh, "%.0f km/h");
+            add(r, s, "Rear wheel speed (filtered)", m0.rearWheelKmh, "%.0f km/h");
+            if (m0.tcsLevelHigh >= 0 || m0.tcsLevelLow >= 0) {
+                r.add(new String[]{s, "Traction control level", m0.tcsLevelHigh + " / " + m0.tcsLevelLow});
+            }
+            if (m0.kqsDown >= 0 || m0.kqsUp >= 0) {
+                r.add(new String[]{s, "Quick shifter", "down " + m0.kqsDown + ", up " + m0.kqsUp});
+            }
+            if (m0.wheelieFlag > 0) r.add(new String[]{s, "Wheelie (suspension unit)", "yes"});
         }
         if (live && b.live.damping >= 0) {
-            r.add(new String[]{"Suspension", "Damping now", level(b.live.damping)});
+            BikeFrames.Telemetry t = b.live;
+            r.add(new String[]{"Suspension", "Damping now", level(t.damping)});
+            if (t.suspCalibration >= 0) {
+                r.add(new String[]{"Suspension", "Where the suspension stands",
+                        "calibration " + t.suspCalibration + ", status " + t.suspStatus
+                                + ", control unit " + t.suspEcu});
+            }
         }
         if (b.service != null) {
             java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);

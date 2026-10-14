@@ -271,9 +271,10 @@ public class BikeFramesTest {
         // torque block: 0x01F4 (500 × 0.2 = 100), 0x0064 (20), 0x4032 (the 0x40 bits are masked: 0x32 × 0.2 = 10)
         put(v, 25, 0x05, 0x17, 0x01, 0xF4, 0x00, 0x64, 0x40, 0x32);
         put(v, 35, 0x05, 0x18, 0x03, 0x22, 0x80, 0x11, 0x33);
-        put(v, 45, 0x05, 0x19, 0xA5, 0x01);
-        put(v, 75, 0x05, 0x1C, 0x07, 0x05);
-        put(v, 85, 0x05, 0x1D, 0x03, 0x78);
+        // every field gets a value of its own, so a swapped mask or bit cannot pass unnoticed
+        put(v, 45, 0x05, 0x19, 0xA1, 0x01);
+        put(v, 75, 0x05, 0x1C, 0x07, 0x06);
+        put(v, 85, 0x05, 0x1D, 0x02, 0x78);
         BikeFrames.Telemetry t = telemetry(infoConfig(0x04, 0x05, 0x00), v);
         assertEquals(100, t.riderTorque);
         assertEquals(20, t.engineTorqueRequest);
@@ -281,15 +282,15 @@ public class BikeFramesTest {
         assertEquals(0x22, t.brakeFrontMaster);
         assertEquals(0x11, t.brakeRearMaster);
         assertEquals(0x33, t.brakeRearCaliper);
-        assertEquals(5, t.absTarget);   // 0xA5 = 101 00 101
-        assertEquals(5, t.absIndicator);
+        assertEquals(5, t.absTarget);   // 0xA1 = 101 0 0 001: target 5, indicator 1
+        assertEquals(1, t.absIndicator);
         assertEquals(1, t.absSwitching);
         assertEquals(7, t.damping);
-        assertEquals(1, t.suspCalibration);
-        assertEquals(0, t.suspStatus);
-        assertEquals(1, t.suspEcu);
-        assertEquals(1, t.cruiseOn);
-        assertEquals(1, t.cruiseMode);
+        assertEquals(1, t.suspCalibration); // 0x06 = 110: calibration 1, status 1, ECU 0
+        assertEquals(1, t.suspStatus);
+        assertEquals(0, t.suspEcu);
+        assertEquals(1, t.cruiseOn);        // 0x02: working, but mode 0
+        assertEquals(0, t.cruiseMode);
         assertEquals(120, t.cruiseKmh);
     }
 
@@ -345,8 +346,8 @@ public class BikeFramesTest {
         put(m, 35, 0x05, 0x04);
         put(m, 45, 0x05, 0x19);
         BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(m);
-        assertEquals(-1, i.tcsHigh);
-        assertEquals(-1, i.wheelie);
+        assertEquals(-1, i.tcsLevelHigh);
+        assertEquals(-1, i.wheelieFlag);
         assertTrue(Double.isNaN(i.frontWheelKmh));
     }
 
@@ -354,20 +355,21 @@ public class BikeFramesTest {
     public void imuMoreValues() {
         byte[] v = blank(0x4B, 53);
         put(v, 15, 0x05, 0x01, 0x00, 0x80);             // rate 1: 0x8000 → 0
-        put(v, 21, 0x00, 0x40);
+        put(v, 21, 0x00, 0x40);                        // ay: 0x4000 (hi in byte 22) → -2.09 g
         put(v, 25, 0x05, 0x02, 0x00, 0xC0);            // rate 2: 0xC000 → +81.92
-        put(v, 45, 0x05, 0x03, 0x0A, 0x00, 0x14, 0x00, 0xA7, 0x01); // 25 km/h, 50 km/h, b51 101 001 1 1
+        put(v, 45, 0x05, 0x03, 0x0A, 0x00, 0x14, 0x00, 0xA6, 0x01); // 31.3 km/h, 62.5 km/h, flags below
         BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(v);
         assertEquals(0.0, i.rate1, 1e-9);
         assertEquals(81.92, i.rate2, 1e-9);
         assertTrue(Double.isNaN(i.rate3));
+        assertEquals(-2.0884, i.ayG, 1e-3);            // 0x4000 × 4.1768 / 32768 − 4.1768
         assertEquals(0x0A00 * 400.0 / 32768.0, i.frontWheelKmh, 1e-9);
         assertEquals(0x1400 * 400.0 / 32768.0, i.rearWheelKmh, 1e-9);
-        assertEquals(5, i.tcsHigh);
-        assertEquals(1, i.tcsLow);
+        assertEquals(5, i.tcsLevelHigh);               // 0xA6 = 101 001 1 0
+        assertEquals(1, i.tcsLevelLow);
         assertEquals(1, i.kqsDown);
-        assertEquals(1, i.kqsUp);
-        assertEquals(1, i.wheelie);
+        assertEquals(0, i.kqsUp);
+        assertEquals(1, i.wheelieFlag);
     }
 
     @Test
@@ -375,8 +377,46 @@ public class BikeFramesTest {
         BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(hx(Z500_4B));
         assertTrue(Double.isNaN(i.rate1));
         assertTrue(Double.isNaN(i.frontWheelKmh));
-        assertEquals(-1, i.tcsHigh);
-        assertEquals(-1, i.wheelie);
+        assertEquals(-1, i.tcsLevelHigh);
+        assertEquals(-1, i.wheelieFlag);
+    }
+
+    @Test
+    public void theLastBlockOf0x4BNeedsBothHeaderBytesToBeAbsent() {
+        // 45 = 05, 46 = FF: Rideology still reads the block (only both FF means "not there")
+        byte[] v = blank(0x4B, 53);
+        put(v, 45, 0x05, 0xFF, 0x0A, 0x00, 0x14, 0x00, 0xA6, 0x01);
+        BikeFrames.ImuSusp one = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(v);
+        assertEquals(31.25, one.frontWheelKmh, 1e-9);
+        assertEquals(5, one.tcsLevelHigh);
+        byte[] both = blank(0x4B, 53);
+        put(both, 45, 0xFF, 0xFF);
+        BikeFrames.ImuSusp none = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(both);
+        assertTrue(Double.isNaN(none.frontWheelKmh));
+        assertEquals(-1, none.tcsLevelHigh);
+    }
+
+    @Test
+    public void wheelieAngleIsReadFromBothBytes() {
+        // byte 22 is the high byte: 0x01CD = 461 × 0.09765625 (nibble 0)
+        byte[] v = blank(0x4A, 93);
+        put(v, 5, 0x05, 0x15);
+        put(v, 15, 0x05, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xCD, 0x00);
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x00, 0x00, 0x00), v);
+        assertEquals(0x1CD * 0.09765625, t.wheelieDeg, 1e-9); // 45.02°
+    }
+
+    @Test
+    public void aFrameCutInsideABlockHasNoValues() {
+        // 33 bytes: the block-25 header is there, the bytes the torque needs are not
+        byte[] v = blank(0x4A, 33);
+        put(v, 5, 0x05, 0x15);
+        put(v, 25, 0x05, 0x17);
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x00, 0x00, 0x00), v);
+        assertEquals(-1, t.riderTorque);   // not 0.2 × a byte read as -1
+        assertEquals(-1, t.riderTorque == -1 ? -1 : 0);
+        assertEquals(-1, t.abs);
+        assertEquals(-1, t.damping);
     }
 
     @Test

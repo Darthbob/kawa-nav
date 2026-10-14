@@ -82,6 +82,8 @@ public final class Hub {
     public static BridgeService.PendingSettings settingsWritePending;
     /** Warnings the bike's values show right now (tyres, ABS, battery), see {@link BikeAlerts}. */
     public static java.util.List<BikeAlerts.Alert> bikeAlerts = java.util.Collections.emptyList();
+    /** Maintenance entries: work the dash cannot know about, see {@link MaintenanceLog}. */
+    public static java.util.List<MaintenanceLog.Entry> maintenanceEntries = java.util.Collections.emptyList();
     /** The 12 V readings at rest, oldest first, see {@link BatteryLog}. */
     public static java.util.List<BatteryLog.Reading> batteryReadings = java.util.Collections.emptyList();
     /** Refuels: detected at the pump by the bridge, added or corrected on the fuel screen. */

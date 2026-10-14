@@ -115,6 +115,25 @@ public final class BikeData {
                     t.gear < 0 ? "–" : String.valueOf(t.gear), t.throttlePct,
                     t.leanDeg, t.accelG, num(t.fuelInjection), t.tcsHigh, t.tcsLow,
                     t.abs < 0 ? "–" : String.format(Locale.ROOT, "%02X", t.abs), t.brakeFrontBar));
+            // the values added in 0.7: the newest raw frame next to the numbers, to compare with the dash
+            sb.append(String.format(Locale.ROOT,
+                    "Live more: torque %d asked, %d requested, %d given; brakes %d/%d master, %d caliper; "
+                            + "ABS target %d indicator %d switching %d; damping %d (cal %d, status %d, ECU %d); "
+                            + "cruise %d mode %d at %d km/h; wheelie angle %s\n",
+                    t.riderTorque, t.engineTorqueRequest, t.engineTorque,
+                    t.brakeFrontMaster, t.brakeRearMaster, t.brakeRearCaliper,
+                    t.absTarget, t.absIndicator, t.absSwitching,
+                    t.damping, t.suspCalibration, t.suspStatus, t.suspEcu,
+                    t.cruiseOn, t.cruiseMode, t.cruiseKmh, num(t.wheelieDeg)));
+        }
+        if (imu != null) {
+            BikeFrames.ImuSusp m = imu;
+            sb.append(String.format(Locale.ROOT,
+                    "Suspension (%s ago): stroke %.1f/%.1f mm, speed %.2f/%.2f; ax %.2f ay %.2f az %.2f g; "
+                            + "rates %.1f/%.1f/%.1f; wheels %.1f/%.1f km/h; TCS %d/%d, KQS %d/%d, wheelie %d\n",
+                    ago(imuAt, now), m.frontStrokeMm, m.rearStrokeMm, m.frontStrokeSpeed, m.rearStrokeSpeed,
+                    m.axG, m.ayG, m.azG, m.rate1, m.rate2, m.rate3, m.frontWheelKmh, m.rearWheelKmh,
+                    m.tcsLevelHigh, m.tcsLevelLow, m.kqsDown, m.kqsUp, m.wheelieFlag));
         }
         if (info != null) {
             BikeFrames.VehicleInfo i = info;

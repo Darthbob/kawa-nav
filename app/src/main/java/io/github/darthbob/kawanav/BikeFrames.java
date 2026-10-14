@@ -297,6 +297,15 @@ public final class BikeFrames {
         return cfg == null || cfg.supported(f);
     }
 
+    /**
+     * The bike has the value and its 0x40 nibble is exactly 0: Rideology's gate for the wheelie flag and
+     * the two TCS nibbles, which it reads only in that mode. An unknown config shows the value, as
+     * {@link #has} does.
+     */
+    static boolean present0(InfoConfig cfg, Flag f) {
+        return cfg == null || cfg.flag(f) == 0;
+    }
+
     /** The config is known and its flag is exactly 0 (the strict reading Rideology uses for these). */
     static boolean zero(InfoConfig cfg, Flag f) {
         return cfg != null && cfg.flag(f) == 0;
@@ -533,14 +542,16 @@ public final class BikeFrames {
                     : Double.NaN;
             int wheelieBits = blk2 && v.length > 21 ? u8(v, 21) : 0xFF;
             // a flag has two states: the "value" 3 is an all-ones byte, not a wheelie
-            wheelie = wheelieBits != 0xFF && (wheelieBits & 0x03) != 0x03 && has(c, InfoConfig.WHEELIE)
+            wheelie = wheelieBits != 0xFF && (wheelieBits & 0x03) != 0x03 && present0(c, InfoConfig.WHEELIE)
                     ? wheelieBits & 0x03 : -1;
             int whMode = mode(c, InfoConfig.WHEELIE_ANGLE);
+            // the mask follows the nibble, as in Rideology (0x07 in mode 0, 0x0F in mode 1)
             wheelieDeg = blk2 && whMode >= 0 && (u8(v, 22) != 0xFF || u8(v, 23) != 0xFF)
-                    ? (((u8(v, 22) & 0x07) << 8) | u8(v, 23)) * (whMode == 1 ? 0.1 : 0.09765625) : Double.NaN;
+                    ? (((u8(v, 22) & (whMode == 1 ? 0x0F : 0x07)) << 8) | u8(v, 23))
+                    * (whMode == 1 ? 0.1 : 0.09765625) : Double.NaN;
             int tcsByte = blk2 && v.length > 24 ? u8(v, 24) : 0xFF;
-            tcsHigh = tcsByte != 0xFF && has(c, InfoConfig.TCS_HB) ? (tcsByte & 0xF0) >> 4 : -1;
-            tcsLow = tcsByte != 0xFF && has(c, InfoConfig.TCS_LB) ? tcsByte & 0x0F : -1;
+            tcsHigh = tcsByte != 0xFF && present0(c, InfoConfig.TCS_HB) ? (tcsByte & 0xF0) >> 4 : -1;
+            tcsLow = tcsByte != 0xFF && present0(c, InfoConfig.TCS_LB) ? tcsByte & 0x0F : -1;
             boolean absPresent = v.length > 37 && blockOk(v, 35);
             // an all-ones byte is "no value", not a fault: the error bits are 0x0C
             abs = absPresent && u8(v, 37) != 0xFF ? u8(v, 37) : -1;
@@ -604,8 +615,12 @@ public final class BikeFrames {
         public final double rate1, rate2, rate3;
         /** Filtered front and rear wheel speed, km/h, NaN when absent. */
         public final double frontWheelKmh, rearWheelKmh;
-        /** Traction control levels (byte 51 bits 7-5, 4-2), quick shifter down/up (bits 1, 0), wheelie (52 bit 0); -1 absent. */
-        public final int tcsHigh, tcsLow, kqsDown, kqsUp, wheelie;
+        /**
+         * Traction control levels as 0x4B byte 51 keeps them (bits 7-5 and 4-2; {@link Telemetry#tcsHigh}
+         * is the 0x4A nibble and a different reading), quick shifter down/up (bits 1, 0) and the wheelie
+         * flag of byte 52; -1 when absent.
+         */
+        public final int tcsLevelHigh, tcsLevelLow, kqsDown, kqsUp, wheelieFlag;
 
         ImuSusp(byte[] v) {
             super(v);
@@ -627,11 +642,11 @@ public final class BikeFrames {
             rearWheelKmh = wheels && v.length > 50 && (u8(v, 49) != 0xFF || u8(v, 50) != 0xFF)
                     ? be16(v, 49) * 400.0 / 32768.0 : Double.NaN;
             int flags = blk5 && v.length > 51 ? u8(v, 51) : 0xFF;
-            tcsHigh = flags != 0xFF ? (flags & 0xE0) >> 5 : -1;
-            tcsLow = flags != 0xFF ? (flags & 0x1C) >> 2 : -1;
+            tcsLevelHigh = flags != 0xFF ? (flags & 0xE0) >> 5 : -1;
+            tcsLevelLow = flags != 0xFF ? (flags & 0x1C) >> 2 : -1;
             kqsDown = flags != 0xFF ? (flags & 0x02) >> 1 : -1;
             kqsUp = flags != 0xFF ? flags & 0x01 : -1;
-            wheelie = blk5 && v.length > 52 && u8(v, 52) != 0xFF ? u8(v, 52) & 0x01 : -1;
+            wheelieFlag = blk5 && v.length > 52 && u8(v, 52) != 0xFF ? u8(v, 52) & 0x01 : -1;
         }
 
         /** Centered rotation rate (hi byte after lo byte), span 163.84. */
