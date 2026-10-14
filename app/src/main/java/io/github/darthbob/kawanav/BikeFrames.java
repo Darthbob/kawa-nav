@@ -481,6 +481,19 @@ public final class BikeFrames {
         /** The other reading of the same bytes, for comparing with the dash (debug card). */
         public final double speedKmhAlt;
         public final int rpmAlt;
+        /**
+         * Torque the rider asks for, the engine control asks for, and the engine gives (bytes 27-32), in
+         * the bike's own unit (Rideology does not name one), -1 when absent.
+         */
+        public final int riderTorque, engineTorqueRequest, engineTorque;
+        /** Raw brake pressures (bytes 38, 40, 41; Rideology keeps them unscaled), -1 when absent. */
+        public final int brakeFrontMaster, brakeRearMaster, brakeRearCaliper;
+        /** ABS target (byte 47 bits 7-5), ABS indicator (bits 2-0), switching info (byte 48 bit 0), -1 absent. */
+        public final int absTarget, absIndicator, absSwitching;
+        /** Electronic suspension: damping value (byte 77) and status bits (byte 78), -1 when absent. */
+        public final int damping, suspCalibration, suspStatus, suspEcu;
+        /** Cruise control: working (byte 87 bit 1), mode (bit 0), set speed (byte 88, km/h), -1 when absent. */
+        public final int cruiseOn, cruiseMode, cruiseKmh;
 
         Telemetry(byte[] v, InfoConfig c) {
             super(v);
@@ -520,6 +533,33 @@ public final class BikeFrames {
             boolean absPresent = v.length > 37 && blockOk(v, 35);
             abs = absPresent ? u8(v, 37) : -1;
             brakeFrontBar = absPresent && v.length > 39 && u8(v, 39) != 0xFF ? u8(v, 39) * 0.1953125 : Double.NaN;
+            brakeFrontMaster = absPresent && v.length > 38 ? u8(v, 38) : -1;
+            brakeRearMaster = absPresent && v.length > 40 ? u8(v, 40) : -1;
+            brakeRearCaliper = absPresent && v.length > 41 ? u8(v, 41) : -1;
+            // torque: 0x40 nibble 0 = 14 bits × 0.2, 1 = 12 bits raw (qe/b.java)
+            boolean blk3 = v.length > 32 && blockOk(v, 25);
+            riderTorque = torque(v, 27, blk3, mode(c, InfoConfig.RIDER_TORQUE));
+            engineTorqueRequest = torque(v, 29, blk3, mode(c, InfoConfig.ENGINE_TORQUE_REQUEST));
+            engineTorque = torque(v, 31, blk3, mode(c, InfoConfig.ENGINE_TORQUE));
+            boolean blk5 = v.length > 48 && blockOk(v, 45);
+            absTarget = blk5 ? (u8(v, 47) & 0xE0) >> 5 : -1;
+            absIndicator = blk5 ? u8(v, 47) & 0x07 : -1;
+            absSwitching = blk5 ? u8(v, 48) & 0x01 : -1;
+            boolean blk8 = v.length > 78 && blockOk(v, 75);
+            damping = blk8 ? u8(v, 77) : -1;
+            suspCalibration = blk8 ? (u8(v, 78) & 0x04) >> 2 : -1;
+            suspStatus = blk8 ? (u8(v, 78) & 0x02) >> 1 : -1;
+            suspEcu = blk8 ? u8(v, 78) & 0x01 : -1;
+            boolean blk9 = v.length > 87 && blockOk(v, 85);
+            cruiseOn = blk9 ? (u8(v, 87) & 0x02) >> 1 : -1;
+            cruiseMode = blk9 ? u8(v, 87) & 0x01 : -1;
+            cruiseKmh = blk9 && v.length > 88 ? u8(v, 88) : -1;
+        }
+
+        private static int torque(byte[] v, int i, boolean block, int mode) {
+            if (!block || mode < 0) return -1;
+            return mode == 1 ? ((u8(v, i) & 0x0F) << 8) | u8(v, i + 1)
+                    : (int) ((((u8(v, i) & 0x3F) << 8) | u8(v, i + 1)) * 0.2);
         }
 
         /** The block at {@code offset} has a header (marker and id not FF). */
@@ -538,6 +578,15 @@ public final class BikeFrames {
     public static final class ImuSusp extends Frame {
         public final double rearStrokeMm, frontStrokeMm, rearStrokeSpeed, frontStrokeSpeed;
         public final double axG, ayG, azG;
+        /**
+         * The three rotation rates next to the axes (Rideology's "psi p1", "p3", "p2" in this order, ±163.84; which is roll,
+         * pitch or yaw is not known yet), NaN when absent.
+         */
+        public final double rate1, rate2, rate3;
+        /** Filtered front and rear wheel speed, km/h, NaN when absent. */
+        public final double frontWheelKmh, rearWheelKmh;
+        /** Traction control levels (byte 51 bits 7-5, 4-2), quick shifter down/up (bits 1, 0), wheelie (52 bit 0); -1 absent. */
+        public final int tcsHigh, tcsLow, kqsDown, kqsUp, wheelie;
 
         ImuSusp(byte[] v) {
             super(v);
@@ -549,6 +598,26 @@ public final class BikeFrames {
             ayG = axis(v, 15, 16, 22, 21);
             axG = axis(v, 25, 26, 32, 31);
             azG = axis(v, 35, 36, 42, 41);
+            rate1 = rate(v, 15, 16, 18, 17);
+            rate2 = rate(v, 25, 26, 28, 27);
+            rate3 = rate(v, 35, 36, 38, 37);
+            // block 45: Rideology treats it as absent only when both header bytes are FF (qe/a.java)
+            boolean blk5 = v.length > 46 && !(u8(v, 45) == 0xFF && u8(v, 46) == 0xFF);
+            frontWheelKmh = blk5 && v.length > 48 ? be16(v, 47) * 400.0 / 32768.0 : Double.NaN;
+            rearWheelKmh = blk5 && v.length > 50 ? be16(v, 49) * 400.0 / 32768.0 : Double.NaN;
+            boolean b51 = blk5 && v.length > 51;
+            tcsHigh = b51 ? (u8(v, 51) & 0xE0) >> 5 : -1;
+            tcsLow = b51 ? (u8(v, 51) & 0x1C) >> 2 : -1;
+            kqsDown = b51 ? (u8(v, 51) & 0x02) >> 1 : -1;
+            kqsUp = b51 ? u8(v, 51) & 0x01 : -1;
+            wheelie = blk5 && v.length > 52 ? u8(v, 52) & 0x01 : -1;
+        }
+
+        /** Centered rotation rate (hi byte after lo byte), span 163.84. */
+        private static double rate(byte[] v, int a, int b, int hi, int lo) {
+            if (!present(v, a, b, Math.max(hi, lo))) return Double.NaN;
+            int x = u8(v, hi) << 8 | u8(v, lo);
+            return x == 0 ? Double.NaN : x * 163.84 / 32768.0 - 163.84;
         }
 
         private static boolean present(byte[] v, int a, int b, int last) {

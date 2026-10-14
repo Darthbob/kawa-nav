@@ -100,16 +100,37 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 | lean | `(((u8(19)&7)<<8) \| u8(20)) × 0.1953125 − 100`° (11-bit) | `… × 0.1`° (12-bit) |
 | fuel injection | `u16(7,8) × 1e-4` | `… × 100/140` |
 | wheelie angle | `(((u8(22)&7)<<8) \| u8(23)) × 0.09765625` | `… × 0.1` |
-| rider/engine torque | `× 0.2` over mask `0x3F` | raw over `0x0F` |
+| rider torque request (27-28), engine torque request (29-30), engine torque (31-32) | `(((hi&0x3F)<<8) \| lo) × 0.2` | `((hi&0x0F)<<8) \| lo` |
 
-- TCS high/low nibbles at byte 24, ABS status byte 37 and front brake pressure byte 39 (mask `0x0F` /
-  guarded by FF) as KawaNav decodes them. (verified for the layout, not for the brake scaling)
+- TCS high/low nibbles at byte 24. (verified)
+- Block 35 (absent when byte 35 or 36 is FF): byte 37 ABS bits (0x10 inspection mode, 0x0C system error,
+  0x01 front / 0x02 rear acting); byte 38 front master pressure, 39 front caliper (`× 0.1953125`, FF =
+  absent), 40 rear master, 41 rear caliper — the masters and the rear caliper are kept raw by Rideology.
+  (verified for the layout, not for any brake scaling)
+- Block 45: byte 47 ABS target (bits 7-5) and ABS indicator (bits 2-0), byte 48 bit 0 switching info.
+- Block 75: byte 77 damping value; byte 78 bit 2 suspension calibration, bit 1 suspension status, bit 0
+  suspension ECU status.
+- Block 85 (frame longer than 87 bytes): byte 87 bit 1 cruise control working, bit 0 cruise mode; byte 88
+  set speed. (layout verified in `qe/b.java:153-174`; no capture from a bike that has these yet)
 - KawaNav `BikeFrames.Telemetry` selects the mode **from the 0x40 nibble, per value**, like the app.
 
 ### 0x4B – suspension / IMU (`Ble5Value.r`)
 
-Streamed, 45 bytes: suspension strokes and stroke speeds, IMU axes, filtered wheel speeds, TCS levels,
-KQS flags, wheelie flag (`qe/a.java:384-433`). All `FF` on bikes without them (Z500, Z900?). (verified)
+Streamed, 45 bytes on the Z500 (longer on bikes with the extra block): suspension strokes and stroke
+speeds, IMU axes, filtered wheel speeds, TCS levels, KQS flags, wheelie flag (`qe/a.java:384-433`).
+All `FF` on bikes without them (Z500, Z900?). (verified)
+
+| Bytes | Value |
+|---|---|
+| 7-8, 9-10 | rear / front stroke, `u16 × 0.015625` mm (block 5) |
+| 11-12, 13-14 | rear / front stroke speed, `u16 × 0.001` |
+| 17-18, 27-28, 37-38 | rotation rates "psi p1/p3/p2", little-endian, `x × 163.84/32768 − 163.84`, 0 = absent |
+| 21-22, 31-32, 41-42 | accelerations ay / ax / az, little-endian, `x × 4.1768/32768 − 4.1768` g, 0 = absent |
+| 47-48, 49-50 | filtered front / rear wheel speed, `u16 × 400/32768` km/h |
+| 51 | TCS high (bits 7-5), TCS low (4-2), KQS down (1), KQS up (0) |
+| 52 | wheelie flag (bit 0) |
+
+Block 45 counts as absent only when **both** bytes 45 and 46 are FF (the other blocks: either one).
 
 ### Units
 
@@ -118,9 +139,11 @@ degrees, temperatures in °C. (verified)
 
 ## Riding log stream: is there a start/stop?
 
-- The app sends **no start and no stop frame** for a ride log: recording is local, and the record button
-  only updates the app state and the RIDELOG icon in the 0x13 frame (`de/q.java:37-133`,
-  `MyApplication.java:335-340`). (verified)
+- There is **no dedicated start or stop frame** for a ride log: recording is local, and the record button
+  updates the app state and the RIDELOG icon in the 0x13 frame (`de/q.java:37-133`,
+  `MyApplication.java:335-340`). (verified) Starting a recording does raise `START_R_LOG_MANUAL`
+  (`u6/fa.java:141`), which asks the meter for 0x45 again with the same `45 00 00` request used at
+  connect (`ne/c.java:89-94`): KawaNav sends it when a recording starts and no 0x45 has arrived.
 - The stream (0x45/0x4A/0x4B) therefore flows while the link is up; the meter does the timing.
   (verified that no trigger frame exists; the meter's own behaviour still needs a capture)
 - **0x08** is a connect-handshake frame, sent once per connection (`ne/c.java:216`,
@@ -188,7 +211,9 @@ degrees, temperatures in °C. (verified)
 
 ## Meter general settings: clock and shift lamp (0x1B)
 
-- READ `1B 0C 00 FF FF 05 0A 00` → answer byte 7 result, byte 8 shift lamp
+- READ: Rideology builds `1B 0C 00 FF FF 05 0A 00 …` and then **fills the whole array with FF**
+  (`ne/c.java:237-238`), so what it actually sends is 15 bytes of `FF`; KawaNav sends the frame as built.
+  Which of the two the meter answers needs a capture. Answer: byte 7 result, byte 8 shift lamp
   (`status = bits 7-6`, `level = bits 5-0`, level 1..61 → rpm `(level−1)×250 + 3000`), bytes 9-14
   day, month, year−2000, hour, minute, second. (verified)
 - WRITE `1B 0C 00 FF FF 05 4A 01 <byte8> <day> <month> <year−2000> <hour> <min> <sec>` — the block id

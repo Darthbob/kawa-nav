@@ -264,6 +264,86 @@ public class BikeFramesTest {
     }
 
     @Test
+    public void telemetryMoreValues() {
+        byte[] v = blank(0x4A, 90);
+        System.arraycopy(telemetryFrame(), 0, v, 0, 55);
+        // torque block: 0x01F4 (500 × 0.2 = 100), 0x0064 (20), 0x4032 (the 0x40 bits are masked: 0x32 × 0.2 = 10)
+        put(v, 25, 0x05, 0x17, 0x01, 0xF4, 0x00, 0x64, 0x40, 0x32);
+        put(v, 35, 0x05, 0x18, 0x03, 0x22, 0x80, 0x11, 0x33);
+        put(v, 45, 0x05, 0x19, 0xA5, 0x01);
+        put(v, 75, 0x05, 0x1C, 0x07, 0x05);
+        put(v, 85, 0x05, 0x1D, 0x03, 0x78);
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x04, 0x05, 0x00), v);
+        assertEquals(100, t.riderTorque);
+        assertEquals(20, t.engineTorqueRequest);
+        assertEquals(10, t.engineTorque);
+        assertEquals(0x22, t.brakeFrontMaster);
+        assertEquals(0x11, t.brakeRearMaster);
+        assertEquals(0x33, t.brakeRearCaliper);
+        assertEquals(5, t.absTarget);   // 0xA5 = 101 00 101
+        assertEquals(5, t.absIndicator);
+        assertEquals(1, t.absSwitching);
+        assertEquals(7, t.damping);
+        assertEquals(1, t.suspCalibration);
+        assertEquals(0, t.suspStatus);
+        assertEquals(1, t.suspEcu);
+        assertEquals(1, t.cruiseOn);
+        assertEquals(1, t.cruiseMode);
+        assertEquals(120, t.cruiseKmh);
+    }
+
+    @Test
+    public void telemetryTorqueRawNibbleAndAbsentBlocks() {
+        byte[] cfg = infoConfig(0x04, 0x05, 0x00);
+        put(cfg, 12, 0x15); // rider torque 1 (raw), engine request 1, engine torque 1
+        byte[] v = blank(0x4A, 90);
+        System.arraycopy(telemetryFrame(), 0, v, 0, 55);
+        put(v, 25, 0x05, 0x17, 0xF1, 0x23, 0x00, 0x10, 0x00, 0x00);
+        BikeFrames.Telemetry t = telemetry(cfg, v);
+        assertEquals(0x123, t.riderTorque); // 12 bits: the high nibble is not part of it
+        assertEquals(0x10, t.engineTorqueRequest);
+        assertEquals(0, t.engineTorque);
+        // blocks 45, 75 and 85 are FF: their values are absent, not 7 or 255
+        assertEquals(-1, t.absTarget);
+        assertEquals(-1, t.damping);
+        assertEquals(-1, t.cruiseOn);
+        assertEquals(-1, t.cruiseKmh);
+        // a short frame (the Z500 sends 55 bytes) has none of them
+        BikeFrames.Telemetry s = telemetry(cfg, telemetryFrame());
+        assertEquals(-1, s.riderTorque);
+        assertEquals(-1, s.cruiseOn);
+    }
+
+    @Test
+    public void imuMoreValues() {
+        byte[] v = blank(0x4B, 53);
+        put(v, 15, 0x05, 0x01, 0x00, 0x80);             // rate 1: 0x8000 → 0
+        put(v, 21, 0x00, 0x40);
+        put(v, 25, 0x05, 0x02, 0x00, 0xC0);            // rate 2: 0xC000 → +81.92
+        put(v, 45, 0x05, 0x03, 0x0A, 0x00, 0x14, 0x00, 0xA7, 0x01); // 25 km/h, 50 km/h, b51 101 001 1 1
+        BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(v);
+        assertEquals(0.0, i.rate1, 1e-9);
+        assertEquals(81.92, i.rate2, 1e-9);
+        assertTrue(Double.isNaN(i.rate3));
+        assertEquals(0x0A00 * 400.0 / 32768.0, i.frontWheelKmh, 1e-9);
+        assertEquals(0x1400 * 400.0 / 32768.0, i.rearWheelKmh, 1e-9);
+        assertEquals(5, i.tcsHigh);
+        assertEquals(1, i.tcsLow);
+        assertEquals(1, i.kqsDown);
+        assertEquals(1, i.kqsUp);
+        assertEquals(1, i.wheelie);
+    }
+
+    @Test
+    public void imuMoreValuesAbsent() {
+        BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(hx(Z500_4B));
+        assertTrue(Double.isNaN(i.rate1));
+        assertTrue(Double.isNaN(i.frontWheelKmh));
+        assertEquals(-1, i.tcsHigh);
+        assertEquals(-1, i.wheelie);
+    }
+
+    @Test
     public void telemetryZ500SampleConfig() {
         // the Z500 sample config: speed nibble 1 (raw 9 bit), rpm nibble 0, throttle nibble 1, no lean
         BikeFrames.Decoder d = new BikeFrames.Decoder();

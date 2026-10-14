@@ -553,6 +553,13 @@ public class BikeActivity extends KawaActivity {
                     r.add(new String[]{s, "Wheelie", Double.isNaN(t.wheelieDeg) ? "yes"
                             : String.format(Locale.ROOT, "yes, %.0f°", t.wheelieDeg)});
                 }
+                if (t.cruiseOn >= 0) {
+                    r.add(new String[]{s, "Cruise control", t.cruiseOn == 1
+                            ? (t.cruiseKmh > 0 ? "on, " + t.cruiseKmh + " km/h" : "on") : "off"});
+                }
+                // torque in the bike's own unit: the numbers compare with each other, not with a spec sheet
+                if (t.riderTorque >= 0) r.add(new String[]{s, "Torque asked by the throttle", t.riderTorque + " (bike units)"});
+                if (t.engineTorque >= 0) r.add(new String[]{s, "Torque from the engine", t.engineTorque + " (bike units)"});
             }
             if (ext) {
                 add(r, s, "Fuel use now", b.ext.fuelRate, "%.2f (dash units)");
@@ -573,6 +580,11 @@ public class BikeActivity extends KawaActivity {
             add(r, s, "Forward acceleration", m0.axG, "%+.2f g");
             add(r, s, "Sideways acceleration", m0.ayG, "%+.2f g");
             add(r, s, "Vertical acceleration", m0.azG, "%+.2f g");
+            add(r, s, "Front wheel speed", m0.frontWheelKmh, "%.0f km/h");
+            add(r, s, "Rear wheel speed", m0.rearWheelKmh, "%.0f km/h");
+        }
+        if (live && b.live.damping >= 0) {
+            r.add(new String[]{"Suspension", "Damping now", level(b.live.damping)});
         }
         if (b.service != null) {
             java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
