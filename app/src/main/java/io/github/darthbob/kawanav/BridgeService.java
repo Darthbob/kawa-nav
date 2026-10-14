@@ -682,6 +682,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.Output out = decide();
         Hub.output = out;
         if (out != null && out.cameraId >= 0) cameraAlert(out);
+        else cameraGone();
         // log every change of what the meter shows (also without bike)
         String key = out == null ? "nothing" : out.source + ":" + out.turn;
         if (!key.equals(lastShownKey)) {
@@ -916,10 +917,15 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 a.camera.id, Hazards.describe(a.camera, a.distanceM));
     }
 
-    /** One notification per camera (a short sound; the phone is usually in a pocket). */
+    /**
+     * One notification per camera: the rider hears it once, on the way to it. Standing still in front of
+     * a camera does not repeat it — the alert is armed again only once the camera is no longer the one
+     * ahead (it was passed, or the rider turned away). A minimum spacing damps a heading that flaps.
+     */
     private void cameraAlert(Hub.Output out) {
         long now = System.currentTimeMillis();
-        if (out.cameraId == lastCameraId && now - lastCameraAt < CAMERA_ALERT_AGAIN_MS) return;
+        if (out.cameraId == lastCameraId) return;
+        if (now - lastCameraAt < CAMERA_ALERT_MIN_GAP_MS) return;
         lastCameraId = out.cameraId;
         lastCameraAt = now;
         Logger.log("Camera: " + out.alert);
@@ -936,9 +942,14 @@ public class BridgeService extends Service implements KawaBle.Listener {
         getSystemService(NotificationManager.class).notify(CAMERA_NOTIFICATION_ID, n);
     }
 
+    /** The camera no longer ahead: the next one is announced again. */
+    private void cameraGone() {
+        lastCameraId = -1;
+    }
+
     private long lastCameraId = -1;
     private long lastCameraAt;
-    private static final long CAMERA_ALERT_AGAIN_MS = 120_000;
+    private static final long CAMERA_ALERT_MIN_GAP_MS = 20_000;
 
     private boolean hasLocationPermission() {
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;

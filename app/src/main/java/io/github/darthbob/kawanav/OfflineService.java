@@ -130,6 +130,8 @@ public class OfflineService extends Service {
         HazardStore hazardStore = new HazardStore(this);
         Set<String> tiles = new HashSet<>();
         store.record(tiles);
+        Set<String> hazardTiles = new HashSet<>();
+        hazardStore.record(hazardTiles);
         int[] res;
         int cameras = 0;
         PbfImporter.Polygon polygon = PbfImporter.Polygon.read(poly);
@@ -159,7 +161,7 @@ public class OfflineService extends Service {
             cameras = hz[0];
         }
         OfflineRegions regions = new OfflineRegions(this, store, hazardStore);
-        regions.save(id, r.label(), r.pbfUrl, dataDate, tiles, !cancel);
+        regions.save(id, r.label(), r.pbfUrl, dataDate, tiles, !cancel, hazardTiles);
         String msg = String.format(Locale.ROOT,
                 "Done: %s, %d roads in %d tiles (+%d border tiles), %d speed cameras · %.1f MB · %d s",
                 label, res[0], res[1], res[2], cameras, regions.bytes(tiles) / 1e6, (System.currentTimeMillis() - t1) / 1000);

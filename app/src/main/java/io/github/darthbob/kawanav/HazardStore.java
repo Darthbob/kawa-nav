@@ -27,6 +27,8 @@ import java.util.zip.GZIPOutputStream;
 public final class HazardStore {
 
     private final File dir;
+    /** Keys ("ty_tx") of the tiles written while recording, see {@link #record}. */
+    private java.util.Set<String> recorded;
 
     /** For desktop tests of the importer. */
     HazardStore(File dir) {
@@ -48,6 +50,11 @@ public final class HazardStore {
 
     public boolean has(int ty, int tx) {
         return file(ty, tx).exists();
+    }
+
+    /** Key of a tile, like the road store uses: "ty_tx". */
+    public static String key(int ty, int tx) {
+        return ty + "_" + tx;
     }
 
     /** Complete or partial (region border) camera data is stored. */
@@ -103,6 +110,23 @@ public final class HazardStore {
             throw new Exception("cannot store hazard tile " + target.getName());
         }
         if (!partial) partFile(ty, tx).delete();
+        if (recorded != null) recorded.add(key(ty, tx));
+    }
+
+    /** From now on, adds the key of every tile written to {@code into} (null: stop). */
+    public void record(java.util.Set<String> into) {
+        recorded = into;
+    }
+
+    /** Keys of every stored camera tile, complete or partial. */
+    public java.util.Set<String> keys() {
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        String[] names = dir.list();
+        if (names == null) return keys;
+        for (String n : names) {
+            if (n.endsWith(".tsv.gz")) keys.add(n.substring(0, n.indexOf('.')));
+        }
+        return keys;
     }
 
     /** Adds cameras to the partial data of a border tile (e.g. the neighbour region's half). */

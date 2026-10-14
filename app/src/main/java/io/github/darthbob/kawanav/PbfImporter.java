@@ -607,14 +607,17 @@ public final class PbfImporter {
      * Every node of the block has its entry, also the ones without any tag.
      */
     private void denseTags(Block bl, Pb kp, long id, int lat7, int lon7) {
-        int[] keys = new int[8], vals = new int[8];
+        int[] keys = null, vals = null;            // most nodes have no tag: nothing to allocate for them
         int n = 0;
         while (kp.more()) {
             long k = kp.varint();
             if (k == 0) break;                      // next node
             if (!kp.more()) break;
             long v = kp.varint();
-            if (n == keys.length) {
+            if (keys == null) {
+                keys = new int[8];
+                vals = new int[8];
+            } else if (n == keys.length) {
                 keys = Arrays.copyOf(keys, n * 2);
                 vals = Arrays.copyOf(vals, n * 2);
             }
@@ -622,7 +625,7 @@ public final class PbfImporter {
             vals[n] = (int) v;
             n++;
         }
-        cameraTags(bl, keys, vals, n, id, lat7, lon7);
+        if (keys != null) cameraTags(bl, keys, vals, n, id, lat7, lon7);
     }
 
     /**

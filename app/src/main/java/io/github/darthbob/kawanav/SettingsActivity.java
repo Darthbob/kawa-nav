@@ -641,7 +641,8 @@ public class SettingsActivity extends KawaActivity {
         java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
         for (OfflineRegions.Region r : list) {
             Long server = serverDates.get(r.id);
-            boolean update = server != null && server - r.dataDate >= OfflineRegions.UPDATE_AFTER_MS;
+            // a region from before the camera data is worth downloading again even without newer data
+            boolean update = (server != null && server - r.dataDate >= OfflineRegions.UPDATE_AFTER_MS) || !r.hazards;
             String state = server == null ? "Checking for newer data…"
                     : server == 0 ? "Could not check for newer data (offline?)"
                     : update ? "Newer data available from " + df.format(new java.util.Date(server))

@@ -52,9 +52,11 @@ public class HazardsTest {
     }
 
     @Test
-    public void aCameraBesideTheRoadIsNotWarnedAgain() {
-        // right next to the rider: already passed, warning off
-        assertNull(Hazards.next(Arrays.asList(at(0, 10)), LAT, LON, 0, 500));
+    public void aCameraAtTheRiderIsNotWarnedAgain() {
+        // right ahead but closer than PASSED_M: the rider is basically at it
+        assertNull(Hazards.next(Arrays.asList(at(10, 0)), LAT, LON, 0, 500));
+        assertNull(Hazards.next(Arrays.asList(at(19, 0)), LAT, LON, 0, 500));
+        assertNotNull(Hazards.next(Arrays.asList(at(21, 0)), LAT, LON, 0, 500));
     }
 
     @Test
@@ -97,8 +99,11 @@ public class HazardsTest {
         store.writeTile(1, 2, Arrays.asList(HazardStore.tsv(c)), false);
         assertEquals(1, store.load(1, 2).size());
         assertEquals(c.id, store.load(1, 2).get(0).id);
-        assertEquals(c.maxspeed, store.load(1, 2).get(0).maxspeed);
-        assertEquals(50, store.load(1, 2).get(0).lat7 == c.lat7 ? 50 : 0);
+        Hazards.Camera read = store.load(1, 2).get(0);
+        assertEquals(c.maxspeed, read.maxspeed);
+        assertEquals(c.lat7, read.lat7);
+        assertEquals(c.lon7, read.lon7);
+        assertEquals(c.type, read.type);
 
         // a border tile merges the neighbouring region's cameras, without doubling one
         store.mergePartial(3, 4, Arrays.asList(HazardStore.tsv(c)));
@@ -110,7 +115,7 @@ public class HazardsTest {
         // a complete tile replaces the partial data of the same tile
         store.writeTile(3, 4, Arrays.asList(HazardStore.tsv(c)), false);
         assertTrue(store.has(3, 4));
-        assertTrue(!store.hasAny(3, 4) || store.load(3, 4).size() == 1);
+        assertEquals(1, store.load(3, 4).size());   // the complete tile replaced the two of the partial
 
         store.delete("3_4");
         assertTrue(!store.hasAny(3, 4));
@@ -142,8 +147,8 @@ public class HazardsTest {
         int ty = RoadStore.tileY(46.52), tx = RoadStore.tileX(11.32);
         assertTrue("inside the border: complete tile", store.has(ty, tx));
         int oy = RoadStore.tileY(46.52), ox = RoadStore.tileX(11.40);
-        assertTrue("outside the border: merged into the partial tile", store.hasAny(oy, ox));
-        assertNotNull(store.load(oy, ox));
+        assertTrue("outside the border: only partial data", store.hasAny(oy, ox));
+        assertTrue("a tile outside the border must not be complete", !store.has(oy, ox));
         assertEquals(1, store.load(oy, ox).size());
     }
 }

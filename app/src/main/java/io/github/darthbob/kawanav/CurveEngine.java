@@ -62,6 +62,8 @@ public final class CurveEngine implements LocationListener {
     private Hazards.Ahead camera;
     private long cameraAt;
     private String cameraTiles = "";
+    /** A region download finished since the last fix: the tiles on disk changed. */
+    private boolean offlineWasRunning;
 
     public CurveEngine(Context context) {
         this.context = context.getApplicationContext();
@@ -265,6 +267,12 @@ public final class CurveEngine implements LocationListener {
             tiles.add(t);
             sig.append(t[0]).append('_').append(t[1]).append(' ');
         }
+        // a finished region download replaced the tiles under us: load them again
+        if (offlineWasRunning && !Hub.offlineRunning) {
+            cameraTiles = "";
+            builtTiles = Integer.MIN_VALUE;   // and the roads, which changed with them
+        }
+        offlineWasRunning = Hub.offlineRunning;
         if (sig.toString().equals(cameraTiles)) return;
         cameraTiles = sig.toString();
         List<Hazards.Camera> loaded = hazards.loadAll(tiles);
