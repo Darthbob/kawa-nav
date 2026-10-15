@@ -299,8 +299,10 @@ left behind is marked "recovered" and its summary rebuilt from the file.
 The **Rides** tab ("Riding log") lists them with totals for this week, this month and this year. A ride
 has:
 
-- a summary (distance, time, average and top speed, highest engine speed, max lean left/right, fuel
-  used, odometer start and end);
+- a summary: six tiles (time, average, top speed, max lean, highest engine speed, fuel used) and then
+  folding sections — engine, chassis and suspension, brakes and electronics, temperatures, data quality
+  — each with the lowest, average and highest of every value that ride recorded, and how long traction
+  control, ABS, cruise control and the front wheel coming up were at work;
 - the track, coloured by speed, with a dot where the ride started;
 - charts for any value the ride recorded — speed, engine speed, gear, throttle, lean angle,
   temperatures, tyres, battery, brake pressure, suspension travel, the body's accelerations, the filtered
