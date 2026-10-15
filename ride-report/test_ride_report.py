@@ -5,9 +5,14 @@ Run it with `python test_ride_report.py` (or `python3`). Every fixture is built 
 ride: an exported ride holds the GPS track of whoever was riding.
 """
 
+import json
 import os
+import re
+import shutil
+import subprocess
 import sys
 import tempfile
+from urllib.parse import urlsplit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -64,6 +69,17 @@ def seconds(n, **cols):
     return [dict(t_ms=i * 1000, **cols) for i in range(n)]
 
 
+def ride_data(report):
+    """The JSON the report hands to its map, or None."""
+    m = re.search(r'<script type="application/json" id="ride-data">(.*?)</script>', report, re.S)
+    return json.loads(m.group(1)) if m else None
+
+
+def hosts(report):
+    """Every server the report names."""
+    return {urlsplit(u).netloc for u in re.findall(r'https?://[^\s"\'<>\\)]+', report)}
+
+
 # ------------------------------------------------------------------ reading
 
 
@@ -98,6 +114,10 @@ def test_reading(tmp):
           and rideology.col("lean_deg") == [-12.0, -14.0])
     check("Rideology CSV: gear N is neutral", rideology.col("gear") == [0.0, 3.0])
     check("Rideology CSV: an absent boost column is no value", rideology.col("boost_temperature") == [None, None])
+
+    # a cell that is not a finite number is no value either (it would also break the map's JSON)
+    check("nan and inf are no value", rr.number("nan") is None and rr.number("inf") is None
+          and rr.gear_value("nan") is None and rr.number("-0.5") == -0.5)
 
     # anything else is refused
     other = write(tmp, "notes.txt", "hello\nworld\n")
@@ -248,20 +268,35 @@ def test_report(tmp):
     check("the report has the table", "Average" in out and "Coolant" in out)
     check("the report has the charts", out.count("<figure class=\"chart\">") >= 3,
           out.count("<figure class=\"chart\">"))
-    check("the report has the track drawn as SVG",
-          'class="track-bg"' in out and "figure class=\"track\"" in out and "<title>" in out)
-    check("nothing is loaded from the internet", "http://" not in out and "https://" not in out,
-          [l for l in out.splitlines() if "http" in l][:1])
     check("the highest value is in the tile", "9,000 rpm" in out,
           [line for line in out.splitlines() if "tile" in line][:1])
 
-    # the track is drawn by the tool itself: no map library, no tiles, nothing to fetch
-    check("the track has a scale bar and north", "class=\"scale\"" in out and ">N<" in out)
-    check("a marker per event with its values",
-          out.count('class="ev-') >= 1 and "<title>" in out)
+    # the map: ride_map.js goes whole into the report, with the ride's data beside it
+    data = ride_data(out)
+    check("the report has the map and its data", 'id="ride-map"' in out and data is not None)
+    with open(rr.MAP_SCRIPT, encoding="utf-8") as f:
+        check("the map's script is in the report, not fetched",
+              f.read() in out and "<script src" not in out and "<link" not in out and "@import" not in out)
+    check("the data has every second, with its place and values",
+          len(data["t"]) == 10 and data["t"][4] == 4000 and data["lat"][4] == 45.0
+          and data["series"]["rpm"][4] == 9000 and data["series"]["speed"][0] == 50)
+    check("the wheel slip is on the map where it happened",
+          [(e["kind"], e["i"], e["lat"], e["lon"]) for e in data["events"]] == [("wheelspin", 4, 45.0, 7.0)],
+          data["events"])
+    check("the moment in the table opens the map", 'data-ev="0"' in out and 'class="glyph k-wheelspin"' in out)
+    check("the charts carry what the map's cursor needs",
+          'data-key="rpm"' in out and 'class="cursor"' in out and 'class="at"' in out)
+    check("nothing comes from outside but the background and its credits",
+          hosts(out) <= {"tile.openstreetmap.de", "server.arcgisonline.com", "{s}.tile.opentopomap.org",
+                         "www.openstreetmap.org", "opentopomap.org"}, hosts(out))
 
-    no_map = rr.parse_args(["x", path, "--no-map"])
-    check("--no-map leaves the track out", 'class="track-bg"' not in rr.html_report(ride, no_map))
+    no_tiles = rr.html_report(ride, rr.parse_args(["x", path, "--no-tiles"]))
+    check("--no-tiles: the report names no server at all", not hosts(no_tiles), hosts(no_tiles))
+    check("--no-tiles keeps the map", 'id="ride-map"' in no_tiles and ride_data(no_tiles)["layers"] == [])
+
+    no_map = rr.html_report(ride, rr.parse_args(["x", path, "--no-map"]))
+    check("--no-map leaves the map out", 'id="ride-map"' not in no_map and ride_data(no_map) is None
+          and "data-ev=" not in no_map)
 
     # the command line: a good file writes a report, a bad one fails with a message
     with tempfile.TemporaryDirectory() as outdir:
@@ -274,6 +309,90 @@ def test_report(tmp):
         code = rr.main([os.path.join(tmp, "notes.txt"), "-o", outdir])
         check("a file that is not a ride fails", code == 1)
 
+        # the moments are found once per ride, so what could not be checked is said once
+        phone = write(tmp, "phone.csv", full_csv(["t_ms", "kmh", "lat", "lon"],
+                                                 [[i * 1000, 30, 45.0, 7.0 + i / 1e4] for i in range(5)]))
+        rr.main([phone, "-o", outdir])
+        with open(os.path.join(outdir, "phone_report.html"), encoding="utf-8") as f:
+            written = f.read()
+        check("what was not checked is said once", written.count("no filtered wheel speeds") == 1,
+              written.count("no filtered wheel speeds"))
+
+
+# ------------------------------------------------------------------ the map and the charts
+
+
+def test_map(tmp):
+    print("map")
+
+    opts = rr.parse_args(["x"])
+
+    def data_of(samples, name):
+        ride = ride_with(tmp, samples, name)
+        events = rr.find_events(ride, opts)
+        return rr.map_data(ride, events, opts, rr.metrics_of(ride))
+
+    check("no track, no map", data_of(seconds(5, kmh=30), "no-gps.csv") is None)
+
+    # a fix the phone itself says is far off is left out, and the moment there goes to the nearest one
+    samples = seconds(12, kmh=30, gps_acc_m=4)
+    for i, s in enumerate(samples):
+        s.update(lat=45.0 + i / 1e4, lon=7.0)
+    samples[6].update(gps_acc_m=80, kmh=0)
+    for i in range(6, 12):
+        samples[i]["kmh"] = 0                          # a stop, starting in the second with the bad fix
+    data = data_of(samples, "bad-fix.csv")
+    check("a bad fix is not drawn", data["lat"][6] is None and data["lat"][5] == 45.0005, data["lat"][4:8])
+    stop = [e for e in data["events"] if e["kind"] == "stop"]
+    check("a moment without its own fix goes to the nearest one",
+          len(stop) == 1 and stop[0]["i"] == 6 and stop[0]["lat"] in (45.0005, 45.0007), stop)
+
+    # a moment far from any fix has no place on the map, but it is still listed
+    far = seconds(40, kmh=30)
+    far[0].update(lat=45.0, lon=7.0)
+    far[1].update(lat=45.0001, lon=7.0)
+    for i in range(30, 36):
+        far[i]["kmh"] = 0
+    data = data_of(far, "far.csv")
+    stop = [e for e in data["events"] if e["kind"] == "stop"]
+    check("a moment far from the track is listed without a place", len(stop) == 1 and stop[0]["lat"] is None, stop)
+
+    # what the track can be coloured by follows what the ride has
+    keys = [c["key"] for c in data_of(seconds(3, kmh=30, gear=2, lat=45.0, lon=7.0), "few.csv")["colours"]]
+    check("only the colourings the ride has", keys == ["speed", "gear"], keys)
+    kinds = [k["id"] for k in data_of(samples, "bad-fix2.csv")["kinds"]]
+    check("only the kinds of moments the ride has", kinds == ["stop"], kinds)
+
+    # JSON that goes inside a script element must not be able to end it
+    text = rr.script_json({"name": "</script><!-- & -->"})
+    check("the map's data cannot close its script", "<" not in text and ">" not in text and "&" not in text
+          and json.loads(text) == {"name": "</script><!-- & -->"})
+
+    # the script itself: valid JavaScript, when there is node to ask
+    if shutil.which("node"):
+        result = subprocess.run(["node", "--check", rr.MAP_SCRIPT], capture_output=True, text=True)
+        check("ride_map.js is valid JavaScript", result.returncode == 0, result.stderr[:200])
+    else:
+        print("  skip ride_map.js syntax (no node)")
+
+
+def test_charts(tmp):
+    print("charts")
+
+    values = [float(i % 7) for i in range(1000)]
+    values[613] = 99.0                                  # one spike in a long ride
+    values[100] = None
+    points = rr.chart_points(values, 100)
+    check("a long chart is thinned", len(points) <= 110, len(points))
+    check("thinning keeps the peaks", 613 in points and points == sorted(points))
+    check("a short chart keeps every second", rr.chart_points([1.0, None, 3.0], 100) == [0, 2])
+
+    ride = ride_with(tmp, [{"t_ms": i * 1000, "rpm": 3000 + (i % 5) * 100} for i in range(300)], "long.csv")
+    out = rr.html_report(ride, rr.parse_args(["x", "--max-points", "60"]))
+    path = re.search(r'data-key="rpm".*?<path d="([^"]+)"', out, re.S).group(1)
+    check("the chart draws no more than it was asked to", path.count("L") + 1 <= 62, path.count("L") + 1)
+    check("the report says the charts were thinned", "the charts keep the lowest and highest of every 10 s" in out)
+
 
 def main():
     with tempfile.TemporaryDirectory() as tmp:
@@ -282,6 +401,8 @@ def main():
         test_facts(tmp)
         test_events(tmp)
         test_report(tmp)
+        test_map(tmp)
+        test_charts(tmp)
     print()
     if FAILURES:
         print("%d failed: %s" % (len(FAILURES), ", ".join(FAILURES)))

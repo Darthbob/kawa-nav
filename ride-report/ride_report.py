@@ -3,11 +3,12 @@
 
 Reads a ride exported by KawaNav (the "CSV (all values)" export, the app's own file, or Rideology's
 CSV) and writes an HTML report beside it: the summary of every channel, the time the electronics spent
-working, the notable moments of the ride, charts, and the track on a map.
+working, the notable moments of the ride, charts, and the ride on an interactive map.
 
-Standard library only: the tool needs nothing but Python 3.9+ installed. Charts are drawn as SVG by
-this program; the map is Leaflet, loaded from a CDN, so the report needs internet when you open it
-(use --no-map to leave it out).
+Standard library only: the tool needs nothing but Python 3.9+ installed. The charts are drawn as SVG
+by this program and the map by ride_map.js, which sits beside it and is put whole into every report:
+no library, nothing from a CDN. Only the background under the track comes from a tile server, when
+the report is opened (--no-tiles leaves it out, --no-map the whole map).
 
 KawaNav itself is Java: this tool repeats the parts of it that matter offline (the column names, the
 summary, the event rules) rather than reusing them. Where the two must agree, the rule is written here
@@ -15,6 +16,7 @@ in the same words as in the app and in docs/PROTOCOL.md.
 """
 
 import argparse
+import bisect
 import html
 import json
 import math
@@ -140,11 +142,14 @@ class Ride:
         return self.col("t_ms")
 
     def seconds(self):
-        """Seconds since the start, one per row."""
+        """The time of every row in ms, as recorded (a row with no time is a second after the one before)."""
         t = self.t_ms()
-        if t and t[0] is not None:
-            return t
-        return [i * 1000.0 for i in range(len(self.rows))]
+        if not t or t[0] is None:
+            return [i * 1000.0 for i in range(len(self.rows))]
+        out = []
+        for v in t:
+            out.append(v if v is not None else out[-1] + 1000.0)
+        return out
 
     def distance_m(self):
         """The distance the app would report: the bike's odometer when there is one, else the GPS."""
@@ -267,14 +272,16 @@ def parse_rows(lines, header, sep):
 
 
 def number(cell):
-    """A cell as a number, or None: an empty cell means the bike did not send that value."""
+    """A cell as a number, or None: an empty cell means the bike did not send that value (and so does
+    one that is not a finite number, which no channel can be)."""
     cell = cell.strip()
     if not cell:
         return None
     try:
-        return float(cell)
+        v = float(cell)
     except ValueError:
         return None
+    return v if math.isfinite(v) else None
 
 
 def gear_value(cell):
@@ -283,10 +290,7 @@ def gear_value(cell):
         return None
     if cell.upper() == "N":
         return 0.0
-    try:
-        return float(cell)
-    except ValueError:
-        return None
+    return number(cell)
 
 
 # ------------------------------------------------------------------ what the ride came to
@@ -356,7 +360,20 @@ def facts_of(ride):
 
 # ------------------------------------------------------------------ the notable moments
 
-EVENT_KINDS = ["wheelspin", "braking", "wheelie", "shift", "tcs", "abs", "stop", "heat"]
+# Every kind of moment, in the order of its colour in the report's palette (the CSS gives each one
+# as --k-<kind>): its name on the map, the letter on its marker, and whether the map shows it before
+# the reader asks. Gear changes come by the dozen, so they are there but hidden until asked for.
+EVENT_STYLE = [
+    ("shift", "Gear change", "G", False),
+    ("braking", "Hard braking", "B", True),
+    ("stop", "Stopped", "S", True),
+    ("wheelspin", "Wheel slip", "W", True),
+    ("tcs", "Traction control", "T", True),
+    ("wheelie", "Front wheel up", "F", True),
+    ("abs", "ABS", "A", True),
+    ("heat", "Coolant hot", "H", True),
+]
+GLYPHS = {kind: letter for kind, _, letter, _ in EVENT_STYLE}
 
 
 class Event:
@@ -391,11 +408,11 @@ def find_events(ride, opts):
         if i < len(kmh) and kmh[i] is not None:
             bits.append("%.0f km/h" % kmh[i])
         if i < len(rpm) and rpm[i] is not None:
-            bits.append("%d rpm" % rpm[i])
+            bits.append("{:,.0f} rpm".format(rpm[i]))
         if i < len(gear) and gear[i] is not None:
             bits.append("gear %s" % ("N" if gear[i] == 0 else int(gear[i])))
         if i < len(lean) and lean[i] is not None:
-            bits.append("%.0f° lean" % lean[i])
+            bits.append("%d° lean" % round(lean[i]))        # round(), so a hair to the left is not "-0°"
         return " · ".join(bits)
 
     def run(kind, hits, title, describe):
@@ -521,8 +538,30 @@ def hhmmss(ms):
     return "%d h %02d min" % (h, m) if h else ("%d min %02d s" % (m, sec) if m else "%d s" % sec)
 
 
-def svg_chart(ride, metric, t_ms, width=980, height=170):
-    """One value over the ride, with the traction-control and ABS seconds marked along the bottom."""
+def stretch(n, limit):
+    """How many seconds one stretch of a chart covers when a ride has more seconds than a chart draws."""
+    return max(1, math.ceil(n / max(1, limit // 2)))
+
+
+def chart_points(values, limit):
+    """The seconds a chart draws: every one, or on a long ride the lowest and the highest of each
+    stretch, so thinning the line never loses a peak."""
+    known = [i for i, v in enumerate(values) if v is not None]
+    if len(known) <= limit:
+        return known
+    per = stretch(len(known), limit)
+    out = []
+    for s in range(0, len(known), per):
+        chunk = known[s:s + per]
+        out.extend(sorted({min(chunk, key=values.__getitem__), max(chunk, key=values.__getitem__)}))
+    return out
+
+
+def svg_chart(ride, metric, t_ms, limit, width=980, height=170):
+    """One value over the ride, with the traction-control and ABS seconds marked along the bottom.
+
+    The svg carries where its plot is (data-left, data-w) so the map's script can draw the cursor on it
+    and read the value under the pointer."""
     values = series_of(ride, metric.key)
     if not any(v is not None for v in values):
         return ""
@@ -541,21 +580,23 @@ def svg_chart(ride, metric, t_ms, width=980, height=170):
     def y(v):
         return top + h - (v - lo) / (hi - lo) * h
 
-    points = [(x(i), y(v)) for i, v in enumerate(values) if v is not None]
+    points = [(x(i), y(values[i])) for i in chart_points(values, limit)]
     path = " ".join("%s%.1f,%.1f" % ("M" if k == 0 else "L", px, py) for k, (px, py) in enumerate(points))
     marks = tcs_abs_marks(ride, t_ms, x, top, h)
     label = "%s  (%s)" % (metric.label, metric.unit) if metric.unit else metric.label
     return f'''<figure class="chart">
 <figcaption><b>{html.escape(label)}</b> <span class="dim">lowest {fmt(metric.min, metric.decimals)} ·
 average {fmt(metric.mean, metric.decimals)} · highest {fmt(metric.max, metric.decimals)}
-{html.escape(metric.unit)}</span></figcaption>
-<svg viewBox="0 0 {width} {height}" preserveAspectRatio="none">
+{html.escape(metric.unit)}</span><span class="at"></span></figcaption>
+<svg viewBox="0 0 {width} {height}" preserveAspectRatio="none" data-key="{html.escape(metric.key)}"
+ data-left="{left}" data-w="{w}" data-vw="{width}" data-decimals="{metric.decimals}" data-unit="{html.escape(metric.unit)}">
 <rect x="{left}" y="{top}" width="{w}" height="{h}" class="plot"/>
 {gridlines(left, top, w, h)}
 <text x="{left - 8}" y="{top + 10}" class="axis" text-anchor="end">{fmt(hi, metric.decimals)}</text>
 <text x="{left - 8}" y="{top + h}" class="axis" text-anchor="end">{fmt(lo, metric.decimals)}</text>
 {marks}
 <path d="{path}" class="line"/>
+<line class="cursor" x1="{left}" y1="{top}" x2="{left}" y2="{top + h}" visibility="hidden"/>
 <text x="{left}" y="{height - 4}" class="axis">{hhmmss(0)}</text>
 <text x="{left + w}" y="{height - 4}" class="axis" text-anchor="end">{hhmmss(total)}</text>
 </svg></figure>'''
@@ -597,106 +638,298 @@ def tcs_abs_marks(ride, t_ms, x, top, h):
     return "\n".join(out)
 
 
-def track_section(ride, events, opts):
-    """The track drawn here, as SVG: no map library, no tiles, no internet.
+def charted(metric):
+    """Every value the ride has gets a chart, except GPS accuracy: it is about the track, not the ride."""
+    return metric.known and metric.key != "gps_acc_m"
 
-    The shape is the point: where the ride went, coloured by speed, with a marker for every notable
-    moment, a scale bar and north. An equirectangular projection is plenty over a ride's few kilometres
-    (and it is what the phone's own track view does).
-    """
-    pts = [(r.get("lat"), r.get("lon"), r.get("kmh")) for r in ride.rows
-           if r.get("lat") is not None and r.get("lon") is not None]
-    if len(pts) < 2:
-        return "<p class=\"dim\">No GPS track in this ride.</p>"
 
-    width, height, pad = 980, 460, 26
-    lat0 = min(p[0] for p in pts)
-    lat1 = max(p[0] for p in pts)
-    lon0 = min(p[1] for p in pts)
-    lon1 = max(p[1] for p in pts)
-    lat_mid = math.radians((lat0 + lat1) / 2)
-    # metres per degree, and the same scale on both axes so the shape is not stretched
-    m_per_deg_lat = 111_320.0
-    m_per_deg_lon = 111_320.0 * math.cos(lat_mid)
-    span_x = max(1e-6, (lon1 - lon0) * m_per_deg_lon)
-    span_y = max(1e-6, (lat1 - lat0) * m_per_deg_lat)
-    scale = min((width - 2 * pad) / span_x, (height - 2 * pad) / span_y)
-    # centre what does not fill the box
-    off_x = (width - span_x * scale) / 2
-    off_y = (height - span_y * scale) / 2
+# ------------------------------------------------------------------ the map
 
-    def xy(lat, lon):
-        x = off_x + (lon - lon0) * m_per_deg_lon * scale
-        y = off_y + (lat1 - lat) * m_per_deg_lat * scale
-        return x, y
+# The backgrounds the map can draw under the track. They were chosen because they answer a report
+# opened from disk, which sends no referer: OpenStreetMap's own tile servers refuse that ("Access
+# blocked") and CARTO's now ask for an API key. Each is asked only for the squares in view, when the
+# report is opened; with --no-tiles the report names no server at all.
+MAP_LAYERS = [
+    {"id": "map", "name": "Map", "source": "OpenStreetMap's openstreetmap.de tile server",
+     "url": "https://tile.openstreetmap.de/{z}/{x}/{y}.png", "max": 19, "dark": False,
+     "credit": '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">'
+               'OpenStreetMap</a> contributors'},
+    {"id": "satellite", "name": "Satellite", "source": "Esri's World Imagery",
+     "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+     "max": 19, "dark": True,
+     "credit": "Imagery © Esri, Maxar, Earthstar Geographics and the GIS User Community"},
+    {"id": "topo", "name": "Topographic", "source": "OpenTopoMap",
+     "url": "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", "sub": "abc", "max": 17, "dark": False,
+     "credit": '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">'
+               'OpenStreetMap</a> contributors, SRTM · style © <a href="https://opentopomap.org" '
+               'target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)'},
+]
 
-    speeds = [p[2] for p in pts if p[2] is not None]
-    top = max(speeds) if speeds else 0
-    palette = ["#4a6fa5", "#2e86de", "#27ae60", "#f39c12", "#c0392b"]
+# The script that draws the map: it lives beside this file and goes whole into every report.
+MAP_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ride_map.js")
 
-    def colour(kmh):
-        if kmh is None or top <= 0:
-            return palette[0]
-        f = min(0.999, max(0.0, kmh / top))
-        return palette[int(f * len(palette))]
+# A fix the phone itself says is this many metres off or worse is left out of the track.
+MAX_FIX_ERROR_M = 50.0
 
-    segments = []
-    for i in range(1, len(pts)):
-        a, b = pts[i - 1], pts[i]
-        x1, y1 = xy(a[0], a[1])
-        x2, y2 = xy(b[0], b[1])
-        segments.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s"/>'
-                        % (x1, y1, x2, y2, colour(b[2])))
 
-    markers = []
+def map_data(ride, events, opts, metrics):
+    """What ride_map.js draws: the track, the values of every second, the moments, the backgrounds.
+
+    None when the ride has no track. Every series has one value per row (None where the bike sent
+    nothing), so a second is the same index on the map, on the strip under it and in every chart."""
+    rows = ride.rows
+    fixes = [i for i, r in enumerate(rows)
+             if r.get("lat") is not None and r.get("lon") is not None
+             and (r.get("gps_acc_m") is None or r["gps_acc_m"] <= MAX_FIX_ERROR_M)]
+    if len(fixes) < 2:
+        return None
+    t = ride.seconds()
+    lat, lon = [None] * len(rows), [None] * len(rows)
+    for i in fixes:
+        lat[i], lon[i] = round(rows[i]["lat"], 6), round(rows[i]["lon"], 6)
+
+    series = {}
+
+    def keep(key, values, decimals):
+        if any(v is not None for v in values):
+            series[key] = [None if v is None else (round(v, decimals) if decimals else int(round(v)))
+                           for v in values]
+
+    keep("speed", ride.col("kmh" if ride.has("kmh") else "gps_kmh"), 0)
+    for key in ("gear", "rpm", "thr_pct", "lean_deg", "alt_m"):
+        keep(key, ride.col(key), 0)
+    keep("forward", ride.forward(), 2)
+    for m in metrics:
+        if charted(m):
+            keep(m.key, series_of(ride, m.key), m.decimals)
+
+    # what the track can be coloured by, and what the cursor reads, as far as this ride has them
+    colours = [dict(key=key, label=label, unit=unit, decimals=d, scale=scale, **extra)
+               for key, label, unit, d, scale, extra in (
+                   ("speed", "Speed", "km/h", 0, "seq", {"lo": 0}),
+                   ("lean_deg", "Lean angle", "°", 0, "seq", {"lo": 0, "abs": True}),
+                   ("thr_pct", "Throttle", "%", 0, "seq", {"lo": 0}),
+                   ("rpm", "Engine speed", "rpm", 0, "seq", {}),
+                   ("gear", "Gear", "", 0, "gear", {}),
+                   ("forward", "Acceleration", "g", 2, "div", {"signed": True}),
+                   ("alt_m", "Altitude", "m", 0, "seq", {}),
+               ) if key in series]
+    readout = [dict(key=key, label=label, unit=unit, decimals=d, **extra)
+               for key, label, unit, d, extra in (
+                   ("speed", "speed", "km/h", 0, {}),
+                   ("gear", "gear", "", 0, {}),
+                   ("rpm", "engine", "rpm", 0, {}),
+                   ("thr_pct", "throttle", "%", 0, {}),
+                   ("lean_deg", "lean", "°", 0, {"abs": True}),
+                   ("forward", "forward", "g", 2, {"signed": True}),
+                   ("alt_m", "altitude", "m", 0, {}),
+               ) if key in series]
+
+    def place(i):
+        """Where a moment goes: its own second's fix, or the nearest one within 10 s."""
+        k = bisect.bisect_left(fixes, i)
+        near = min(fixes[max(0, k - 1):k + 1], key=lambda f: abs(f - i))
+        return near if abs(t[near] - t[i]) <= 10000 else None
+
+    moments = []
     for e in events:
-        if e.lat is None or e.lon is None:
-            continue
-        x, y = xy(e.lat, e.lon)
-        markers.append('<g class="ev"><title>%s · %s — %s</title>'
-                       '<circle cx="%.1f" cy="%.1f" r="5" class="ev-%s" stroke="#fff"/></g>'
-                       % (html.escape(e.time), html.escape(e.title), html.escape(e.detail),
-                          x, y, e.kind))
-    sx, sy = xy(pts[0][0], pts[0][1])
-    start_dot = ('<circle cx="%.1f" cy="%.1f" r="4" class="start"/>' % (sx, sy))
-
-    # a scale bar of a round distance that fits the drawing
-    bar_m = 100.0
-    for candidate in (50, 100, 200, 500, 1000, 2000, 5000, 10000):
-        if candidate * scale <= width * 0.3:
-            bar_m = candidate
-    bar_px = bar_m * scale
-    bar_label = "%d m" % bar_m if bar_m < 1000 else "%d km" % (bar_m // 1000)
-
-    return """<figure class="track">
-<svg viewBox="0 0 %d %d" role="img" aria-label="the ride's track">
-<rect width="%d" height="%d" class="track-bg"/>
-%s
-%s
-%s
-<g class="scale"><line x1="%d" y1="%d" x2="%.1f" y2="%d"/><text x="%d" y="%d">%s</text></g>
-<g class="north"><line x1="%d" y1="%d" x2="%d" y2="%d"/><text x="%d" y="%d">N</text></g>
-</svg>
-<figcaption class="dim">Blue is the slowest part of the ride, red the fastest%s. Touch a marker for the
-moment it stands for; the scale bar is approximate (the shape is drawn flat, without a projection).
-</figcaption></figure>""" % (
-        width, height, width, height,
-        "\n".join(segments), start_dot, "\n".join(markers),
-        16, height - 18, 16 + bar_px, height - 18, 16, height - 26, bar_label,
-        width - 28, 22, width - 28, 44, width - 34, 38,
-        (", grey where the speed is unknown" if top <= 0 else ""),
-    )
+        f = place(e.index)
+        moments.append({"i": e.index, "kind": e.kind, "time": e.time, "title": e.title, "detail": e.detail,
+                        "lat": None if f is None else lat[f], "lon": None if f is None else lon[f]})
+    present = {e.kind for e in events}
+    return {
+        "t": [int(round(v - t[0])) for v in t],
+        "lat": lat, "lon": lon,
+        "series": series, "colours": colours, "readout": readout,
+        "events": moments,
+        "kinds": [{"id": kind, "label": label, "glyph": letter, "hidden": not shown}
+                  for kind, label, letter, shown in EVENT_STYLE if kind in present],
+        "layers": MAP_LAYERS if opts.tiles else [],
+    }
 
 
-def html_report(ride, opts):
+def script_json(value):
+    """JSON to put inside a <script> element: nothing in it can end the element early."""
+    text = json.dumps(value, separators=(",", ":"), allow_nan=False)
+    return text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+
+
+def map_script():
+    with open(MAP_SCRIPT, encoding="utf-8") as f:
+        js = f.read()
+    if "</script" in js.lower():
+        raise ValueError("ride_map.js cannot go inside the report: it contains </script")
+    return js
+
+
+def map_parts(ride, events, opts, metrics):
+    """The map's place in the page, and the two scripts that fill it, which go at the end of the page."""
+    data = map_data(ride, events, opts, metrics)
+    if data is None:
+        return '<p class="dim">No GPS track in this ride.</p>', ""
+    try:
+        js = map_script()
+    except OSError:
+        return '<p class="dim">No map: ride_map.js should be beside ride_report.py.</p>', ""
+    panel = ('<section class="map-panel" id="ride-map" aria-label="The ride on a map">\n'
+             '<noscript><p class="dim">The map needs JavaScript; everything else in the report is here '
+             'without it.</p></noscript>\n</section>')
+    scripts = ('<script type="application/json" id="ride-data">%s</script>\n<script>\n%s</script>'
+               % (script_json(data), js))
+    return panel, scripts
+
+
+# ------------------------------------------------------------------ the page
+
+REPORT_CSS = """
+:root {
+  color-scheme: light dark;
+  --page: #fff; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781; --line: #e1e0d9;
+  --surface: #fcfcfb; --map-bg: #eef0f1; --focus: #2a78d6;
+  /* one colour per kind of moment, in the palette's order (see EVENT_STYLE) */
+  --k-shift: #2a78d6; --k-braking: #eb6834; --k-stop: #1baf7a; --k-wheelspin: #eda100;
+  --k-tcs: #e87ba4; --k-wheelie: #008300; --k-abs: #6250d6; --k-heat: #e34948;
+}
+[hidden] { display: none !important; }
+body { font: 15px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 1040px; padding: 24px;
+       background: var(--page); color: var(--ink); }
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 18px; margin: 28px 0 8px; }
+h3 { font-size: 15px; margin: 18px 0 6px; color: #666; }
+.dim { color: #777; font-weight: normal; }
+.tiles { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.tile { border: 1px solid #ddd; border-radius: 10px; padding: 10px 14px; min-width: 130px; }
+.tile b { display: block; font-size: 20px; }
+table.data { border-collapse: collapse; width: 100%; }
+table.data th { text-align: left; font-weight: 600; }
+table.data td, table.data th { padding: 4px 10px 4px 0; border-bottom: 1px solid #eee; }
+table.data td { text-align: right; font-variant-numeric: tabular-nums; }
+table.data th:first-child { width: 40%; }
+table.events th:first-child { width: 4em; }
+table.events td { text-align: left; }
+.ev-tcs td, .ev-wheelspin td { background: #fff6e5; }
+.ev-braking td, .ev-abs td, .ev-heat td { background: #fdecea; }
+tr[data-ev] { cursor: pointer; }
+tr[data-ev]:hover td, tr[data-ev]:focus td { box-shadow: inset 0 0 0 999px rgba(42, 120, 214, .08); }
+tr[data-ev]:focus { outline: none; }
+tr.is-on td { box-shadow: inset 0 -2px 0 var(--focus); }
+figure.chart { margin: 14px 0; }
+figcaption { font-size: 13px; margin-bottom: 4px; }
+svg { width: 100%; height: 170px; }
+figure.chart svg { touch-action: pan-y; }
+.plot { fill: none; stroke: #ddd; }
+.grid { stroke: #eee; }
+.line { fill: none; stroke: #2e86de; stroke-width: 1.6; }
+.axis { font-size: 10px; fill: #888; }
+.marker-tcs { stroke: #f39c12; stroke-width: 2; }
+.marker-abs { stroke: #c0392b; stroke-width: 2; }
+.cursor { stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.at { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* the map: built by ride_map.js inside #ride-map */
+.map-panel { margin: 10px 0 4px; }
+.map-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px;
+             font-size: 13px; }
+.map-tools .push { margin-left: auto; }
+.map-tools select, .map-bar select { font: inherit; font-size: 13px; padding: 3px 6px; border-radius: 6px;
+                                     border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.legend { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--ink-2);
+          font-variant-numeric: tabular-nums; }
+.legend .ramp { display: inline-flex; border-radius: 3px; overflow: hidden; }
+.legend .ramp i { width: 12px; height: 10px; }
+.legend .lg { display: inline-flex; align-items: center; gap: 4px; }
+.legend .lg i { width: 12px; height: 10px; border-radius: 2px; }
+.map-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px;
+        border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit;
+        font-size: 12px; cursor: pointer; }
+.chip .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="false"] { color: var(--muted); }
+.chip[aria-pressed="false"] .glyph { background: transparent; color: var(--muted);
+                                     box-shadow: inset 0 0 0 1.5px var(--muted); }
+.glyph { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+         background: var(--k); color: #0b0b0b; font: 700 10px/1 system-ui, sans-serif; vertical-align: -3px; }
+.k-shift { --k: var(--k-shift); } .k-braking { --k: var(--k-braking); } .k-stop { --k: var(--k-stop); }
+.k-wheelspin { --k: var(--k-wheelspin); } .k-tcs { --k: var(--k-tcs); } .k-wheelie { --k: var(--k-wheelie); }
+.k-abs { --k: var(--k-abs); } .k-heat { --k: var(--k-heat); }
+.glyph.k-wheelie, .glyph.k-abs { color: #fff; }
+.map-view { position: relative; height: 480px; overflow: hidden; border-radius: 10px; background: var(--map-bg);
+            touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; outline: none; }
+.map-view:focus-visible { box-shadow: 0 0 0 2px var(--focus); }
+.map-view.dragging { cursor: grabbing; }
+.map-tiles { position: absolute; inset: 0; z-index: 0; }
+.map-canvas { position: absolute; left: 0; top: 0; z-index: 1; }
+.map-tiles img { position: absolute; left: 0; top: 0; max-width: none; opacity: 0; transition: opacity .25s;
+                 pointer-events: none; }
+.map-tiles img.on { opacity: 1; }
+.map-ctl { position: absolute; left: 10px; top: 10px; z-index: 3; display: flex; flex-direction: column; gap: 6px; }
+.map-ctl button { width: 32px; height: 32px; padding: 0; border-radius: 8px; border: 1px solid rgba(11, 11, 11, .12);
+                  background: var(--surface); color: var(--ink); font: 600 17px/1 system-ui, sans-serif;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, .18); cursor: pointer; }
+.map-ctl button:hover { background: var(--line); }
+.map-scale { position: absolute; left: 10px; bottom: 10px; z-index: 3; box-sizing: border-box; height: 16px;
+             padding: 0 4px; border: 2px solid var(--ink); border-top: 0; font-size: 11px; line-height: 12px;
+             color: var(--ink); background: color-mix(in srgb, var(--surface) 70%, transparent); white-space: nowrap; }
+.map-credit { position: absolute; right: 0; bottom: 0; z-index: 3; max-width: 75%; padding: 1px 6px;
+              border-top-left-radius: 6px; font-size: 10px; color: var(--ink-2);
+              background: color-mix(in srgb, var(--surface) 80%, transparent); }
+.map-credit a { color: inherit; }
+.map-note { position: absolute; left: 50%; top: 10px; z-index: 4; transform: translateX(-50%); max-width: 80%;
+            padding: 6px 12px; border-radius: 8px; font-size: 12px; text-align: center; background: var(--surface);
+            color: var(--ink); box-shadow: 0 2px 8px rgba(0, 0, 0, .2); pointer-events: none; }
+.map-tip { position: absolute; z-index: 5; max-width: 280px; padding: 7px 10px; border-radius: 8px; font-size: 12px;
+           line-height: 1.4; background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+           box-shadow: 0 4px 14px rgba(0, 0, 0, .18); pointer-events: none; }
+.tip-head { font-weight: 600; margin-bottom: 3px; }
+.tip-grid { display: grid; grid-template-columns: auto auto; gap: 1px 10px; font-variant-numeric: tabular-nums; }
+.tip-grid b { text-align: right; }
+.tip-grid span, .tip-detail { color: var(--ink-2); }
+.map-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.map-bar .play { width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--line);
+                 background: var(--surface); color: var(--ink); font-size: 13px; cursor: pointer; }
+.map-strip { flex: 1; min-width: 0; height: 52px; cursor: col-resize; touch-action: pan-y; }
+.map-readout { display: flex; flex-wrap: wrap; gap: 2px 14px; min-height: 22px; margin-top: 6px; font-size: 13px;
+               color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.map-readout b { color: var(--ink); font-weight: 600; }
+.map-caption { font-size: 12px; margin: 6px 0 0; }
+.map-panel:fullscreen { display: flex; flex-direction: column; box-sizing: border-box; padding: 14px;
+                        background: var(--page); }
+.map-panel.is-max { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; margin: 0;
+                    padding: 14px; overflow: auto; background: var(--page); }
+.map-panel:fullscreen .map-view, .map-panel.is-max .map-view { flex: 1; height: auto; min-height: 240px; }
+@media (max-width: 640px) {
+  body { padding: 16px; }
+  .map-view { height: 62vh; }
+  .map-tools .push { margin-left: 0; }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #111; --ink: #f0efec; --ink-2: #c3c2b7; --line: #2c2c2a; --surface: #1a1a19; --map-bg: #1a1d21;
+    --focus: #3987e5;
+    --k-shift: #3987e5; --k-braking: #d95926; --k-stop: #199e70; --k-wheelspin: #c98500;
+    --k-tcs: #d55181; --k-wheelie: #008300; --k-abs: #9085e9; --k-heat: #e66767;
+  }
+  .tile, table.data td, table.data th { border-color: #333; }
+  .grid { stroke: #262626; } .plot { stroke: #333; } .line { stroke: #4aa3ff; }
+  .ev-tcs td, .ev-wheelspin td { background: #2a2317; }
+  .ev-braking td, .ev-abs td, .ev-heat td { background: #2a1a19; }
+  .glyph.k-abs { color: #0b0b0b; }
+  .map-ctl button { border-color: rgba(255, 255, 255, .12); }
+  /* the street and the topographic maps are light: dimmed a little, so they do not glare */
+  .map-view[data-layer="map"] .map-tiles, .map-view[data-layer="topo"] .map-tiles { filter: brightness(.82); }
+}
+"""
+
+
+def html_report(ride, opts, events=None):
+    if events is None:
+        events = find_events(ride, opts)
     metrics = metrics_of(ride)
     facts = facts_of(ride)
-    events = find_events(ride, opts)
     t_ms = ride.seconds()
     dist_m, dist_src = ride.distance_m()
     km = dist_m / 1000.0
     fuel = ride.fuel_l()
-    noted = [c for c, _ in [(c, None) for c in ride.header]]
 
     tiles = []
     tiles.append(("Time", hhmmss(ride.duration_ms())))
@@ -730,7 +963,7 @@ def html_report(ride, opts):
                      "<th>Average</th><th>Highest</th><th>Unit</th></tr>\n%s</table>" % (section, rows_html))
 
     fact_lines = []
-    for key, _ in [(k, None) for k, _, _ in FACTS]:
+    for key, _, _ in FACTS:
         label, seconds, present = facts[key]
         if not present:
             continue
@@ -738,16 +971,23 @@ def html_report(ride, opts):
                           % (html.escape(label),
                              "never" if seconds == 0 else hhmmss(seconds * 1000)))
 
-    event_rows = "\n".join(
-        "<tr class=\"ev-%s\"><td>%s</td><td><b>%s</b></td><td>%s</td></tr>"
-        % (e.kind, e.time, html.escape(e.title), html.escape(e.detail)) for e in events)
+    map_panel, map_scripts = map_parts(ride, events, opts, metrics) if opts.map else ("", "")
+    on_map = bool(map_scripts)
+
+    def event_row(k, e):
+        if not on_map:
+            return ("<tr class=\"ev-%s\"><td>%s</td><td><b>%s</b></td><td>%s</td></tr>"
+                    % (e.kind, e.time, html.escape(e.title), html.escape(e.detail)))
+        return ("<tr class=\"ev-%s\" data-ev=\"%d\" tabindex=\"0\" title=\"Show it on the map\"><td>%s</td>"
+                "<td><b><span class=\"glyph k-%s\">%s</span> %s</b></td><td>%s</td></tr>"
+                % (e.kind, k, e.time, e.kind, GLYPHS.get(e.kind, ""), html.escape(e.title),
+                   html.escape(e.detail)))
+
+    event_rows = "\n".join(event_row(k, e) for k, e in enumerate(events))
     if not event_rows:
         event_rows = "<tr><td colspan=\"3\" class=\"dim\">Nothing notable found.</td></tr>"
 
-    charts = []
-    for m in metrics:
-        if m.known and m.key not in ("gps_acc_m",):
-            charts.append(svg_chart(ride, m, t_ms))
+    charts = [svg_chart(ride, m, t_ms, opts.max_points) for m in metrics if charted(m)]
 
     notes = []
     if not ride.has("kmh"):
@@ -757,59 +997,14 @@ def html_report(ride, opts):
     if ride.warnings:
         notes.append("not checked: " + "; ".join(ride.warnings))
     if len(ride) > opts.max_points:
-        notes.append("charts drawn from every %dth second of %d" % (max(1, len(ride) // opts.max_points), len(ride)))
+        notes.append("the charts keep the lowest and highest of every %d s"
+                     % stretch(len(ride), opts.max_points))
 
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>{html.escape(ride.name)} — KawaNav ride report</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-:root {{ color-scheme: light dark; }}
-body {{ font: 15px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 1040px; padding: 24px; }}
-h1 {{ font-size: 24px; margin: 0 0 4px; }}
-h2 {{ font-size: 18px; margin: 28px 0 8px; }}
-h3 {{ font-size: 15px; margin: 18px 0 6px; color: #666; }}
-.dim {{ color: #777; font-weight: normal; }}
-.tiles {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }}
-.tile {{ border: 1px solid #ddd; border-radius: 10px; padding: 10px 14px; min-width: 130px; }}
-.tile b {{ display: block; font-size: 20px; }}
-table.data {{ border-collapse: collapse; width: 100%; }}
-table.data th {{ text-align: left; font-weight: 600; }}
-table.data td, table.data th {{ padding: 4px 10px 4px 0; border-bottom: 1px solid #eee; }}
-table.data td {{ text-align: right; font-variant-numeric: tabular-nums; }}
-table.data th:first-child {{ width: 40%; }}
-.ev-tcs td, .ev-wheelspin td {{ background: #fff6e5; }}
-.ev-braking td, .ev-abs td, .ev-heat td {{ background: #fdecea; }}
-figure.chart {{ margin: 14px 0; }}
-figcaption {{ font-size: 13px; margin-bottom: 4px; }}
-svg {{ width: 100%; height: 170px; }}
-.plot {{ fill: none; stroke: #ddd; }}
-.grid {{ stroke: #eee; }}
-.line {{ fill: none; stroke: #2e86de; stroke-width: 1.6; }}
-.axis {{ font-size: 10px; fill: #888; }}
-.marker-tcs {{ stroke: #f39c12; stroke-width: 2; }}
-.marker-abs {{ stroke: #c0392b; stroke-width: 2; }}
-figure.track svg {{ height: auto; }}
-.track-bg {{ fill: #f4f6f8; }}
-figure.track line {{ stroke-width: 4; stroke-linecap: round; }}
-.start {{ fill: #27ae60; }}
-.scale line, .north line {{ stroke: #666; stroke-width: 2; }}
-.scale text, .north text {{ font-size: 11px; fill: #666; }}
-.ev circle {{ stroke-width: 2; }}
-.ev-wheelspin circle, .ev-tcs circle {{ fill: #f39c12; }}
-.ev-braking circle, .ev-abs circle, .ev-heat circle {{ fill: #c0392b; }}
-.ev-shift circle, .ev-stop circle, .ev-wheelie circle {{ fill: #333; }}
-@media (prefers-color-scheme: dark) {{
-  body {{ background: #111; color: #eee; }}
-  .tile, table.data td, table.data th {{ border-color: #333; }}
-  .grid {{ stroke: #262626; }} .plot {{ stroke: #333; }} .line {{ stroke: #4aa3ff; }}
-  .track-bg {{ fill: #1a1d21; }}
-  .scale line, .north line {{ stroke: #999; }} .scale text, .north text {{ fill: #999; }}
-  .ev-shift circle, .ev-stop circle, .ev-wheelie circle {{ fill: #ddd; }}
-  .ev-tcs td, .ev-wheelspin td {{ background: #2a2317; }}
-  .ev-braking td, .ev-abs td, .ev-heat td {{ background: #2a1a19; }}
-}}
-</style></head><body>
+<style>{REPORT_CSS}</style></head><body>
 <h1>{html.escape(ride.name)}</h1>
 <p class="dim">{html.escape(os.path.basename(ride.path))} · {len(ride)} seconds ·
 distance {km:,.2f} km ({dist_src}) · {hhmmss(ride.duration_ms())}{(' · ' + '; '.join(notes)) if notes else ''}</p>
@@ -819,23 +1014,25 @@ distance {km:,.2f} km ({dist_src}) · {hhmmss(ride.duration_ms())}{(' · ' + '; 
 </div>
 {f'<p>{fuel / km * 100:.1f} L/100 km over {km:,.1f} km</p>' if fuel > 0 and km > 0 else ''}
 
+{('<h2>Map</h2>' + map_panel) if opts.map else ''}
+
+<h2>Notable moments</h2>
+<p class="dim">Traction-control readings are unverified (see docs/PROTOCOL.md): what is listed is
+the reading moving, not a proven intervention.{' Click a moment to see it on the map.' if on_map else ''}</p>
+<table class="data events"><tr><th>Time</th><th>What</th><th>Values</th></tr>{event_rows}</table>
+
 <h2>What the ride recorded</h2>
 {''.join(table)}
 <h3>Times</h3>
 <table class="data">{''.join(fact_lines)}</table>
 
-<h2>Notable moments</h2>
-<p class="dim">Traction-control readings are unverified (see docs/PROTOCOL.md): what is listed is
-the reading moving, not a proven intervention.</p>
-<table class="data"><tr><th>Time</th><th>What</th><th>Values</th></tr>{event_rows}</table>
-
 <h2>Charts</h2>
+{'<p class="dim">Point at a chart to read that second, on the chart and on the map.</p>' if on_map else ''}
 {''.join(charts)}
-
-{('<h2>Track</h2>' + track_section(ride, events, opts)) if opts.map else ''}
 
 <p class="dim">Made by KawaNav's ride-report tool from {html.escape(os.path.basename(ride.path))}.
 The values are what the bike sent; an empty cell there means it sent nothing.</p>
+{map_scripts}
 </body></html>
 '''
 
@@ -848,8 +1045,11 @@ def parse_args(argv):
     p.add_argument("files", nargs="+", help="the exported CSV (or the app's own ride file)")
     p.add_argument("-o", "--out", default=None, help="where to write the report (default: beside the CSV)")
     p.add_argument("--events", action="store_true", help="only list the notable moments, no HTML")
-    p.add_argument("--no-map", dest="map", action="store_false", help="leave the map out (no internet needed)")
-    p.add_argument("--max-points", type=int, default=4000, help="charts use at most this many seconds")
+    p.add_argument("--no-map", dest="map", action="store_false", help="leave the map out of the report")
+    p.add_argument("--no-tiles", dest="tiles", action="store_false",
+                   help="no background under the track: the report asks no server for anything")
+    p.add_argument("--max-points", type=int, default=4000,
+                   help="a chart draws at most this many points (a longer ride keeps each stretch's extremes)")
     p.add_argument("--open", action="store_true", help="open the report when it is written")
     p.add_argument("--slip", type=float, default=3.0, help="wheel slip, km/h (default 3)")
     p.add_argument("--brake", type=float, default=0.35, help="hard braking, g (default 0.35)")
@@ -889,7 +1089,7 @@ def main(argv=None):
             base = os.path.splitext(os.path.basename(path))[0]
             out = os.path.join(out_dir, base + "_report.html")
             with open(out, "w", encoding="utf-8") as f:
-                f.write(html_report(ride, opts))
+                f.write(html_report(ride, opts, events))
             print("  report: %s" % out)
             if opts.open:
                 open_in_browser(out)

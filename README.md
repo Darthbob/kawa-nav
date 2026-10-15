@@ -324,7 +324,8 @@ ride rather than a row of zeroes.
 An exported ride can also be looked at on a computer: the small Python tool in
 [ride-report/](ride-report/) reads the "CSV (all values)" export and writes an HTML report beside it —
 every channel with its lowest, average and highest, the time the electronics worked, the notable moments
-with the values that caused them, charts, and the track on a map. It needs nothing but Python.
+with the values that caused them, charts, and the ride on an interactive map tied to the charts. It needs
+nothing but Python.
 
 Distance comes from the bike's odometer when the bike reports one, else
 from the GPS track. The dash's
