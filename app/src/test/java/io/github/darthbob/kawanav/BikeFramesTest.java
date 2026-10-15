@@ -531,6 +531,25 @@ public class BikeFramesTest {
     }
 
     @Test
+    public void theImuAxesAreTurnedToTheBikesDirections() {
+        // the measured mounting: upright and still, the raw pair reads -0.70 and -0.71 g, and turning it
+        // by 45 degrees gives no forward acceleration and one g down (PROTOCOL.md, a recorded ride)
+        assertEquals(0.0, BikeFrames.ImuSusp.longitudinal(-0.70, -0.71), 0.02);
+        assertEquals(1.0, BikeFrames.ImuSusp.vertical(-0.70, -0.71), 0.02);
+        // the pairs measured while accelerating (the bike said +0.52 g) and braking (it said -0.60 g):
+        // the turned value keeps the sign and is close to the bike's own figure
+        assertEquals(0.41, BikeFrames.ImuSusp.longitudinal(-0.51, -1.09), 0.02);
+        assertEquals(1.13, BikeFrames.ImuSusp.vertical(-0.51, -1.09), 0.02);
+        assertEquals(-0.69, BikeFrames.ImuSusp.longitudinal(-1.21, -0.24), 0.02);
+        // the third axis is used as it comes
+        assertEquals(-0.31, BikeFrames.ImuSusp.lateral(-0.31), 1e-9);
+        // and from a frame: no IMU sent, no derived value either
+        BikeFrames.ImuSusp none = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(hx(Z500_4B));
+        assertTrue(Double.isNaN(none.longitudinalG));
+        assertTrue(Double.isNaN(none.verticalG));
+    }
+
+    @Test
     public void theLastBlockOf0x4BNeedsBothHeaderBytesToBeAbsent() {
         // 45 = 05, 46 = FF: Rideology still reads the block (only both FF means "not there")
         byte[] v = blank(0x4B, 53);

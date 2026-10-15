@@ -129,10 +129,12 @@ public final class BikeData {
         if (imu != null) {
             BikeFrames.ImuSusp m = imu;
             sb.append(String.format(Locale.ROOT,
-                    "Suspension (%s ago): stroke %.1f/%.1f mm, speed %.2f/%.2f; ax %.2f ay %.2f az %.2f g; "
+                    "Suspension (%s ago): stroke %.1f/%.1f mm, speed %.2f/%.2f; "
+                            + "raw x %.2f y %.2f z %.2f g (long %.2f, up %.2f, side %.2f); "
                             + "rates %.1f/%.1f/%.1f; wheels %.1f/%.1f km/h; TCS %d/%d, KQS %d/%d, wheelie %d\n",
                     ago(imuAt, now), m.frontStrokeMm, m.rearStrokeMm, m.frontStrokeSpeed, m.rearStrokeSpeed,
-                    m.axG, m.ayG, m.azG, m.rate1, m.rate2, m.rate3, m.frontWheelKmh, m.rearWheelKmh,
+                    m.rawX, m.rawY, m.rawZ, m.longitudinalG, m.verticalG, m.lateralG,
+                    m.rate1, m.rate2, m.rate3, m.frontWheelKmh, m.rearWheelKmh,
                     m.tcsLevelHigh, m.tcsLevelLow, m.kqsDown, m.kqsUp, m.wheelieFlag));
         }
         if (info != null) {

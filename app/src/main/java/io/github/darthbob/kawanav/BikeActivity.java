@@ -697,12 +697,13 @@ public class BikeActivity extends KawaActivity {
             String s = "Suspension";
             add(r, s, "Front travel", m0.frontStrokeMm, "%.0f mm");
             add(r, s, "Rear travel", m0.rearStrokeMm, "%.0f mm");
-            add(r, s, "Forward acceleration", m0.axG, "%+.2f g");
-            add(r, s, "Sideways acceleration", m0.ayG, "%+.2f g");
-            add(r, s, "Vertical acceleration", m0.azG, "%+.2f g");
-            add(r, s, "Rotation rate 1", m0.rate1, "%+.1f");
-            add(r, s, "Rotation rate 2", m0.rate2, "%+.1f");
-            add(r, s, "Rotation rate 3", m0.rate3, "%+.1f");
+            add(r, s, "Acceleration (forward, + = accelerating)", m0.longitudinalG, "%+.2f g");
+            add(r, s, "Acceleration (sideways)", m0.lateralG, "%+.2f g");
+            add(r, s, "Acceleration (up)", m0.verticalG, "%+.2f g");
+            // which axis each of the three is has not been established (PROTOCOL.md): the numbers stand
+            add(r, s, "IMU rate 1 (unverified)", m0.rate1, "%+.1f");
+            add(r, s, "IMU rate 2 (unverified)", m0.rate2, "%+.1f");
+            add(r, s, "IMU rate 3 (unverified)", m0.rate3, "%+.1f");
         }
         // the filtered wheel speeds the suspension unit reports: its own reading of what the wheels do
         if (m0 != null && now - b.imuAt < LIVE_MS && (m0.frontWheelKmh == m0.frontWheelKmh || m0.rearWheelKmh == m0.rearWheelKmh)) {

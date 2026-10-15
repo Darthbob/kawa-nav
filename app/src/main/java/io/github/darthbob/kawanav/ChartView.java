@@ -24,7 +24,8 @@ public final class ChartView extends View {
         TYRE_FRONT("Front tyre", "bar"), TYRE_REAR("Rear tyre", "bar"), BATTERY("Battery", "V"),
         OUTSIDE("Outside temperature", "°C"), BRAKE("Front brake", "bar"), ALTITUDE("Altitude", "m"),
         SUSP_FRONT("Front suspension", "mm"), SUSP_REAR("Rear suspension", "mm"),
-        AX("Forward acceleration", "g"), AY("Sideways acceleration", "g"), AZ("Vertical acceleration", "g"),
+        LONGITUDINAL("Acceleration, forward", "g"), LATERAL("Acceleration, sideways", "g"),
+        VERTICAL("Acceleration, up", "g"),
         WHEEL_FRONT("Front wheel (filtered)", "km/h"), WHEEL_REAR("Rear wheel (filtered)", "km/h");
 
         public final String title, unit;
@@ -96,9 +97,10 @@ public final class ChartView extends View {
             case ALTITUDE: return s.altM;
             case SUSP_FRONT: return s.susp_f_stroke_mm;
             case SUSP_REAR: return s.susp_r_stroke_mm;
-            case AX: return s.imu_ax_g;
-            case AY: return s.imu_ay_g;
-            case AZ: return s.imu_az_g;
+            // the IMU is mounted at 45°: these come from the same two raw columns, turned (see PROTOCOL.md)
+            case LONGITUDINAL: return BikeFrames.ImuSusp.longitudinal(s.imu_ax_g, s.imu_ay_g);
+            case LATERAL: return BikeFrames.ImuSusp.lateral(s.imu_az_g);
+            case VERTICAL: return BikeFrames.ImuSusp.vertical(s.imu_ax_g, s.imu_ay_g);
             case WHEEL_FRONT: return s.wheel_f_kmh;
             case WHEEL_REAR: return s.wheel_r_kmh;
             default: return Double.NaN;

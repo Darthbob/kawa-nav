@@ -198,6 +198,22 @@ All `FF` on bikes without them (Z500, Z900?). (verified)
 | 11-12, 13-14 | rear / front stroke speed, `u16 × 0.001` |
 | 17-18, 27-28, 37-38 | rotation rates "psi p1/p3/p2", little-endian, `x × 163.84/32768 − 163.84`, 0 = absent |
 | 21-22, 31-32, 41-42 | accelerations ay / ax / az, little-endian, `x × 4.1768/32768 − 4.1768` g, 0 = absent |
+
+**The three accelerations are not the bike's axes.** On a Z900 at a standstill the first two read
+−0.70 g and −0.71 g while the third reads 0.05 g: the gravity is split evenly between them, which is what
+a sensor mounted at **45°** about the bike's lateral axis does. Turning the pair by 45° gives, at a
+standstill, **0.00 g forward and 1.00 g down**, and on the move it follows the acceleration the bike
+reports on its own (+0.52 g of its own against +0.41 g turned, −0.60 against −0.69): so
+
+- forward = `(x − y) × cos 45°`, positive when accelerating;
+- up = `−(x + y) × cos 45°`, which reads 1 g at rest;
+- sideways = the third axis, unchanged.
+
+KawaNav applies this (`BikeFrames.ImuSusp.longitudinal/vertical/lateral`) and names them accordingly. The
+mounting angle was measured on one bike; a model that mounts its IMU differently would need its own angle,
+which the same standstill check reveals. Which of the three "rotation rates" (17-18, 27-28, 37-38) is which
+axis is **not** established: on that ride one follows the lean angle (r = 0.72), one its rate of change
+(−0.60), the third neither, so the app labels them "IMU rate 1/2/3 (unverified)".
 | 47-48, 49-50 | filtered front / rear wheel speed, `u16 × 400/32768` km/h |
 | 51 | `tcs_level_hb` (bits 7-5), `tcs_level_lb` (bits 4-2), `kqs_down_operation_flag` (bit 1), `kqs_up_operation_flag` (bit 0) |
 | 52 | wheelie flag (bit 0) |

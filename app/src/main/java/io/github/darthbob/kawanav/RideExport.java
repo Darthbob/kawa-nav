@@ -141,9 +141,10 @@ public final class RideExport {
             ext(ext, "abs", s.abs, "%.0f");
             ext(ext, "suspFrontMm", s.susp_f_stroke_mm, "%.1f");
             ext(ext, "suspRearMm", s.susp_r_stroke_mm, "%.1f");
-            ext(ext, "ax", s.imu_ax_g, "%.2f");
-            ext(ext, "ay", s.imu_ay_g, "%.2f");
-            ext(ext, "az", s.imu_az_g, "%.2f");
+            // the direction the bike moves in, from the IMU's 45°-mounted pair (see PROTOCOL.md)
+            ext(ext, "accelForward", BikeFrames.ImuSusp.longitudinal(s.imu_ax_g, s.imu_ay_g), "%.2f");
+            ext(ext, "accelSideways", BikeFrames.ImuSusp.lateral(s.imu_az_g), "%.2f");
+            ext(ext, "accelUp", BikeFrames.ImuSusp.vertical(s.imu_ax_g, s.imu_ay_g), "%.2f");
             ext(ext, "wheelFront", s.wheel_f_kmh, "%.1f");
             ext(ext, "wheelRear", s.wheel_r_kmh, "%.1f");
             ext(ext, "torqueRequest", s.torque_req, "%.0f");

@@ -703,6 +703,12 @@ public final class BikeFrames {
             ayG = axis(v, 15, 16, 22, 21);
             axG = axis(v, 25, 26, 32, 31);
             azG = axis(v, 35, 36, 42, 41);
+            rawX = axG;
+            rawY = ayG;
+            rawZ = azG;
+            longitudinalG = longitudinal(axG, ayG);
+            verticalG = vertical(axG, ayG);
+            lateralG = lateral(azG);
             rate1 = rate(v, 15, 16, 18, 17);
             rate2 = rate(v, 25, 26, 28, 27);
             rate3 = rate(v, 35, 36, 38, 37);
@@ -732,6 +738,34 @@ public final class BikeFrames {
         private static boolean present(byte[] v, int a, int b, int last) {
             return v.length > last && u8(v, a) != 0xFF && u8(v, b) != 0xFF;
         }
+
+        /** The three axes as the bike sends them; see the derived ones below for what they mean. */
+        public final double rawX, rawY, rawZ;
+        /**
+         * The same three axes turned into the bike's own directions. The IMU of a Z900 is mounted at 45°
+         * about the lateral axis, so its x and y carry gravity split evenly: measured at a standstill from
+         * a recorded ride, x = -0.70 g and y = -0.71 g while the bike is upright, and turning the pair by
+         * 45° gives 0.00 g forward and 1.00 g down. See PROTOCOL.md. NaN when the bike sends no IMU.
+         */
+        public final double longitudinalG, verticalG, lateralG;
+
+        /** One axis of the pair, turned into the direction the bike is pointing (+ = accelerating). */
+        public static double longitudinal(double x, double y) {
+            return (x - y) * SIN_45;
+        }
+
+        /** The other one (+ = up), which reads 1 g at rest. */
+        public static double vertical(double x, double y) {
+            return -(x + y) * SIN_45;
+        }
+
+        /** The lateral acceleration: the third axis, unaffected by the mounting angle. */
+        public static double lateral(double z) {
+            return z;
+        }
+
+        /** cos 45°: the pair is split evenly between the two directions. */
+        private static final double SIN_45 = Math.sqrt(0.5);
 
         /** Centered axis (hi byte after lo byte), span 4.1768 g. */
         private static double axis(byte[] v, int a, int b, int hi, int lo) {

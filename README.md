@@ -430,6 +430,10 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   held back.
 - The byte the cruise control shares its frame with (0x4A byte 88) is Rideology's **wheel-speed
   setting** — a calibration number, not a cruise speed. KawaNav shows it raw on the debug card only.
+- **The IMU's three accelerations are turned into the bike's directions** (forward, up, sideways): the
+  sensor is mounted at 45° on a Z900 — at rest gravity is split evenly between two channels, and turning
+  them makes it read 0 g forward and 1 g down. The three "rotation rates" are still unidentified and are
+  labelled as such.
 - **The two "traction control" readings are not understood**: 0x4A byte 24 and 0x4B byte 51 carry two
   different pairs with the same name in Rideology (`tcs_level_hb`/`tcs_level_lb`), from different frames,
   and Kawasaki's app never interprets either of them. On a recorded ride the 0x4B pair moved exactly in the
