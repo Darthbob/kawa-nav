@@ -86,6 +86,9 @@ public class RidesActivity extends KawaActivity {
         loading = true;
         new Thread(() -> {
             List<Ride> rides = store.list();
+            // rides saved before 0.9 get their numbers added here, a few per visit, so the records above
+            // fill in without opening every ride
+            store.summariseOutdated(rides, 5);
             runOnUiThread(() -> show(rides));
         }, "rides-list").start();
     }
@@ -168,9 +171,39 @@ public class RidesActivity extends KawaActivity {
             c.addView(secondary(String.format(Locale.ROOT, "Longest ride: %.0f km on ", stats.longest.value)
                     + when(stats.longest.ride)));
         }
+        // what only the rides opened since 0.9 know about themselves
+        if (stats.hottest.known()) {
+            c.addView(secondary(String.format(Locale.ROOT, "Hottest engine: %.0f °C on ",
+                    stats.hottest.value) + when(stats.hottest.ride)));
+        }
+        if (stats.hardestBraking.known()) {
+            c.addView(secondary(String.format(Locale.ROOT, "Hardest braking: %.2f g on ",
+                    stats.hardestBraking.value) + when(stats.hardestBraking.ride)));
+        }
+        if (stats.mostSuspension.known()) {
+            c.addView(secondary(String.format(Locale.ROOT, "Most suspension travel: %.1f mm on ",
+                    stats.mostSuspension.value) + when(stats.mostSuspension.ride)));
+        }
         // the same wording the totals use: "48 min", not "0 h", when the log is young
-        c.addView(secondary(String.format(Locale.ROOT, "Altogether %,.0f km in %s",
-                stats.totalKm, minutes((long) (stats.totalHours * 3_600_000)))));
+        StringBuilder total = new StringBuilder(String.format(Locale.ROOT, "Altogether %,.0f km in %s",
+                stats.totalKm, minutes((long) (stats.totalHours * 3_600_000))));
+        if (stats.fuelL > 0 && stats.totalKm > 0) {
+            total.append(String.format(Locale.ROOT, " · %,.1f L · %.1f L/100 km",
+                    stats.fuelL, stats.fuelL / stats.totalKm * 100));
+        }
+        c.addView(secondary(total.toString()));
+        // how much the electronics worked over the whole log
+        StringBuilder work = new StringBuilder();
+        if (stats.tcsSeconds > 0) work.append(minutes((long) (stats.tcsSeconds * 1000))).append(" in traction control");
+        if (stats.absSeconds > 0) {
+            if (work.length() > 0) work.append(" · ");
+            work.append(minutes((long) (stats.absSeconds * 1000))).append(" in ABS");
+        }
+        if (stats.wheelieSeconds > 0) {
+            if (work.length() > 0) work.append(" · ");
+            work.append(minutes((long) (stats.wheelieSeconds * 1000))).append(" with the front wheel up");
+        }
+        if (work.length() > 0) c.addView(secondary(work.toString()));
         List<RideStats.Year> years = RideStats.byYear(rides);
         if (years.size() > 1) {
             for (RideStats.Year y : years) {

@@ -76,6 +76,65 @@ public class RideStatsTest {
         assertEquals(100.0, RideStats.km(r), 1e-9);
     }
 
+    /** A ride with the 0.9 numbers: simplest way is to summarise samples through it. */
+    private static Ride summarised(Ride r, double... coolantAndAccel) {
+        java.util.List<RideTsv.Sample> in = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            RideTsv.Sample s = new RideTsv.Sample();
+            s.tMs = i * 1000L;
+            s.epochMs = r.start + i * 1000L;
+            s.waterC = coolantAndAccel[0];
+            s.accG = coolantAndAccel[1];
+            s.kmh = 50;
+            in.add(s);
+        }
+        r.summarize(in);
+        return r;
+    }
+
+    @Test
+    public void theRecordsTheMetricsKnow() {
+        List<Ride> rides = new ArrayList<>();
+        rides.add(summarised(ride(at(2026, 1, 1), 100, 60, 100, 0, 0, 0), 90, -0.2));
+        rides.add(summarised(ride(at(2026, 2, 1), 50, 30, 90, 0, 0, 0), 101, -0.6));
+        RideStats s = RideStats.of(rides);
+        assertTrue(s.hottest.known());
+        assertEquals(101, s.hottest.value, 1e-9);
+        assertEquals(at(2026, 2, 1), s.hottest.ride.start);
+        assertTrue(s.hardestBraking.known());
+        assertEquals(0.6, s.hardestBraking.value, 1e-9);   // the magnitude of the hardest stop
+        assertEquals(at(2026, 2, 1), s.hardestBraking.ride.start);
+        assertFalse(s.mostSuspension.known());             // no bike on the fixture sends travel
+    }
+
+    @Test
+    public void rideWithoutMetricsContributesNothing() {
+        List<Ride> rides = new ArrayList<>();
+        rides.add(ride(at(2026, 1, 1), 100, 60, 100, 0, 0, 0));      // never summarised: no metrics
+        RideStats s = RideStats.of(rides);
+        assertFalse(s.hottest.known());
+        assertFalse(s.hardestBraking.known());
+        assertEquals(0, s.fuelL, 1e-9);
+    }
+
+    @Test
+    public void theLogsTotals() {
+        Ride a = summarised(ride(at(2026, 1, 1), 100, 60, 100, -10, 12, 5), 90, -0.2);
+        a.fuelUsedL = 5;   // summarise() recomputes it from the samples, which the fixture does not have
+        a.tcsOnS = 12;
+        a.absOnS = 3;
+        a.wheelieS = 0;
+        Ride b = summarised(ride(at(2026, 2, 1), 50, 30, 90, -5, 8, 0), 95, -0.1);
+        b.tcsOnS = 0;                                        // recorded, never cut in
+        b.absOnS = 0;
+        b.wheelieS = 5;
+        RideStats s = RideStats.of(java.util.Arrays.asList(a, b));
+        assertEquals(5, s.fuelL, 1e-9);
+        assertEquals(12, s.tcsSeconds, 1e-9);
+        assertEquals(3, s.absSeconds, 1e-9);
+        assertEquals(5, s.wheelieSeconds, 1e-9);
+    }
+
     @Test
     public void nothingRecordedYet() {
         RideStats s = RideStats.of(new ArrayList<>());

@@ -36,12 +36,23 @@ public final class RideStats {
         }
     }
 
+    /**
+     * What the whole log came to, and the best of each. The records that need a value the ride only keeps
+     * since 0.9 (hottest coolant, hardest braking, most suspension travel) are unknown for a ride that has
+     * not computed them yet: a ride is summarised when it is opened, or by {@link #summariseOutdated}.
+     */
     public final int rides;
     public final double totalKm, totalHours;
     public final Best fastest, maxLeanLeft, maxLeanRight, longest;
+    /** Hottest coolant of any ride, strongest deceleration, most suspension travel used. */
+    public final Best hottest, hardestBraking, mostSuspension;
+    /** Fuel the log burned, and the seconds its electronics spent working. */
+    public final double fuelL, tcsSeconds, absSeconds, wheelieSeconds;
 
     private RideStats(int rides, double totalKm, double totalHours,
-                      Best fastest, Best maxLeanLeft, Best maxLeanRight, Best longest) {
+                      Best fastest, Best maxLeanLeft, Best maxLeanRight, Best longest,
+                      Best hottest, Best hardestBraking, Best mostSuspension,
+                      double fuelL, double tcsSeconds, double absSeconds, double wheelieSeconds) {
         this.rides = rides;
         this.totalKm = totalKm;
         this.totalHours = totalHours;
@@ -49,6 +60,19 @@ public final class RideStats {
         this.maxLeanLeft = maxLeanLeft;
         this.maxLeanRight = maxLeanRight;
         this.longest = longest;
+        this.hottest = hottest;
+        this.hardestBraking = hardestBraking;
+        this.mostSuspension = mostSuspension;
+        this.fuelL = fuelL;
+        this.tcsSeconds = tcsSeconds;
+        this.absSeconds = absSeconds;
+        this.wheelieSeconds = wheelieSeconds;
+    }
+
+    /** The highest this channel reached on a ride, or NaN when the ride does not have it. */
+    private static double peak(Ride r, String key) {
+        Ride.Metric m = r.metric(key);
+        return m != null && m.known() ? m.max : Double.NaN;
     }
 
     /** The distance of a ride the way the list shows it: the bike's odometer when it has one. */
@@ -58,7 +82,9 @@ public final class RideStats {
 
     public static RideStats of(List<Ride> rides) {
         Ride fastest = null, left = null, right = null, longest = null;
+        Ride hot = null, brake = null, susp = null;
         double fastestKmh = 0, leanL = 0, leanR = 0, longestKm = 0, km = 0, ms = 0;
+        double hotC = 0, brakeG = 0, suspMm = 0, fuel = 0, tcsS = 0, absS = 0, wheelieS = 0;
         for (Ride r : rides) {
             double d = km(r);
             km += d;
@@ -81,10 +107,32 @@ public final class RideStats {
                 longestKm = d;
                 longest = r;
             }
+            // the values a ride only knows since 0.9; a ride that has not computed them contributes nothing
+            double c = peak(r, "coolant");
+            if (c == c && c > hotC) {
+                hotC = c;
+                hot = r;
+            }
+            Ride.Metric accel = r.metric("accel");
+            double braking = accel != null && accel.known() ? -accel.min : Double.NaN;
+            if (braking == braking && braking > brakeG) {
+                brakeG = braking;
+                brake = r;
+            }
+            double travel = Math.max(peak(r, "susp_f"), peak(r, "susp_r"));
+            if (travel == travel && travel > suspMm) {
+                suspMm = travel;
+                susp = r;
+            }
+            if (r.fuelUsedL > 0) fuel += r.fuelUsedL;
+            if (r.tcsOnS > 0) tcsS += r.tcsOnS;
+            if (r.absOnS > 0) absS += r.absOnS;
+            if (r.wheelieS > 0) wheelieS += r.wheelieS;
         }
         return new RideStats(rides.size(), km, ms / 3_600_000.0,
                 new Best(fastest, fastestKmh), new Best(left, leanL), new Best(right, leanR),
-                new Best(longest, longestKm));
+                new Best(longest, longestKm), new Best(hot, hotC), new Best(brake, brakeG),
+                new Best(susp, suspMm), fuel, tcsS, absS, wheelieS);
     }
 
     /** The rides per year, newest first. */

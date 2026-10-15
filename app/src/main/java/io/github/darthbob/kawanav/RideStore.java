@@ -246,6 +246,26 @@ public final class RideStore {
         }
     }
 
+    /**
+     * Gives the rides that were saved before the summary kept its numbers (metrics, electronics time) theirs:
+     * one pass per ride, on the store's own thread, at most {@code max} of them. A ride whose file is open,
+     * or still being recorded, is left alone. Returns how many were done.
+     */
+    public int summariseOutdated(List<Ride> rides, int max) {
+        int done = 0;
+        for (Ride r : rides) {
+            if (done >= max) break;
+            if (r.summaryVersion >= Ride.SUMMARY_VERSION || r.isRecording() || isOpen(r.id)) continue;
+            List<RideTsv.Sample> samples = samples(r.id);
+            if (samples.isEmpty()) continue;
+            r.summarize(samples);
+            save(r);
+            done++;
+        }
+        if (done > 0) Logger.log("Ride: " + done + " older rides summarised");
+        return done;
+    }
+
     /** Saves the summary (background, atomically: temporary file then rename). */
     public void save(Ride r) {
         JSONObject o = new JSONObject();

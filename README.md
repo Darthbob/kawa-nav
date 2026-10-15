@@ -296,7 +296,11 @@ line per second: the bike's values that second and the phone's position. Tapping
 continues or stops the ride (Home shows the same buttons while a ride runs); a ride that was running when the app was killed is continued after a restart, and one that was
 left behind is marked "recovered" and its summary rebuilt from the file.
 
-The **Rides** tab ("Riding log") lists them with totals for this week, this month and this year. A ride
+The **Rides** tab ("Riding log") lists them with totals for this week, this month and this year. The
+**Records** card keeps the best of the log — fastest ride, most lean each way, longest ride, hottest engine,
+hardest braking, most suspension travel — and the totals add up the fuel used, the consumption and the time
+the electronics spent working (traction control, ABS, front wheel up). A ride saved by an older version has
+its numbers worked out when the list is shown, a few at a time. A ride
 has:
 
 - a summary: six tiles (time, average, top speed, max lean, highest engine speed, fuel used) and then
