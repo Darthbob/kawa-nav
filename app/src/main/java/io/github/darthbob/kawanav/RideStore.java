@@ -219,6 +219,22 @@ public final class RideStore {
             r.hasBike = o.optBoolean("hasBike");
             r.samples = o.optInt("samples");
             r.endReason = o.optString("endReason", "");
+            r.summaryVersion = o.optInt("summaryVersion", 0);
+            JSONObject metrics = o.optJSONObject("metrics");
+            if (metrics != null) {
+                for (Ride.Metric m : r.metrics) {
+                    org.json.JSONArray v = metrics.optJSONArray(m.key);
+                    if (v == null || v.length() < 4) continue;   // a channel this file does not have
+                    m.min = v.optDouble(0, Double.NaN);
+                    m.mean = v.optDouble(1, Double.NaN);
+                    m.max = v.optDouble(2, Double.NaN);
+                    m.n = v.optInt(3);
+                }
+            }
+            r.tcsOnS = o.has("tcsOnS") ? o.optDouble("tcsOnS") : Double.NaN;
+            r.absOnS = o.has("absOnS") ? o.optDouble("absOnS") : Double.NaN;
+            r.wheelieS = o.has("wheelieS") ? o.optDouble("wheelieS") : Double.NaN;
+            r.cruiseOnS = o.has("cruiseOnS") ? o.optDouble("cruiseOnS") : Double.NaN;
             org.json.JSONArray bbox = o.optJSONArray("bbox");
             if (bbox != null && bbox.length() == 4) {
                 r.bbox = new double[]{bbox.getDouble(0), bbox.getDouble(1), bbox.getDouble(2), bbox.getDouble(3)};
@@ -254,6 +270,25 @@ public final class RideStore {
             o.put("hasBike", r.hasBike);
             o.put("samples", r.samples);
             o.put("endReason", r.endReason);
+            o.put("summaryVersion", r.summaryVersion);
+            // the channels are keyed by name, so adding one later cannot shift an old file's values.
+            // A channel the ride does not have is left out: org.json throws on NaN, and that would
+            // abandon the whole save (the periodic one included).
+            JSONObject metrics = new JSONObject();
+            for (Ride.Metric m : r.metrics) {
+                if (!m.known()) continue;
+                org.json.JSONArray v = new org.json.JSONArray();
+                v.put(round(m.min));
+                v.put(round(m.mean));
+                v.put(round(m.max));
+                v.put(m.n);
+                metrics.put(m.key, v);
+            }
+            if (metrics.length() > 0) o.put("metrics", metrics);
+            if (r.tcsOnS == r.tcsOnS) o.put("tcsOnS", round(r.tcsOnS));
+            if (r.absOnS == r.absOnS) o.put("absOnS", round(r.absOnS));
+            if (r.wheelieS == r.wheelieS) o.put("wheelieS", round(r.wheelieS));
+            if (r.cruiseOnS == r.cruiseOnS) o.put("cruiseOnS", round(r.cruiseOnS));
             if (r.bbox != null) {
                 org.json.JSONArray b = new org.json.JSONArray();
                 for (double d : r.bbox) b.put(d);

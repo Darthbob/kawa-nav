@@ -653,6 +653,58 @@ public abstract class KawaActivity extends Activity {
         return new Hero(size);
     }
 
+    /**
+     * A group of rows with a title that folds it away. The header is the tap target (the section header
+     * itself is about 48 dp tall); when folded, a one-line preview takes the place of the rows so the
+     * screen still says something about what is inside. Used where a page has more numbers than a rider
+     * wants to look at at once.
+     */
+    protected final class Section {
+        public final LinearLayout view, body;
+        private final TextView preview, arrow;
+        private final String title;
+        private boolean open;
+
+        Section(int drawable, String title, boolean open) {
+            this.title = title;
+            view = column();
+            LinearLayout head = row();
+            head.addView(sectionHeader(drawable, title), weight());
+            arrow = chevron();
+            head.addView(arrow);
+            head.setOnClickListener(v -> setOpen(!this.open));
+            view.addView(head);
+            preview = secondary("");
+            preview.setPadding(dp(Ui.SPACE1), 0, dp(Ui.SPACE1), dp(Ui.SPACE2));
+            view.addView(preview);
+            body = column();
+            view.addView(body);
+            setOpen(open);
+        }
+
+        /** The line shown while folded: what the rider would see if they opened it. */
+        public void setPreview(String text) {
+            preview.setText(text);
+            preview.setVisibility(open || text.isEmpty() ? View.GONE : View.VISIBLE);
+        }
+
+        public void setOpen(boolean nowOpen) {
+            open = nowOpen;
+            body.setVisibility(nowOpen ? View.VISIBLE : View.GONE);
+            preview.setVisibility(nowOpen || preview.getText().length() == 0 ? View.GONE : View.VISIBLE);
+            arrow.setRotation(nowOpen ? 90 : 0);
+            view.setContentDescription(title + (nowOpen ? ", open" : ", closed"));
+        }
+
+        public boolean isOpen() {
+            return open;
+        }
+    }
+
+    protected Section section(int drawable, String title, boolean open) {
+        return new Section(drawable, title, open);
+    }
+
     /** A row of a value list: icon and label on the left, the figure on the right. */
     protected final class ValueRow {
         public final LinearLayout view;

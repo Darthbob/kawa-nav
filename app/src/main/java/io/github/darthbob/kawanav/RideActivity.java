@@ -79,6 +79,13 @@ public class RideActivity extends KawaActivity {
         new Thread(() -> {
             Ride r = store.get(id);
             List<RideTsv.Sample> s = r == null ? List.of() : store.samples(id);
+            // a ride saved before the summary kept the channels gets them computed here, once, in the
+            // background: from then on opening it is instant. A ride still being recorded is computed in
+            // memory only: its file belongs to the recorder.
+            if (r != null && !s.isEmpty() && r.summaryVersion < Ride.SUMMARY_VERSION) {
+                r.summarize(s);
+                if (!r.isRecording() && !store.isOpen(r.id)) store.save(r);
+            }
             runOnUiThread(() -> {
                 if (isFinishing()) return;
                 ride = r;
@@ -100,19 +107,12 @@ public class RideActivity extends KawaActivity {
                 boolean gps = r.hasGps && gpsPoints >= 2;
                 track.set(gps ? samples : null, -1);
                 trackCard.setVisibility(gps ? View.VISIBLE : View.GONE);
-                chartCard.setVisibility(hasSeriesData() ? View.VISIBLE : View.GONE);
-                refreshSeries();
+                // the chart is shown when the ride has any value at all, not only speed and engine speed
+                boolean anySeries = refreshSeries();
+                chartCard.setVisibility(anySeries ? View.VISIBLE : View.GONE);
                 showChart(0);
             });
         }, "ride-load").start();
-    }
-
-    private boolean hasSeriesData() {
-        for (RideTsv.Sample s : samples) {
-            if (ChartView.value(s, ChartView.Series.SPEED) == ChartView.value(s, ChartView.Series.SPEED)) return true;
-            if (ChartView.value(s, ChartView.Series.RPM) == ChartView.value(s, ChartView.Series.RPM)) return true;
-        }
-        return false;
     }
 
     private LinearLayout trackCard() {
@@ -124,7 +124,7 @@ public class RideActivity extends KawaActivity {
         well.setCornerRadius(dp(Ui.RADIUS_TILE));
         track.setBackground(well);
         LinearLayout.LayoutParams lp = matchWrap();
-        lp.height = dp(220);
+        lp.height = dp(180);   // the numbers above matter more than a tall map
         lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
         c.addView(track, lp);
         c.addView(note("Blue is the slowest part of the ride, red the fastest. The green dot is where "
@@ -144,7 +144,7 @@ public class RideActivity extends KawaActivity {
         c.addView(head);
         chart = new ChartView(this);
         LinearLayout.LayoutParams lp = matchWrap();
-        lp.height = dp(160);
+        lp.height = dp(140);
         c.addView(chart, lp);
         cursor = secondary("");
         c.addView(cursor);
@@ -167,11 +167,15 @@ public class RideActivity extends KawaActivity {
         });
     }
 
-    /** Once the ride is loaded: the list offers only the values this ride recorded. */
-    private void refreshSeries() {
+    /**
+     * Once the ride is loaded: the list offers only the values this ride recorded. True when it offers
+     * anything at all, which is what decides whether the chart card is worth showing.
+     */
+    private boolean refreshSeries() {
         java.util.List<ChartView.Series> have = new java.util.ArrayList<>();
         for (ChartView.Series s : ALL_SERIES) if (!missingSeries(s)) have.add(s);
-        if (have.isEmpty()) have.add(ChartView.Series.SPEED);
+        boolean any = !have.isEmpty();
+        if (!any) have.add(ChartView.Series.SPEED);
         SERIES = have.toArray(new ChartView.Series[0]);
         String[] names = new String[SERIES.length];
         for (int i = 0; i < SERIES.length; i++) names[i] = SERIES[i].title;
@@ -182,15 +186,12 @@ public class RideActivity extends KawaActivity {
         parent.removeViewAt(at);
         parent.addView(fresh, at, seriesSpinner.getLayoutParams());
         seriesSpinner = fresh;
+        return any;
     }
 
-    /** True when the ride has a traction-control or ABS event; -1 (an older file) does not count. */
+    /** True when the ride has a traction-control or ABS event, from the summary the ride already holds. */
     private boolean hasInterventions() {
-        for (RideTsv.Sample s : samples) {
-            if ((s.tcs == s.tcs && s.tcs > 0)
-                    || (s.abs == s.abs && s.abs >= 0 && ((int) s.abs & 0x03) != 0)) return true;
-        }
-        return false;
+        return ride != null && (ride.tcsOnS > 0 || ride.absOnS > 0);
     }
 
     private boolean missingSeries(ChartView.Series series) {
@@ -218,6 +219,26 @@ public class RideActivity extends KawaActivity {
 
     private void showSummary(Ride r) {
         summary.removeAllViews();
+        summary.addView(headline(r));
+        // one folding section per group of values, each opened only if it is the first with rows
+        boolean opened = false;
+        for (String name : r.sections()) {
+            if (Ride.QUALITY.equals(name)) continue;   // its own section below, with the file's own rows
+            Section sec = valueSection(r, name);
+            if (sec == null) continue;
+            if (!opened) {
+                sec.setOpen(true);
+                opened = true;
+            }
+            summary.addView(sec.view);
+        }
+        Section quality = qualitySection(r);
+        if (!opened) quality.setOpen(true);
+        summary.addView(quality.view);
+    }
+
+    /** The numbers a rider looks at first: six tiles, the fuel economy, and what is missing from the ride. */
+    private LinearLayout headline(Ride r) {
         LinearLayout section = column();
         section.addView(sectionHeader(R.drawable.ic_speed, "Summary"));
         LinearLayout tiles = statGrid(2,
@@ -227,6 +248,7 @@ public class RideActivity extends KawaActivity {
                 r.maxLeanL < 0 || r.maxLeanR > 0
                         ? statTile("Max lean", String.format(Locale.ROOT, "%.0f° / %.0f°", Math.abs(r.maxLeanL), r.maxLeanR))
                         : null,
+                r.maxRpm > 0 ? statTile("Max engine speed", String.format(Locale.ROOT, "%,d rpm", r.maxRpm)) : null,
                 r.fuelUsedL > 0 ? statTile("Fuel used", String.format(Locale.ROOT, "%.1f L", r.fuelUsedL)) : null);
         LinearLayout tileSurface = group();
         tileSurface.setPadding(dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2));
@@ -234,20 +256,127 @@ public class RideActivity extends KawaActivity {
         LinearLayout.LayoutParams lp = matchWrap();
         lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
         section.addView(tileSurface, lp);
-        LinearLayout c = group();
-        if (r.maxRpm > 0) add(c, "Highest engine speed", String.format(Locale.ROOT, "%,d rpm", r.maxRpm));
+
+        double km = (r.distBikeM > 0 ? r.distBikeM : r.distGpsM) / 1000;
+        if (r.fuelUsedL > 0 && km > 0) {
+            TextView economy = secondary(String.format(Locale.ROOT, "%.1f L/100 km over %,.1f km",
+                    r.fuelUsedL / km * 100, km));
+            economy.setPadding(dp(Ui.SPACE1), 0, dp(Ui.SPACE1), dp(Ui.SPACE2));
+            section.addView(economy);
+        }
+        if (!r.hasBike || !r.hasGps) {
+            TextView what = note(!r.hasBike
+                    ? "Recorded from the phone alone: no values from the bike."
+                    : "Recorded without GPS: no track and no altitude.");
+            what.setPadding(dp(Ui.SPACE1), 0, dp(Ui.SPACE1), dp(Ui.SPACE2));
+            section.addView(what);
+        }
+        return section;
+    }
+
+    /** One section of values, folded: label left, "lowest / average / highest" right. */
+    private Section valueSection(Ride r, String name) {
+        Section sec = section(sectionIcon(name), name, false);
+        LinearLayout g = group();
+        boolean any = false;
+        for (Ride.Metric m : r.metrics) {
+            if (!name.equals(m.section) || !m.known()) continue;
+            add(g, m.label, range(m));
+            any = true;
+        }
+        // the electronics: how long they worked, not what level they were at (a level means nothing averaged)
+        if (Ride.BRAKES.equals(name)) {
+            any |= addSeconds(g, "Traction control", r.tcsOnS);
+            any |= addSeconds(g, "ABS", r.absOnS);
+            any |= addSeconds(g, "Cruise control", r.cruiseOnS);
+        }
+        if (Ride.CHASSIS.equals(name)) any |= addSeconds(g, "Front wheel up", r.wheelieS);
+        if (!any) return null;
+        if (hasRanges(r, name)) {
+            TextView legend = note("Lowest, average and highest of the seconds the bike sent this.");
+            legend.setPadding(0, dp(Ui.SPACE2), 0, 0);
+            g.addView(legend);
+        }
+        sec.body.addView(g);
+        sec.setPreview(preview(r, name));
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, 0, 0, dp(Ui.CARD_GAP));
+        sec.view.setLayoutParams(lp);
+        return sec;
+    }
+
+    /** Where the ride's own file is concerned: what was recorded, and how completely. */
+    private Section qualitySection(Ride r) {
+        Section sec = section(R.drawable.ic_info, Ride.QUALITY, false);
+        LinearLayout g = group();
+        for (Ride.Metric m : r.metrics) {
+            if (Ride.QUALITY.equals(m.section) && m.known()) add(g, m.label, range(m));
+        }
         if (r.odoStartKm == r.odoStartKm && r.odoEndKm == r.odoEndKm) {
-            add(c, "Odometer", String.format(Locale.ROOT, "%,.0f → %,.0f km", r.odoStartKm, r.odoEndKm));
+            add(g, "Odometer", String.format(Locale.ROOT, "%,.0f → %,.0f km", r.odoStartKm, r.odoEndKm));
         }
         // both distances when they disagree: the odometer counts whole wheel turns, GPS cuts corners
         if (r.distBikeM > 0 && r.distGpsM > 0 && Math.abs(r.distBikeM - r.distGpsM) > 0.03 * r.distBikeM) {
-            add(c, "Distance: odometer / GPS", String.format(Locale.ROOT, "%.1f / %.1f km",
+            add(g, "Distance: odometer / GPS", String.format(Locale.ROOT, "%.1f / %.1f km",
                     r.distBikeM / 1000, r.distGpsM / 1000));
         }
-        add(c, "Recorded", r.duration() + ", " + r.samples + " samples"
-                + (r.hasGps ? "" : ", without a GPS track"));
-        section.addView(c);
-        summary.addView(section);
+        add(g, "Recorded", r.duration() + ", " + r.samples + " samples");
+        long expected = r.activeMs / 1000 + 1;
+        if (expected > 0 && r.samples > 0) {
+            add(g, "Seconds recorded", String.format(Locale.ROOT, "%d of %d (%.0f %%)",
+                    r.samples, expected, 100.0 * r.samples / expected));
+        }
+        sec.body.addView(g);
+        sec.setPreview(r.samples + " seconds" + (r.hasGps ? ", with a GPS track" : ", no GPS track"));
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, 0, 0, dp(Ui.CARD_GAP));
+        sec.view.setLayoutParams(lp);
+        return sec;
+    }
+
+    /** "lowest / average / highest unit", the three numbers every value row carries. */
+    private static String range(Ride.Metric m) {
+        String f = "%," + "." + m.decimals + "f";
+        return String.format(Locale.ROOT, f + " / " + f + " / " + f + " %s", m.min, m.mean, m.max, m.unit);
+    }
+
+    /** A line for a system that either worked or did not: its time when it did, "never" when it did not. */
+    private boolean addSeconds(LinearLayout group, String label, double seconds) {
+        if (seconds != seconds) return false;              // the ride has no such column at all
+        add(group, label, seconds > 0 ? seconds(seconds) : "never");
+        return true;
+    }
+
+    private static String seconds(double s) {
+        long total = Math.round(s);
+        return total >= 60 ? String.format(Locale.ROOT, "%d min %02d s", total / 60, total % 60) : total + " s";
+    }
+
+    /** True when the section has at least one "lowest / average / highest" row (not only state lines). */
+    private static boolean hasRanges(Ride r, String name) {
+        for (Ride.Metric m : r.metrics) if (name.equals(m.section) && m.known()) return true;
+        return false;
+    }
+
+    /** What a folded section says about itself: the highest value it holds. */
+    private static String preview(Ride r, String name) {
+        Ride.Metric first = null;
+        for (Ride.Metric m : r.metrics) {
+            if (name.equals(m.section) && m.known()) {
+                first = m;
+                break;
+            }
+        }
+        if (first == null) return "";
+        return String.format(Locale.ROOT, "up to %," + "." + first.decimals + "f %s", first.max, first.unit);
+    }
+
+    private static int sectionIcon(String name) {
+        if (Ride.ENGINE.equals(name)) return R.drawable.ic_speed;
+        if (Ride.CHASSIS.equals(name)) return R.drawable.ic_sliders;
+        if (Ride.BRAKES.equals(name)) return R.drawable.ic_alert;
+        if (Ride.TEMPERATURES.equals(name)) return R.drawable.ic_thermo;
+        return R.drawable.ic_info;
     }
 
     private void add(LinearLayout group, String label, String text) {

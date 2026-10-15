@@ -86,6 +86,135 @@ public class RideTest {
         assertTrue(r.bbox[2] > r.bbox[0]);
     }
 
+    /** A sample with only the values the caller sets; everything else stays "the bike did not send it". */
+    private static RideTsv.Sample bare(int second) {
+        RideTsv.Sample s = new RideTsv.Sample();
+        s.tMs = second * 1000L;
+        s.epochMs = 1_700_000_000_000L + second * 1000L;
+        return s;
+    }
+
+    @Test
+    public void metricsFromSamples() {
+        Ride r = new Ride();
+        r.summarize(ride100());   // rpm 4000..4099, throttle 20, coolant 80, odometer 12000+ ...
+        Ride.Metric rpm = r.metric("rpm");
+        assertTrue(rpm.known());
+        assertEquals(100, rpm.n);
+        assertEquals(4000, rpm.min, 1e-9);
+        assertEquals(4099, rpm.max, 1e-9);
+        assertEquals(4049.5, rpm.mean, 1e-9);
+        assertEquals(80, r.metric("coolant").max, 1e-9);
+        assertEquals(20, r.metric("throttle").max, 1e-9);
+        assertEquals(Ride.SUMMARY_VERSION, r.summaryVersion);
+    }
+
+    @Test
+    public void channelsTheBikeNeverSentStayUnknown() {
+        Ride r = new Ride();
+        r.summarize(ride100());
+        // the fixture has no 0x4B/0x45/0x41 values beyond coolant, the odometer and the GPS accuracy
+        for (String key : new String[]{"oil", "intake", "outside", "accel", "wheelie", "susp_f", "susp_r",
+                "tyre_f", "tyre_r", "brake_f", "battery", "altitude"}) {
+            assertFalse("expected " + key + " to be unknown", r.metric(key).known());
+        }
+        assertFalse(r.sections().contains(Ride.CHASSIS));
+        assertTrue(r.sections().contains(Ride.ENGINE));
+        assertTrue(r.metric("gps_acc").known());       // the fixture's fixes have an accuracy
+        assertFalse(r.sections().contains(Ride.CHASSIS));
+    }
+
+    @Test
+    public void aZeroIsAValueNotAnAbsence() {
+        // no acceleration, no throttle, no brake pressure are all real values at their minimum
+        java.util.List<RideTsv.Sample> in = new java.util.ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            RideTsv.Sample s = bare(i);
+            s.accG = 0;
+            s.thrPct = 0;
+            s.brakeFrontBar = 0;
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        for (String key : new String[]{"accel", "throttle", "brake_f"}) {
+            Ride.Metric m = r.metric(key);
+            assertTrue("expected " + key + " to be known", m.known());
+            assertEquals(0, m.min, 1e-9);
+            assertEquals(0, m.max, 1e-9);
+        }
+    }
+
+    @Test
+    public void summarizeTwiceReplacesTheMetrics() {
+        Ride r = new Ride();
+        r.summarize(ride100());
+        java.util.List<RideTsv.Sample> other = new java.util.ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            RideTsv.Sample s = bare(i);
+            s.rpm = 1000 + i;
+            other.add(s);
+        }
+        r.summarize(other);
+        assertEquals(3, r.metric("rpm").n);          // the second ride's, not merged with the first
+        assertEquals(1000, r.metric("rpm").min, 1e-9);
+        assertEquals(1002, r.metric("rpm").max, 1e-9);
+        assertFalse(r.metric("coolant").known());    // the first ride had it, this one does not
+    }
+
+    @Test
+    public void stateFactsCountTimeNotZeros() {
+        java.util.List<RideTsv.Sample> in = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) {               // ten seconds without traction control
+            RideTsv.Sample s = bare(i);
+            s.tcs = 0;
+            s.abs = 0;
+            in.add(s);
+        }
+        for (int i = 10; i < 15; i++) {              // then five with it working
+            RideTsv.Sample s = bare(i);
+            s.tcs = 3;
+            s.abs = 1;                               // front channel acting
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(5, r.tcsOnS, 1e-9);
+        assertEquals(5, r.absOnS, 1e-9);
+        assertTrue(Double.isNaN(r.wheelieS));        // no 0x4B in this ride at all
+        assertTrue(Double.isNaN(r.cruiseOnS));
+    }
+
+    @Test
+    public void stateFactsKeepTheDifferenceBetweenNeverAndNotRecorded() {
+        java.util.List<RideTsv.Sample> in = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            RideTsv.Sample s = bare(i);
+            s.tcs = 0;                               // recorded, never cut in
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(0, r.tcsOnS, 1e-9);
+        assertFalse(r.tcsOnS != r.tcsOnS);           // 0, not NaN: the row can say "never"
+        assertTrue(Double.isNaN(r.absOnS));          // the ABS column is not in this ride
+    }
+
+    @Test
+    public void theMetricTableIsWellFormed() {
+        Ride r = new Ride();
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        java.util.Set<String> sections = new java.util.HashSet<>();
+        for (Ride.Metric m : r.metrics) {
+            assertTrue("duplicate key " + m.key, keys.add(m.key));
+            assertFalse(m.label.isEmpty());
+            assertFalse(m.unit.isEmpty());
+            sections.add(m.section);
+        }
+        assertEquals(java.util.Set.of(Ride.ENGINE, Ride.CHASSIS, Ride.BRAKES, Ride.TEMPERATURES, Ride.QUALITY),
+                sections);
+    }
+
     @Test
     public void summaryLeavesPausesOut() {
         List<RideTsv.Sample> samples = new ArrayList<>();
