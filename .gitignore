@@ -12,3 +12,8 @@ tools/
 keystore.properties
 *.jks
 *.keystore
+
+# exported rides: personal GPS tracks, never commit them
+Ride_*.csv
+Ride_*.gpx
+Ride_*.tsv
