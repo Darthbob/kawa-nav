@@ -483,6 +483,10 @@ public class SettingsActivity extends KawaActivity {
                         + "it adds the phone name and the 0x08 init",
                 new String[]{"Capabilities only (v0.3)", "Read-only", "Full (like Rideology)"}, Hub.initLevel(this),
                 pos -> prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, pos).apply()));
+        c.addView(switchRow("Send icons and arrows anyway", "Ignores the dash's answer that it has no status "
+                + "icons or no turn-by-turn (the 0x1A frame). For a dash whose answer is misread: without "
+                + "this, the arrows would go missing.", Hub.KEY_DEBUG_IGNORE_CAPS, false,
+                on -> BridgeService.settingsChanged()));
         c.addView(switchRow("Skip the riding log request", "Read-only connect and ride start leave out 45 00 00 "
                 + "(as KawaNav 0.6 and before did; Rideology always sends it)", Hub.KEY_DEBUG_NO_EXT, false));
         c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect: "

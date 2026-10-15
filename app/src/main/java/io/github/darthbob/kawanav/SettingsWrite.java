@@ -23,8 +23,22 @@ public final class SettingsWrite {
      * (datamodels/b.java and oh/b.java). KTRC is mapped, see {@link #ktrcWire}.
      */
     public static final String[] MODES = {"Sport", "Road", "Rain", "Rider", "Rider 2", "Rider 3", "Rider 4"};
-    /** The riding modes a write may set (the four every bike with modes has). */
+    /** The riding modes a bike without the four-rider-mode option has (the four every such bike has). */
     public static final int WRITABLE_MODES = 4;
+    /** The riding modes a bike with four rider modes offers: 5, 6 and 7 are "Rider 2", "Rider 3", "Rider 4". */
+    public static final int WRITABLE_MODES_7 = 7;
+
+    /**
+     * How many riding modes the bike has. Rideology reads the 0x47 tuning config's riding-mode field
+     * (byte 8 bits 5-4, {@link BikeFrames.TuningConfig#RIDING_MODE}) and shows seven names when it is 1,
+     * four when it is 0 (Ble5VehicleSettingViewModel.java:72,423). A config that has not arrived, or that
+     * says the bike has no such setting, counts as four: the smaller list can never offer a mode the bike
+     * does not have.
+     */
+    public static int modeCount(BikeFrames.TuningConfig tuning) {
+        if (tuning == null || !tuning.valid) return WRITABLE_MODES;
+        return tuning.flag(BikeFrames.TuningConfig.RIDING_MODE) == 1 ? WRITABLE_MODES_7 : WRITABLE_MODES;
+    }
     public static final String[] POWER = {"Full", "Medium", "Low"};
     public static final String[] KTRC = {"OFF", "1", "2", "3", "4", "5"};
     public static final String[] ON_OFF = {"OFF", "ON"};
@@ -114,8 +128,8 @@ public final class SettingsWrite {
      * Why these values must not be written, or null when they are all in the ranges Rideology sends.
      * A 0 or a value off the end would be a setting the bike never offered.
      */
-    public static String invalid(int mode, int power, int ktrcLevel, int kqs, int kebc) {
-        if (mode < 1 || mode > WRITABLE_MODES) return "riding mode " + mode + " is not one the bike offers";
+    public static String invalid(int modes, int mode, int power, int ktrcLevel, int kqs, int kebc) {
+        if (mode < 1 || mode > modes) return "riding mode " + mode + " is not one the bike offers";
         if (power < 1 || power > POWER.length) return "power mode " + power + " is not one the bike offers";
         if (ktrcLevel < 0 || ktrcLevel >= KTRC.length) return "KTRC level " + ktrcLevel + " cannot be written";
         if (kqs < 1 || kqs > ON_OFF.length) return "quickshifter value " + kqs + " is not OFF or ON";

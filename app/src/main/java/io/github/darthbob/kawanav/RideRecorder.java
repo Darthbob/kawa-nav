@@ -211,6 +211,11 @@ public final class RideRecorder implements android.location.LocationListener {
     };
 
     /** One recorded second. */
+    /** A whole number the decoder reports, or NaN when the frame had none (-1), so the cell stays empty. */
+    private static double pos(int v) {
+        return v >= 0 ? v : Double.NaN;
+    }
+
     private void sample() {
         long now = System.currentTimeMillis();
         if (clock.ms(now) > MAX_RIDE_MS) {
@@ -245,14 +250,32 @@ public final class RideRecorder implements android.location.LocationListener {
             BikeFrames.Telemetry t = b.live;
             if (t != null) {
                 s.kmh = t.speedKmh;
-                s.rpm = t.rpm;
-                s.gear = t.gear;
+                s.rpm = pos(t.rpm);
+                s.gear = pos(t.gear);
                 s.thrPct = t.throttlePct;
                 s.accG = t.accelG;
                 s.lean = t.leanDeg;
-                s.tcs = t.tcsLow >= 0 ? t.tcsLow : Double.NaN;
-                s.abs = t.abs;
+                s.tcs = pos(t.tcsLow);
+                s.abs = pos(t.abs);
                 s.brakeFrontBar = t.brakeFrontBar;
+                // the rest of the live frame: torque, the raw brake pressures, ABS state, damping, cruise
+                s.torque_rider = pos(t.riderTorque);
+                s.torque_req = pos(t.engineTorqueRequest);
+                s.torque_actual = pos(t.engineTorque);
+                s.brake_f_master = pos(t.brakeFrontMaster);
+                s.brake_r_master = pos(t.brakeRearMaster);
+                s.brake_r_caliper = pos(t.brakeRearCaliper);
+                s.abs_target = pos(t.absTarget);
+                s.abs_ind = pos(t.absIndicator);
+                s.abs_switching = pos(t.absSwitching);
+                s.damping = pos(t.damping);
+                s.susp_cal = pos(t.suspCalibration);
+                s.susp_status = pos(t.suspStatus);
+                s.susp_ecu = pos(t.suspEcu);
+                s.cruise_on = pos(t.cruiseOn);
+                s.cruise_mode = pos(t.cruiseMode);
+                s.wheelie_deg = t.wheelieDeg;
+                s.wheel_speed_setting = pos(t.wheelSpeedSetting);
                 if (t.speedKmh == t.speedKmh) maxKmh = Math.max(maxKmh, t.speedKmh);
                 if (t.rpm >= 0) maxRpm = Math.max(maxRpm, t.rpm);
                 if (t.leanDeg == t.leanDeg) {
@@ -275,6 +298,27 @@ public final class RideRecorder implements android.location.LocationListener {
                 s.batteryV = BikeAlerts.battery(b.info);
                 s.outsideC = b.info.outsideC;
                 if (s.odoKm == s.odoKm) ride.odoEndKm = s.odoKm;
+            }
+            // 0x4B: the suspension and the body's movement, on the bikes that send them
+            if (now - b.imuAt <= BIKE_MS && b.imu != null) {
+                BikeFrames.ImuSusp m = b.imu;
+                s.susp_f_stroke_mm = m.frontStrokeMm;
+                s.susp_r_stroke_mm = m.rearStrokeMm;
+                s.susp_f_stroke_vp = m.frontStrokeSpeed;
+                s.susp_r_stroke_vp = m.rearStrokeSpeed;
+                s.imu_ax_g = m.axG;
+                s.imu_ay_g = m.ayG;
+                s.imu_az_g = m.azG;
+                s.imu_ax_psip3 = m.rate2;   // Rideology's own order: p3, p1, p2
+                s.imu_ay_psip1 = m.rate1;
+                s.imu_az_psip2 = m.rate3;
+                s.wheel_f_kmh = m.frontWheelKmh;
+                s.wheel_r_kmh = m.rearWheelKmh;
+                s.tcs_hb = pos(m.tcsLevelHigh);
+                s.tcs_lb = pos(m.tcsLevelLow);
+                s.kqs_down = pos(m.kqsDown);
+                s.kqs_up = pos(m.kqsUp);
+                s.wheelie_flag = pos(m.wheelieFlag);
             }
             s.flags |= RideTsv.FLAG_BIKE;
         }

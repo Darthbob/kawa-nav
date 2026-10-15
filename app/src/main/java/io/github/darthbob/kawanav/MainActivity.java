@@ -154,6 +154,10 @@ public class MainActivity extends KawaActivity {
                 prefs.edit().putBoolean(Hub.KEY_DEBUG_NOTIF_CAPTURE, i.getBooleanExtra("notif_capture", false)).apply();
                 if (!i.getBooleanExtra("notif_capture", false)) NotifCapture.stop();
             }
+            if (i.hasExtra("ignore_caps")) {
+                prefs.edit().putBoolean(Hub.KEY_DEBUG_IGNORE_CAPS, i.getBooleanExtra("ignore_caps", false)).apply();
+                BridgeService.settingsChanged();
+            }
             if (i.hasExtra("notif_capture_all")) {
                 prefs.edit().putBoolean(Hub.KEY_DEBUG_NOTIF_CAPTURE_ALL, i.getBooleanExtra("notif_capture_all", false)).apply();
             }

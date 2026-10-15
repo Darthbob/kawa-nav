@@ -159,6 +159,20 @@ public final class BikeFrames {
         /** Status icons supported unless every indicator field says "none". */
         public final boolean statusIcons;
 
+        /**
+         * Whether a frame of this kind may go out at all. Rideology drops the status-icon frame when all
+         * five of its fields say the dash has none ({@code oh/b.java:343}) and the navigation frames when
+         * the dash has no turn-by-turn ({@code oh/b.java:385}); it keeps sending when the capability frame
+         * has not arrived or is not ready, because then nothing is known about the dash.
+         *
+         * @param ignore the debug override: send anyway, for a dash whose answer is misread
+         */
+        public static boolean allowed(GeneralCaps caps, boolean supported, boolean ignore) {
+            if (ignore) return true;
+            if (caps == null || !caps.valid) return true;
+            return supported;
+        }
+
         GeneralCaps(byte[] v) {
             super(v);
             valid = v.length < 15 || !retryRequired(v, 5, 6, 14);
@@ -263,6 +277,8 @@ public final class BikeFrames {
         public static final Flag TRIP_A_VALID = new Flag("trip A valid bit", 33, 0x08);
         public static final Flag TRIP_B_VALID = new Flag("trip B valid bit", 33, 0x04);
         public static final Flag AVG_SPEED_VALID = new Flag("average speed valid bit", 33, 0x02);
+        /** Rideology keeps it but uses it for nothing (Ble5Value/i.java T); KawaNav lists it as a capability. */
+        public static final Flag OUTSIDE_TEMP_VALID = new Flag("outside temperature valid bit", 33, 0x01);
         public static final Flag RANGE_VALID = new Flag("range valid bit", 34, 0x40);
         public static final Flag TOTAL_TIME_VALID = new Flag("total time valid bit", 34, 0x20);
         public static final Flag[] ALL = {TOTAL_DISTANCE, TOTAL_FUEL, FUEL_RATE, ECU_BATTERY, WATER_TEMP, OIL_TEMP,
@@ -270,7 +286,7 @@ public final class BikeFrames {
                 ACCELERATION, LEAN, WHEELIE, WHEELIE_ANGLE, TCS_HB, TCS_LB, RIDER_TORQUE, ENGINE_TORQUE_REQUEST,
                 ENGINE_TORQUE, ODOMETER, FUEL_GAUGE, AVG_MILEAGE, METER_BATTERY, TRIP_A, TRIP_B, AVG_SPEED,
                 OUTSIDE_TEMP, RANGE_SYMBOL, RANGE, FUEL_CONSUMPTION, TOTAL_TIME, INSTANT_FUEL, MAX_LEAN_LEFT,
-                MAX_LEAN_RIGHT};
+                MAX_LEAN_RIGHT, OUTSIDE_TEMP_VALID};
 
         public final boolean valid;
 
@@ -339,8 +355,15 @@ public final class BikeFrames {
         public static final Flag[] ALL = {ECU, KTRC, RIDING_MODE, KQS, KEBC, POWER, METER, KECS_PRELOAD, KECS_MODE,
                 KECS_LOAD, KECS_FR_COM, KECS_FR_TEN, KECS_RR_COM, KECS_RR_TEN};
 
+        /** True when the frame carries a usable config: the meter says "not ready" until the bike is on. */
+        public final boolean valid;
+
         TuningConfig(byte[] v) {
             super(v);
+            // the same rule as the other config frames (Ble5Value/y.java K): a block whose header is not all
+            // ones and whose last byte has bit 0 clear is still being prepared, so the frame needs asking for
+            // again. Usable when neither of its two segments says so.
+            valid = !(retryRequired(v, 5, 6, 14) || retryRequired(v, 15, 16, 24));
         }
 
         public int flag(Flag f) {
@@ -437,6 +460,18 @@ public final class BikeFrames {
         public final double totalDistanceKm, fuelRate, waterC, oilC, intakeC, instantFuel, tyreFrontKpa, tyreRearKpa;
         /** TPMS warning bits: 0 front pressure drop, 1 rear pressure drop, 2 front sensor battery, 3 rear; -1 none. */
         public final int tpmsWarnings;
+        /**
+         * The long form of this frame (longer than 58 bytes) repeats the dash's own values — odometer, fuel
+         * gauge, average mileage, meter battery — with their own valid bits at byte 57 (Rideology reads them
+         * straight into the same table as the 0x41's, qe/b.java:70-78). KawaNav keeps them out of the screens
+         * (the 0x41 has the same numbers) and shows them on the debug card. NaN/-1 when the frame has none.
+         */
+        public final int odometerKm, fuelBars;
+        public final double avgMileage, meterBatteryV;
+        /** The "not current" bits of byte 57, -1 when the bike sends none: 1 means the value is not current. */
+        public final int odometerValid, meterBatteryValid, avgMileageValid;
+        /** The instant fuel's own "not current" bit (byte 27 bit 4), -1 when the bike sends none. */
+        public final int instantFuelValid;
 
         LogExt(byte[] v, InfoConfig c) {
             super(v);
@@ -446,14 +481,43 @@ public final class BikeFrames {
             waterC = temp(v, 17, 40, c, InfoConfig.WATER_TEMP);
             oilC = temp(v, 19, 60, c, InfoConfig.OIL_TEMP);
             intakeC = temp(v, 20, 40, c, InfoConfig.INTAKE_TEMP);
-            instantFuel = in(v, 28) && has(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF
+            boolean fuelValid = current(v, 27, 4, c, InfoConfig.INSTANT_FUEL_VALID);
+            instantFuel = in(v, 28) && has(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF && fuelValid
                     ? ((u8(v, 27) & 0x03) << 8 | u8(v, 28)) * 0.1 : Double.NaN;
+            instantFuelValid = zero(c, InfoConfig.INSTANT_FUEL_VALID) && in(v, 27)
+                    ? (u8(v, 27) & 0x10) >> 4 : -1;
             // TPMS bytes 45-49: present unless bytes 45 or 46 are FF, as Rideology reads them (qe/b.java);
             // an ordinary 05 block marker there must not hide the pressures. Untested on a bike.
             boolean tpms = v.length > 49 && u8(v, 45) != 0xFF && u8(v, 46) != 0xFF;
             tyreFrontKpa = tpms && u8(v, 47) != 0xFF ? u8(v, 47) * 1.373 + 100 : Double.NaN;
             tyreRearKpa = tpms && u8(v, 48) != 0xFF ? u8(v, 48) * 1.373 + 100 : Double.NaN;
             tpmsWarnings = tpms ? u8(v, 49) & 0x0F : -1;
+            // the long form: same numbers as the 0x41, with their own flags in byte 57 (bits 6/5/4)
+            int odo = v.length > 59 && has(c, InfoConfig.ODOMETER)
+                    ? ((u8(v, 57) & 0x0F) << 16) | be16(v, 58) : -1;
+            odometerKm = odo >= 0 && odo != 0xFFFFF && current(v, 57, 6, c, InfoConfig.ODOMETER_VALID) ? odo : -1;
+            int bars = v.length > 60 && has(c, InfoConfig.FUEL_GAUGE) ? u8(v, 60) & 0x0F : -1;
+            fuelBars = bars == 0x0F ? -1 : bars;
+            int mileage = v.length > 63 && has(c, InfoConfig.AVG_MILEAGE)
+                    ? ((u8(v, 62) & 0x03) << 8) | u8(v, 63) : -1;
+            avgMileage = mileage >= 0 && mileage != 0x3FF && current(v, 57, 4, c, InfoConfig.AVG_MILEAGE_VALID)
+                    ? mileage * 0.1 : Double.NaN;
+            int meter = v.length > 64 && has(c, InfoConfig.METER_BATTERY) ? u8(v, 64) : -1;
+            meterBatteryV = meter >= 0 && meter != 0xFF && current(v, 57, 5, c, InfoConfig.METER_BATTERY_VALID)
+                    ? meter * 0.1 : Double.NaN;
+            odometerValid = v.length > 57 && zero(c, InfoConfig.ODOMETER_VALID) ? (u8(v, 57) & 0x40) >> 6 : -1;
+            meterBatteryValid = v.length > 57 && zero(c, InfoConfig.METER_BATTERY_VALID) ? (u8(v, 57) & 0x20) >> 5 : -1;
+            avgMileageValid = v.length > 57 && zero(c, InfoConfig.AVG_MILEAGE_VALID) ? (u8(v, 57) & 0x10) >> 4 : -1;
+        }
+
+        /**
+         * Rideology's "this value is current" rule for this frame's tail: the config nibble says the bike
+         * sends the bit, and the bit is clear. No block check: bytes past 50 sit in a block the meter may
+         * leave unmarked, and Rideology gates them on the frame length alone (qe/b.java:70-78).
+         */
+        private static boolean current(byte[] v, int i, int bit, InfoConfig c, Flag f) {
+            if (!zero(c, f)) return true;
+            return v.length > i && (u8(v, i) & (1 << bit)) == 0;
         }
 
         private static double temp(byte[] v, int i, int offset, InfoConfig c, Flag f) {
@@ -501,8 +565,14 @@ public final class BikeFrames {
         public final int absTarget, absIndicator, absSwitching;
         /** Electronic suspension: damping value (byte 77) and status bits (byte 78), -1 when absent. */
         public final int damping, suspCalibration, suspStatus, suspEcu;
-        /** Cruise control: working (byte 87 bit 1), mode (bit 0), set speed (byte 88, km/h), -1 when absent. */
-        public final int cruiseOn, cruiseMode, cruiseKmh;
+        /** Cruise control: working (byte 87 bit 1), mode (bit 0), -1 when absent. */
+        public final int cruiseOn, cruiseMode;
+        /**
+         * Byte 88, which rides in the same block as the cruise bits. Rideology calls it
+         * {@code wheel_speed_setting} and stores it as a plain number (`qe/b.java:168-171`, the realm column
+         * of the same name); it is not a cruise speed, so it is kept raw and left to the debug card.
+         */
+        public final int wheelSpeedSetting;
 
         Telemetry(byte[] v, InfoConfig c) {
             super(v);
@@ -578,7 +648,7 @@ public final class BikeFrames {
             int cruise = blk9 ? u8(v, 87) : 0xFF;
             cruiseOn = cruise != 0xFF ? (cruise & 0x02) >> 1 : -1;
             cruiseMode = cruise != 0xFF ? cruise & 0x01 : -1;
-            cruiseKmh = blk9 && v.length > 88 && u8(v, 88) != 0xFF ? u8(v, 88) : -1;
+            wheelSpeedSetting = blk9 && v.length > 88 && u8(v, 88) != 0xFF ? u8(v, 88) : -1;
         }
 
         /** A raw brake pressure byte, -1 when the block is absent or the byte is all ones. */

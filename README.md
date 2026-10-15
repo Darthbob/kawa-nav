@@ -54,13 +54,17 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   phone remembers where the bike was parked ("Walk to the bike").
 - 🗺️ **Ride recording**: records once a second — the bike's values and the phone's GPS track — and keeps
   the rides with a summary, a track coloured by speed, charts for any value (touch to see where you were)
-  and export as Rideology's CSV or as GPX. A ride survives the app being killed.
+  and export as Rideology's CSV or as GPX. Since 0.8 the ride also holds what the suspension unit and the
+  body were doing (travel, accelerations, rotation rates, filtered wheel speeds) and the rest of the live
+  frame (torque, brake pressures, ABS state, damping, cruise control). A ride survives the app being
+  killed.
 - 🔔 **Call and mail icons on the dash**: the dash shows an icon while a call comes in or a mail or
   message arrives. Only the fact there is one is sent: no numbers, no names, nothing stored.
 - 🕐 **Dash clock from the phone**: optional, once per connection, like Rideology.
 - 🔧 **Settings on the bike**: reads the ride settings (riding mode, power, KTRC, quickshifter, and the
   suspension settings on bikes that have them) and, in debug builds, writes riding mode/power/KTRC/KQS
-  and the dash shift lamp after a confirmation.
+  and the dash shift lamp after a confirmation. The riding-mode list follows the bike: four modes, or
+  seven (Rider 2-4) on a bike that announces them.
 - 🌍 **Offline maps**: download regions (country, state, district) from Geofabrik, see their data date,
   update and delete them one by one.
 - 🚨 **Speed camera warnings** (optional, off by default): taken from the same offline map data, shown on
@@ -304,7 +308,9 @@ has:
   for Rideology exports can read it) or **GPX** with the values as extensions for map programs. Both
   are written to `Download/KawaNav` and offered for sharing.
 
-Distance comes from the bike's odometer when the bike reports one, else from the GPS track. The dash's
+Anything the bike does not report stays an empty cell, so an older or simpler bike records a shorter
+ride rather than a row of zeroes. Distance comes from the bike's odometer when the bike reports one, else
+from the GPS track. The dash's
 riding-log icon (the small "log" symbol) follows the recorder: recording, paused, or off. The tab also
 keeps your **records** (fastest ride, most lean each way, longest ride, distance per year), and a ride
 that ends announces its summary — distance, time, fuel, best lean, top speed — in a notification that
@@ -407,9 +413,16 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   number the bike sent, not instead of it.
 - The **scaling of the riding-log values** (speed, engine speed, throttle, lean angle) is chosen from
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with
-  the dash for a whole ride yet. The same goes for the values added in 0.7 (torque, brake pressures, ABS
-  target, suspension damping, cruise control, rotation rates, wheel speeds), which are decoded exactly as
-  Rideology decodes them.
+  the dash for a whole ride yet. The same goes for the values added in 0.7 and recorded since 0.8
+  (torque, brake pressures, ABS target, suspension damping, cruise control, rotation rates, wheel
+  speeds, suspension travel and the body's accelerations): decoded exactly as Rideology decodes them,
+  never yet compared with a dash.
+- **What the dash says it can do is obeyed**: if its capability frame says it has no status icons or no
+  turn-by-turn, KawaNav stops sending those frames, as Rideology does. A dash whose answer is misread
+  would lose its arrows, so a debug switch ("Send icons and arrows anyway") overrides it, and the app
+  says in the log when it is holding something back.
+- The byte the cruise control shares its frame with (0x4A byte 88) is Rideology's **wheel-speed
+  setting** — a calibration number, not a cruise speed. KawaNav shows it raw on the debug card only.
 - The **refuel diary** estimates the litres: the bike never says how many went in, only what the gauge
   and the range show. Correct them on the Refuels screen to get a true figure.
 - The **12 V battery** warning rule (0.4 V lost over three days of readings) is a sensible guess, not a

@@ -135,6 +135,61 @@ public class RideTest {
     }
 
     @Test
+    public void newColumnsRoundTrip() {
+        // one value per group, so a swapped column name or order shows up
+        RideTsv.Sample s = new RideTsv.Sample();
+        s.tMs = 1000;
+        s.epochMs = 2_000_000;
+        s.susp_f_stroke_mm = 12.5;
+        s.susp_r_stroke_mm = 7.25;
+        s.imu_ax_g = -0.42;
+        s.imu_ay_psip1 = 3.5;
+        s.wheel_f_kmh = 63.4;
+        s.brake_f_master = 34;
+        s.abs_target = 5;
+        s.cruise_on = 1;
+        s.torque_actual = 10;
+        s.damping = 7;
+        s.tcs_hb = 5;
+        s.wheelie_deg = 45.02;
+        java.util.List<RideTsv.Sample> back = RideTsv.parse(java.util.Arrays.asList(
+                RideTsv.magic(), RideTsv.header(), s.line()));
+        assertEquals(1, back.size());
+        RideTsv.Sample r = back.get(0);
+        assertEquals(12.5, r.susp_f_stroke_mm, 1e-9);
+        assertEquals(7.25, r.susp_r_stroke_mm, 1e-9);
+        assertEquals(-0.42, r.imu_ax_g, 1e-9);
+        assertEquals(3.5, r.imu_ay_psip1, 1e-9);
+        assertEquals(63.4, r.wheel_f_kmh, 1e-9);
+        assertEquals(34, r.brake_f_master, 1e-9);
+        assertEquals(5, r.abs_target, 1e-9);
+        assertEquals(1, r.cruise_on, 1e-9);
+        assertEquals(10, r.torque_actual, 1e-9);
+        assertEquals(7, r.damping, 1e-9);
+        assertEquals(5, r.tcs_hb, 1e-9);
+        assertEquals(45.02, r.wheelie_deg, 1e-9);
+        // what this sample has none of stays empty
+        assertTrue(Double.isNaN(r.susp_r_stroke_vp));
+        assertTrue(Double.isNaN(r.imu_az_g));
+    }
+
+    @Test
+    public void aFileFromBeforeTheNewColumnsStillReads() {
+        // a 0.7 file: same magic, header and row as then, without any of the 0.8 columns
+        String header = "t_ms	epoch_ms	lat	lon	alt_m	gps_kmh	gps_acc_m	flags	kmh	rpm	gear"
+                + "	thr_pct	acc_g	lean_deg	water_c	oil_c	intake_c	fuel_inst	fuel_rate	tcs	abs"
+                + "	odo_km	dist_m	fuel_total_l	tyre_f_kpa	tyre_r_kpa	battery_v	outside_c	brake_f_bar";
+        String row = "5000	1700000000000	47.1	9.5				3	62.50	4200	3	45.00	0.10	18.00"
+                + "	85	95	30	4.8	1.00	1	0	12345	1500.00	123.45	210.00	251.00	11.72	18	12.70";
+        java.util.List<RideTsv.Sample> back = RideTsv.parse(java.util.Arrays.asList(RideTsv.magic(), header, row));
+        assertEquals(1, back.size());
+        assertEquals(62.5, back.get(0).kmh, 1e-9);
+        assertEquals(210.0, back.get(0).tyreFrontKpa, 1e-9);
+        assertTrue(Double.isNaN(back.get(0).susp_f_stroke_mm));
+        assertTrue(Double.isNaN(back.get(0).abs_target));
+    }
+
+    @Test
     public void csvLayout() {
         Ride r = new Ride();
         r.name = "Morning ride";

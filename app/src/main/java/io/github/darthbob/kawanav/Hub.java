@@ -139,6 +139,11 @@ public final class Hub {
     public static final String KEY_DEBUG_NO_EXT = "debug_no_ext_request";
     /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
     public static final String KEY_DEBUG_CAPTURE = "debug_capture";
+    /**
+     * Debug: send the status-icon and navigation frames even when the dash's 0x1A answer says it has no
+     * such feature. For a dash whose answer is misread: without it, the arrows would go missing.
+     */
+    public static final String KEY_DEBUG_IGNORE_CAPS = "debug_ignore_caps";
     /** Debug: notifications are written down, to see what an app like Waze puts in them. */
     public static final String KEY_DEBUG_NOTIF_CAPTURE = "debug_notif_capture";
     /** Debug: capture every app's notifications, not only Waze and the shell. */

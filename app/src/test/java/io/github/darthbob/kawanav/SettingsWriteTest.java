@@ -1,6 +1,7 @@
 package io.github.darthbob.kawanav;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -66,16 +67,64 @@ public class SettingsWriteTest {
     }
 
     /** A 0 or a number off the end would be a setting the bike never offered: never sent. */
+    /** A 0x47 frame whose riding-mode nibble (byte 8 bits 5-4) has the given value. */
+    private static BikeFrames.TuningConfig tuning(int modeNibble) {
+        byte[] v = new byte[25];
+        java.util.Arrays.fill(v, (byte) 0xFF);
+        v[0] = 0x47;
+        v[1] = 22;
+        v[5] = 0x05;
+        v[6] = 0x12;
+        v[8] = (byte) (modeNibble << 4);
+        v[14] = 0x01;   // ready: bit 0 set means the meter has finished preparing the config
+        return (BikeFrames.TuningConfig) new BikeFrames.Decoder().decode(v);
+    }
+
+    @Test
+    public void modeCountFollowsTheBike() {
+        assertEquals(7, SettingsWrite.modeCount(tuning(1)));
+        assertEquals(4, SettingsWrite.modeCount(tuning(0)));
+        assertEquals(4, SettingsWrite.modeCount(tuning(3)));   // the bike says it has none
+        assertEquals(4, SettingsWrite.modeCount(null));
+        // a config that has not arrived yet must never open the longer list
+        byte[] notReady = new byte[25];
+        java.util.Arrays.fill(notReady, (byte) 0xFF);
+        notReady[0] = 0x47;
+        notReady[1] = 22;
+        notReady[5] = 0x05;
+        notReady[6] = 0x12;
+        notReady[8] = 0x10;
+        notReady[14] = 0x00;   // header present but bit 0 clear: still being prepared
+        BikeFrames.TuningConfig pending = (BikeFrames.TuningConfig) new BikeFrames.Decoder().decode(notReady);
+        assertFalse(pending.valid);
+        assertEquals(4, SettingsWrite.modeCount(pending));
+    }
+
+    @Test
+    public void theRiderModeGoesOnTheWireAsSeven() {
+        // mode 7 with KTRC 4: byte 8 = (4 << 3) | 7
+        byte[] f = SettingsWrite.frame(7, 1, 4, 2, 1, "");
+        assertEquals(7, f[8] & 0x07);
+        assertEquals(4, (f[8] & 0xF8) >> 3);
+    }
+
+    @Test
+    public void invalidFollowsTheBikesCount() {
+        assertNull(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES_7, 7, 1, 0, 1, 0));
+        assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 5, 1, 0, 1, 0).contains("riding mode"));
+        assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES_7, 8, 1, 0, 1, 0).contains("riding mode"));
+    }
+
     @Test
     public void outOfRangeValuesAreRefused() {
-        assertNull(SettingsWrite.invalid(1, 1, 0, 1, 0));    // Sport, Full, KTRC OFF, KQS OFF, no KEBC
-        assertNull(SettingsWrite.invalid(4, 3, 5, 2, 3));    // Rider, Low, KTRC 5, KQS ON, KEBC Light
-        assertTrue(SettingsWrite.invalid(0, 1, 0, 1, 0).contains("riding mode"));
-        assertTrue(SettingsWrite.invalid(5, 1, 0, 1, 0).contains("riding mode"));
-        assertTrue(SettingsWrite.invalid(1, 0, 0, 1, 0).contains("power"));
-        assertTrue(SettingsWrite.invalid(1, 1, 6, 1, 0).contains("KTRC"));
-        assertTrue(SettingsWrite.invalid(1, 1, 0, 0, 0).contains("quickshifter"));
-        assertTrue(SettingsWrite.invalid(1, 1, 0, 1, 4).contains("engine brake"));
+        assertNull(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 1, 1, 0, 1, 0));    // Sport, Full, KTRC OFF, KQS OFF, no KEBC
+        assertNull(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 4, 3, 5, 2, 3));    // Rider, Low, KTRC 5, KQS ON, KEBC Light
+        assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 0, 1, 0, 1, 0).contains("riding mode"));
+        assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 5, 1, 0, 1, 0).contains("riding mode"));
+        assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 1, 0, 0, 1, 0).contains("power"));
+        assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 1, 1, 6, 1, 0).contains("KTRC"));
+        assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 1, 1, 0, 0, 0).contains("quickshifter"));
+        assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 1, 1, 0, 1, 4).contains("engine brake"));
     }
 
     @Test

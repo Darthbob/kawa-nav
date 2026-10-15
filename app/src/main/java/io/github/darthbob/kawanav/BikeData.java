@@ -119,12 +119,12 @@ public final class BikeData {
             sb.append(String.format(Locale.ROOT,
                     "Live more: torque %d asked, %d requested, %d given; brakes %d/%d master, %d caliper; "
                             + "ABS target %d indicator %d switching %d; damping %d (cal %d, status %d, ECU %d); "
-                            + "cruise %d mode %d at %d km/h; wheelie angle %s\n",
+                            + "cruise %d mode %d (byte 88 = %d, Rideology's wheel-speed setting); wheelie angle %s" + "\n",
                     t.riderTorque, t.engineTorqueRequest, t.engineTorque,
                     t.brakeFrontMaster, t.brakeRearMaster, t.brakeRearCaliper,
                     t.absTarget, t.absIndicator, t.absSwitching,
                     t.damping, t.suspCalibration, t.suspStatus, t.suspEcu,
-                    t.cruiseOn, t.cruiseMode, t.cruiseKmh, num(t.wheelieDeg)));
+                    t.cruiseOn, t.cruiseMode, t.wheelSpeedSetting, num(t.wheelieDeg)));
         }
         if (imu != null) {
             BikeFrames.ImuSusp m = imu;
@@ -151,6 +151,14 @@ public final class BikeData {
                     "Ext (%s ago): water %s °C, oil %s °C, intake %s °C, distance %s km, fuel rate %s, instant %s, tyres %s/%s kPa\n",
                     ago(extAt, now), num(e.waterC), num(e.oilC), num(e.intakeC), num(e.totalDistanceKm), num(e.fuelRate),
                     num(e.instantFuel), num(e.tyreFrontKpa), num(e.tyreRearKpa)));
+            // the long form of 0x45 repeats what the 0x41 carries: shown here only, to compare the two
+            if (e.odometerKm >= 0 || e.fuelBars >= 0 || e.avgMileage == e.avgMileage || e.meterBatteryV == e.meterBatteryV) {
+                sb.append(String.format(Locale.ROOT,
+                        "Ext long: odo %d km (flag %d), bars %d, mileage %s (flag %d), meter %s V (flag %d), "
+                                + "instant fuel flag %d" + "\n",
+                        e.odometerKm, e.odometerValid, e.fuelBars, num(e.avgMileage), e.avgMileageValid,
+                        num(e.meterBatteryV), e.meterBatteryValid, e.instantFuelValid));
+            }
         }
         if (settings != null) {
             BikeFrames.VehicleSettings s = settings;

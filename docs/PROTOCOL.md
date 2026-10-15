@@ -40,8 +40,16 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 
 `03 · 40 · 1A · 1D · 47 · 0B(phone name) · 41 · 1B(read) · 48(read) · 1E · clock sync · 08 · 45 · 42`
 
-- 50 ms between frames; the four config frames (0x40, 0x1A, 0x1D, 0x47) are asked again when the meter
-  answers "not ready" (500 ms pause, max 5 tries, then disconnect; `ne/p.java:171-194`). (verified)
+- 50 ms between frames; the config frames are asked again when the meter answers "not ready" (500 ms
+  pause, max 5 tries, then disconnect; `ne/p.java:171-194`). (verified)
+- **What "not ready" means**, per frame (`i.java:174-181`, `y.java:71-75`, `qe/a.java:348`,
+  `u.java:97-101`): a segment is still being prepared when its header bytes are not both `FF` **and** the
+  low bit of the segment's last byte is 0. The frame is usable when at least one segment is ready, and
+  Rideology only retries the frames that carry a config payload — **0x40 and 0x47**; 0x1A and 0x1D go
+  through the same routine but are not re-asked on their own. (verified)
+- KawaNav keeps its own queue instead: three attempts per frame id, no blocking sleep, and it now retries
+  0x1A, 0x40, 0x1D **and 0x47**. Its 0x1D test is stricter than Rideology's (it wants the `05` block
+  marker, Rideology only that the header is not `FF FF`); on every real frame both agree.
 - **A timeout during the sequence is fatal**: the app clears the queue and disconnects
   (`a0/s.java:65-132`, `ne/j.java:54-69`). Only the runtime 0x13/0x14 flows advance on timeout.
   (verified)
@@ -59,11 +67,32 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 - Request `40 00 00`, **connect-time one-shot** (`ne/c.java:226-230`, only caller `ne/c.java:71`).
   (verified)
 - 2-bit nibbles say which values the bike has **and which scaling** (nibble 0 and 1 both mean
-  "present", with two different scalings; 2 and 3 mean absent):
-  wheel speed `(b9&0x0C)>>2` · engine speed `b9&0x03` · gear `(b10&0xF0)>>4` · throttle `(b10&0x0C)>>2` ·
-  acceleration `b10&0x03` · lean `(b11&0xC0)>>6`; the same layout continues through bytes 7-12 and 27-31
-  (fuel, temperatures, odometer, trips, …) (`Ble5Value/i.java:112-134`, stored in `Ble5McInfoConfigTable`,
-  `a0/s.java:172-219`). (verified)
+  "present", with two different scalings; 2 and 3 mean absent). The full map, byte by byte
+  (`Ble5Value/i.java:112-183`, stored in `Ble5McInfoConfigTable`, `a0/s.java:172-219`). (verified)
+
+| Byte | Bits 7-6 | Bits 5-4 | Bits 3-2 | Bits 1-0 |
+|---|---|---|---|---|
+| 7 | total distance travelled | total fuel consumed | engine fuel rate | ECU 12 V battery (3 = unsupported) |
+| 8 | water temperature | oil temperature | intake air temperature | boost temperature (never read by any parser) |
+| 9 | boost pressure (never read) | fuel injection | wheel speed | engine speed |
+| 10 | gear position | throttle position | acceleration | — |
+| 11 | lean angle | wheelie flag | wheelie angle | TCS level high |
+| 12 | TCS level low | rider torque request | engine torque request | engine torque |
+| 13-26 | — | — | — | — (unused) |
+| 27 | odometer (3 = unsupported) | fuel gauge | average fuel mileage (3 = unsupported) | meter 12 V battery |
+| 28 | trip A | trip B | average speed | outside air temperature |
+| 29 | range symbol | range | fuel consumption | total time |
+| 30 | — | — | — | — (unused) |
+| 31 | — | — | instant fuel mileage | — |
+| 32 | max lean left | max lean right | — | — |
+| 33 | odometer valid bit present | meter 12 V valid bit present | average mileage valid bit present | instant fuel valid bit present |
+| 33 | trip A valid bit present | trip B valid bit present | average speed valid bit present | outside temperature valid bit present |
+| 34 | — | range valid bit present | total time valid bit present | — |
+
+  The "present" nibbles of bytes 33-34 are themselves nibbles like the others: **0 means the bike sends
+  that value's valid bit**, 1 means it does not (see the 0x41 table below). Bytes 13-26 and 30 are not
+  used by any parser. Boost temperature and boost pressure are configured but read from no frame, in
+  Rideology either (`Ble5Value/i.java` is their only user).
 - The nibbles are read once per connection and reused; the same data can come per model from the cloud
   record (`oh/g.java:36-40`). (verified)
 
@@ -74,6 +103,15 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   consumption, total time, **and max lean left/right** (`o0.java:434-435`). KawaNav decodes everything
   including max lean: bytes 53/54 (7 bits, 127 = none), with the gate in 0x40 byte 32 and the "not
   current" bits in byte 47 (bits 3 and 2). (layout from i.java / o0.java, not yet compared with a dash)
+- **Valid bits** (each carries a value only with its 0x40 nibble at 0; a bit set means "not current"):
+  byte 27 bit 6 odometer, bit 5 meter 12 V, bit 4 average mileage; byte 37 bit 7 trip A, bit 6 trip B,
+  bit 5 average speed (this byte also holds trip A's highest bit, bit 0); byte 47 bit 7 range, bit 6
+  total time. The two remaining bits of byte 47 — **bit 3 = max lean left, bit 2 = max lean right** —
+  are the only valid bits Rideology reads without a config gate (`qe/b.java:419-422`; they reach
+  `setMax_lean_angle_L/R` at `qe/b.java:541-544`). (verified)
+- Values the meter fills in when it has none are dropped, not shown: `0xFFFFFFFF`, `0xFFFFF` (1048575),
+  `0xFFFFF` (13107.1), `8191`, `1023`, `255`, `102.3`, `25.5`, `15`, `127` (`qe/b.java:520-542` and the
+  `h.a()`/`q.a()` helpers). (verified)
 - Asked for again when the info screen updates, and at connect — **there is no interval poll on BLE5**
   (`oh/b.java:152-177`). (verified)
 
@@ -82,7 +120,22 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 - Request `45 00 00` in the connect sequence, then receive-only. 55 bytes: total distance
   (u32 × 0.1 km), engine fuel rate (u16 × 0.02), water/oil/intake temperature, instant fuel
   consumption, TPMS pressures and warning bits. Speed/rpm/gear/throttle/lean are **not** here.
-  (verified)
+  (verified). Water/oil/intake temperature are read when their 0x40 nibble is **1**, not 0; every other
+  value here wants 0 (`qe/b.java:52-62`). (verified)
+- **Long form** (the frame the Z900 does not send; longer than 58 bytes) repeats what the 0x41 carries,
+  with a second set of valid bits in byte 57 (`qe/b.java:70-82`). (verified)
+
+| Bytes | Value | Read when |
+|---|---|---|
+| 57-59 | odometer, `((b57&0x0F)<<16) \| be16(58)` km | length > 59 and the 0x40 odometer nibble is 0 |
+| 60 (low nibble) | fuel gauge bars | length > 60 and the fuel-gauge nibble is 0 or 1 |
+| 62-63 | average fuel mileage, `((b62&3)<<8 \| b63) × 0.1` | length > 63 and the average-mileage nibble is 0 |
+| 64 | meter 12 V battery, `b64 × 0.1` | length > 64 and the meter-battery nibble is 0 |
+
+  Byte 57 also carries the "not current" bits for these three: bit 6 odometer, bit 5 meter battery,
+  bit 4 average mileage — same meaning as in the 0x41. Byte 27 bit 4 is the instant fuel's own "not
+  current" bit, read when the 0x40 inst-fuel nibble (byte 33 bit 4) is 0. The same placeholders are
+  dropped (`0xFFFFF`, `15`, `102.3`, `25.5`).
 
 ### 0x4A – live riding data (`Ble5Value.s`)
 
@@ -115,9 +168,10 @@ shifts the high byte; KawaNav keeps the shift, which the masked nibble makes equ
 - Block 45: byte 47 ABS target (bits 7-5) and ABS indicator (bits 2-0), byte 48 bit 0 switching info.
 - Block 75: byte 77 damping value; byte 78 bit 2 suspension calibration, bit 1 suspension status, bit 0
   suspension ECU status.
-- Block 85 (frame longer than 87 bytes): byte 87 bit 1 cruise control working, bit 0 cruise mode; byte 88
-  is Rideology's `wheel_speed_setting` — read as a speed, but what it means is inferred. (layout verified
-  in `qe/b.java:153-174`; no capture from a bike that has these yet)
+- Block 85 (frame longer than 87 bytes): byte 87 bit 1 cruise control working, bit 0 cruise mode. Byte 88
+  is Rideology's **`wheel_speed_setting`**: it reaches the realm column of that name (`qe/b.java:168-171`
+  → `a0/s.java:323`), so it is a wheel-circumference/calibration number, **not** a cruise speed. KawaNav
+  shows the raw byte on its debug card only. (layout verified; the number's meaning needs the bike)
 - KawaNav reads block 1 of 0x4A as absent when either header byte is FF, where Rideology drops the frame
   only when both are; it also gates the second and third blocks on their headers, which Rideology does not.
   Deliberately stricter: a frame with a half-FF header is not something the meter sends, and reading it
@@ -237,10 +291,15 @@ degrees, temperatures in °C. (verified)
 
 ## Capabilities (0x1A, `Ble5Value.b`)
 
-- Turn-by-turn supported unless the high nibble of byte 12 is 15; Rideology then sends no nav frames.
+- Turn-by-turn supported unless the high nibble of byte 12 is 15; Rideology then sends no nav frame at
+  all (`oh/b.java:385`), while the notification frame 0x12 has no such gate (`ne/p.java:196-202`).
   (verified)
-- Status icons supported unless byte 11 low nibble = 15 and the 2-bit fields byte 12 bits 3-2, 1-0 and
-  byte 13 bits 7-6, 5-4 are all 3. (verified)
+- Status icons supported unless byte 11 low nibble = 15 **and** the 2-bit fields byte 12 bits 3-2, 1-0
+  and byte 13 bits 7-6, 5-4 are all 3 — the frame 0x13 is dropped only when **all five** say "none"
+  (`oh/b.java:343`, `oh/b.java:362`). (verified)
+- Both gates only apply once the capability frame is a *usable* one: a 0x1A that is missing or still
+  being prepared leaves the app sending, which is what Rideology does with its default-initialised
+  object. (verified)
 - Clock: byte 7 bits 7-6 = clock gate (0 = the app may sync the clock). Shift lamp: byte 7 bits 1-0 =
   mode (0 = OFF/tach/LED/LED+tach list, 3 = OFF/ON, 1 and 2 = not settable), byte 8 = max level,
   byte 9 = min level (settable when min ≥ 1 and max ≤ 61). Byte 10 flags day/month/year/hour, byte 11
@@ -370,8 +429,18 @@ KawaNav never logs this frame.)
 - Behaviour of the shift-lamp-only write's `0x2F` year byte.
 - Which byte of a *short* ACK (KawaNav reads byte 4) is the general accept/reject — Rideology only
   parses the settings result (byte 7 of a 0x48 reply) and its generic ACK wrapper is raw.
-- Frame types not decoded by KawaNav: 0x01, 0x07, 0x12/0x0A (app→meter), and the EV/HEV family
-  (0x11, 0x16, 0x23, 0x24, 0x31, 0x32, 0x35, 0x42, 0x52, 0x62, 0x0E).
+- Frame ids, by what they belong to. KawaNav targets the BLE5 combustion bikes, so only the first group
+  is its business:
+
+| Group | Ids | What they are |
+|---|---|---|
+| BLE5, in use | 0x03 0x08 0x0B 0x1A 0x1B 0x1D 0x1E 0x13 0x14 0x12 0x40 0x41 0x45 0x47 0x48 0x4A 0x4B | model info, meter init, phone name, capabilities, general settings, maintenance config/indicator, dash icons, turn-by-turn, notifications, the vehicle frames |
+| BLE5, seen but not decoded | 0x01 0x20 0x30 | 0x01 is an empty "accepted" reply; 0x20 the ACK; 0x30 the meter's status frame |
+| EV / HEV family | 0x07 0x0E 0x11 0x16 0x17 0x23 0x24 0x31 0x32 0x35 0x42 0x52 0x62 | battery pack, EV modes, walk mode, an energy histogram. Reached only on the e-1 and HEV bikes |
+| BLE4 (older dashes) | 0x0A 0x12 as settings read, 0x17, and the 0x0E histogram | a different protocol entirely (see `Ble4VehicleSettingViewModel`) |
+
+  The EV/HEV ids are the ones a 2025+ petrol bike never sends; if one appears in a capture, the
+  assumption that this is a BLE5 combustion meter is wrong.
 
 ## What KawaNav implements today
 
@@ -380,7 +449,7 @@ KawaNav never logs this frame.)
 | Turn-by-turn | 0x14, 0x13 | works on the bike (v0.1–v0.3, verified) |
 | Bike data | 0x03, 0x40, 0x41, 0x45, 0x4A, 0x4B, 0x1A, 0x1B, 0x1D, 0x1E, 0x47, 0x48 | decoded and shown; the scaling comes from the 0x40 nibbles, not yet compared with a dash over a whole ride |
 | Connect sequence | 03, 40, 1A, 1D, 47, 0B, 41, 1B, 48, 1E, 08, 45 | sent after connecting (read-only level in release; the full one, with 0x08 and the phone name, in debug builds) |
-| Ride recording | 0x45, 0x4A + GPS | records locally; nothing on the meter drives it (no start/stop frame); like Rideology, KawaNav asks for 0x45 at connect and when a recording starts without one |
+| Ride recording | 0x45, 0x4A, 0x4B + GPS | records locally; the suspension/IMU values (0x4B: travel, accelerations, rotation rates, filtered wheel speeds, TCS/KQS flags) and the rest of 0x4A (torque, brake pressures, ABS target, damping, cruise) are recorded per second since 0.8; nothing on the meter drives it (no start/stop frame); like Rideology, KawaNav asks for 0x45 at connect and when a recording starts without one |
 | Dash icons | 0x13 (battery, headset, riding log), 0x12 (call, mail) | sent; the riding-log icon follows the recorder. Not yet seen on a dash |
 | Clock | 0x1B write | optional setting, off by default; preserves the shift lamp |
 | Settings write | 0x48 (block 09, byte 7 = 1) | debug builds only until tried on a bike: riding mode, power, KTRC, KQS |

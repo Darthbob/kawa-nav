@@ -184,7 +184,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         long age = System.currentTimeMillis() - Hub.bike.liveAt;
         String blocked = SettingsWrite.blockedBecause(Hub.bike.live, age, Hub.bike.tuning);
         if (blocked != null) return blocked;
-        String bad = SettingsWrite.invalid(mode, power, ktrcLevel, kqs, kebc);
+        String bad = SettingsWrite.invalid(SettingsWrite.modeCount(Hub.bike.tuning), mode, power,
+                ktrcLevel, kqs, kebc);
         if (bad != null) return bad;
         int ktrc = SettingsWrite.ktrcWire(ktrcLevel);
         byte[] frame = SettingsWrite.frame(mode, power, ktrc, kqs, kebc, name);
@@ -484,7 +485,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
         closeAudioProfiles();
         KawaBle b = ble;
         if (b.isReady()) {
-            // let the meter drop the arrow and the status icons, then close the link
+            // let the meter drop the arrow and the status icons, then close the link. Sent even when the
+            // dash says it has neither: clearing is always safe, and a dash that is showing something
+            // because of a misread capability must not be left with it on screen.
             b.write(KawaProtocol.clearFrame(), "clear", true);
             b.write(KawaProtocol.meterIndicationFrame(KawaProtocol.BATTERY_NONE, 0, 0, 0), "icons off", true);
             new Handler(Looper.getMainLooper()).postDelayed(b::disconnect, 500);
@@ -622,8 +625,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Logger.log("Bike display: turn-by-turn " + (c.turnByTurn ? "supported" : "NOT supported")
                 + ", status icons " + (c.statusIcons ? "supported" : "NOT supported"));
         if (!c.turnByTurn) {
-            // only a warning: Rideology stops sending arrows here, KawaNav keeps sending in case the flag is misread
-            Hub.bikeHint = "This bike's display reports no turn-by-turn support: arrows and curves will probably not appear.";
+            // the frames stop going out (unless the debug override is on): say so rather than going quiet
+            Hub.bikeHint = "This bike's display reports no turn-by-turn support: arrows and curves are not being "
+                    + "sent to it.";
         }
         updateNotification();
     }
@@ -724,7 +728,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (Hub.prefs(this).getBoolean(Hub.KEY_RIDE_AUTO, false)) recorder.autoCheck();
         if (out == null) {
             Hub.outputStatus = "Nothing to show";
-            if (clearsSent < CLEAR_REPEATS) {
+            if (clearsSent < CLEAR_REPEATS && navFramesAllowed()) {
                 ble.write(KawaProtocol.clearFrame(), "clear", true);
                 clearsSent++;
             }
@@ -739,7 +743,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 unit = 3; // feet
                 dist = (int) Math.round(dist / 0.3048);
             }
-            ble.write(KawaProtocol.naviFrame(0, out.turn, unit, dist), out.describe(), true);
+            if (navFramesAllowed()) {
+                ble.write(KawaProtocol.naviFrame(0, out.turn, unit, dist), out.describe(), true);
+            }
         }
         updateNotification();
     }
@@ -750,6 +756,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
      * is connected to the phone. Each field can be fixed in the hidden debug card ({@link Hub#iconSetting}).
      */
     private void sendIcons(long now) {
+        if (!framesAllowed(Hub.bikeCapabilities != null && Hub.bikeCapabilities.statusIcons, "status icons")) return;
         boolean batteryOn = Hub.prefs(this).getBoolean(Hub.KEY_PHONE_BATTERY, true);
         int percent = getSystemService(BatteryManager.class).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
         boolean charging = pluggedIn();
@@ -768,6 +775,32 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.iconsStatus = label + "\n" + KawaProtocol.hex(frame);
         iconsSent = icons;
         iconsSentAt = now;
+    }
+
+    /**
+     * The dash said (in its 0x1A answer) whether it has status icons and turn-by-turn at all. Rideology
+     * stops sending what it has not; KawaNav does the same, but only when the answer is a ready one, so a
+     * frame that has not arrived yet never silences anything. The debug switch overrides it either way.
+     */
+    private boolean framesAllowed(boolean supported, String what) {
+        boolean ok = BikeFrames.GeneralCaps.allowed(Hub.bikeCapabilities, supported, ignoreCaps());
+        if (!ok && lastQuiet != what) {
+            lastQuiet = what;
+            Logger.log("Dash says it has no " + what + ": not sending them (debug switch overrides)");
+        } else if (ok) {
+            lastQuiet = null;
+        }
+        return ok;
+    }
+
+    private boolean navFramesAllowed() {
+        return framesAllowed(Hub.bikeCapabilities != null && Hub.bikeCapabilities.turnByTurn, "turn-by-turn");
+    }
+
+    private String lastQuiet;
+
+    private boolean ignoreCaps() {
+        return Hub.DEBUG_TOOLS && Hub.prefs(this).getBoolean(Hub.KEY_DEBUG_IGNORE_CAPS, false);
     }
 
     /**

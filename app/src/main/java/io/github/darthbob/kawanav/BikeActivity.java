@@ -38,6 +38,8 @@ public class BikeActivity extends KawaActivity {
     // ride settings (debug builds until this has been tried on a bike)
     private LinearLayout settingsCard;
     private android.widget.Spinner modeSpinner, powerSpinner, ktrcSpinner, kqsSpinner;
+    /** Says how many riding modes the bike announced, so "Rider 4" missing from the list makes sense. */
+    private TextView modeNote;
     private TextView settingsStatus;
     private Button settingsSend;
     private LinearLayout lampCard;
@@ -211,9 +213,11 @@ public class BikeActivity extends KawaActivity {
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
                 + "screen. The bike must be standing still, in neutral and with the throttle closed."));
         modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
+        modeNote = secondary("");
         powerSpinner = spinner(SettingsWrite.POWER, 0);
         ktrcSpinner = spinner(SettingsWrite.KTRC, 0);
         kqsSpinner = spinner(SettingsWrite.ON_OFF, 0);
+        c.addView(modeNote);
         addRow(c, settingRowWith("Riding mode", modeSpinner));
         addRow(c, settingRowWith("Power", powerSpinner));
         addRow(c, settingRowWith("KTRC", ktrcSpinner));
@@ -478,9 +482,29 @@ public class BikeActivity extends KawaActivity {
         boolean canWrite = Hub.DEBUG_TOOLS && live && b.tuning != null && b.tuning.any();
         settingsCard.setVisibility(canWrite ? View.VISIBLE : View.GONE);
         if (canWrite) {
+            int modes = SettingsWrite.modeCount(b.tuning);
+            if (modeSpinner.getAdapter() == null || modeSpinner.getAdapter().getCount() != modes) {
+                modeNote.setText("This bike reports " + modes + " riding modes (0x47 says so), so the list "
+                        + (modes > SettingsWrite.WRITABLE_MODES ? "includes Rider 2-4." : "stops at Rider."));
+                int was = modeSpinner.getSelectedItemPosition();
+                android.widget.Spinner fresh = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, modes),
+                        Math.max(0, Math.min(was, modes - 1)));
+                android.view.ViewGroup parent = (android.view.ViewGroup) modeSpinner.getParent();
+                android.widget.LinearLayout rowParent = parent instanceof android.widget.LinearLayout
+                        ? (android.widget.LinearLayout) parent : null;
+                if (rowParent != null) {
+                    int at = rowParent.indexOfChild(modeSpinner);
+                    rowParent.removeViewAt(at);
+                    rowParent.addView(fresh, at, modeSpinner.getLayoutParams());
+                    modeSpinner = fresh;
+                    settingsPrefilled = false;   // the prefill below then sets it from the bike's own answer
+                }
+            }
             BikeFrames.VehicleSettings s = b.settings;
             if (s != null && !settingsPrefilled) { // prefill once, from what the bike reported
-                if (s.ridingMode >= 1 && s.ridingMode <= SettingsWrite.WRITABLE_MODES) modeSpinner.setSelection(s.ridingMode - 1);
+                if (s.ridingMode >= 1 && s.ridingMode <= SettingsWrite.modeCount(b.tuning)) {
+                    modeSpinner.setSelection(s.ridingMode - 1);
+                }
                 if (s.power >= 1 && s.power <= SettingsWrite.POWER.length) powerSpinner.setSelection(s.power - 1);
                 int k = SettingsWrite.ktrcFromWire(s.ktrc);
                 if (k >= 0) ktrcSpinner.setSelection(k);
@@ -631,9 +655,9 @@ public class BikeActivity extends KawaActivity {
                             : String.format(Locale.ROOT, "yes, %.0f°", t.wheelieDeg)});
                 }
                 if (t.cruiseOn >= 0) {
-                    // the mode and the speed are read but their meaning is not confirmed on a bike yet
+                    // byte 88 is Rideology's wheel-speed setting, not a cruise speed: it is not shown here
                     r.add(new String[]{s, "Cruise control", t.cruiseOn == 1
-                            ? (t.cruiseKmh > 0 ? "on, " + t.cruiseKmh + " km/h (unverified)" : "on") : "off"});
+                            ? (t.cruiseMode > 0 ? "on, mode " + t.cruiseMode : "on") : "off"});
                 }
                 // torque in the bike's own unit: the numbers compare with each other, not with a spec sheet
                 if (t.riderTorque >= 0) r.add(new String[]{s, "Torque asked by the throttle", t.riderTorque + " (bike units)"});

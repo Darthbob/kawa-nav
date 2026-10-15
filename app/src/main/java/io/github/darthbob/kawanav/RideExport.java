@@ -110,6 +110,20 @@ public final class RideExport {
             ext(ext, "brakeFront", s.brakeFrontBar, "%.1f");
             ext(ext, "tcs", s.tcs, "%.0f");
             ext(ext, "abs", s.abs, "%.0f");
+            ext(ext, "suspFrontMm", s.susp_f_stroke_mm, "%.1f");
+            ext(ext, "suspRearMm", s.susp_r_stroke_mm, "%.1f");
+            ext(ext, "ax", s.imu_ax_g, "%.2f");
+            ext(ext, "ay", s.imu_ay_g, "%.2f");
+            ext(ext, "az", s.imu_az_g, "%.2f");
+            ext(ext, "wheelFront", s.wheel_f_kmh, "%.1f");
+            ext(ext, "wheelRear", s.wheel_r_kmh, "%.1f");
+            ext(ext, "torqueRequest", s.torque_req, "%.0f");
+            ext(ext, "torqueActual", s.torque_actual, "%.0f");
+            ext(ext, "brakeFrontMaster", s.brake_f_master, "%.0f");
+            ext(ext, "brakeRearCaliper", s.brake_r_caliper, "%.0f");
+            ext(ext, "absTarget", s.abs_target, "%.0f");
+            ext(ext, "damping", s.damping, "%.0f");
+            ext(ext, "cruise", s.cruise_on, "%.0f");
             if (ext.length() > 0) {
                 sb.append("<extensions><kawanav:data>").append(ext).append("</kawanav:data></extensions>");
             }

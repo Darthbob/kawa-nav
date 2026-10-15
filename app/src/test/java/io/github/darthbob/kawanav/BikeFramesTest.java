@@ -123,7 +123,7 @@ public class BikeFramesTest {
         assertTrue(c.valid);
         int supported = 0;
         for (BikeFrames.Flag f : BikeFrames.InfoConfig.ALL) if (c.supported(f)) supported++;
-        assertEquals(8, supported);
+        assertEquals(9, supported);   // a change detector: the real checks are the ones below
         assertTrue(c.supported(BikeFrames.InfoConfig.ECU_BATTERY));
         assertTrue(c.supported(BikeFrames.InfoConfig.WATER_TEMP));
         assertTrue(c.supported(BikeFrames.InfoConfig.INTAKE_TEMP));
@@ -176,6 +176,146 @@ public class BikeFramesTest {
     }
 
     @Test
+    public void logExtLongForm() {
+        // the long 0x45 repeats the dash's own values, with their valid bits in byte 57
+        byte[] v = blank(0x45, 65);
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(infoConfigNoNibbleMasks());
+        put(v, 5, 0x05, 0x15);
+        put(v, 45, 0x05, 0x19);
+        put(v, 57, 0x00, 0x23, 0x45);   // flag clear, odometer 0x2345 = 9029 … set below instead
+        put(v, 57, 0x00, 0x12, 0x34);   // odometer 0x1234 = 4660
+        put(v, 60, 0x06);
+        put(v, 62, 0x02, 0xAB);         // average mileage 0x2AB = 683 -> 68.3
+        put(v, 64, 0x7B);               // meter battery 123 -> 12.3
+        BikeFrames.LogExt e = (BikeFrames.LogExt) d.decode(v);
+        assertEquals(4660, e.odometerKm);
+        assertEquals(6, e.fuelBars);
+        assertEquals(68.3, e.avgMileage, 1e-9);
+        assertEquals(12.3, e.meterBatteryV, 1e-9);
+        assertEquals(0, e.odometerValid);
+        assertEquals(0, e.meterBatteryValid);
+        assertEquals(0, e.avgMileageValid);
+    }
+
+    @Test
+    public void logExtLongFormFlagsDropTheValues() {
+        // byte 57 bits 6/5/4 set: the dash says those three are not current any more
+        byte[] v = blank(0x45, 65);
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(infoConfigNoNibbleMasks());
+        put(v, 5, 0x05, 0x15);
+        put(v, 45, 0x05, 0x19);
+        put(v, 57, 0x70, 0x12, 0x34);   // bits 6/5/4: odometer, meter battery, mileage not current
+        put(v, 60, 0x06);
+        put(v, 62, 0x02, 0xAB);
+        put(v, 64, 0x7B);
+        BikeFrames.LogExt e = (BikeFrames.LogExt) d.decode(v);
+        assertEquals(-1, e.odometerKm);
+        assertTrue(Double.isNaN(e.avgMileage));
+        assertTrue(Double.isNaN(e.meterBatteryV));
+        assertEquals(1, e.odometerValid);
+        assertEquals(1, e.meterBatteryValid);
+        assertEquals(1, e.avgMileageValid);
+        assertEquals(6, e.fuelBars);    // the gauge has no bit of its own
+    }
+
+    @Test
+    public void logExtShortFrameHasNoLongForm() {
+        // the 55-byte form the Z900 sends: every long-form value absent, not zero
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(hx(Z500_40));
+        BikeFrames.LogExt e = (BikeFrames.LogExt) d.decode(hx(Z500_45));
+        assertEquals(-1, e.odometerKm);
+        assertEquals(-1, e.fuelBars);
+        assertTrue(Double.isNaN(e.avgMileage));
+        assertTrue(Double.isNaN(e.meterBatteryV));
+        assertEquals(-1, e.odometerValid);
+    }
+
+    @Test
+    public void logExtInstantFuelValidBit() {
+        // the 0x40 nibble at byte 33 bit 4 (value 0) says the instant fuel carries a "not current" bit,
+        // which is byte 27 bit 4 of the 0x45 frame
+        byte[] v = blank(0x45, 55);
+        put(v, 5, 0x05, 0x15);
+        put(v, 25, 0x05, 0x18);
+        put(v, 27, 0x00, 0x30);
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(infoConfigNoNibbleMasks());
+        BikeFrames.LogExt current = (BikeFrames.LogExt) d.decode(v);
+        assertEquals(4.8, current.instantFuel, 1e-9);
+        assertEquals(0, current.instantFuelValid);
+        put(v, 27, 0x10, 0x30);        // bit 4 set: the dash says the value is not current
+        BikeFrames.LogExt stale = (BikeFrames.LogExt) d.decode(v);
+        assertTrue(Double.isNaN(stale.instantFuel));
+        assertEquals(1, stale.instantFuelValid);
+        // a bike that sends no such bit (nibble 1): the value is used as it comes and the flag is unknown
+        byte[] noBit = infoConfigNoNibbleMasks();
+        put(noBit, 33, 0x10);
+        BikeFrames.Decoder d2 = new BikeFrames.Decoder();
+        d2.decode(noBit);
+        put(v, 27, 0x10, 0x30);
+        BikeFrames.LogExt plain = (BikeFrames.LogExt) d2.decode(v);
+        assertEquals(4.8, plain.instantFuel, 1e-9);
+        assertEquals(-1, plain.instantFuelValid);
+    }
+
+    @Test
+    public void outsideTemperatureValidBitIsRead() {
+        // the last flag of the set (0x40 byte 33 bit 0); nothing gates on it, but the debug card lists it
+        BikeFrames.InfoConfig cfg = (BikeFrames.InfoConfig) new BikeFrames.Decoder()
+                .decode(infoConfigNoNibbleMasks());
+        assertEquals(0, cfg.flag(BikeFrames.InfoConfig.OUTSIDE_TEMP_VALID));
+        byte[] other = infoConfigNoNibbleMasks();
+        put(other, 33, 0x01);
+        BikeFrames.InfoConfig with = (BikeFrames.InfoConfig) new BikeFrames.Decoder().decode(other);
+        assertEquals(1, with.flag(BikeFrames.InfoConfig.OUTSIDE_TEMP_VALID));
+    }
+
+    @Test
+    public void capabilityAnswerDecidesWhetherFramesGoOut() {
+        // a ready 0x1A that says "no" is the only thing that stops them
+        byte[] no = blank(0x1A, 15);
+        put(no, 5, 0x05, 0x0B);
+        put(no, 11, 0x0F);          // status icons: the low nibble at 15
+        put(no, 12, 0xFF, 0xFF);    // navi nibble 15 and both icon sub-fields of the byte at 3
+        put(no, 13, 0xFF);
+        put(no, 14, 0x01);          // ready
+        BikeFrames.GeneralCaps caps = (BikeFrames.GeneralCaps) new BikeFrames.Decoder().decode(no);
+        assertTrue(caps.valid);
+        assertFalse(caps.turnByTurn);
+        assertFalse(caps.statusIcons);
+        assertFalse(BikeFrames.GeneralCaps.allowed(caps, caps.turnByTurn, false));
+        assertFalse(BikeFrames.GeneralCaps.allowed(caps, caps.statusIcons, false));
+        // the debug override wins
+        assertTrue(BikeFrames.GeneralCaps.allowed(caps, caps.turnByTurn, true));
+
+        // nothing known: keep sending (a frame that has not arrived must not silence anything)
+        assertTrue(BikeFrames.GeneralCaps.allowed(null, false, false));
+        byte[] pending = blank(0x1A, 15);
+        put(pending, 5, 0x05, 0x0B);
+        put(pending, 11, 0x0F);
+        put(pending, 14, 0x00);      // header present, bit 0 clear: still being prepared
+        BikeFrames.GeneralCaps notReady = (BikeFrames.GeneralCaps) new BikeFrames.Decoder().decode(pending);
+        assertFalse(notReady.valid);
+        assertTrue(BikeFrames.GeneralCaps.allowed(notReady, false, false));
+
+        // a dash that has them: everything goes out, and the two booleans say so
+        byte[] yes = blank(0x1A, 15);
+        put(yes, 5, 0x05, 0x0B);
+        put(yes, 11, 0x00);
+        put(yes, 12, 0x00, 0x00);
+        put(yes, 13, 0x00);
+        put(yes, 14, 0x01);
+        BikeFrames.GeneralCaps full = (BikeFrames.GeneralCaps) new BikeFrames.Decoder().decode(yes);
+        assertTrue(full.valid);
+        assertTrue(full.turnByTurn);
+        assertTrue(full.statusIcons);
+        assertTrue(BikeFrames.GeneralCaps.allowed(full, full.turnByTurn, false));
+    }
+
+    @Test
     public void unknownFrameKeepsBytes() {
         BikeFrames.Frame f = new BikeFrames.Decoder().decode(hx("0a0000"));
         assertEquals(0x0A, f.id);
@@ -191,6 +331,15 @@ public class BikeFramesTest {
         put(v, 5, 0x05, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
         put(v, 9, b9, b10, b11);
         put(v, 14, 0x01); // flags "ready" (bit 0 set): no retry
+        return v;
+    }
+
+    /** 0x40 with every value nibble at 0 (present) and the valid-bit flags present. */
+    static byte[] infoConfigNoNibbleMasks() {
+        byte[] v = blank(0x40, 35);
+        put(v, 5, 0x05, 0x11);
+        put(v, 27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+        put(v, 14, 0x01);
         return v;
     }
 
@@ -291,7 +440,7 @@ public class BikeFramesTest {
         assertEquals(0, t.suspEcu);
         assertEquals(1, t.cruiseOn);        // 0x02: working, but mode 0
         assertEquals(0, t.cruiseMode);
-        assertEquals(120, t.cruiseKmh);
+        assertEquals(120, t.wheelSpeedSetting); // byte 88, Rideology's wheel_speed_setting
     }
 
     @Test
@@ -309,7 +458,7 @@ public class BikeFramesTest {
         assertEquals(-1, t.absTarget);
         assertEquals(-1, t.damping);
         assertEquals(-1, t.cruiseOn);
-        assertEquals(-1, t.cruiseKmh);
+        assertEquals(-1, t.wheelSpeedSetting);
         // a short frame (the Z500 sends 55 bytes) has none of them
         BikeFrames.Telemetry s = telemetry(cfg, telemetryFrame());
         assertEquals(-1, s.riderTorque);
@@ -338,7 +487,7 @@ public class BikeFramesTest {
         assertEquals(-1, t.absTarget);
         assertEquals(-1, t.damping);
         assertEquals(-1, t.cruiseOn);
-        assertEquals(-1, t.cruiseKmh);
+        assertEquals(-1, t.wheelSpeedSetting);
         byte[] m = blank(0x4B, 53);
         put(m, 5, 0x05, 0x01);
         put(m, 15, 0x05, 0x02);
