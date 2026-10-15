@@ -268,12 +268,21 @@ public class RideActivity extends KawaActivity {
         e.addView(gap());
         e.addView(iconButton(secondaryButton("Export GPX", v -> export("gpx")), R.drawable.ic_download), weight());
         c.addView(e);
+        // the two that carry everything: every recorded value as a table, and the app's own file
+        LinearLayout a = row();
+        a.setPadding(0, dp(Ui.SPACE2), 0, 0);
+        a.addView(iconButton(secondaryButton("CSV (all values)", v -> export("full")), R.drawable.ic_download), weight());
+        a.addView(gap());
+        a.addView(iconButton(secondaryButton("Raw file", v -> export("tsv")), R.drawable.ic_download), weight());
+        c.addView(a);
         LinearLayout r = row();
         r.setPadding(0, dp(Ui.SPACE2), 0, 0);
         r.addView(iconButton(destructiveButton("Delete", v -> confirmDelete()), R.drawable.ic_trash), weight());
         c.addView(r);
-        TextView caption = note("CSV has Rideology's columns, so the existing tools can read the ride. GPX is a "
-                + "track for map programs. Both go to Download/KawaNav.");
+        TextView caption = note("CSV has Rideology's columns, so the existing tools can read the ride. "
+                + "\"CSV (all values)\" has every value KawaNav records, one column each — the same table the "
+                + "app keeps, which is what \"Raw file\" gives too, in the app's own format. GPX is a track for "
+                + "map programs. All of them go to Download/KawaNav.");
         caption.setPadding(0, dp(Ui.SPACE2), 0, 0);
         c.addView(caption);
         return c;
@@ -316,16 +325,42 @@ public class RideActivity extends KawaActivity {
     /** Writes the ride to Download/KawaNav and offers to share it. */
     private void export(String kind) {
         if (ride == null || samples == null) return;
-        String text = kind.equals("csv") ? RideExport.csv(ride, samples, "", "") : RideExport.gpx(ride, samples);
-        byte[] bytes = kind.equals("csv") ? RideExport.csvBytes(text) : text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        String name = RideExport.fileName(ride, kind);
-        Uri uri = writeToDownloads(name, kind.equals("csv") ? "text/csv" : "application/gpx+xml", bytes);
+        // the ride as Rideology's CSV, as a CSV with every recorded value, as a GPX track, or as the raw
+        // file the app keeps (all 63 columns, what the other two only partly carry)
+        String text;
+        String mime;
+        String name;
+        switch (kind) {
+            case "csv":
+                text = RideExport.csv(ride, samples, "", "");
+                mime = "text/csv";
+                name = RideExport.fileName(ride, "csv");
+                break;
+            case "full":
+                text = RideExport.fullCsv(ride, samples);
+                mime = "text/csv";
+                name = RideExport.fileName(ride, "full", "csv");
+                break;
+            case "tsv":
+                text = RideExport.rawTsv(samples);
+                mime = "text/tab-separated-values";
+                name = RideExport.fileName(ride, "kawanav", "tsv");
+                break;
+            default:
+                text = RideExport.gpx(ride, samples);
+                mime = "application/gpx+xml";
+                name = RideExport.fileName(ride, "gpx");
+                break;
+        }
+        byte[] bytes = kind.equals("csv") ? RideExport.csvBytes(text)
+                : text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        Uri uri = writeToDownloads(name, mime, bytes);
         if (uri == null) {
             android.widget.Toast.makeText(this, "Export failed", android.widget.Toast.LENGTH_LONG).show();
             return;
         }
         Logger.log("Ride: exported " + name + " (" + bytes.length + " bytes)");
-        Intent share = new Intent(Intent.ACTION_SEND).setType(kind.equals("csv") ? "text/csv" : "application/gpx+xml")
+        Intent share = new Intent(Intent.ACTION_SEND).setType(mime)
                 .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
             startActivity(Intent.createChooser(share, "Share " + name));

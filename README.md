@@ -305,9 +305,12 @@ has:
 - charts for any value the ride recorded — speed, engine speed, gear, throttle, lean angle,
   temperatures, tyres, battery, brake pressure, suspension travel, the body's accelerations, the filtered
   wheel speeds and more; picking one and touching the line marks that second on the track;
-- rename (the pencil at the top), delete, and export: **CSV** with Rideology's column layout (so the tools people already use
-  for Rideology exports can read it) or **GPX** with the values as extensions for map programs. Both
-  are written to `Download/KawaNav` and offered for sharing.
+- rename (the pencil at the top), delete, and export: **CSV** with Rideology's column layout (so the tools
+  people already use for Rideology exports can read it) or **GPX** with the values as extensions for map
+  programs. Two more carry everything a ride recorded: **CSV (all values)**, one column per recorded value
+  — including the suspension, IMU, torque and brake values Rideology's layout has no column for — and
+  **Raw file**, the app's own file with the same values. All four are written to `Download/KawaNav` and
+  offered for sharing.
 
 Anything the bike does not report stays an empty cell, so an older or simpler bike records a shorter
 ride rather than a row of zeroes. Distance comes from the bike's odometer when the bike reports one, else

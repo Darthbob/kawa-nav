@@ -190,6 +190,51 @@ public class RideTest {
     }
 
     @Test
+    public void theFullCsvCarriesEveryRecordedValue() {
+        Ride r = new Ride();
+        r.id = "test"; r.name = "Test ride"; r.start = 1_700_000_000_000L; r.activeMs = 3000;
+        java.util.List<RideTsv.Sample> samples = new java.util.ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            RideTsv.Sample s = new RideTsv.Sample();
+            s.tMs = i * 1000;
+            s.epochMs = 1_700_000_000_000L + i * 1000;
+            s.susp_f_stroke_mm = 12.5 + i;
+            s.imu_ax_g = -0.4;
+            s.wheel_f_kmh = 60 + i;
+            s.abs_target = 5;
+            samples.add(s);
+        }
+        String csv = RideExport.fullCsv(r, samples);
+        String[] lines = csv.split("\n");
+        // a comment, the header, one line per second - and the header is the ride file's own columns
+        assertEquals(RideTsv.header(), lines[1]);
+        assertEquals(lines[1].split("	", -1).length, lines[2].split("	", -1).length);
+        assertEquals(3 + 2, lines.length);
+        assertTrue(csv.startsWith("# "));
+        // and it reads back as the same values
+        java.util.List<RideTsv.Sample> back = RideTsv.parse(java.util.Arrays.asList(
+                RideTsv.magic(), lines[1], lines[2], lines[3], lines[4]));
+        assertEquals(3, back.size());
+        assertEquals(12.5, back.get(0).susp_f_stroke_mm, 1e-9);
+        assertEquals(5, back.get(2).abs_target, 1e-9);
+    }
+
+    @Test
+    public void theRawExportIsTheRideFile() {
+        RideTsv.Sample s = new RideTsv.Sample();
+        s.tMs = 1000;
+        s.epochMs = 1_700_000_000_000L;
+        s.kmh = 42;
+        String raw = RideExport.rawTsv(java.util.Arrays.asList(s));
+        String[] lines = raw.split("\n");
+        assertEquals(RideTsv.magic(), lines[0]);
+        assertEquals(RideTsv.header(), lines[1]);
+        java.util.List<RideTsv.Sample> back = RideTsv.parse(java.util.Arrays.asList(lines));
+        assertEquals(1, back.size());
+        assertEquals(42, back.get(0).kmh, 1e-9);
+    }
+
+    @Test
     public void csvLayout() {
         Ride r = new Ride();
         r.name = "Morning ride";

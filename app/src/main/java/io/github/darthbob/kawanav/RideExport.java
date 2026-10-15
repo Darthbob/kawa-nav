@@ -65,6 +65,35 @@ public final class RideExport {
     }
 
     /** The CSV as bytes in the encoding Rideology uses (Shift-JIS, falling back to UTF-8). */
+    /**
+     * Every value the ride recorded, one column per value, named as in the ride's own file: the CSV that
+     * goes with the Rideology one, for the values Rideology's layout has no column for (suspension, IMU,
+     * torques, brake pressures, the traction-control and quick-shifter flags).
+     *
+     * The first line is a comment (a spreadsheet shows it as text, a parser can skip it): the ride's name,
+     * when it was and what it came to.
+     */
+    public static String fullCsv(Ride ride, List<RideTsv.Sample> samples) {
+        StringBuilder sb = new StringBuilder(samples.size() * 260);
+        sb.append("# ").append(ride.name == null || ride.name.isEmpty() ? ride.id : ride.name);
+        sb.append(" ").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.ROOT)
+                .format(new java.util.Date(ride.start)));
+        sb.append(String.format(java.util.Locale.ROOT, " · %.2f km · %d min",
+                (ride.distBikeM > 0 ? ride.distBikeM : ride.distGpsM) / 1000, Math.round(ride.activeMs / 60_000.0)));
+        sb.append(" · every value KawaNav recorded").append('\n');
+        sb.append(RideTsv.header()).append('\n');
+        for (RideTsv.Sample s : samples) sb.append(s.line()).append('\n');
+        return sb.toString();
+    }
+
+    /** The ride's own file, as the app writes it: the magic line, the header and one line per second. */
+    public static String rawTsv(List<RideTsv.Sample> samples) {
+        StringBuilder sb = new StringBuilder(samples.size() * 260);
+        sb.append(RideTsv.magic()).append('\n').append(RideTsv.header()).append('\n');
+        for (RideTsv.Sample s : samples) sb.append(s.line()).append('\n');
+        return sb.toString();
+    }
+
     public static byte[] csvBytes(String csv) {
         try {
             return csv.getBytes(java.nio.charset.Charset.forName("Shift_JIS"));
@@ -153,7 +182,13 @@ public final class RideExport {
 
     /** A file name that is safe on every phone and in every file manager. */
     public static String fileName(Ride ride, String extension) {
+        return fileName(ride, "", extension);
+    }
+
+    /** A file name for a ride: its name, an optional suffix ("full", "all"), and the extension. */
+    public static String fileName(Ride ride, String suffix, String extension) {
         String base = ride.name == null || ride.name.isEmpty() ? ride.id : ride.name;
-        return base.replaceAll("[^A-Za-z0-9._-]+", "_") + "." + extension;
+        String tail = suffix == null || suffix.isEmpty() ? "" : "_" + suffix;
+        return base.replaceAll("[^A-Za-z0-9._-]+", "_") + tail + "." + extension;
     }
 }
