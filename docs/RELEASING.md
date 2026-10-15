@@ -1,6 +1,6 @@
 # Releasing
 
-Pushing a version tag (`v0.9.1`, …) runs [the Release workflow](../.github/workflows/release.yml): it
+Pushing a version tag (`v0.9.2`, …) runs [the Release workflow](../.github/workflows/release.yml): it
 builds both APKs, signs them with this fork's key, checks the signing certificate and publishes them
 as a GitHub release with their checksums.
 
@@ -28,24 +28,24 @@ secret back, and without the key no update installs over the app already on a ph
 
 ## Each release
 
-1. Raise `versionCode` and `versionName` in `app/build.gradle`. The tag must match: `v0.9.1` for
+1. Raise `versionCode` and `versionName` in `app/build.gradle`. The tag must match: `v0.9.2` for
    `versionName '0.9'`, otherwise the workflow stops.
-2. Write the notes in `docs/releases/v0.9.1.md`: what is new or changed, what has not been tried on a
+2. Write the notes in `docs/releases/v0.9.2.md`: what is new or changed, what has not been tried on a
    bike yet, which APK is which. The workflow adds the safety note, the checksums, the signing
    certificate and the licence line. Without this file it uses GitHub's generated list of changes.
 3. Commit, push to `main`, and wait for CI.
 4. Tag and push the tag:
 
    ```bash
-   git tag -a v0.9.1 -m "KawaNav v0.9.1 (jackyes fork)"
+   git tag -a v0.9.2 -m "KawaNav v0.9.2 (jackyes fork)"
    ```
 
    ```bash
-   git push origin v0.9.1
+   git push origin v0.9.2
    ```
 
-5. The release appears under Releases with `KawaNav-v0.9.1.apk` and `KawaNav-v0.9.1-debug.apk` once the
+5. The release appears under Releases with `KawaNav-v0.9.2.apk` and `KawaNav-v0.9.2-debug.apk` once the
    workflow is done (Actions → Release).
 
 A failed run publishes nothing (at most a draft release is left: delete it under Releases). Fix the
-cause, delete the tag (`git push origin :refs/tags/v0.9.1`, `git tag -d v0.9.1`), and tag again.
+cause, delete the tag (`git push origin :refs/tags/v0.9.2`, `git tag -d v0.9.2`), and tag again.
