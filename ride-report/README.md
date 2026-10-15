@@ -5,8 +5,14 @@ writes an HTML report beside it: every value the ride recorded with its lowest, 
 long the electronics worked, the notable moments with the values that caused them, charts, and the track
 on a map.
 
-It needs **nothing but Python 3.9 or newer** — no packages to install. The charts are drawn by the tool
-itself; only the map uses the internet (Leaflet from a CDN), and `--no-map` leaves it out.
+It needs **nothing but Python 3.9 or newer** — no packages to install, and **the report opens with no
+internet at all**: the charts and the track are both drawn by the tool as SVG. Nothing in the file is
+fetched from anywhere, so no tile server can answer "Access blocked" or "API key required".
+
+The track panel shows the shape of the ride coloured by speed, a marker for every notable moment (point
+at one and its time, title and values appear), the start, a scale bar and north. It is drawn flat, without
+a projection, which over a ride's few tens of kilometres is plenty — the caption in the report says so,
+and the scale bar is approximate. `--no-map` leaves the panel out.
 
 ## Using it
 

@@ -234,7 +234,7 @@ def test_report(tmp):
     samples = seconds(10, kmh=50, rpm=4000, water_c=90, gear=3, thr_pct=30, acc_g=0.1,
                       lat=45.0, lon=7.0, wheel_f_kmh=50, wheel_r_kmh=50)
     samples[4]["rpm"] = 9000
-    samples[4]["gas"] = None
+    samples[4]["wheel_r_kmh"] = 60          # a wheel slip: it has to reach the report as a marker
     path = write(tmp, "report-ride.csv", full_csv(
         ["t_ms", "kmh", "rpm", "water_c", "gear", "thr_pct", "acc_g", "lat", "lon",
          "wheel_f_kmh", "wheel_r_kmh"],
@@ -248,12 +248,20 @@ def test_report(tmp):
     check("the report has the table", "Average" in out and "Coolant" in out)
     check("the report has the charts", out.count("<figure class=\"chart\">") >= 3,
           out.count("<figure class=\"chart\">"))
-    check("the report has the track", "leaflet" in out and "circleMarker" in out)
+    check("the report has the track drawn as SVG",
+          'class="track-bg"' in out and "figure class=\"track\"" in out and "<title>" in out)
+    check("nothing is loaded from the internet", "http://" not in out and "https://" not in out,
+          [l for l in out.splitlines() if "http" in l][:1])
     check("the highest value is in the tile", "9,000 rpm" in out,
           [line for line in out.splitlines() if "tile" in line][:1])
 
+    # the track is drawn by the tool itself: no map library, no tiles, nothing to fetch
+    check("the track has a scale bar and north", "class=\"scale\"" in out and ">N<" in out)
+    check("a marker per event with its values",
+          out.count('class="ev-') >= 1 and "<title>" in out)
+
     no_map = rr.parse_args(["x", path, "--no-map"])
-    check("--no-map leaves the map out", "leaflet" not in rr.html_report(ride, no_map))
+    check("--no-map leaves the track out", 'class="track-bg"' not in rr.html_report(ride, no_map))
 
     # the command line: a good file writes a report, a bad one fails with a message
     with tempfile.TemporaryDirectory() as outdir:

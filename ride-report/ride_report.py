@@ -70,6 +70,7 @@ ALIASES = {
     "throttle_position": "thr_pct", "gear_position": "gear", "lean_angle": "lean_deg",
 }
 
+
 MAGIC = "#kawanav-ride 1"
 COS45 = math.sqrt(0.5)
 
@@ -596,47 +597,95 @@ def tcs_abs_marks(ride, t_ms, x, top, h):
     return "\n".join(out)
 
 
-def map_section(ride, events):
-    """The track on a map, coloured by speed, with a marker for every event."""
+def track_section(ride, events, opts):
+    """The track drawn here, as SVG: no map library, no tiles, no internet.
+
+    The shape is the point: where the ride went, coloured by speed, with a marker for every notable
+    moment, a scale bar and north. An equirectangular projection is plenty over a ride's few kilometres
+    (and it is what the phone's own track view does).
+    """
     pts = [(r.get("lat"), r.get("lon"), r.get("kmh")) for r in ride.rows
            if r.get("lat") is not None and r.get("lon") is not None]
     if len(pts) < 2:
         return "<p class=\"dim\">No GPS track in this ride.</p>"
+
+    width, height, pad = 980, 460, 26
+    lat0 = min(p[0] for p in pts)
+    lat1 = max(p[0] for p in pts)
+    lon0 = min(p[1] for p in pts)
+    lon1 = max(p[1] for p in pts)
+    lat_mid = math.radians((lat0 + lat1) / 2)
+    # metres per degree, and the same scale on both axes so the shape is not stretched
+    m_per_deg_lat = 111_320.0
+    m_per_deg_lon = 111_320.0 * math.cos(lat_mid)
+    span_x = max(1e-6, (lon1 - lon0) * m_per_deg_lon)
+    span_y = max(1e-6, (lat1 - lat0) * m_per_deg_lat)
+    scale = min((width - 2 * pad) / span_x, (height - 2 * pad) / span_y)
+    # centre what does not fill the box
+    off_x = (width - span_x * scale) / 2
+    off_y = (height - span_y * scale) / 2
+
+    def xy(lat, lon):
+        x = off_x + (lon - lon0) * m_per_deg_lon * scale
+        y = off_y + (lat1 - lat) * m_per_deg_lat * scale
+        return x, y
+
     speeds = [p[2] for p in pts if p[2] is not None]
-    bounds = [[min(p[0] for p in pts), min(p[1] for p in pts)],
-              [max(p[0] for p in pts), max(p[1] for p in pts)]]
-    payload = {
-        "points": [[round(p[0], 6), round(p[1], 6), round(p[2], 1) if p[2] is not None else None] for p in pts],
-        "bounds": bounds,
-        "maxSpeed": max(speeds) if speeds else 0,
-        "events": [{"lat": e.lat, "lon": e.lon, "title": e.title, "detail": e.detail, "time": e.time,
-                    "kind": e.kind} for e in events if e.lat is not None and e.lon is not None],
-    }
-    return '''<div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script>
-const ride = %s;
-const map = L.map('map');
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {maxZoom: 19, attribution: '&copy; OpenStreetMap'}).addTo(map);
-L.rectangle([ride.bounds[0], ride.bounds[1]], {color: '#888', weight: 1, fill: false}).addTo(map);
-map.fitBounds(ride.bounds, {padding: [20, 20]});
-const palette = ['#7f8c8d', '#2e86de', '#27ae60', '#f39c12', '#c0392b'];
-function colourFor(kmh) {
-  if (kmh === null || ride.maxSpeed <= 0) return palette[0];
-  const f = Math.min(0.999, Math.max(0, kmh / ride.maxSpeed));
-  return palette[Math.floor(f * palette.length)];
-}
-for (let i = 1; i < ride.points.length; i++) {
-  const a = ride.points[i - 1], b = ride.points[i];
-  L.polyline([[a[0], a[1]], [b[0], b[1]]], {color: colourFor(b[2]), weight: 5, opacity: 0.9}).addTo(map);
-}
-for (const e of ride.events) {
-  L.circleMarker([e.lat, e.lon], {radius: 7, color: '#fff', weight: 2, fillColor: '#111',
-    fillOpacity: 1}).addTo(map).bindPopup('<b>' + e.time + ' · ' + e.title + '</b><br>' + e.detail);
-}
-</script>''' % json.dumps(payload)
+    top = max(speeds) if speeds else 0
+    palette = ["#4a6fa5", "#2e86de", "#27ae60", "#f39c12", "#c0392b"]
+
+    def colour(kmh):
+        if kmh is None or top <= 0:
+            return palette[0]
+        f = min(0.999, max(0.0, kmh / top))
+        return palette[int(f * len(palette))]
+
+    segments = []
+    for i in range(1, len(pts)):
+        a, b = pts[i - 1], pts[i]
+        x1, y1 = xy(a[0], a[1])
+        x2, y2 = xy(b[0], b[1])
+        segments.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s"/>'
+                        % (x1, y1, x2, y2, colour(b[2])))
+
+    markers = []
+    for e in events:
+        if e.lat is None or e.lon is None:
+            continue
+        x, y = xy(e.lat, e.lon)
+        markers.append('<g class="ev"><title>%s · %s — %s</title>'
+                       '<circle cx="%.1f" cy="%.1f" r="5" class="ev-%s" stroke="#fff"/></g>'
+                       % (html.escape(e.time), html.escape(e.title), html.escape(e.detail),
+                          x, y, e.kind))
+    sx, sy = xy(pts[0][0], pts[0][1])
+    start_dot = ('<circle cx="%.1f" cy="%.1f" r="4" class="start"/>' % (sx, sy))
+
+    # a scale bar of a round distance that fits the drawing
+    bar_m = 100.0
+    for candidate in (50, 100, 200, 500, 1000, 2000, 5000, 10000):
+        if candidate * scale <= width * 0.3:
+            bar_m = candidate
+    bar_px = bar_m * scale
+    bar_label = "%d m" % bar_m if bar_m < 1000 else "%d km" % (bar_m // 1000)
+
+    return """<figure class="track">
+<svg viewBox="0 0 %d %d" role="img" aria-label="the ride's track">
+<rect width="%d" height="%d" class="track-bg"/>
+%s
+%s
+%s
+<g class="scale"><line x1="%d" y1="%d" x2="%.1f" y2="%d"/><text x="%d" y="%d">%s</text></g>
+<g class="north"><line x1="%d" y1="%d" x2="%d" y2="%d"/><text x="%d" y="%d">N</text></g>
+</svg>
+<figcaption class="dim">Blue is the slowest part of the ride, red the fastest%s. Touch a marker for the
+moment it stands for; the scale bar is approximate (the shape is drawn flat, without a projection).
+</figcaption></figure>""" % (
+        width, height, width, height,
+        "\n".join(segments), start_dot, "\n".join(markers),
+        16, height - 18, 16 + bar_px, height - 18, 16, height - 26, bar_label,
+        width - 28, 22, width - 28, 44, width - 34, 38,
+        (", grey where the speed is unknown" if top <= 0 else ""),
+    )
 
 
 def html_report(ride, opts):
@@ -714,7 +763,6 @@ def html_report(ride, opts):
 <html lang="en"><head><meta charset="utf-8">
 <title>{html.escape(ride.name)} — KawaNav ride report</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-{'<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">' if opts.map else ''}
 <style>
 :root {{ color-scheme: light dark; }}
 body {{ font: 15px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 1040px; padding: 24px; }}
@@ -741,11 +789,23 @@ svg {{ width: 100%; height: 170px; }}
 .axis {{ font-size: 10px; fill: #888; }}
 .marker-tcs {{ stroke: #f39c12; stroke-width: 2; }}
 .marker-abs {{ stroke: #c0392b; stroke-width: 2; }}
-#map {{ height: 460px; border-radius: 12px; margin-top: 8px; }}
+figure.track svg {{ height: auto; }}
+.track-bg {{ fill: #f4f6f8; }}
+figure.track line {{ stroke-width: 4; stroke-linecap: round; }}
+.start {{ fill: #27ae60; }}
+.scale line, .north line {{ stroke: #666; stroke-width: 2; }}
+.scale text, .north text {{ font-size: 11px; fill: #666; }}
+.ev circle {{ stroke-width: 2; }}
+.ev-wheelspin circle, .ev-tcs circle {{ fill: #f39c12; }}
+.ev-braking circle, .ev-abs circle, .ev-heat circle {{ fill: #c0392b; }}
+.ev-shift circle, .ev-stop circle, .ev-wheelie circle {{ fill: #333; }}
 @media (prefers-color-scheme: dark) {{
   body {{ background: #111; color: #eee; }}
   .tile, table.data td, table.data th {{ border-color: #333; }}
   .grid {{ stroke: #262626; }} .plot {{ stroke: #333; }} .line {{ stroke: #4aa3ff; }}
+  .track-bg {{ fill: #1a1d21; }}
+  .scale line, .north line {{ stroke: #999; }} .scale text, .north text {{ fill: #999; }}
+  .ev-shift circle, .ev-stop circle, .ev-wheelie circle {{ fill: #ddd; }}
   .ev-tcs td, .ev-wheelspin td {{ background: #2a2317; }}
   .ev-braking td, .ev-abs td, .ev-heat td {{ background: #2a1a19; }}
 }}
@@ -772,7 +832,7 @@ the reading moving, not a proven intervention.</p>
 <h2>Charts</h2>
 {''.join(charts)}
 
-{('<h2>Track</h2>' + map_section(ride, events)) if opts.map else ''}
+{('<h2>Track</h2>' + track_section(ride, events, opts)) if opts.map else ''}
 
 <p class="dim">Made by KawaNav's ride-report tool from {html.escape(os.path.basename(ride.path))}.
 The values are what the bike sent; an empty cell there means it sent nothing.</p>
