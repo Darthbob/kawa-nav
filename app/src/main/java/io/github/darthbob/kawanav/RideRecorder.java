@@ -256,6 +256,7 @@ public final class RideRecorder implements android.location.LocationListener {
                 s.accG = t.accelG;
                 s.lean = t.leanDeg;
                 s.tcs = pos(t.tcsLow);
+                s.tcs_hi = pos(t.tcsHigh);   // the other half of the same byte, dropped until 0.9
                 s.abs = pos(t.abs);
                 s.brakeFrontBar = t.brakeFrontBar;
                 // the rest of the live frame: torque, the raw brake pressures, ABS state, damping, cruise

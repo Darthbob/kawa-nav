@@ -651,7 +651,10 @@ public class BikeActivity extends KawaActivity {
                 // the front brake pressure: scaling taken from Rideology, not yet compared on a bike
                 add(r, s, "Front brake (unverified)", t.brakeFrontBar, "%.1f bar");
                 if (t.tcsHigh >= 0 || t.tcsLow >= 0) {
-                    r.add(new String[]{s, "Traction control working", t.tcsHigh > 0 || t.tcsLow > 0 ? "yes" : "no"});
+                    // what these nibbles report is not established (PROTOCOL.md): the numbers stand, the
+                    // meaning does not, so no "working / not working" claim
+                    r.add(new String[]{s, "Traction control reading (unverified)",
+                            "high " + Math.max(0, t.tcsHigh) + " / low " + Math.max(0, t.tcsLow)});
                 }
                 if (t.abs >= 0) r.add(new String[]{s, "ABS", absText(t.abs)});
                 if (t.wheelie > 0) {

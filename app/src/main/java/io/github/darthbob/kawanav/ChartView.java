@@ -156,7 +156,8 @@ public final class ChartView extends View {
         Paint mark = null;
         for (RideTsv.Sample s : samples) {
             // >= 0: rides recorded before 0.8 wrote -1 for "the bike sent nothing"
-            boolean tcs = s.tcs == s.tcs && s.tcs > 0;
+            boolean tcs = (s.tcs == s.tcs && s.tcs > 0) || (s.tcs_hi == s.tcs_hi && s.tcs_hi > 0)
+                    || (s.tcs_hb == s.tcs_hb && s.tcs_hb > 0) || (s.tcs_lb == s.tcs_lb && s.tcs_lb > 0);
             boolean abs = s.abs == s.abs && s.abs >= 0 && ((int) s.abs & 0x03) != 0;
             if (!tcs && !abs) continue;
             if (mark == null) {

@@ -163,6 +163,46 @@ public class RideTest {
     }
 
     @Test
+    public void eitherTcsReadingCountsAsTheTractionControlWorking() {
+        // the 0x4A nibbles and the 0x4B pair are different readings: the real bike moves only the 0x4B one
+        java.util.List<RideTsv.Sample> in = new java.util.ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            RideTsv.Sample s = bare(i);
+            s.tcs = 0;
+            s.tcs_hb = i == 3 ? 1 : 0;
+            s.tcs_lb = i == 3 ? 7 : 0;
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(1, r.tcsOnS, 1e-9);
+        // and the other way round: only the 0x4A nibble moving
+        java.util.List<RideTsv.Sample> other = new java.util.ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            RideTsv.Sample s = bare(i);
+            s.tcs_hi = i < 2 ? 1 : 0;
+            s.tcs_hb = 0;
+            s.tcs_lb = 0;
+            other.add(s);
+        }
+        Ride r2 = new Ride();
+        r2.summarize(other);
+        assertEquals(2, r2.tcsOnS, 1e-9);
+    }
+
+    @Test
+    public void theHighTcsNibbleIsRecordedToo() {
+        RideTsv.Sample s = bare(0);
+        s.tcs = 3;
+        s.tcs_hi = 1;
+        java.util.List<RideTsv.Sample> back = RideTsv.parse(java.util.Arrays.asList(
+                RideTsv.magic(), RideTsv.header(), s.line()));
+        assertEquals(1, back.size());
+        assertEquals(3, back.get(0).tcs, 1e-9);
+        assertEquals(1, back.get(0).tcs_hi, 1e-9);
+    }
+
+    @Test
     public void stateFactsCountTimeNotZeros() {
         java.util.List<RideTsv.Sample> in = new java.util.ArrayList<>();
         for (int i = 0; i < 10; i++) {               // ten seconds without traction control

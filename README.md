@@ -430,6 +430,12 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   held back.
 - The byte the cruise control shares its frame with (0x4A byte 88) is Rideology's **wheel-speed
   setting** — a calibration number, not a cruise speed. KawaNav shows it raw on the debug card only.
+- **The two "traction control" readings are not understood**: 0x4A byte 24 and 0x4B byte 51 carry two
+  different pairs with the same name in Rideology (`tcs_level_hb`/`tcs_level_lb`), from different frames,
+  and Kawasaki's app never interprets either of them. On a recorded ride the 0x4B pair moved exactly in the
+  one second the rear wheel spun up, the 0x4A one stayed at zero: the app shows them as raw readings marked
+  unverified and counts time only when one of them moves. See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the
+  two tests that would settle it.
 - The **refuel diary** estimates the litres: the bike never says how many went in, only what the gauge
   and the range show. Correct them on the Refuels screen to get a true figure.
 - The **12 V battery** warning rule (0.4 V lost over three days of readings) is a sensible guess, not a

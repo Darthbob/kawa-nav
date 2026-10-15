@@ -160,7 +160,15 @@ Wheelie angle: Rideology's nibble-1 branch masks 0x0F, KawaNav does the same; it
 in both. Rideology adds the two bytes there (`(bArr[22] & 7) + bArr[23]`) where every neighbouring value
 shifts the high byte; KawaNav keeps the shift, which the masked nibble makes equivalent for values in range.
 
-- TCS high/low nibbles at byte 24. (verified)
+- **Byte 24: the two TCS nibbles** (`Ble5Value.s.f11358k`/`f11359l`, written to the realm columns
+  `tcs_level_hb`/`tcs_level_lb` of the mid log, `a0/s.java:301-302`). Each nibble is decoded only when its
+  0x40 gate (byte 11 bits 1-0 for the high one, byte 12 bits 7-6 for the low) is exactly 0. What the
+  numbers mean is **not documented by Kawasaki either**: no code in Rideology compares, thresholds,
+  averages or displays them, they are in no chart, no tile and **not in the CSV export** (`sf/c.java` has
+  no such column); they only reach the realm tables and the JSON backup (`u6/da.java:139-143`). The same
+  two column names are also filled from two other sources (see 0x4B below). A whole recorded ride on the
+  Z900 had this byte at `00` in all 1448 seconds that carried it: a real 0, not a suppressed reading.
+  (verified)
 - Block 35 (absent when byte 35 or 36 is FF): byte 37 ABS bits (0x10 inspection mode, 0x0C system error,
   0x01 front / 0x02 rear acting); byte 38 front master pressure, 39 front caliper (`× 0.1953125`, FF =
   absent), 40 rear master, 41 rear caliper — the masters and the rear caliper are kept raw by Rideology.
@@ -191,10 +199,33 @@ All `FF` on bikes without them (Z500, Z900?). (verified)
 | 17-18, 27-28, 37-38 | rotation rates "psi p1/p3/p2", little-endian, `x × 163.84/32768 − 163.84`, 0 = absent |
 | 21-22, 31-32, 41-42 | accelerations ay / ax / az, little-endian, `x × 4.1768/32768 − 4.1768` g, 0 = absent |
 | 47-48, 49-50 | filtered front / rear wheel speed, `u16 × 400/32768` km/h |
-| 51 | TCS high (bits 7-5), TCS low (4-2), KQS down (1), KQS up (0) |
+| 51 | `tcs_level_hb` (bits 7-5), `tcs_level_lb` (bits 4-2), `kqs_down_operation_flag` (bit 1), `kqs_up_operation_flag` (bit 0) |
 | 52 | wheelie flag (bit 0) |
 
-Block 45 counts as absent only when **both** bytes 45 and 46 are FF (the other blocks: either one).
+Block 45 counts as absent only when **both** bytes 45 and 46 are FF (the other blocks: either one). No
+config nibble gates byte 51.
+
+**The two pairs of "TCS" values are not the same thing, and neither of them is the rider's setting.**
+
+- The rider's traction-control level is **KTRC**, read from the 0x48 settings frame (byte 18 bits 6-3, wire
+  1..9, OFF = 10). It appears in no riding-log frame.
+- 0x4A byte 24 carries a **4-bit** pair, 0x4B byte 51 a **3-bit** pair: different frames, different gates,
+  different widths, written to different tables, and **no code relates them to each other** — nothing in
+  Rideology says which one is "the" reading, and the same column names are used for both.
+- Rideology is not consistent about the `hb`/`lb` suffix either: in 0x4B bits 7-5 are stored as
+  `tcs_level_hb`, while in its high-rate riding log the same bits are stored as `tcs_level_lb`
+  (`a0/s.java:274-275` versus `u5/d.java:258-259`). Read the suffix as a name, not as "high/low side".
+- The only empirical reading so far comes from a recorded Z900 ride: the **0x4B pair moved once**, in the
+  single second where the filtered rear wheel ran 4.6 km/h faster than the front (56.2 against 51.6 km/h,
+  the largest slip of that ride), while the **0x4A nibbles stayed 0 all ride**. The two bits beside them in
+  the same byte, `kqs_*_operation_flag`, fired 12 and 6 times and every time a gear changed in that second
+  or the next (up with the throttle open, down with it closed) — so byte 51 reads like "what the
+  electronics did this second", and the 0x4B pair is far more likely an intervention reading than a level.
+  "Far more likely" is as far as this goes: Kawasaki's own name says *level*, and nothing proves otherwise.
+
+What would settle it, on a bike: (1) change KTRC between two rides — if neither column follows the setting,
+neither of them is the setting; (2) provoke a deliberate cut-in on a slippery surface with the dash's
+traction-control lamp in view, and compare which column steps with the lamp.
 
 ### Units
 
@@ -423,6 +454,8 @@ KawaNav never logs this frame.)
   streaming 0x45/0x4A.
 - Riding-log sample rate (meter/frequency controlled).
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
+- What the two TCS pairs (0x4A byte 24, 0x4B byte 51) actually report: the rider's level, an intervention,
+  or something else. See the 0x4B section for the one observation there is and the two tests that settle it.
 - R.Score formula (server side).
 - Whether the meter shows an "Apply on the cluster" step: the `0x10` result suggests a two-stage apply,
   but no code or string proves a rider action on the dash.
@@ -466,3 +499,28 @@ Everything else in this document is protocol knowledge KawaNav does not use yet.
 - => Useful set for a replacement app: turns 0-43, flags 0 (navigating) and 3 (clear).
 - Status icon frames (0x13): the dash redraws them about once a second; faster changes are not shown.
 - Pairing without Rideology (KawaNav's companion association + createBond) works.
+
+### What a Z900 actually sends (recorded ride, 2026-10-15)
+
+A 24-minute ride recorded by KawaNav on this bike (1450 samples, at rest and moving) shows which fields
+that model fills. That matters more than any scaling question: a value a bike never sends cannot be
+compared with a dash, and it is not "unverified", it is absent.
+
+- **Every second**: 0x4A speed, rpm, gear, throttle, acceleration, lean, the TCS nibbles (below), the ABS
+  byte 37 (always `00` = ready), the wheelie flag and angle; 0x4B block 45 (the two filtered wheel speeds,
+  the TCS pair and the two quick-shifter bits of byte 51, the wheelie flag); 0x4B blocks 15/25/35 (the three
+  accelerations and the three rotation rates); GPS position, altitude, speed and accuracy.
+- **Now and then**: 0x45 coolant and intake temperature every second, **oil temperature once in the whole
+  ride**; instant fuel in 80 % of the seconds (the dash leaves it `FF` while decelerating or stopped); 0x41
+  odometer and battery voltage every ~7 s, not every second; 0x4A blocks 45/85 (ABS target and indicator,
+  cruise bits) present but always `0`.
+- **Never**: TPMS (no tyre pressures at all: no sensors fitted), outside temperature, fuel rate, total
+  fuel, front brake pressure, the three torque values, the raw brake masters and the rear caliper, ABS
+  switching, damping, the suspension calibration/status/ECU bits, and — worth noting — **the strokes and
+  stroke speeds of 0x4B block 5**, while the IMU blocks of the same frame are present. A Z900 has the IMU
+  (lean, traction control, wheelie) but no electronic suspension, and the two are independent blocks, as
+  the 0x4B table says.
+
+Consequence for KawaNav: the values its screen labels "unverified" (brake pressure, the torque numbers, the
+tyre pressures, outside temperature, the suspension strokes) are simply **not sent by this bike**; they
+stay empty cells in its ride file. The "unverified" wording now applies only to bikes that do send them.

@@ -25,6 +25,8 @@ public final class RideTsv {
             "tyre_f_kpa", "tyre_r_kpa", "battery_v", "outside_c", "brake_f_bar",
             // added in 0.8: the suspension/IMU frame (0x4B) and the rest of the live frame (0x4A)
             "susp_f_stroke_mm", "susp_r_stroke_mm", "susp_f_stroke_vp", "susp_r_stroke_vp", "imu_ax_g", "imu_ay_g", "imu_az_g", "imu_ax_psip3", "imu_ay_psip1", "imu_az_psip2", "wheel_f_kmh", "wheel_r_kmh", "tcs_hb", "tcs_lb", "kqs_down", "kqs_up", "wheelie_flag", "torque_rider", "torque_req", "torque_actual", "brake_f_master", "brake_r_master", "brake_r_caliper", "abs_target", "abs_ind", "abs_switching", "damping", "susp_cal", "susp_status", "susp_ecu", "cruise_on", "cruise_mode", "wheelie_deg", "wheel_speed_setting",
+            // the other half of the 0x4A TCS byte: only the low nibble was recorded before 0.9
+            "tcs_hi",
     };
     /** flags: the bike was connected while this second was recorded. */
     public static final int FLAG_BIKE = 1;
@@ -43,7 +45,7 @@ public final class RideTsv {
                 odoKm = Double.NaN, distM = Double.NaN, fuelTotalL = Double.NaN,
                 tyreFrontKpa = Double.NaN, tyreRearKpa = Double.NaN, batteryV = Double.NaN,
                 outsideC = Double.NaN, brakeFrontBar = Double.NaN,
-                susp_f_stroke_mm = Double.NaN, susp_r_stroke_mm = Double.NaN, susp_f_stroke_vp = Double.NaN, susp_r_stroke_vp = Double.NaN, imu_ax_g = Double.NaN, imu_ay_g = Double.NaN, imu_az_g = Double.NaN, imu_ax_psip3 = Double.NaN, imu_ay_psip1 = Double.NaN, imu_az_psip2 = Double.NaN, wheel_f_kmh = Double.NaN, wheel_r_kmh = Double.NaN, tcs_hb = Double.NaN, tcs_lb = Double.NaN, kqs_down = Double.NaN, kqs_up = Double.NaN, wheelie_flag = Double.NaN, torque_rider = Double.NaN, torque_req = Double.NaN, torque_actual = Double.NaN, brake_f_master = Double.NaN, brake_r_master = Double.NaN, brake_r_caliper = Double.NaN, abs_target = Double.NaN, abs_ind = Double.NaN, abs_switching = Double.NaN, damping = Double.NaN, susp_cal = Double.NaN, susp_status = Double.NaN, susp_ecu = Double.NaN, cruise_on = Double.NaN, cruise_mode = Double.NaN, wheelie_deg = Double.NaN, wheel_speed_setting = Double.NaN;
+                susp_f_stroke_mm = Double.NaN, susp_r_stroke_mm = Double.NaN, susp_f_stroke_vp = Double.NaN, susp_r_stroke_vp = Double.NaN, imu_ax_g = Double.NaN, imu_ay_g = Double.NaN, imu_az_g = Double.NaN, imu_ax_psip3 = Double.NaN, imu_ay_psip1 = Double.NaN, imu_az_psip2 = Double.NaN, wheel_f_kmh = Double.NaN, wheel_r_kmh = Double.NaN, tcs_hb = Double.NaN, tcs_lb = Double.NaN, kqs_down = Double.NaN, kqs_up = Double.NaN, wheelie_flag = Double.NaN, torque_rider = Double.NaN, torque_req = Double.NaN, torque_actual = Double.NaN, brake_f_master = Double.NaN, brake_r_master = Double.NaN, brake_r_caliper = Double.NaN, abs_target = Double.NaN, abs_ind = Double.NaN, abs_switching = Double.NaN, damping = Double.NaN, susp_cal = Double.NaN, susp_status = Double.NaN, susp_ecu = Double.NaN, cruise_on = Double.NaN, cruise_mode = Double.NaN, wheelie_deg = Double.NaN, wheel_speed_setting = Double.NaN, tcs_hi = Double.NaN;
 
         public boolean hasGps() {
             return (flags & FLAG_GPS) != 0 && lat == lat && lon == lon;
@@ -55,7 +57,7 @@ public final class RideTsv {
             double[] numbers = {tMs, epochMs, lat, lon, altM, gpsKmh, gpsAccM, flags, kmh, rpm, gear, thrPct, accG,
                     lean, waterC, oilC, intakeC, fuelInst, fuelRate, tcs, abs, odoKm, distM, fuelTotalL,
                     tyreFrontKpa, tyreRearKpa, batteryV, outsideC, brakeFrontBar,
-                    susp_f_stroke_mm, susp_r_stroke_mm, susp_f_stroke_vp, susp_r_stroke_vp, imu_ax_g, imu_ay_g, imu_az_g, imu_ax_psip3, imu_ay_psip1, imu_az_psip2, wheel_f_kmh, wheel_r_kmh, tcs_hb, tcs_lb, kqs_down, kqs_up, wheelie_flag, torque_rider, torque_req, torque_actual, brake_f_master, brake_r_master, brake_r_caliper, abs_target, abs_ind, abs_switching, damping, susp_cal, susp_status, susp_ecu, cruise_on, cruise_mode, wheelie_deg, wheel_speed_setting};
+                    susp_f_stroke_mm, susp_r_stroke_mm, susp_f_stroke_vp, susp_r_stroke_vp, imu_ax_g, imu_ay_g, imu_az_g, imu_ax_psip3, imu_ay_psip1, imu_az_psip2, wheel_f_kmh, wheel_r_kmh, tcs_hb, tcs_lb, kqs_down, kqs_up, wheelie_flag, torque_rider, torque_req, torque_actual, brake_f_master, brake_r_master, brake_r_caliper, abs_target, abs_ind, abs_switching, damping, susp_cal, susp_status, susp_ecu, cruise_on, cruise_mode, wheelie_deg, wheel_speed_setting, tcs_hi};
             for (int i = 0; i < numbers.length; i++) {
                 if (i > 0) sb.append('\t');
                 sb.append(cell(numbers[i], COLUMNS[i]));
@@ -69,7 +71,7 @@ public final class RideTsv {
         if (v != v) return "";
         switch (column) {
             case "t_ms": case "epoch_ms": case "flags": case "rpm": case "gear": case "water_c": case "oil_c":
-            case "intake_c": case "tcs": case "abs":
+            case "intake_c": case "tcs": case "tcs_hi": case "abs":
             // the whole numbers of 0x4A/0x4B: counts and levels, not measurements
             case "abs_ind": case "abs_switching": case "abs_target": case "brake_f_master": case "brake_r_caliper": case "brake_r_master": case "cruise_mode": case "cruise_on": case "damping": case "kqs_down": case "kqs_up": case "susp_cal": case "susp_ecu": case "susp_status": case "tcs_hb": case "tcs_lb": case "torque_actual": case "torque_req": case "torque_rider": case "wheel_speed_setting": case "wheelie_flag":
                 return String.valueOf(Math.round(v));
@@ -167,6 +169,7 @@ public final class RideTsv {
             s.susp_status = num(cells, index, "susp_status");
             s.susp_ecu = num(cells, index, "susp_ecu");
             s.cruise_on = num(cells, index, "cruise_on");
+            s.tcs_hi = num(cells, index, "tcs_hi");
             s.cruise_mode = num(cells, index, "cruise_mode");
             s.wheelie_deg = num(cells, index, "wheelie_deg");
             s.wheel_speed_setting = num(cells, index, "wheel_speed_setting");

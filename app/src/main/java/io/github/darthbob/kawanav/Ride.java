@@ -226,9 +226,11 @@ public final class Ride {
             }
             for (Metric m : metrics) m.add(m.of.applyAsDouble(s));
             // one sample is one second: the time a system was working is the number of samples it was on
-            if (s.tcs == s.tcs) {
+            // the 0x4A nibbles and the 0x4B pair are different readings of different frames: either of
+            // them moving counts as "the traction control worked this second" (see PROTOCOL.md)
+            if (s.tcs == s.tcs || s.tcs_hi == s.tcs_hi || s.tcs_hb == s.tcs_hb || s.tcs_lb == s.tcs_lb) {
                 tcsSeen = true;
-                if (s.tcs > 0) tcs++;
+                if (s.tcs > 0 || s.tcs_hi > 0 || s.tcs_hb > 0 || s.tcs_lb > 0) tcs++;
             }
             if (s.abs == s.abs && s.abs >= 0) {
                 absSeen = true;
