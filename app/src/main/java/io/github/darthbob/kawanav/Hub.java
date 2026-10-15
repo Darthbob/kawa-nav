@@ -140,10 +140,12 @@ public final class Hub {
     /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
     public static final String KEY_DEBUG_CAPTURE = "debug_capture";
     /**
-     * Debug: send the status-icon and navigation frames even when the dash's 0x1A answer says it has no
-     * such feature. For a dash whose answer is misread: without it, the arrows would go missing.
+     * Send the status-icon and navigation frames even when the dash's capability answer says it has no such
+     * feature. Off by default (the dash is believed, as Rideology believes it); a rider whose dash answers
+     * wrongly turns it on and gets the arrows back, which is why it is a normal setting and not a debug
+     * one: a release build must have a way back.
      */
-    public static final String KEY_DEBUG_IGNORE_CAPS = "debug_ignore_caps";
+    public static final String KEY_IGNORE_CAPS = "ignore_caps";
     /** Debug: notifications are written down, to see what an app like Waze puts in them. */
     public static final String KEY_DEBUG_NOTIF_CAPTURE = "debug_notif_capture";
     /** Debug: capture every app's notifications, not only Waze and the shell. */

@@ -302,8 +302,9 @@ has:
 - a summary (distance, time, average and top speed, highest engine speed, max lean left/right, fuel
   used, odometer start and end);
 - the track, coloured by speed, with a dot where the ride started;
-- charts for speed, engine speed, gear, throttle, lean angle, coolant temperature and acceleration —
-  picking one and touching the line marks that second on the track;
+- charts for any value the ride recorded — speed, engine speed, gear, throttle, lean angle,
+  temperatures, tyres, battery, brake pressure, suspension travel, the body's accelerations, the filtered
+  wheel speeds and more; picking one and touching the line marks that second on the track;
 - rename (the pencil at the top), delete, and export: **CSV** with Rideology's column layout (so the tools people already use
   for Rideology exports can read it) or **GPX** with the values as extensions for map programs. Both
   are written to `Download/KawaNav` and offered for sharing.
@@ -419,8 +420,9 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   never yet compared with a dash.
 - **What the dash says it can do is obeyed**: if its capability frame says it has no status icons or no
   turn-by-turn, KawaNav stops sending those frames, as Rideology does. A dash whose answer is misread
-  would lose its arrows, so a debug switch ("Send icons and arrows anyway") overrides it, and the app
-  says in the log when it is holding something back.
+  would lose its arrows, so **Settings → "Send arrows and icons anyway"** turns the obeying off (a normal
+  setting, not a debug one), and the log — plus a line on the Home screen — says when something is being
+  held back.
 - The byte the cruise control shares its frame with (0x4A byte 88) is Rideology's **wheel-speed
   setting** — a calibration number, not a cruise speed. KawaNav shows it raw on the debug card only.
 - The **refuel diary** estimates the litres: the bike never says how many went in, only what the gauge

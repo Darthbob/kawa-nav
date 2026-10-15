@@ -624,10 +624,16 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.bikeCapabilities = c;
         Logger.log("Bike display: turn-by-turn " + (c.turnByTurn ? "supported" : "NOT supported")
                 + ", status icons " + (c.statusIcons ? "supported" : "NOT supported"));
-        if (!c.turnByTurn) {
-            // the frames stop going out (unless the debug override is on): say so rather than going quiet
-            Hub.bikeHint = "This bike's display reports no turn-by-turn support: arrows and curves are not being "
-                    + "sent to it.";
+        if (c.valid && !c.turnByTurn && !ignoreCaps()) {
+            // the frames stop going out: say so, and say how to get them back
+            Hub.bikeHint = "This bike's display reports no turn-by-turn support, so arrows and curves are not "
+                    + "being sent to it. If they used to work, turn on \"Send arrows and icons anyway\" in "
+                    + "Settings.";
+        } else if (c.valid && !c.statusIcons && !ignoreCaps()) {
+            Hub.bikeHint = "This bike's display reports no status icons, so the call, mail and phone icons are "
+                    + "not being sent to it. \"Send arrows and icons anyway\" in Settings overrides this.";
+        } else {
+            Hub.bikeHint = "";
         }
         updateNotification();
     }
@@ -784,11 +790,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
      */
     private boolean framesAllowed(boolean supported, String what) {
         boolean ok = BikeFrames.GeneralCaps.allowed(Hub.bikeCapabilities, supported, ignoreCaps());
-        if (!ok && lastQuiet != what) {
-            lastQuiet = what;
-            Logger.log("Dash says it has no " + what + ": not sending them (debug switch overrides)");
-        } else if (ok) {
-            lastQuiet = null;
+        if (!ok) {
+            if (quiet.add(what)) Logger.log("Dash says it has no " + what + ": not sending them (the "
+                    + "\"Send arrows and icons anyway\" setting overrides this)");
+        } else {
+            quiet.remove(what);
         }
         return ok;
     }
@@ -797,10 +803,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
         return framesAllowed(Hub.bikeCapabilities != null && Hub.bikeCapabilities.turnByTurn, "turn-by-turn");
     }
 
-    private String lastQuiet;
+    /** What is being held back right now, one entry per kind: logged when it starts, not every tick. */
+    private final java.util.Set<String> quiet = new java.util.HashSet<>();
 
     private boolean ignoreCaps() {
-        return Hub.DEBUG_TOOLS && Hub.prefs(this).getBoolean(Hub.KEY_DEBUG_IGNORE_CAPS, false);
+        return Hub.prefs(this).getBoolean(Hub.KEY_IGNORE_CAPS, false);
     }
 
     /**
@@ -828,13 +835,14 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     /**
-     * Like Rideology: a config frame (capabilities, vehicle info config, maintenance config) the meter
-     * flags as not ready yet is asked for again, a few times per connection.
+     * Like Rideology: a config frame (capabilities, vehicle info config, maintenance config, tuning
+     * config) the meter flags as not ready yet is asked for again, a few times per connection.
      */
     private void retryConfigIfNotReady(BikeFrames.Frame f) {
         boolean notReady = f instanceof BikeFrames.GeneralCaps && !((BikeFrames.GeneralCaps) f).valid
                 || f instanceof BikeFrames.InfoConfig && !((BikeFrames.InfoConfig) f).valid
-                || f instanceof BikeFrames.ServiceConfig && !((BikeFrames.ServiceConfig) f).valid;
+                || f instanceof BikeFrames.ServiceConfig && !((BikeFrames.ServiceConfig) f).valid
+                || f instanceof BikeFrames.TuningConfig && !((BikeFrames.TuningConfig) f).valid;
         if (!notReady || !ble.isReady()) return;
         int n = configRetries.merge(f.id, 1, Integer::sum);
         if (n > CONFIG_RETRIES) return;

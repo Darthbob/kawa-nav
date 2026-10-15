@@ -314,9 +314,10 @@ public final class BikeFrames {
     }
 
     /**
-     * The bike has the value and its 0x40 nibble is exactly 0: Rideology's gate for the wheelie flag and
-     * the two TCS nibbles, which it reads only in that mode. An unknown config shows the value, as
-     * {@link #has} does.
+     * The bike has the value and its 0x40 nibble is exactly 0: Rideology's gate for the wheelie flag, the
+     * two TCS nibbles, and the values that have only one scaling (odometer, average mileage, meter
+     * battery, instant fuel, the long form of 0x45). An unknown config counts as 0, which is what
+     * Rideology's default-initialised config holds, so an unread config never hides a value.
      */
     static boolean present0(InfoConfig cfg, Flag f) {
         return cfg == null || cfg.flag(f) == 0;
@@ -412,14 +413,14 @@ public final class BikeFrames {
                     ? be32(v, 7) * 0.01 : Double.NaN;
             ecuBatteryV = in(v, 14) && has(c, InfoConfig.ECU_BATTERY) && u8(v, 14) != 0xFF
                     ? u8(v, 14) * 20.0 / 256.0 : Double.NaN;
-            int odo = in(v, 29) && has(c, InfoConfig.ODOMETER) ? (u8(v, 27) & 0x0F) << 16 | be16(v, 28) : -1;
+            int odo = in(v, 29) && present0(c, InfoConfig.ODOMETER) ? (u8(v, 27) & 0x0F) << 16 | be16(v, 28) : -1;
             odometerKm = odo != 0xFFFFF && validBit(v, 27, 6, c, InfoConfig.ODOMETER_VALID) ? odo : -1;
             int bars = in(v, 30) && has(c, InfoConfig.FUEL_GAUGE) ? u8(v, 30) & 0x0F : -1;
             fuelBars = bars == 0x0F ? -1 : bars;
-            int mileage = in(v, 33) && has(c, InfoConfig.AVG_MILEAGE) ? (u8(v, 32) & 0x03) << 8 | u8(v, 33) : -1;
+            int mileage = in(v, 33) && present0(c, InfoConfig.AVG_MILEAGE) ? (u8(v, 32) & 0x03) << 8 | u8(v, 33) : -1;
             avgMileage = mileage >= 0 && mileage != 0x3FF && validBit(v, 27, 4, c, InfoConfig.AVG_MILEAGE_VALID)
                     ? mileage * 0.1 : Double.NaN;
-            int meterBattery = in(v, 34) && has(c, InfoConfig.METER_BATTERY) ? u8(v, 34) : -1;
+            int meterBattery = in(v, 34) && present0(c, InfoConfig.METER_BATTERY) ? u8(v, 34) : -1;
             meterBatteryV = meterBattery >= 0 && meterBattery != 0xFF
                     && validBit(v, 27, 5, c, InfoConfig.METER_BATTERY_VALID) ? meterBattery * 0.1 : Double.NaN;
             int tripA = in(v, 39) && has(c, InfoConfig.TRIP_A) ? (u8(v, 37) & 0x01) << 16 | be16(v, 38) : -1;
@@ -482,7 +483,7 @@ public final class BikeFrames {
             oilC = temp(v, 19, 60, c, InfoConfig.OIL_TEMP);
             intakeC = temp(v, 20, 40, c, InfoConfig.INTAKE_TEMP);
             boolean fuelValid = current(v, 27, 4, c, InfoConfig.INSTANT_FUEL_VALID);
-            instantFuel = in(v, 28) && has(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF && fuelValid
+            instantFuel = in(v, 28) && present0(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF && fuelValid
                     ? ((u8(v, 27) & 0x03) << 8 | u8(v, 28)) * 0.1 : Double.NaN;
             instantFuelValid = zero(c, InfoConfig.INSTANT_FUEL_VALID) && in(v, 27)
                     ? (u8(v, 27) & 0x10) >> 4 : -1;
@@ -493,16 +494,16 @@ public final class BikeFrames {
             tyreRearKpa = tpms && u8(v, 48) != 0xFF ? u8(v, 48) * 1.373 + 100 : Double.NaN;
             tpmsWarnings = tpms ? u8(v, 49) & 0x0F : -1;
             // the long form: same numbers as the 0x41, with their own flags in byte 57 (bits 6/5/4)
-            int odo = v.length > 59 && has(c, InfoConfig.ODOMETER)
+            int odo = v.length > 59 && present0(c, InfoConfig.ODOMETER)
                     ? ((u8(v, 57) & 0x0F) << 16) | be16(v, 58) : -1;
             odometerKm = odo >= 0 && odo != 0xFFFFF && current(v, 57, 6, c, InfoConfig.ODOMETER_VALID) ? odo : -1;
             int bars = v.length > 60 && has(c, InfoConfig.FUEL_GAUGE) ? u8(v, 60) & 0x0F : -1;
             fuelBars = bars == 0x0F ? -1 : bars;
-            int mileage = v.length > 63 && has(c, InfoConfig.AVG_MILEAGE)
+            int mileage = v.length > 63 && present0(c, InfoConfig.AVG_MILEAGE)
                     ? ((u8(v, 62) & 0x03) << 8) | u8(v, 63) : -1;
             avgMileage = mileage >= 0 && mileage != 0x3FF && current(v, 57, 4, c, InfoConfig.AVG_MILEAGE_VALID)
                     ? mileage * 0.1 : Double.NaN;
-            int meter = v.length > 64 && has(c, InfoConfig.METER_BATTERY) ? u8(v, 64) : -1;
+            int meter = v.length > 64 && present0(c, InfoConfig.METER_BATTERY) ? u8(v, 64) : -1;
             meterBatteryV = meter >= 0 && meter != 0xFF && current(v, 57, 5, c, InfoConfig.METER_BATTERY_VALID)
                     ? meter * 0.1 : Double.NaN;
             odometerValid = v.length > 57 && zero(c, InfoConfig.ODOMETER_VALID) ? (u8(v, 57) & 0x40) >> 6 : -1;

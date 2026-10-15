@@ -66,7 +66,6 @@ public class SettingsWriteTest {
         assertEquals("+5 (11)", SettingsWrite.adjustment(11));
     }
 
-    /** A 0 or a number off the end would be a setting the bike never offered: never sent. */
     /** A 0x47 frame whose riding-mode nibble (byte 8 bits 5-4) has the given value. */
     private static BikeFrames.TuningConfig tuning(int modeNibble) {
         byte[] v = new byte[25];
@@ -115,6 +114,7 @@ public class SettingsWriteTest {
         assertTrue(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES_7, 8, 1, 0, 1, 0).contains("riding mode"));
     }
 
+    /** A 0 or a number off the end would be a setting the bike never offered: never sent. */
     @Test
     public void outOfRangeValuesAreRefused() {
         assertNull(SettingsWrite.invalid(SettingsWrite.WRITABLE_MODES, 1, 1, 0, 1, 0));    // Sport, Full, KTRC OFF, KQS OFF, no KEBC

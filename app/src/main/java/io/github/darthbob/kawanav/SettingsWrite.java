@@ -31,7 +31,7 @@ public final class SettingsWrite {
     /**
      * How many riding modes the bike has. Rideology reads the 0x47 tuning config's riding-mode field
      * (byte 8 bits 5-4, {@link BikeFrames.TuningConfig#RIDING_MODE}) and shows seven names when it is 1,
-     * four when it is 0 (Ble5VehicleSettingViewModel.java:72,423). A config that has not arrived, or that
+     * four when it is 0 (Ble5VehicleSettingViewModel.java:72; VehicleSettingEditViewModel.java:423). A config that has not arrived, or that
      * says the bike has no such setting, counts as four: the smaller list can never offer a mode the bike
      * does not have.
      */

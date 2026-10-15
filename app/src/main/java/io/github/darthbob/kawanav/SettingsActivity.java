@@ -299,6 +299,10 @@ public class SettingsActivity extends KawaActivity {
         BikeFrames.GeneralCaps caps = Hub.bike.caps;
         String noIcons = caps != null && !caps.statusIcons ? ". Your bike's dash said it shows no status icons" : "";
         String noClock = caps != null && !caps.clockSettable() ? ". Your bike's dash said the phone may not set its clock" : "";
+        addRow(c, switchRow("Send arrows and icons anyway", "The dash says whether it has turn-by-turn and "
+                + "status icons at all, and KawaNav believes it, like Rideology: what it says it cannot show "
+                + "is not sent. Switch this on if arrows or icons worked before and stopped: some dashes "
+                + "answer wrongly.", Hub.KEY_IGNORE_CAPS, false, on -> BridgeService.settingsChanged()));
         addRow(c, switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging"
                 + noIcons, Hub.KEY_PHONE_BATTERY, true));
         addRow(c, switchRow("Set the dash clock from the phone", "Once per connection, like Rideology. Keeps the "
@@ -483,10 +487,6 @@ public class SettingsActivity extends KawaActivity {
                         + "it adds the phone name and the 0x08 init",
                 new String[]{"Capabilities only (v0.3)", "Read-only", "Full (like Rideology)"}, Hub.initLevel(this),
                 pos -> prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, pos).apply()));
-        c.addView(switchRow("Send icons and arrows anyway", "Ignores the dash's answer that it has no status "
-                + "icons or no turn-by-turn (the 0x1A frame). For a dash whose answer is misread: without "
-                + "this, the arrows would go missing.", Hub.KEY_DEBUG_IGNORE_CAPS, false,
-                on -> BridgeService.settingsChanged()));
         c.addView(switchRow("Skip the riding log request", "Read-only connect and ride start leave out 45 00 00 "
                 + "(as KawaNav 0.6 and before did; Rideology always sends it)", Hub.KEY_DEBUG_NO_EXT, false));
         c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect: "

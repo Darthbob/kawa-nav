@@ -184,9 +184,11 @@ public class RideActivity extends KawaActivity {
         seriesSpinner = fresh;
     }
 
+    /** True when the ride has a traction-control or ABS event; -1 (an older file) does not count. */
     private boolean hasInterventions() {
         for (RideTsv.Sample s : samples) {
-            if ((s.tcs == s.tcs && s.tcs > 0) || (s.abs == s.abs && ((int) s.abs & 0x03) != 0)) return true;
+            if ((s.tcs == s.tcs && s.tcs > 0)
+                    || (s.abs == s.abs && s.abs >= 0 && ((int) s.abs & 0x03) != 0)) return true;
         }
         return false;
     }

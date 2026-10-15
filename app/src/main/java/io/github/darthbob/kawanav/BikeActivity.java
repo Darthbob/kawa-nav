@@ -483,9 +483,13 @@ public class BikeActivity extends KawaActivity {
         settingsCard.setVisibility(canWrite ? View.VISIBLE : View.GONE);
         if (canWrite) {
             int modes = SettingsWrite.modeCount(b.tuning);
+            modeNote.setText(modes > SettingsWrite.WRITABLE_MODES
+                    ? "This bike reports 7 riding modes: Rider 2-4 are in the list."
+                    : b.tuning == null || !b.tuning.valid
+                    ? "How many riding modes the bike has is not known yet (no ready 0x47 answer): the list "
+                            + "offers the four every bike has."
+                    : "This bike reports 4 riding modes, so the list stops at Rider.");
             if (modeSpinner.getAdapter() == null || modeSpinner.getAdapter().getCount() != modes) {
-                modeNote.setText("This bike reports " + modes + " riding modes (0x47 says so), so the list "
-                        + (modes > SettingsWrite.WRITABLE_MODES ? "includes Rider 2-4." : "stops at Rider."));
                 int was = modeSpinner.getSelectedItemPosition();
                 android.widget.Spinner fresh = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, modes),
                         Math.max(0, Math.min(was, modes - 1)));
@@ -497,7 +501,7 @@ public class BikeActivity extends KawaActivity {
                     rowParent.removeViewAt(at);
                     rowParent.addView(fresh, at, modeSpinner.getLayoutParams());
                     modeSpinner = fresh;
-                    settingsPrefilled = false;   // the prefill below then sets it from the bike's own answer
+                    // the rider's pick is kept by the clamp above; only a first fill comes from the bike
                 }
             }
             BikeFrames.VehicleSettings s = b.settings;

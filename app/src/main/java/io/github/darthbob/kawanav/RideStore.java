@@ -32,6 +32,8 @@ public final class RideStore {
 
     private final File dir;
     private Writer out;
+    /** Header width of a file being appended to that an older version wrote (0 = today's). */
+    private int appendedWidth;
     private long writtenAt;
     private String openId;
 
@@ -51,6 +53,10 @@ public final class RideStore {
         try {
             close();
             File f = tsv(ride.id);
+            // a ride started by an older version has a shorter header: its rows keep that
+            // width, so the newest columns are missing from that one ride instead of the file
+            // turning ragged
+            appendedWidth = append ? olderHeaderWidth(f) : 0;
             out = new FileWriter(f, append);
             if (!append) {
                 out.write(RideTsv.magic() + "\n");
@@ -64,11 +70,36 @@ public final class RideStore {
         }
     }
 
+    /** The header width of an older file (0 when it matches today's columns or cannot be read). */
+    private static int olderHeaderWidth(File f) {
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f))) {
+            String first = r.readLine(), second = r.readLine();
+            if (first == null || second == null || !RideTsv.magic().equals(first.trim())) return 0;
+            int width = second.split("\t", -1).length;
+            return width == RideTsv.header().split("\t", -1).length ? 0 : width;
+        } catch (IOException e) {
+            return 0;
+        }
+    }
+
+    /** Cuts a row to the given number of tab-separated cells (a file from an older version). */
+    private static String cutToColumns(String line, int columns) {
+        int at = -1;
+        for (int i = 1; i < columns; i++) {
+            at = line.indexOf('\t', at + 1);
+            if (at < 0) return line;
+        }
+        int end = line.indexOf('\t', at + 1);
+        return end < 0 ? line : line.substring(0, end);
+    }
+
     /** Appends one recorded second. */
     public synchronized void append(RideTsv.Sample s) {
         if (out == null) return;
         try {
-            out.write(s.line() + "\n");
+            String line = s.line();
+            if (appendedWidth > 0) line = cutToColumns(line, appendedWidth);
+            out.write(line + "\n");
             long now = System.currentTimeMillis();
             if (now - writtenAt >= FLUSH_MS) {
                 out.flush();

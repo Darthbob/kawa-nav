@@ -22,7 +22,10 @@ public final class ChartView extends View {
         LEAN("Lean angle", "°"), WATER("Coolant", "°C"), ACCEL("Acceleration", "g"),
         OIL("Oil temperature", "°C"), INTAKE("Intake air", "°C"), FUEL("Fuel economy", ""),
         TYRE_FRONT("Front tyre", "bar"), TYRE_REAR("Rear tyre", "bar"), BATTERY("Battery", "V"),
-        OUTSIDE("Outside temperature", "°C"), BRAKE("Front brake", "bar"), ALTITUDE("Altitude", "m");
+        OUTSIDE("Outside temperature", "°C"), BRAKE("Front brake", "bar"), ALTITUDE("Altitude", "m"),
+        SUSP_FRONT("Front suspension", "mm"), SUSP_REAR("Rear suspension", "mm"),
+        AX("Forward acceleration", "g"), AY("Sideways acceleration", "g"), AZ("Vertical acceleration", "g"),
+        WHEEL_FRONT("Front wheel (filtered)", "km/h"), WHEEL_REAR("Rear wheel (filtered)", "km/h");
 
         public final String title, unit;
 
@@ -91,6 +94,13 @@ public final class ChartView extends View {
             case OUTSIDE: return s.outsideC;
             case BRAKE: return s.brakeFrontBar;
             case ALTITUDE: return s.altM;
+            case SUSP_FRONT: return s.susp_f_stroke_mm;
+            case SUSP_REAR: return s.susp_r_stroke_mm;
+            case AX: return s.imu_ax_g;
+            case AY: return s.imu_ay_g;
+            case AZ: return s.imu_az_g;
+            case WHEEL_FRONT: return s.wheel_f_kmh;
+            case WHEEL_REAR: return s.wheel_r_kmh;
             default: return Double.NaN;
         }
     }
@@ -145,8 +155,9 @@ public final class ChartView extends View {
         // where traction control or ABS stepped in: short marks along the bottom
         Paint mark = null;
         for (RideTsv.Sample s : samples) {
+            // >= 0: rides recorded before 0.8 wrote -1 for "the bike sent nothing"
             boolean tcs = s.tcs == s.tcs && s.tcs > 0;
-            boolean abs = s.abs == s.abs && ((int) s.abs & 0x03) != 0;
+            boolean abs = s.abs == s.abs && s.abs >= 0 && ((int) s.abs & 0x03) != 0;
             if (!tcs && !abs) continue;
             if (mark == null) {
                 mark = new Paint(Paint.ANTI_ALIAS_FLAG);
