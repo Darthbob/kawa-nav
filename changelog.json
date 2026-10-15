@@ -1,0 +1,33 @@
+{
+  "versions": [
+    {
+      "version": "0.4",
+      "changes": [
+        "In-app updates: when a new version is released, KawaNav offers it on start with the list of changes and installs it (Android asks to confirm)"
+      ]
+    },
+    {
+      "version": "0.3",
+      "changes": [
+        "\"What do the options mean?\" under \"Which curves count\": explains each option and which arrow the dash shows",
+        "Shorter README with simpler install steps"
+      ]
+    },
+    {
+      "version": "0.2",
+      "changes": [
+        "Phone battery on the dash: 4 bars and charging, like with Rideology",
+        "Headset icon on the dash while your helmet intercom is connected",
+        "Warning in the app when the dash does not support turn-by-turn",
+        "Stop with autostart set up no longer reconnects after a few seconds",
+        "Pairing the bike in KawaNav is now tested: Rideology is not needed"
+      ]
+    },
+    {
+      "version": "0.1",
+      "changes": [
+        "First release: Google Maps directions and upcoming curves on the dash, autostart, offline maps"
+      ]
+    }
+  ]
+}

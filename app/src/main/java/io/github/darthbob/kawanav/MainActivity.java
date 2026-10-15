@@ -124,6 +124,10 @@ public class MainActivity extends Activity {
     private TextView offlineStatus;
     private List<Geofabrik.Region> regions = new ArrayList<>();
     private Geofabrik.Region selectedRegion;
+    // in-app update
+    private static final String KEY_UPDATE_SKIPPED = "update_skipped"; // version the user skipped
+    private static boolean updateChecked; // once per app start, not again when the screen is rebuilt
+    private Updater.Release pendingUpdate; // waits for "Install unknown apps", see onResume
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,7 +144,10 @@ public class MainActivity extends Activity {
         if (savedInstanceState == null && !fromHistory) pendingIntent = getIntent();
         android.companion.AssociationInfo bike = BikePresence.association(this);
         if (bike != null) BikePresence.observe(this, bike); // make sure the system keeps watching
-
+        if (!updateChecked) {
+            updateChecked = true;
+            checkForUpdate();
+        }
     }
 
     /** Intent from adb to act on once resumed: services using GPS may only start while we are visible. */
@@ -212,6 +219,12 @@ public class MainActivity extends Activity {
             if (!hasNotificationAccess() && installedFromFile()) handler.post(this::showRestrictedSettingsHelp);
         }
         handler.post(this::continueSetup);
+        if (pendingUpdate != null) {
+            // back from Android's "Install unknown apps" screen
+            Updater.Release r = pendingUpdate;
+            pendingUpdate = null;
+            if (getPackageManager().canRequestPackageInstalls()) handler.post(() -> installUpdate(r));
+        }
         if (pendingIntent != null) {
             Intent i = pendingIntent;
             pendingIntent = null;
@@ -1210,6 +1223,89 @@ public class MainActivity extends Activity {
             OfflineService.startRegion(this, id);
         }
     }
+    // ------------------------------------------------------------------ in-app update
+
+    private void checkForUpdate() {
+        new Thread(() -> {
+            try {
+                Updater.Release r = Updater.check();
+                if (r != null) runOnUiThread(() -> offerUpdate(r));
+            } catch (Exception e) {
+                Logger.log("Update check failed: " + e);
+            }
+        }, "update-check").start();
+    }
+
+    /** Asks to update, with what changed; a skipped version is not offered again. */
+    private void offerUpdate(Updater.Release r) {
+        if (isFinishing() || isDestroyed()) return;
+        if (Updater.compare(r.version, prefs.getString(KEY_UPDATE_SKIPPED, "0")) <= 0) return;
+        // the first-start guide goes first, the update is offered on the next start
+        if (setupDialog || setupWaiting || prefs.getInt(KEY_SETUP_STEP, 0) < SETUP_STEPS) return;
+        Logger.log("Update " + r.version + " offered");
+        new AlertDialog.Builder(this)
+                .setTitle("KawaNav " + r.version + " is available")
+                .setMessage(r.changes + (Hub.serviceRunning
+                        ? "\n\nKawaNav stops while updating. Start it again afterwards." : ""))
+                .setPositiveButton("Update", (d, w) -> installUpdate(r))
+                .setNeutralButton("Later", null)
+                .setNegativeButton("Skip this version", (d, w) -> {
+                    prefs.edit().putString(KEY_UPDATE_SKIPPED, r.version).apply();
+                    Logger.log("Update " + r.version + " skipped");
+                })
+                .show();
+    }
+
+    /** Downloads the APK and hands it to Android's installer, which asks to confirm. */
+    private void installUpdate(Updater.Release r) {
+        if (isFinishing() || isDestroyed()) return;
+        if (!getPackageManager().canRequestPackageInstalls()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Allow installing updates")
+                    .setMessage("Android asks once whether KawaNav may install apps.\n\n"
+                            + "On the next screen, turn on \"Allow from this source\", then go back.")
+                    .setPositiveButton("Continue", (d, w) -> {
+                        pendingUpdate = r;
+                        startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                android.net.Uri.parse("package:" + getPackageName())));
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return;
+        }
+        ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        bar.setIndeterminate(true);
+        bar.setMax(1000);
+        LinearLayout c = column();
+        c.setPadding(dp(24), dp(12), dp(24), 0);
+        c.addView(bar, matchWrap());
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Downloading KawaNav " + r.version)
+                .setView(c)
+                .setCancelable(false)
+                .show();
+        android.content.Context app = getApplicationContext();
+        new Thread(() -> {
+            String failed = null;
+            try {
+                Updater.install(app, r, (done, total) -> {
+                    if (total > 0) runOnUiThread(() -> {
+                        bar.setIndeterminate(false);
+                        bar.setProgress((int) (done * 1000 / total));
+                    });
+                });
+            } catch (Exception e) {
+                Logger.log("Update download failed: " + e);
+                failed = "Update download failed. Are you online?";
+            }
+            String msg = failed;
+            runOnUiThread(() -> {
+                if (!isDestroyed()) dialog.dismiss();
+                if (msg != null) android.widget.Toast.makeText(app, msg, android.widget.Toast.LENGTH_LONG).show();
+            });
+        }, "update-download").start();
+    }
+
     // ------------------------------------------------------------------ view helpers
 
     private interface OnPos {

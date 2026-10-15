@@ -18,6 +18,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- in-app updates: installs the APK of a newer GitHub release (Android asks to confirm) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- autostart: woken by the companion device manager when the bike advertises -->
     <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
     <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
@@ -69,6 +71,10 @@
                 <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".Updater$InstallResult"
+            android:exported="false" />
 
         <service
             android:name=".OfflineService"
