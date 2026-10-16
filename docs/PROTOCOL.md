@@ -481,6 +481,8 @@ KawaNav never logs this frame.)
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
 - What the two TCS pairs (0x4A byte 24, 0x4B byte 51) actually report: the rider's level, an intervention,
   or something else. See the 0x4B section for the one observation there is and the two tests that settle it.
+- Which *exported columns* carry a doubt of this kind, and what would settle each: the last part of the
+  Z900 section below lists them by column.
 - R.Score formula (server side).
 - Whether the meter shows an "Apply on the cluster" step: the `0x10` result suggests a two-stage apply,
   but no code or string proves a rider action on the dash.
@@ -564,3 +566,56 @@ Two more things this ride showed, both on KawaNav's side:
   measures 13.4 km. After 1.0 the odometer counts the kilometres and the GPS fills in between them: how
   far the ride had gone when the odometer first stepped, and how far since its last step (`Ride.Distance`).
   This ride comes to 13.2 km, and its `dist_m` column no longer moves in 1000 m steps.
+
+### Which exported values are still doubtful
+
+Two kinds of doubt are left, and they are different things: a value whose **meaning** is not settled (the
+number is right, the name is a guess), and one whose meaning is understood but whose **scale or unit** was
+never checked against a dash. Everything else in a ride file is either verified on a capture or an empty
+cell on a bike that does not send it.
+
+**Meaning not settled**
+
+| Columns | The question | What there is to go on |
+|---|---|---|
+| `tcs`, `tcs_hi`, `tcs_hb`, `tcs_lb` | the rider's level, an intervention, or something else | two different pairs in two frames; on this ride the 0x4A nibbles stayed `0` and the 0x4B pair moved once, in the second with the largest wheel-speed difference — where `tcs_lb` read `7`, all three bits set, which elsewhere in a 3-bit field means "no value", so even that one observation is ambiguous. See the 0x4B section for the two tests that settle it |
+| `imu_ax_psip3`, `imu_ay_psip1`, `imu_az_psip2` | which rate is roll, pitch and yaw | one follows the lean angle (r = 0.72), one its rate of change (−0.60), the third neither; hence "IMU rate 1/2/3 (unverified)" in the app |
+| `imu_ax_g`, `imu_ay_g`, `imu_az_g` | the IMU's mounting angle | 45°, measured at a standstill on one bike; a model that mounts its IMU differently needs its own angle, which the same check reveals |
+| `kqs_down`, `kqs_up` | an operation flag, or "the electronics did something this second" | `kqs_up` fired 12 times and `kqs_down` 6, each within a second of a gear change (up with the throttle open, down with it closed) |
+| `wheel_speed_setting` | what the number says | Rideology's own column name points at a wheel circumference, not a speed; `0` in all 1448 seconds of this ride |
+| `cruise_on`, `cruise_mode` | what the mode values mean | present but always `0` on this bike |
+| `abs`, `abs_target`, `abs_ind` | what a value other than "ready" says | `00`, `0` and `0` all ride |
+| `wheelie_flag` | the values other than the `0` it read all ride (the 2-bit field's `3` is the all-ones byte, i.e. no value) | only `0` seen |
+
+**Scale or unit never checked against a dash**
+
+| Columns | The scaling used | Note |
+|---|---|---|
+| `fuel_inst` | `u16 × 0.1` | **the unit is not established.** This ride fills 197 different values from 1.0 to 99.9, and 99.9 comes up on purpose — a clamp, or a real ratio. Rideology calls the column `instant_fuel_consumption` |
+| `fuel_rate` | `u16 × 0.02` | the unit is not established either |
+| `brake_f_bar` | `u8 × 0.1953125`, bar | not sent by this bike |
+| `brake_f_master`, `brake_r_master`, `brake_r_caliper` | kept raw | Rideology keeps these raw too; not sent by this bike |
+| `torque_rider`, `torque_req`, `torque_actual` | `((hi & 0x3F) << 8 \| lo) × 0.2` (nibble 0) | not sent by this bike |
+| `tyre_f_kpa`, `tyre_r_kpa` | `u8 × 1.373 + 100` | never compared with a gauge |
+| `outside_c` | `u8 − 60` | not sent by this bike |
+| `damping`, `susp_cal`, `susp_status`, `susp_ecu` | raw bits and values | no electronic suspension on this bike |
+
+Water, oil and intake temperature are the one case where the scaling is verified but the **gate** is not:
+KawaNav reads them when their 0x40 nibble is 0 or 1, Rideology only when it is 1 (0x45 above). It only
+bites on a bike whose 0x40 declares one of them at 0.
+
+**Empty on this bike, meaning known** (their scaling is still the unverified one above): total fuel, fuel
+rate, both tyre pressures, the three torque values, the front brake pressure, the raw brake masters and
+the rear caliper, ABS switching, damping, the suspension calibration/status/ECU bits, and the four
+suspension strokes and stroke speeds.
+
+**What would settle them, on a bike**
+
+1. **KTRC:** change the level between two rides. If neither `tcs` pair follows the setting, neither is
+   the setting.
+2. **Intervention:** provoke a cut-in on a slippery surface with the dash's traction-control lamp in
+   view, and see which column steps with the lamp.
+3. **IMU:** at a standstill on a known slope, and on a straight at a known lean, correlate the three
+   rotation rates with the lean angle and its rate of change, and the three axes with the bike's own
+   acceleration.
+4. **Instant fuel:** a fill-up measured by hand against the values the ride recorded.
