@@ -18,7 +18,7 @@ public final class RideExport {
      */
     public static String csv(Ride ride, List<RideTsv.Sample> samples, String userName, String comment) {
         StringBuilder sb = new StringBuilder(samples.size() * 120);
-        double km = (ride.distBikeM > 0 ? ride.distBikeM : ride.distGpsM) / 1000;
+        double km = ride.km();
         sb.append("UserAccount Name,").append(cell(userName)).append('\n');
         sb.append("Title,").append(cell(ride.name)).append('\n');
         sb.append("Comment,").append(cell(comment)).append('\n');
@@ -79,7 +79,7 @@ public final class RideExport {
         sb.append(" ").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.ROOT)
                 .format(new java.util.Date(ride.start)));
         sb.append(String.format(java.util.Locale.ROOT, " · %.2f km · %d min",
-                (ride.distBikeM > 0 ? ride.distBikeM : ride.distGpsM) / 1000, Math.round(ride.activeMs / 60_000.0)));
+                ride.km(), Math.round(ride.activeMs / 60_000.0)));
         sb.append(" · every value KawaNav recorded").append('\n');
         sb.append(RideTsv.header()).append('\n');
         for (RideTsv.Sample s : samples) sb.append(s.line()).append('\n');

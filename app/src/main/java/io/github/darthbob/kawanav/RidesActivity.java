@@ -115,7 +115,7 @@ public class RidesActivity extends KawaActivity {
         long yearFrom = c.getTimeInMillis();
 
         for (Ride r : rides) {
-            double km = (r.distBikeM > 0 ? r.distBikeM : r.distGpsM) / 1000;
+            double km = r.km();
             all += km;
             if (r.start >= yearFrom) year += km;
             if (r.start >= monthFrom) {

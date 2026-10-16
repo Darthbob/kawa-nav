@@ -42,7 +42,7 @@ public final class RideRecorder implements android.location.LocationListener {
     /** Recorded time: runs while recording, not while paused. */
     private ActiveClock clock = new ActiveClock(0);
     /** Live distance since the ride started (GPS and bike odometer); a new one for every ride. */
-    private RideDistance dist = new RideDistance(0, 0);
+    private Ride.Distance dist = new Ride.Distance();
     private double fuelStart = Double.NaN, lastFuel = Double.NaN;
     private double maxKmh, maxLeanL, maxLeanR;
     private int maxRpm, samples;
@@ -74,7 +74,7 @@ public final class RideRecorder implements android.location.LocationListener {
     }
 
     public double distanceM() {
-        return dist.metres();
+        return dist.m();
     }
 
     // ------------------------------------------------------------------ start / pause / stop
@@ -94,7 +94,7 @@ public final class RideRecorder implements android.location.LocationListener {
         clock = new ActiveClock(0);
         clock.start(System.currentTimeMillis());
         // a ride of its own: the previous ride's last odometer reading and position must not count
-        dist = new RideDistance(0, 0);
+        dist = new Ride.Distance();
         fuelStart = lastFuel = Double.NaN;
         maxKmh = maxLeanL = maxLeanR = 0;
         maxRpm = 0;
@@ -129,7 +129,10 @@ public final class RideRecorder implements android.location.LocationListener {
         clock = new ActiveClock(r.activeMs);
         clock.start(System.currentTimeMillis());
         lastSaveAt = System.currentTimeMillis();
-        dist = new RideDistance(r.distGpsM, r.distBikeM);
+        // the distance carries on from the samples themselves: the summary is up to a minute old, and
+        // where the odometer last stepped is in the samples, not in the summary
+        dist = new Ride.Distance();
+        for (RideTsv.Sample s : store.samples(r.id)) dist.add(s);
         maxKmh = r.maxKmh;
         maxRpm = r.maxRpm;
         maxLeanL = r.maxLeanL;
@@ -324,15 +327,11 @@ public final class RideRecorder implements android.location.LocationListener {
             }
             s.flags |= RideTsv.FLAG_BIKE;
         }
-        // distance: from the odometer when it is there, else from the positions
-        if (s.odoKm == s.odoKm) {
-            if (ride.odoStartKm != ride.odoStartKm) ride.odoStartKm = s.odoKm;
-            dist.odometer(s.odoKm);
-        }
-        if (l != null) dist.position(l.getLatitude(), l.getLongitude(), s.gpsAccM);
+        // distance: the odometer's kilometres and the positions together, as the summary counts it
+        if (s.odoKm == s.odoKm && ride.odoStartKm != ride.odoStartKm) ride.odoStartKm = s.odoKm;
+        dist.add(s);
         if (s.fuelTotalL == s.fuelTotalL) lastFuel = s.fuelTotalL;
-        // distance so far, the way the summary counts it: the bike's odometer when it has one, else GPS
-        s.distM = distanceM();
+        s.distM = dist.m();
 
         store.append(s);
         samples++;
@@ -346,17 +345,18 @@ public final class RideRecorder implements android.location.LocationListener {
         ride.activeMs = activeMs();
         ride.end = System.currentTimeMillis();
         ride.samples = samples;
-        ride.distGpsM = dist.gpsM();
-        ride.distBikeM = dist.bikeM();
+        ride.distGpsM = dist.gpsM;
+        ride.distBikeM = dist.bikeM;
+        ride.distM = dist.m();
         ride.maxKmh = maxKmh;
         double hours = Math.max(1.0 / 3600, ride.activeMs / 3_600_000.0); // at least a second
-        ride.avgKmh = dist.metres() / 1000 / hours; // km over active hours
+        ride.avgKmh = ride.distM / 1000 / hours; // km over active hours
         ride.maxRpm = maxRpm;
         ride.maxLeanL = maxLeanL;
         ride.maxLeanR = maxLeanR;
         ride.fuelUsedL = fuelStart == fuelStart && lastFuel == lastFuel ? Math.max(0, lastFuel - fuelStart) : 0;
         if (fuelStart != fuelStart && lastFuel == lastFuel) fuelStart = lastFuel;
-        ride.hasGps = dist.gpsM() > 0;
+        ride.hasGps = dist.gpsM > 0;
         ride.hasBike = samples > 0 && Hub.bikeConnected;
         store.save(ride);
     }
