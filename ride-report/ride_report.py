@@ -53,6 +53,11 @@ CHANNELS = [
 # Some values are stored in one unit and read in another, as in the app.
 SCALE = {"tyre_f_kpa": 0.01, "tyre_r_kpa": 0.01}
 
+# The bottom of each temperature's scale is a raw 00: a sensor that reads nothing, not a reading.
+# KawaNav before 0.9.3 wrote it down (a -60 °C oil cell on a Z900); the app now reads such a cell back
+# as empty (RideTsv), and so does this tool.
+TEMP_FLOOR = {"water_c": -40.0, "oil_c": -60.0, "intake_c": -40.0}
+
 SECTION_ORDER = ["Engine", "Chassis and suspension", "Brakes and electronics", "Temperatures",
                  "Data quality"]
 
@@ -96,6 +101,10 @@ class Ride:
     def __init__(self, path, name, sample_rows, header):
         self.path = path
         self.name = name
+        for r in sample_rows:
+            for key, floor in TEMP_FLOOR.items():
+                if r.get(key) == floor:
+                    r[key] = None
         self.rows = sample_rows
         self.header = header
         self.warnings = []

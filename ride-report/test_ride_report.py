@@ -115,6 +115,15 @@ def test_reading(tmp):
     check("Rideology CSV: gear N is neutral", rideology.col("gear") == [0.0, 3.0])
     check("Rideology CSV: an absent boost column is no value", rideology.col("boost_temperature") == [None, None])
 
+    # the bottom of a temperature's scale is no reading: older versions wrote a raw 00 as -40 / -60 °C
+    temps = ride_with(tmp, [{"t_ms": 0, "water_c": -40, "oil_c": -60, "intake_c": 36},
+                            {"t_ms": 1000, "water_c": 61, "oil_c": -59, "intake_c": -40}], "temps.csv")
+    check("a -40 / -60 °C temperature is no value", temps.col("water_c") == [None, 61.0]
+          and temps.col("oil_c") == [None, -59.0] and temps.col("intake_c") == [36.0, None])
+    z900 = ride_with(tmp, [{"t_ms": 0, "water_c": 61, "oil_c": -60}, {"t_ms": 1000, "water_c": 61, "oil_c": None}],
+                     "z900.csv")
+    check("a ride whose only oil cell was -60 °C has no oil", not z900.has("oil_c") and z900.has("water_c"))
+
     # a cell that is not a finite number is no value either (it would also break the map's JSON)
     check("nan and inf are no value", rr.number("nan") is None and rr.number("inf") is None
           and rr.gear_value("nan") is None and rr.number("-0.5") == -0.5)

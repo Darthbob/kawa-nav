@@ -98,6 +98,8 @@ which axis: they are not reported here for that reason.
 
 A value the bike did not send is an empty cell in the export, and it is treated as *absent* everywhere —
 never as a zero. A real zero (no throttle, upright, no braking) is a value and is reported as one.
+A temperature at the very bottom of its scale (−40 °C coolant or intake, −60 °C oil) is absent too: it
+is what a sensor that reads nothing sends, which KawaNav before 0.9.3 wrote down as a reading.
 
 ## Tests
 
