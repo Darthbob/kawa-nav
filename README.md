@@ -326,8 +326,9 @@ every channel with its lowest, average and highest, the time the electronics wor
 with the values that caused them, charts, and the ride on an interactive map tied to the charts. It needs
 nothing but Python.
 
-Distance comes from the bike's odometer when the bike reports one, else
-from the GPS track. The dash's
+Distance comes from the bike's odometer and the GPS together: the odometer counts the whole kilometres
+and the GPS track fills in what it cannot see, the part of a kilometre at each end of the ride; with
+only one of them, that one alone. The dash's
 riding-log icon (the small "log" symbol) follows the recorder: recording, paused, or off. The tab also
 keeps your **records** (fastest ride, most lean each way, longest ride, distance per year), and a ride
 that ends announces its summary — distance, time, fuel, best lean, top speed — in a notification that
