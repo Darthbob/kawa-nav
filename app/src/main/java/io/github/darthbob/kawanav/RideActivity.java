@@ -455,7 +455,7 @@ public class RideActivity extends KawaActivity {
     private void export(String kind) {
         if (ride == null || samples == null) return;
         // the ride as Rideology's CSV, as a CSV with every recorded value, as a GPX track, or as the raw
-        // file the app keeps (all 63 columns, what the other two only partly carry)
+        // file the app keeps (all 64 columns of RideTsv.COLUMNS, what the other two only partly carry)
         String text;
         String mime;
         String name;
