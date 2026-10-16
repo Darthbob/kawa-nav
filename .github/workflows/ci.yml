@@ -26,6 +26,10 @@ jobs:
         with:
           persist-credentials: false
 
+      # changelog.json must have an entry for the versionName (the in-app updater shows it)
+      - name: Version and changelog
+        run: .github/scripts/version.sh
+
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin

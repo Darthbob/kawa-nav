@@ -379,9 +379,8 @@ public class SettingsActivity extends KawaActivity {
         TextView t = note(MainActivity.RIDING_NOTICE + "\n\n" + MainActivity.AFFILIATION_NOTICE
                 + "\n\nRoad data © OpenStreetMap contributors, available under the Open Database License (ODbL), "
                 + "downloaded from Geofabrik."
-                + "\n\nKawaNav © 2026 Darthbob; this version modified by jackyes (2026). Free software under "
-                + "the GNU General Public License v3, without any warranty. Source code: github.com/jackyes/kawa-nav "
-                + "(based on github.com/Darthbob/kawa-nav)"
+                + "\n\nKawaNav © 2026 Darthbob and jackyes. Free software under the GNU General Public "
+                + "License v3, without any warranty. Source code: github.com/Darthbob/kawa-nav"
                 + "\n\nVersion " + BuildConfig.VERSION_NAME + (Hub.DEBUG_TOOLS ? " (debug)" : ""));
         t.setPadding(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE3));
         t.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);

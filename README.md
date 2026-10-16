@@ -125,9 +125,8 @@ The app's own screen is in English.
 ## 📦 Install
 
 1. Download the APK from the [Releases](../../releases) page and open it on the phone (allow
-   installing apps from your browser or file manager when Android asks).
-   This fork's app (`io.github.jackyes.kawanav`) installs next to Darthbob's KawaNav rather than over
-   it. Keep only one of them connected to the bike: uninstall the other or turn off its autostart.
+   installing apps from your browser or file manager when Android asks). Later versions: KawaNav
+   offers them itself when you open it.
 2. Open KawaNav. On the first start it walks you through pairing, permissions and notification
    access, explaining each step. Anything missing later shows up in an **orange banner** at the top
    of Home, each item with a button that fixes it.
@@ -456,7 +455,6 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   and the range show. Correct them on the Refuels screen to get a true figure.
 - The **12 V battery** warning rule (0.4 V lost over three days of readings) is a sensible guess, not a
   manufacturer's figure, and needs a few weeks of readings before it says anything.
-- **One app at a time**: only one of KawaNav and Darthbob's KawaNav should stay connected to the bike.
 - The **battery and headset icons**, the **call/mail icons** and the **dash clock** have never been seen
   on a real dash. They follow the protocol Rideology uses.
 - **R.Score** (Rideology's ride score) is not computed: Kawasaki's cloud does that, and the formula is
@@ -466,9 +464,8 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
 
 ## 📜 License
 
-KawaNav © 2026 Darthbob. This version is modified by jackyes (from October 2026: bike data, ride
-recording, dash icons and clock, settings on the bike, CI); the changes are in the git history of
-[jackyes/kawa-nav](https://github.com/jackyes/kawa-nav). This program is free software: you can redistribute it and/or modify it
+KawaNav © 2026 Darthbob and jackyes (from October 2026: bike data, ride recording, dash icons and
+clock, settings on the bike, CI). This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free Software Foundation,
 version 3 (GPL-3.0-only). It is distributed in the hope that it will be useful,
 but **without any warranty**; without even the implied warranty of merchantability or fitness for a

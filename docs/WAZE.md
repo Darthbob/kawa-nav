@@ -57,7 +57,7 @@ The debug build can write it down.
 5. Stop. Switch **Capture notifications** off again — the capture copies the text of *all*
    notifications, messages included.
 6. **Export the log and the capture** (the button in the same card, or
-   `adb shell am start -n io.github.jackyes.kawanav/io.github.darthbob.kawanav.MainActivity --ez export_log true`).
+   `adb shell am start -n io.github.darthbob.kawanav/io.github.darthbob.kawanav.MainActivity --ez export_log true`).
    The files land in `Download/KawaNav` (`adb pull /sdcard/Download/KawaNav/`).
 7. Send `....-notif-*.txt` and the `icons/` PNGs (they are in the same folder, named
    `...-icons-<hash>.png`).
@@ -76,5 +76,5 @@ In the capture file, blocks from `com.waze`:
 
 The capture file contains the text of other apps' notifications, including messages. It stays on
 the phone until it is exported. Read it before sending it, delete what you do not want to share, and
-clear the folder afterwards (Android/data/io.github.jackyes.kawanav/files/notifications/ and
+clear the folder afterwards (Android/data/io.github.darthbob.kawanav/files/notifications/ and
 Download/KawaNav). The switch is off by default, and release builds cannot capture at all.

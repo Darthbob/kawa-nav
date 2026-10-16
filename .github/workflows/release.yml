@@ -1,51 +1,86 @@
 name: Release
 
-# Pushing a version tag (v0.6, …) builds both APKs signed with the release key and publishes them as
-# a GitHub release. The key is kept in the "release" environment, which only v* tags may use; see
-# docs/RELEASING.md.
+# A push to main whose versionName (app/build.gradle) has no tag yet is released: both APKs signed
+# with the release key, tag v<versionName> and a GitHub release with the changes from
+# changelog.json. The in-app updater then offers it. See docs/RELEASING.md.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Signed APKs and GitHub release
+  check:
+    name: New version?
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    environment: release
-    permissions:
-      contents: write # create the release and upload the APKs
-    env:
-      TAG: ${{ github.ref_name }}
-      # this fork's release key, as in v0.4 and v0.5: an APK signed otherwise would not install over them
-      CERT_SHA256: 1705d7a647e94ebdffa81d7e316c208a44d4f2b4825ce4ae0896c69020cffda4
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.new.outputs.release }}
     steps:
       # Actions are pinned to full commit SHAs, as in ci.yml; Dependabot keeps them up to date.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0 # tags: released versions
           persist-credentials: false
 
-      - name: Tag and app version agree
+      - name: Version and changelog
+        id: version
+        run: .github/scripts/version.sh
+
+      - name: Released already?
+        id: new
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CODE: ${{ steps.version.outputs.code }}
         run: |
-          version=$(sed -n "s/^ *versionName '\(.*\)'.*$/\1/p" app/build.gradle)
-          if [ "v$version" != "$TAG" ]; then
-            echo "::error::Tag $TAG, but versionName is '$version' in app/build.gradle"
-            exit 1
+          if git rev-parse -q --verify "refs/tags/v$VERSION" > /dev/null; then
+            echo "v$VERSION is already released"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          prev=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          if [ -n "$prev" ]; then
+            prev_code=$(git show "$prev:app/build.gradle" | sed -n 's/^ *versionCode \([0-9][0-9]*\).*/\1/p')
+            if [ "$CODE" -le "$prev_code" ]; then
+              echo "::error file=app/build.gradle::versionCode $CODE must be higher than $prev_code of $prev, or Android refuses the update"
+              exit 1
+            fi
+          fi
+          echo "Releasing v$VERSION (previous: ${prev:-none})"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Signed APKs and GitHub release
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # the release key is in this environment's secrets, which only main may use
+    environment: release
+    permissions:
+      contents: write # create the release and upload the APKs
+    env:
+      TAG: v${{ needs.check.outputs.version }}
+      # Darthbob's release key (v0.1 on): an APK signed otherwise does not install over the app
+      CERT_SHA256: 7e9575b361224e88803f075caa6ee7373066901f701d31a619e47cc2f7cce08b
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '21'
 
-      # Same Gradle as CI (see ci.yml). No cache: a release is built from the tagged sources only.
+      # Same Gradle as CI (see ci.yml). No cache: a release is built from its sources only.
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           gradle-version: '8.14.6'
@@ -55,21 +90,18 @@ jobs:
       - name: Release key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PROPERTIES" ]; then
-            echo "::error::KEYSTORE_BASE64 or KEYSTORE_PROPERTIES is missing in the release environment, see docs/RELEASING.md"
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Signing secrets missing in the release environment, see docs/RELEASING.md"
             exit 1
           fi
-          # mask each password on its own too, should a tool ever print one
-          printf '%s\n' "$KEYSTORE_PROPERTIES" | tr -d '\r' \
-            | sed -n 's/^[[:space:]]*\(storePassword\|keyPassword\)[[:space:]]*[=:][[:space:]]*//p' \
-            | while IFS= read -r value; do [ -z "$value" ] || echo "::add-mask::${value//%/%25}"; done
           umask 077
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
-          # the local keystore.properties, with the keystore's path on this runner
-          { printf '%s\n' "$KEYSTORE_PROPERTIES" | tr -d '\r' | grep -v '^[[:space:]]*storeFile[[:space:]]*[=:]'
-            echo "storeFile=$RUNNER_TEMP/release.jks"; } > keystore.properties
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/release.jks" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
 
       - name: Build signed APKs
         run: gradle assembleRelease assembleDebug testDebugUnitTest
@@ -100,24 +132,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir dist
+          # the in-app updater downloads exactly KawaNav-v<versionName>.apk
           cp app/build/outputs/apk/release/app-release.apk "dist/KawaNav-$TAG.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "dist/KawaNav-$TAG-debug.apk"
           notes="docs/releases/$TAG.md"
           {
             echo "> **Safety:** KawaNav is a riding aid, not a safety system. Directions and curves can be late, missing or wrong. Always ride by what you see on the road. No warranty. Not affiliated with Kawasaki or Google."
             echo
+            jq -r --arg v "${TAG#v}" '.versions[] | select(.version == $v) | .changes[] | "- " + .' changelog.json
+            echo
             if [ -f "$notes" ]; then cat "$notes"; echo; fi
+            echo "### Install / update"
+            echo "KawaNav 1.0 and newer offers updates itself when you open it. Or download \`KawaNav-$TAG.apk\` below and open it on the phone (Android 13+); it installs over earlier versions and keeps your settings and maps. \`KawaNav-$TAG-debug.apk\` is the same version with debug tools. New install: see the [README](../../blob/$TAG/README.md)."
+            echo
             echo "### Verify the APK"
             echo "- \`KawaNav-$TAG.apk\` SHA-256: \`$(sha256sum "dist/KawaNav-$TAG.apk" | cut -d' ' -f1)\` (built from commit \`${GITHUB_SHA:0:7}\` by [this workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID))"
             echo "- \`KawaNav-$TAG-debug.apk\` SHA-256: \`$(sha256sum "dist/KawaNav-$TAG-debug.apk" | cut -d' ' -f1)\`"
-            echo "- Signing certificate SHA-256: \`$CERT_SHA256\` (this fork's key, not Darthbob's)"
+            echo "- Signing certificate SHA-256: \`$CERT_SHA256\` (same as all earlier versions)"
             echo
-            echo "Free software under the GNU GPL v3, modified from Darthbob's KawaNav; the source of this version is attached below. Road data © OpenStreetMap contributors (ODbL)."
+            echo "Free software under the GNU GPL v3. Road data © OpenStreetMap contributors (ODbL)."
           } > "$RUNNER_TEMP/notes.md"
-          # without notes for this version, GitHub's list of changes follows the text above
-          generate=()
-          [ -f "$notes" ] || generate=(--generate-notes)
-          # a draft first, published once both APKs are uploaded
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft --title "KawaNav $TAG" \
-            --notes-file "$RUNNER_TEMP/notes.md" "${generate[@]}" dist/*.apk
+          # a draft first, published (and tagged) once both APKs are uploaded
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft \
+            --title "KawaNav $TAG" --notes-file "$RUNNER_TEMP/notes.md" dist/*.apk
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
