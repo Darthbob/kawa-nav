@@ -75,9 +75,9 @@ public final class RideStats {
         return m != null && m.known() ? m.max : Double.NaN;
     }
 
-    /** The distance of a ride the way the list shows it: the bike's odometer when it has one. */
+    /** The distance of a ride the way the list shows it ({@link Ride#km()}). */
     public static double km(Ride r) {
-        return (r.distBikeM > 0 ? r.distBikeM : r.distGpsM) / 1000;
+        return r.km();
     }
 
     public static RideStats of(List<Ride> rides) {

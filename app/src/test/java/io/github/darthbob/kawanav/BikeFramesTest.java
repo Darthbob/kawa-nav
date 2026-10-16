@@ -156,6 +156,34 @@ public class BikeFramesTest {
         assertEquals(-1, e.tpmsWarnings);
     }
 
+    /**
+     * 00 is the bottom of a temperature's scale (-40 C coolant and intake, -60 C oil): a sensor that reads
+     * nothing, not a reading. The Z500 sends it as its oil temperature.
+     */
+    @Test
+    public void logExtTemperatureZeroIsNone() {
+        byte[] cfg = hx(Z500_40);
+        put(cfg, 8, 0x57);                                 // a config that says all three are there
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(cfg);
+        byte[] v = hx(Z500_45);
+        BikeFrames.LogExt e = (BikeFrames.LogExt) d.decode(v);
+        assertTrue(Double.isNaN(e.oilC));                  // byte 19 is 00
+        assertEquals(40, e.waterC, 0);
+        assertEquals(36, e.intakeC, 0);
+        put(v, 19, 0x8C);
+        e = (BikeFrames.LogExt) d.decode(v);
+        assertEquals(80, e.oilC, 0);
+        put(v, 19, 0x01);
+        e = (BikeFrames.LogExt) d.decode(v);
+        assertEquals(-59, e.oilC, 0);                      // one step above the bottom is a reading
+        put(v, 17, 0x00);
+        put(v, 20, 0x00);
+        e = (BikeFrames.LogExt) d.decode(v);
+        assertTrue(Double.isNaN(e.waterC));
+        assertTrue(Double.isNaN(e.intakeC));
+    }
+
     @Test
     public void temperaturesWaitForTheConfig() {
         // the meter streams 0x45 before the 0x40 is in; the Z500 sends 00 as the oil temperature it has not

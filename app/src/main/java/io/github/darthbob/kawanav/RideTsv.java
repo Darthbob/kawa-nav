@@ -123,9 +123,9 @@ public final class RideTsv {
             s.thrPct = num(cells, index, "thr_pct");
             s.accG = num(cells, index, "acc_g");
             s.lean = num(cells, index, "lean_deg");
-            s.waterC = num(cells, index, "water_c");
-            s.oilC = num(cells, index, "oil_c");
-            s.intakeC = num(cells, index, "intake_c");
+            s.waterC = temp(num(cells, index, "water_c"), -40);
+            s.oilC = temp(num(cells, index, "oil_c"), -60);
+            s.intakeC = temp(num(cells, index, "intake_c"), -40);
             s.fuelInst = num(cells, index, "fuel_inst");
             s.fuelRate = num(cells, index, "fuel_rate");
             s.tcs = num(cells, index, "tcs");
@@ -176,6 +176,14 @@ public final class RideTsv {
             out.add(s);
         }
         return out;
+    }
+
+    /**
+     * A 0x45 temperature, NaN when it is the bottom of its scale: older versions decoded a raw 00 (a sensor
+     * that reads nothing, see {@code BikeFrames.LogExt}) as −40 °C or −60 °C and wrote it down.
+     */
+    private static double temp(double c, double floor) {
+        return c == floor ? Double.NaN : c;
     }
 
     private static double num(String[] cells, Map<String, Integer> index, String column) {

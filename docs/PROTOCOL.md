@@ -122,12 +122,15 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   consumption, TPMS pressures and warning bits. Speed/rpm/gear/throttle/lean are **not** here.
   (verified). Water/oil/intake temperature are read when their 0x40 nibble is **1**, not 0; every other
   value here wants 0 (`qe/b.java:52-62`). (verified)
-- KawaNav reads a temperature only once the 0x40 is in. Its other gates treat a config not read yet as
-  Rideology's default-initialised one (every nibble 0); for the temperatures that default means "not
+- Temperatures: water `b17 − 40`, oil `b19 − 60`, intake `b20 − 40` °C. Besides `FF`, KawaNav drops `00`,
+  the bottom of each scale (−40 °C, −60 °C), which no running engine reads: it is what a sensor that
+  reads nothing gives. The Z500 sends `00` as its oil temperature. This is KawaNav's rule, not Rideology's.
+- KawaNav also reads a temperature only once the 0x40 is in. Its other gates treat a config not read yet
+  as Rideology's default-initialised one (every nibble 0); for the temperatures that default means "not
   read", since they want 1. It matters because the meter keeps streaming 0x45 before KawaNav has the
   config, and a temperature the bike does not have can come as `00` (the Z500's oil byte, which its
-  config marks absent): read without the config, that is −60 °C oil. A Z900 ride had exactly that in
-  its first second with bike data (below).
+  config marks absent). A Z900 ride had exactly that, −60 °C oil in its first second with bike data
+  (below).
 - **Long form** (the frame the Z900 does not send; longer than 58 bytes) repeats what the 0x41 carries,
   with a second set of valid bits in byte 57 (`qe/b.java:70-82`). (verified)
 
@@ -533,11 +536,11 @@ compared with a dash, and it is not "unverified", it is absent.
   the TCS pair and the two quick-shifter bits of byte 51, the wheelie flag); 0x4B blocks 15/25/35 (the three
   accelerations and the three rotation rates); GPS position, altitude, speed and accuracy.
 - **Now and then**: 0x45 coolant and intake temperature every second; instant fuel in 80 % of the seconds
-  (the dash leaves it `FF` while decelerating or stopped); 0x41 odometer and battery voltage in runs of
-  three seconds every 20–21 s (70 runs), which is KawaNav's cadence, not the bike's: the meter answers
-  0x41 only when asked, KawaNav asks every 20 s (`BridgeService.INFO_POLL_MS`), and the recorder writes an
-  answer into each second for 3 s (`RideRecorder.BIKE_MS`); 0x4A blocks 45/85 (ABS target and indicator,
-  cruise bits) present but always `0`.
+  (the dash leaves it `FF` while decelerating or stopped); 0x41 odometer (whole km) and battery voltage
+  in runs of three seconds every 20–21 s (70 runs), which is KawaNav's cadence, not the bike's: the meter
+  answers 0x41 only when asked, KawaNav asks every 20 s (`BridgeService.INFO_POLL_MS`), and the recorder
+  writes an answer into each second for 3 s (`RideRecorder.BIKE_MS`); 0x4A blocks 45/85 (ABS target and
+  indicator, cruise bits) present but always `0`.
 - **Never**: the oil temperature (the ride file has one oil cell, −60 °C in the first second with bike
   data: a `00` decoded before the 0x40 was in, see 0x45 above; KawaNav now leaves it empty), TPMS (no
   tyre pressures at all: no sensors fitted), outside temperature, fuel rate, total fuel, front brake
@@ -550,3 +553,14 @@ compared with a dash, and it is not "unverified", it is absent.
 Consequence for KawaNav: the values its screen labels "unverified" (brake pressure, the torque numbers, the
 tyre pressures, outside temperature, the suspension strokes) are simply **not sent by this bike**; they
 stay empty cells in its ride file. The "unverified" wording now applies only to bikes that do send them.
+
+Two more things this ride showed, both on KawaNav's side:
+
+- The oil temperature's single `00` made a −60 °C cell. After 0.9.2 `00` is no temperature, none is read
+  before the 0x40 is in, and a −40 °C coolant/intake or −60 °C oil cell written by an older version reads
+  back as empty (`RideTsv`).
+- The odometer counts whole kilometres, so a ride's distance taken from it alone moves in 1 km steps and
+  can be nearly a kilometre off either way: this ride read 5234 → 5247 km, "13.00 km", while its GPS track
+  measures 13.4 km. After 0.9.2 the odometer counts the kilometres and the GPS fills in between them: how
+  far the ride had gone when the odometer first stepped, and how far since its last step (`Ride.Distance`).
+  This ride comes to 13.2 km, and its `dist_m` column no longer moves in 1000 m steps.
