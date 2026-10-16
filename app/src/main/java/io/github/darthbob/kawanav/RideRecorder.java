@@ -41,8 +41,9 @@ public final class RideRecorder implements android.location.LocationListener {
     private long lastSaveAt;
     /** Recorded time: runs while recording, not while paused. */
     private ActiveClock clock = new ActiveClock(0);
-    /** Live distance since the ride started (GPS and bike odometer). */
-    private double distGpsM, distBikeM, fuelStart = Double.NaN, lastFuel = Double.NaN;
+    /** Live distance since the ride started (GPS and bike odometer); a new one for every ride. */
+    private RideDistance dist = new RideDistance(0, 0);
+    private double fuelStart = Double.NaN, lastFuel = Double.NaN;
     private double maxKmh, maxLeanL, maxLeanR;
     private int maxRpm, samples;
     private boolean gpsRequested, partialGps;
@@ -73,7 +74,7 @@ public final class RideRecorder implements android.location.LocationListener {
     }
 
     public double distanceM() {
-        return distBikeM > 0 ? distBikeM : distGpsM;
+        return dist.metres();
     }
 
     // ------------------------------------------------------------------ start / pause / stop
@@ -92,7 +93,8 @@ public final class RideRecorder implements android.location.LocationListener {
         state = RECORDING;
         clock = new ActiveClock(0);
         clock.start(System.currentTimeMillis());
-        distGpsM = distBikeM = 0;
+        // a ride of its own: the previous ride's last odometer reading and position must not count
+        dist = new RideDistance(0, 0);
         fuelStart = lastFuel = Double.NaN;
         maxKmh = maxLeanL = maxLeanR = 0;
         maxRpm = 0;
@@ -127,8 +129,7 @@ public final class RideRecorder implements android.location.LocationListener {
         clock = new ActiveClock(r.activeMs);
         clock.start(System.currentTimeMillis());
         lastSaveAt = System.currentTimeMillis();
-        distGpsM = r.distGpsM;
-        distBikeM = r.distBikeM;
+        dist = new RideDistance(r.distGpsM, r.distBikeM);
         maxKmh = r.maxKmh;
         maxRpm = r.maxRpm;
         maxLeanL = r.maxLeanL;
@@ -326,17 +327,9 @@ public final class RideRecorder implements android.location.LocationListener {
         // distance: from the odometer when it is there, else from the positions
         if (s.odoKm == s.odoKm) {
             if (ride.odoStartKm != ride.odoStartKm) ride.odoStartKm = s.odoKm;
-            if (s.odoKm >= lastOdo) distBikeM += (s.odoKm - lastOdo) * 1000;
-            lastOdo = s.odoKm;
+            dist.odometer(s.odoKm);
         }
-        if (l != null && lastLat == lastLat) {
-            double d = Ride.distanceM(lastLat, lastLon, l.getLatitude(), l.getLongitude());
-            if (d < 500 && (!l.hasAccuracy() || l.getAccuracy() < 25)) distGpsM += d;
-        }
-        if (l != null) {
-            lastLat = l.getLatitude();
-            lastLon = l.getLongitude();
-        }
+        if (l != null) dist.position(l.getLatitude(), l.getLongitude(), s.gpsAccM);
         if (s.fuelTotalL == s.fuelTotalL) lastFuel = s.fuelTotalL;
         // distance so far, the way the summary counts it: the bike's odometer when it has one, else GPS
         s.distM = distanceM();
@@ -346,8 +339,6 @@ public final class RideRecorder implements android.location.LocationListener {
         if (now - lastSaveAt >= 60_000) saveSummary();
     }
 
-    private double lastOdo = Double.NaN, lastLat = Double.NaN, lastLon = Double.NaN;
-
     /** Writes the summary while the ride goes on, so the list shows its length and distance. */
     private void saveSummary() {
         if (ride == null) return;
@@ -355,17 +346,17 @@ public final class RideRecorder implements android.location.LocationListener {
         ride.activeMs = activeMs();
         ride.end = System.currentTimeMillis();
         ride.samples = samples;
-        ride.distGpsM = distGpsM;
-        ride.distBikeM = distBikeM;
+        ride.distGpsM = dist.gpsM();
+        ride.distBikeM = dist.bikeM();
         ride.maxKmh = maxKmh;
         double hours = Math.max(1.0 / 3600, ride.activeMs / 3_600_000.0); // at least a second
-        ride.avgKmh = (distBikeM > 0 ? distBikeM / 1000 : distGpsM / 1000) / hours; // km over active hours
+        ride.avgKmh = dist.metres() / 1000 / hours; // km over active hours
         ride.maxRpm = maxRpm;
         ride.maxLeanL = maxLeanL;
         ride.maxLeanR = maxLeanR;
         ride.fuelUsedL = fuelStart == fuelStart && lastFuel == lastFuel ? Math.max(0, lastFuel - fuelStart) : 0;
         if (fuelStart != fuelStart && lastFuel == lastFuel) fuelStart = lastFuel;
-        ride.hasGps = distGpsM > 0;
+        ride.hasGps = dist.gpsM() > 0;
         ride.hasBike = samples > 0 && Hub.bikeConnected;
         store.save(ride);
     }
