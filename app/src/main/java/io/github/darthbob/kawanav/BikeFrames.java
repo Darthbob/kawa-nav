@@ -521,8 +521,15 @@ public final class BikeFrames {
             return v.length > i && (u8(v, i) & (1 << bit)) == 0;
         }
 
+        /**
+         * A temperature, only once the 0x40 is in: unlike the other gates, an unknown config hides it.
+         * Rideology reads these at nibble 1, so its default-initialised config (all 0) shows none before
+         * the real one arrives. The meter streams 0x45 before KawaNav has the 0x40, and a temperature the
+         * bike does not have can come as 00 (the Z500's oil byte, which its config marks absent): read
+         * without the config, that is a -60 °C oil temperature.
+         */
         private static double temp(byte[] v, int i, int offset, InfoConfig c, Flag f) {
-            if (!in(v, i) || !has(c, f) || u8(v, i) == 0xFF) return Double.NaN;
+            if (!in(v, i) || c == null || !c.supported(f) || u8(v, i) == 0xFF) return Double.NaN;
             return u8(v, i) - offset;
         }
     }
