@@ -533,8 +533,11 @@ compared with a dash, and it is not "unverified", it is absent.
   the TCS pair and the two quick-shifter bits of byte 51, the wheelie flag); 0x4B blocks 15/25/35 (the three
   accelerations and the three rotation rates); GPS position, altitude, speed and accuracy.
 - **Now and then**: 0x45 coolant and intake temperature every second; instant fuel in 80 % of the seconds
-  (the dash leaves it `FF` while decelerating or stopped); 0x41 odometer and battery voltage every ~7 s,
-  not every second; 0x4A blocks 45/85 (ABS target and indicator, cruise bits) present but always `0`.
+  (the dash leaves it `FF` while decelerating or stopped); 0x41 odometer and battery voltage in runs of
+  three seconds every 20–21 s (70 runs), which is KawaNav's cadence, not the bike's: the meter answers
+  0x41 only when asked, KawaNav asks every 20 s (`BridgeService.INFO_POLL_MS`), and the recorder writes an
+  answer into each second for 3 s (`RideRecorder.BIKE_MS`); 0x4A blocks 45/85 (ABS target and indicator,
+  cruise bits) present but always `0`.
 - **Never**: the oil temperature (the ride file has one oil cell, −60 °C in the first second with bike
   data: a `00` decoded before the 0x40 was in, see 0x45 above; KawaNav now leaves it empty), TPMS (no
   tyre pressures at all: no sensors fitted), outside temperature, fuel rate, total fuel, front brake
