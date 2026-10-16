@@ -122,6 +122,12 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   consumption, TPMS pressures and warning bits. Speed/rpm/gear/throttle/lean are **not** here.
   (verified). Water/oil/intake temperature are read when their 0x40 nibble is **1**, not 0; every other
   value here wants 0 (`qe/b.java:52-62`). (verified)
+- KawaNav reads a temperature only once the 0x40 is in. Its other gates treat a config not read yet as
+  Rideology's default-initialised one (every nibble 0); for the temperatures that default means "not
+  read", since they want 1. It matters because the meter keeps streaming 0x45 before KawaNav has the
+  config, and a temperature the bike does not have can come as `00` (the Z500's oil byte, which its
+  config marks absent): read without the config, that is −60 °C oil. A Z900 ride had exactly that in
+  its first second with bike data (below).
 - **Long form** (the frame the Z900 does not send; longer than 58 bytes) repeats what the 0x41 carries,
   with a second set of valid bits in byte 57 (`qe/b.java:70-82`). (verified)
 
@@ -526,16 +532,17 @@ compared with a dash, and it is not "unverified", it is absent.
   byte 37 (always `00` = ready), the wheelie flag and angle; 0x4B block 45 (the two filtered wheel speeds,
   the TCS pair and the two quick-shifter bits of byte 51, the wheelie flag); 0x4B blocks 15/25/35 (the three
   accelerations and the three rotation rates); GPS position, altitude, speed and accuracy.
-- **Now and then**: 0x45 coolant and intake temperature every second, **oil temperature once in the whole
-  ride**; instant fuel in 80 % of the seconds (the dash leaves it `FF` while decelerating or stopped); 0x41
-  odometer and battery voltage every ~7 s, not every second; 0x4A blocks 45/85 (ABS target and indicator,
-  cruise bits) present but always `0`.
-- **Never**: TPMS (no tyre pressures at all: no sensors fitted), outside temperature, fuel rate, total
-  fuel, front brake pressure, the three torque values, the raw brake masters and the rear caliper, ABS
-  switching, damping, the suspension calibration/status/ECU bits, and — worth noting — **the strokes and
-  stroke speeds of 0x4B block 5**, while the IMU blocks of the same frame are present. A Z900 has the IMU
-  (lean, traction control, wheelie) but no electronic suspension, and the two are independent blocks, as
-  the 0x4B table says.
+- **Now and then**: 0x45 coolant and intake temperature every second; instant fuel in 80 % of the seconds
+  (the dash leaves it `FF` while decelerating or stopped); 0x41 odometer and battery voltage every ~7 s,
+  not every second; 0x4A blocks 45/85 (ABS target and indicator, cruise bits) present but always `0`.
+- **Never**: the oil temperature (the ride file has one oil cell, −60 °C in the first second with bike
+  data: a `00` decoded before the 0x40 was in, see 0x45 above; KawaNav now leaves it empty), TPMS (no
+  tyre pressures at all: no sensors fitted), outside temperature, fuel rate, total fuel, front brake
+  pressure, the three torque values, the raw brake masters and the rear caliper, ABS switching, damping,
+  the suspension calibration/status/ECU bits, and — worth noting — **the strokes and stroke speeds of
+  0x4B block 5**, while the IMU blocks of the same frame are present. A Z900 has the IMU (lean, traction
+  control, wheelie) but no electronic suspension, and the two are independent blocks, as the 0x4B table
+  says.
 
 Consequence for KawaNav: the values its screen labels "unverified" (brake pressure, the torque numbers, the
 tyre pressures, outside temperature, the suspension strokes) are simply **not sent by this bike**; they

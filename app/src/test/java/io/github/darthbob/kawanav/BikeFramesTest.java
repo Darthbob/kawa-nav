@@ -157,6 +157,21 @@ public class BikeFramesTest {
     }
 
     @Test
+    public void temperaturesWaitForTheConfig() {
+        // the meter streams 0x45 before the 0x40 is in; the Z500 sends 00 as the oil temperature it has not
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        BikeFrames.LogExt early = (BikeFrames.LogExt) d.decode(hx(Z500_45));
+        assertTrue(Double.isNaN(early.oilC));      // not -60 °C
+        assertTrue(Double.isNaN(early.waterC));
+        assertTrue(Double.isNaN(early.intakeC));
+        d.decode(hx(Z500_40));
+        BikeFrames.LogExt later = (BikeFrames.LogExt) d.decode(hx(Z500_45));
+        assertEquals(40, later.waterC, 0);
+        assertEquals(36, later.intakeC, 0);
+        assertTrue(Double.isNaN(later.oilC));      // the config says the bike has none
+    }
+
+    @Test
     public void tuningNotSupported() {
         BikeFrames.Decoder d = new BikeFrames.Decoder();
         BikeFrames.TuningConfig t = (BikeFrames.TuningConfig) d.decode(hx(Z500_47));
