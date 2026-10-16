@@ -277,6 +277,20 @@ public class BikeFramesTest {
     }
 
     @Test
+    public void instantFuelPlaceholderIsDropped() {
+        // 0x3FF is the dash's "no value" (102.3), dropped like Rideology does; 0x3FE is a reading
+        byte[] v = blank(0x45, 55);
+        put(v, 5, 0x05, 0x15);
+        put(v, 25, 0x05, 0x18);
+        put(v, 27, 0x03, 0xFF);
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(infoConfigNoNibbleMasks());
+        assertTrue(Double.isNaN(((BikeFrames.LogExt) d.decode(v)).instantFuel));
+        put(v, 27, 0x03, 0xFE);
+        assertEquals(102.2, ((BikeFrames.LogExt) d.decode(v)).instantFuel, 1e-9);
+    }
+
+    @Test
     public void outsideTemperatureValidBitIsRead() {
         // the last flag of the set (0x40 byte 33 bit 0); nothing gates on it, but the debug card lists it
         BikeFrames.InfoConfig cfg = (BikeFrames.InfoConfig) new BikeFrames.Decoder()

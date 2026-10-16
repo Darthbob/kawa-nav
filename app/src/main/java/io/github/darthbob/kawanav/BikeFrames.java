@@ -483,8 +483,9 @@ public final class BikeFrames {
             oilC = temp(v, 19, 60, c, InfoConfig.OIL_TEMP);
             intakeC = temp(v, 20, 40, c, InfoConfig.INTAKE_TEMP);
             boolean fuelValid = current(v, 27, 4, c, InfoConfig.INSTANT_FUEL_VALID);
-            instantFuel = in(v, 28) && present0(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF && fuelValid
-                    ? ((u8(v, 27) & 0x03) << 8 | u8(v, 28)) * 0.1 : Double.NaN;
+            int fuel = in(v, 28) && present0(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF && fuelValid
+                    ? (u8(v, 27) & 0x03) << 8 | u8(v, 28) : -1;
+            instantFuel = fuel >= 0 && fuel != 0x3FF ? fuel * 0.1 : Double.NaN;   // 0x3FF: 102.3, none
             instantFuelValid = zero(c, InfoConfig.INSTANT_FUEL_VALID) && in(v, 27)
                     ? (u8(v, 27) & 0x10) >> 4 : -1;
             // TPMS bytes 45-49: present unless bytes 45 or 46 are FF, as Rideology reads them (qe/b.java);
