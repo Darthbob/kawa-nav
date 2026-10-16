@@ -12,3 +12,14 @@ tools/
 keystore.properties
 *.jks
 *.keystore
+
+# exported rides: personal GPS tracks, never commit them
+Ride_*.csv
+Ride_*.gpx
+Ride_*.tsv
+# and the reports made from them, which carry the same track
+*_report.html
+
+# Python bytecode, if the ride-report tool is run from a checkout
+__pycache__/
+*.pyc

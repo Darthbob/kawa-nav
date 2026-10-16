@@ -30,11 +30,21 @@ public final class Hub {
         public final int turn;
         public final int distanceM;
         public final String source;
+        /** Speed camera warning: the OpenStreetMap node id, or -1 when this is not one. */
+        public final long cameraId;
+        /** "Speed camera in 350 m (50 km/h)"; only with a camera warning. */
+        public final String alert;
 
         public Output(int turn, int distanceM, String source) {
+            this(turn, distanceM, source, -1, null);
+        }
+
+        public Output(int turn, int distanceM, String source, long cameraId, String alert) {
             this.turn = turn;
             this.distanceM = distanceM;
             this.source = source;
+            this.cameraId = cameraId;
+            this.alert = alert;
         }
 
         public String describe() {
@@ -59,11 +69,29 @@ public final class Hub {
     /** Progress of pairing the bike from KawaNav ("" = not pairing). */
     public static String pairStatus = "";
     /** What the connected meter says it can show (null: not known yet). */
-    public static KawaProtocol.Capabilities bikeCapabilities;
+    public static BikeFrames.GeneralCaps bikeCapabilities;
     /** Debug: the meter's Bluetooth services, read once per connect while the debug card is shown. */
     public static String gattDump = "";
     /** Status icons last sent to the meter, for the debug card. */
     public static String iconsStatus = "–";
+    /** Vehicle data and settings from the meter (last values, also after the bike is switched off). */
+    public static final BikeData bike = new BikeData();
+    /** ATT MTU of the current connection, for the debug card. */
+    public static int bikeMtu;
+    /** Settings write waiting for the meter's answer, see {@link BridgeService#writeSettings}. */
+    public static BridgeService.PendingSettings settingsWritePending;
+    /** Warnings the bike's values show right now (tyres, ABS, battery), see {@link BikeAlerts}. */
+    public static java.util.List<BikeAlerts.Alert> bikeAlerts = java.util.Collections.emptyList();
+    /** When the 12 V battery warning was last shown, so it does not repeat every day the app starts. */
+    public static final String KEY_BATTERY_WARNED_AT = "battery_warned_at";
+    /** Maintenance entries: work the dash cannot know about, see {@link MaintenanceLog}. */
+    public static java.util.List<MaintenanceLog.Entry> maintenanceEntries = java.util.Collections.emptyList();
+    /** The 12 V readings at rest, oldest first, see {@link BatteryLog}. */
+    public static java.util.List<BatteryLog.Reading> batteryReadings = java.util.Collections.emptyList();
+    /** Refuels: detected at the pump by the bridge, added or corrected on the fuel screen. */
+    public static java.util.List<FuelLog.Entry> fuelEntries = java.util.Collections.emptyList();
+    /** Last GPS fix any part of KawaNav got (curves, ride recorder), or null. */
+    public static android.location.Location lastFix;
 
     // --- settings
     public static final String PREFS = "settings";
@@ -74,6 +102,8 @@ public final class Hub {
     public static final String KEY_SENSITIVITY = "curve_sensitivity"; // 0 low, 1 normal, 2 high
     public static final String KEY_LOOKAHEAD = "curve_lookahead_m";
     public static final String KEY_DEVICE = "device";
+    /** Bluetooth name of the bike last connected (e.g. "Kawasaki-ZR900S"), for the bike screens. */
+    public static final String KEY_BIKE_NAME = "bike_name";
     /** Address of the helmet whose Bluetooth connection starts the bridge (autostart fallback). */
     public static final String KEY_HELMET = "helmet";
     /** Phone battery icon on the bike's display (on unless turned off). */
@@ -103,12 +133,58 @@ public final class Hub {
     public static final String KEY_ICON_RIDING_LOG = "icon_riding_log";
     /** Debug: text sent to the meter as the phone's name on every connect ("" = none). */
     public static final String KEY_DEBUG_PHONE_NAME = "debug_phone_name";
-    /** Debug builds: riding log icon on until changed in the debug card, to see how it looks on the dash. */
-    public static final int RIDING_LOG_DEFAULT = 1;
+    /** Debug: requests sent after connecting, {@link KawaProtocol#INIT_NONE} / INIT_READ / INIT_FULL. */
+    public static final String KEY_DEBUG_INIT_LEVEL = "debug_init_level";
+    /** Debug: leave the 0x45 riding log request out of the read-only connect sequence and ride start. */
+    public static final String KEY_DEBUG_NO_EXT = "debug_no_ext_request";
+    /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
+    public static final String KEY_DEBUG_CAPTURE = "debug_capture";
+    /**
+     * Send the status-icon and navigation frames even when the dash's capability answer says it has no such
+     * feature. Off by default (the dash is believed, as Rideology believes it); a rider whose dash answers
+     * wrongly turns it on and gets the arrows back, which is why it is a normal setting and not a debug
+     * one: a release build must have a way back.
+     */
+    public static final String KEY_IGNORE_CAPS = "ignore_caps";
+    /** Debug: notifications are written down, to see what an app like Waze puts in them. */
+    public static final String KEY_DEBUG_NOTIF_CAPTURE = "debug_notif_capture";
+    /** Debug: capture every app's notifications, not only Waze and the shell. */
+    public static final String KEY_DEBUG_NOTIF_CAPTURE_ALL = "debug_notif_capture_all";
+    /** The meter clock is set from the phone once per connection (off until tried on the bike). */
+    public static final String KEY_CLOCK_SYNC = "clock_sync";
+    /** Call icon on the dash (Rideology's notification icons). */
+    public static final String KEY_DASH_CALLS = "dash_calls";
+    /** Mail/message icon on the dash. */
+    public static final String KEY_DASH_MAIL = "dash_mail";
+    /**
+     * Speed camera warnings from the offline OpenStreetMap data, on the phone and on the dash.
+     * Off by default: announcing cameras is restricted in some countries (see README).
+     */
+    public static final String KEY_CAMERAS = "speed_cameras";
+    /** Warn about a camera from this many metres on (the value of {@link #CAMERA_WARN_CHOICES}). */
+    public static final String KEY_CAMERA_WARN = "camera_warn_m";
+    public static final int CAMERA_WARN_DEFAULT = 500;
+    /** Start recording by itself when the bike is moving (off by default). */
+    public static final String KEY_RIDE_AUTO = "ride_auto";
+    /** Set while the bridge is being started only because a ride was asked for. */
+    public static final String KEY_RIDE_WANTED = "ride_wanted";
+    /** Ride state ({@link RideRecorder#IDLE}, RECORDING, PAUSED) and its "3.4 km · 12 min" text, for the UI. */
+    public static int rideState;
+    public static String rideText = "";
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
 
     /** Free mode (show upcoming curves) is on unless turned off; Google Maps navigation takes priority. */
+    /** Speed camera warnings are on. */
+    public static boolean camerasEnabled(Context c) {
+        return prefs(c).getBoolean(KEY_CAMERAS, false);
+    }
+
+    /** Distance from which a camera is announced, metres. */
+    public static int cameraWarnM(Context c) {
+        return prefs(c).getInt(KEY_CAMERA_WARN, CAMERA_WARN_DEFAULT);
+    }
+
     public static boolean freeMode(Context c) {
         return prefs(c).getBoolean(KEY_FREE_MODE, true);
     }
@@ -121,7 +197,19 @@ public final class Hub {
     /** Debug value of a status icon field (-1 = automatic, always in release builds). */
     public static int iconSetting(Context c, String key) {
         if (!DEBUG_TOOLS) return -1;
-        return prefs(c).getInt(key, KEY_ICON_RIDING_LOG.equals(key) ? RIDING_LOG_DEFAULT : -1);
+        return prefs(c).getInt(key, -1);
+    }
+
+    /** Requests sent to the bike after connecting (release builds: read-only). */
+    public static int initLevel(Context c) {
+        if (!DEBUG_TOOLS) return KawaProtocol.INIT_READ;
+        int level = prefs(c).getInt(KEY_DEBUG_INIT_LEVEL, KawaProtocol.INIT_READ);
+        return Math.max(KawaProtocol.INIT_NONE, Math.min(KawaProtocol.INIT_FULL, level));
+    }
+
+    /** KawaNav asks for the 0x45 riding log at connect and at ride start, as Rideology does (release: always). */
+    public static boolean askRidingLogExt(Context c) {
+        return !DEBUG_TOOLS || !prefs(c).getBoolean(KEY_DEBUG_NO_EXT, false);
     }
 
     /**

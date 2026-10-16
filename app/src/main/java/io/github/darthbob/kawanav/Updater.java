@@ -61,7 +61,8 @@ public final class Updater {
         JSONArray assets = latest.getJSONArray("assets");
         for (int i = 0; i < assets.length(); i++) {
             JSONObject a = assets.getJSONObject(i);
-            if (!a.getString("name").endsWith(".apk")) continue;
+            // KawaNav-v1.0.apk; the release also carries KawaNav-v1.0-debug.apk
+            if (!a.getString("name").equals("KawaNav-v" + version + ".apk")) continue;
             return new Release(version, a.getString("browser_download_url"), a.optLong("size", -1), changes(version));
         }
         Logger.log("Update " + version + " has no APK");

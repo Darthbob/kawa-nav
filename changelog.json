@@ -1,9 +1,17 @@
 {
   "versions": [
     {
-      "version": "0.4",
+      "version": "1.0",
       "changes": [
-        "In-app updates: when a new version is released, KawaNav offers it on start with the list of changes and installs it (Android asks to confirm)"
+        "KawaNav is now a joint project of Darthbob and jackyes, with jackyes' features merged in",
+        "New look after Rideology: bottom bar with Home, Bike, record button, Rides and Settings; dark and light theme",
+        "Your bike: odometer, trips, fuel and range, battery voltage, temperatures, maintenance reminders and live values; the last values stay after the ignition is off, with \"Walk to the bike\"",
+        "Ride recording: GPS track and the bike's values, riding log with totals and records, ride summary with charts, export as Rideology CSV, GPX or all values",
+        "Refuel diary, 12 V battery log and maintenance log",
+        "Speed camera warnings from the offline map data (off by default)",
+        "Call and message icons and the clock on the dash (off by default)",
+        "Ride settings of the bike (riding mode, power, traction control…) shown in the app",
+        "In-app updates: KawaNav offers new versions with the list of changes and installs them (Android asks to confirm)"
       ]
     },
     {

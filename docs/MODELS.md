@@ -28,9 +28,10 @@ coverage (as of October 2026).
 - **Older Rideology bikes (2019–2024, e.g. Z900 2020, Ninja 650 2020)**: older meters without
   turn-by-turn.
 
-The meter reports whether it supports turn-by-turn (capability byte, see PROTOCOL.md); Rideology
-then skips nav frames. KawaNav does not read it yet: on an unsupported bike it connects, but the
-arrows never appear.
+The meter reports what it can show (the 0x1A capability answer, see PROTOCOL.md): KawaNav asks for it
+right after connecting, shows it on the bike screen and in the debug card, and warns (without stopping)
+when the dash says it has no turn-by-turn. Leaving the arrows out for good is a decision for the rider,
+since the flag has not been checked against a dash without turn-by-turn yet.
 
 ## Sources
 

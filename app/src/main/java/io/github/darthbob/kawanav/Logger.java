@@ -15,6 +15,8 @@ import java.util.Locale;
 /**
  * App-wide log: logcat (tag KawaNav) and a file readable with
  * {@code adb shell run-as io.github.darthbob.kawanav cat files/kawanav.log} (rotated to .1 at 2 MB).
+ * Lines are stamped on the main thread (keeps their order) and written to the file on a background
+ * thread, so logging never blocks the bike link or the UI.
  */
 public final class Logger {
     private Logger() {}
@@ -25,6 +27,8 @@ public final class Logger {
 
     private static final SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.ROOT);
     private static final Handler main = new Handler(Looper.getMainLooper());
+    private static final java.util.concurrent.ExecutorService io =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> new Thread(r, "log-io"));
     private static File dir;
 
     public static void init(Context context) {
@@ -38,10 +42,19 @@ public final class Logger {
         }
         Log.i(TAG, line);
         String stamped = fmt.format(new Date()) + "  " + line;
-        if (dir != null) appendToFile(stamped);
+        File d = dir;
+        if (d != null) io.execute(() -> appendToFile(d, stamped));
     }
 
-    private static void appendToFile(String line) {
+    /**
+     * Runs {@code r} on the log's background thread, after every line logged so far is in the file and
+     * before any later one (e.g. to copy the files without them changing underneath).
+     */
+    public static void withLogFiles(Runnable r) {
+        io.execute(r);
+    }
+
+    private static void appendToFile(File dir, String line) {
         File f = new File(dir, FILE);
         if (f.length() > MAX_FILE_BYTES) {
             File old = new File(dir, FILE + ".1");

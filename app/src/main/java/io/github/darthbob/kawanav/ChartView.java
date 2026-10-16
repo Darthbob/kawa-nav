@@ -1,0 +1,228 @@
+package io.github.darthbob.kawanav;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.view.MotionEvent;
+import android.view.View;
+
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * One recorded value over the ride: a line with its range on the left and the time along the bottom.
+ * Touching it marks the second, so the track and the values can be looked at together.
+ */
+public final class ChartView extends View {
+
+    /** Which recorded value to draw. */
+    public enum Series {
+        SPEED("Speed", "km/h"), RPM("Engine", "rpm"), GEAR("Gear", ""), THROTTLE("Throttle", "%"),
+        LEAN("Lean angle", "°"), WATER("Coolant", "°C"), ACCEL("Acceleration", "g"),
+        OIL("Oil temperature", "°C"), INTAKE("Intake air", "°C"), FUEL("Fuel economy", ""),
+        TYRE_FRONT("Front tyre", "bar"), TYRE_REAR("Rear tyre", "bar"), BATTERY("Battery", "V"),
+        OUTSIDE("Outside temperature", "°C"), BRAKE("Front brake", "bar"), ALTITUDE("Altitude", "m"),
+        SUSP_FRONT("Front suspension", "mm"), SUSP_REAR("Rear suspension", "mm"),
+        LONGITUDINAL("Acceleration, forward", "g"), LATERAL("Acceleration, sideways", "g"),
+        VERTICAL("Acceleration, up", "g"),
+        WHEEL_FRONT("Front wheel (filtered)", "km/h"), WHEEL_REAR("Rear wheel (filtered)", "km/h");
+
+        public final String title, unit;
+
+        Series(String title, String unit) {
+            this.title = title;
+            this.unit = unit;
+        }
+    }
+
+    public interface OnPoint {
+        void onSample(int index);
+    }
+
+    private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint grid = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path path = new Path();
+
+    private List<RideTsv.Sample> samples;
+    private Series series = Series.SPEED;
+    private OnPoint listener;
+    private int marked = -1;
+
+    public ChartView(Context context) {
+        super(context);
+        float d = context.getResources().getDisplayMetrics().density;
+        line.setStyle(Paint.Style.STROKE);
+        line.setStrokeWidth(d * 2);
+        boolean night = Ui.night(context);
+        line.setColor(Ui.accent(night));
+        grid.setColor(Ui.chartGrid(night));
+        grid.setStrokeWidth(1);
+        text.setColor(Ui.chartInk(night));
+        text.setTextSize(d * 11);
+    }
+
+    public void set(List<RideTsv.Sample> samples, Series series, OnPoint listener) {
+        this.samples = samples;
+        this.series = series;
+        this.listener = listener;
+        this.marked = -1;
+        invalidate();
+    }
+
+    public void mark(int index) {
+        marked = index;
+        invalidate();
+    }
+
+    /** The value of a sample for this series, NaN when the ride has none. */
+    static double value(RideTsv.Sample s, Series series) {
+        switch (series) {
+            case SPEED: return s.kmh;
+            case RPM: return s.rpm;
+            case GEAR: return s.gear;
+            case THROTTLE: return s.thrPct;
+            case LEAN: return s.lean;
+            case WATER: return s.waterC;
+            case ACCEL: return s.accG;
+            case OIL: return s.oilC;
+            case INTAKE: return s.intakeC;
+            case FUEL: return s.fuelInst;
+            case TYRE_FRONT: return s.tyreFrontKpa / 100;
+            case TYRE_REAR: return s.tyreRearKpa / 100;
+            case BATTERY: return s.batteryV;
+            case OUTSIDE: return s.outsideC;
+            case BRAKE: return s.brakeFrontBar;
+            case ALTITUDE: return s.altM;
+            case SUSP_FRONT: return s.susp_f_stroke_mm;
+            case SUSP_REAR: return s.susp_r_stroke_mm;
+            // the IMU is mounted at 45°: these come from the same two raw columns, turned (see PROTOCOL.md)
+            case LONGITUDINAL: return BikeFrames.ImuSusp.longitudinal(s.imu_ax_g, s.imu_ay_g);
+            case LATERAL: return BikeFrames.ImuSusp.lateral(s.imu_az_g);
+            case VERTICAL: return BikeFrames.ImuSusp.vertical(s.imu_ax_g, s.imu_ay_g);
+            case WHEEL_FRONT: return s.wheel_f_kmh;
+            case WHEEL_REAR: return s.wheel_r_kmh;
+            default: return Double.NaN;
+        }
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (samples == null || samples.size() < 2) return;
+        float d = getResources().getDisplayMetrics().density;
+        float padL = d * 42, padR = d * 8, padT = d * 6, padB = d * 18;
+        float w = getWidth() - padL - padR, h = getHeight() - padT - padB;
+        if (w <= 0 || h <= 0) return;
+
+        double min = Double.MAX_VALUE, max = -Double.MAX_VALUE;
+        for (RideTsv.Sample s : samples) {
+            double v = value(s, series);
+            if (v != v) continue;
+            min = Math.min(min, v);
+            max = Math.max(max, v);
+        }
+        if (min > max) return;
+        if (max - min < 1e-6) { // a flat line in the middle
+            min -= 1;
+            max += 1;
+        }
+        canvas.drawLine(padL, padT + h, padL + w, padT + h, grid);
+        canvas.drawText(String.format(Locale.ROOT, "%.0f %s", max, series.unit), d * 2, padT + d * 10, text);
+        canvas.drawText(String.format(Locale.ROOT, "%.0f", min), d * 2, padT + h, text);
+
+        long total = Math.max(1, samples.get(samples.size() - 1).tMs);
+        float prevX = 0, prevY = 0;
+        boolean first = true;
+        path.reset();
+        for (RideTsv.Sample s : samples) {
+            double v = value(s, series);
+            if (v != v) {
+                first = true;
+                continue;
+            }
+            float x = padL + w * (s.tMs / (float) total);
+            float y = (float) (padT + h - (v - min) / (max - min) * h);
+            if (first) {
+                path.moveTo(x, y);
+                first = false;
+            } else {
+                path.lineTo(x, y);
+            }
+            prevX = x;
+            prevY = y;
+        }
+        canvas.drawPath(path, line);
+        // where traction control or ABS stepped in: short marks along the bottom
+        Paint mark = null;
+        for (RideTsv.Sample s : samples) {
+            // >= 0: rides recorded before 0.8 wrote -1 for "the bike sent nothing"
+            boolean tcs = (s.tcs == s.tcs && s.tcs > 0) || (s.tcs_hi == s.tcs_hi && s.tcs_hi > 0)
+                    || (s.tcs_hb == s.tcs_hb && s.tcs_hb > 0) || (s.tcs_lb == s.tcs_lb && s.tcs_lb > 0);
+            boolean abs = s.abs == s.abs && s.abs >= 0 && ((int) s.abs & 0x03) != 0;
+            if (!tcs && !abs) continue;
+            if (mark == null) {
+                mark = new Paint(Paint.ANTI_ALIAS_FLAG);
+                mark.setStrokeWidth(d * 2);
+            }
+            mark.setColor(abs ? Ui.recording() : Ui.warn(Ui.night(getContext())));
+            float x = padL + w * (s.tMs / (float) total);
+            canvas.drawLine(x, padT + h - d * 6, x, padT + h, mark);
+        }
+        canvas.drawText(axisLabel(0, total), padL, padT + h + d * 13, text);
+        String endLabel = axisLabel(total, total);
+        canvas.drawText(endLabel, padL + w - text.measureText(endLabel), padT + h + d * 13, text);
+        if (marked >= 0 && marked < samples.size()) {
+            float x = padL + w * (samples.get(marked).tMs / (float) total);
+            canvas.drawLine(x, padT, x, padT + h, grid);
+            double v = value(samples.get(marked), series);
+            if (v == v) {
+                float y = (float) (padT + h - (v - min) / (max - min) * h);
+                Paint p = new Paint(line);
+                p.setStyle(Paint.Style.FILL);
+                p.setColor(Ui.markerOnTrack());
+                canvas.drawCircle(x, y, d * 4, p);
+            }
+        }
+    }
+
+    /** Wall-clock time of the first sample: over days and months the axis then shows dates, not minutes. */
+    private long epochAtZero;
+
+    /** Tells the chart that {@code tMs} 0 is this moment, so a long span can be labelled with dates. */
+    public void setEpochAtZero(long epochMs) {
+        epochAtZero = epochMs;
+        invalidate();
+    }
+
+    /** "12 Oct" when the chart spans days, else the minutes of a ride. */
+    private String axisLabel(long ms, long total) {
+        if (epochAtZero > 0 && total > 3L * 24 * 60 * 60_000) {
+            // the rider's own month names: ROOT has none and falls back to "M10"
+            return new java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault())
+                    .format(new java.util.Date(epochAtZero + ms));
+        }
+        return minutes(ms);
+    }
+
+    private static String minutes(long ms) {
+        long min = ms / 60_000;
+        return min >= 60 ? min / 60 + " h" : min + " min";
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent e) {
+        if (samples == null || samples.size() < 2 || listener == null) return false;
+        if (e.getAction() == MotionEvent.ACTION_DOWN || e.getAction() == MotionEvent.ACTION_MOVE) {
+            float d = getResources().getDisplayMetrics().density;
+            float padL = d * 42, padR = d * 8;
+            float f = (e.getX() - padL) / Math.max(1, getWidth() - padL - padR);
+            int index = (int) Math.round(Math.max(0, Math.min(1, f)) * (samples.size() - 1));
+            mark(index);
+            listener.onSample(index);
+            return true;
+        }
+        return super.onTouchEvent(e);
+    }
+}

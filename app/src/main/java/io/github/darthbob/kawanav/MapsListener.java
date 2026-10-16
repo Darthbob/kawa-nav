@@ -42,6 +42,8 @@ public class MapsListener extends NotificationListenerService {
         Logger.log("Notification access active");
         try {
             for (StatusBarNotification sbn : getActiveNotifications()) onNotificationPosted(sbn);
+            // notifications that were already there: show their icon too
+            for (StatusBarNotification sbn : getActiveNotifications()) dashAlert(sbn, true);
         } catch (SecurityException e) {
             Logger.log("Cannot read active notifications: " + e.getMessage());
         }
@@ -55,6 +57,8 @@ public class MapsListener extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        NotifCapture.onPosted(this, sbn);   // debug builds, switched on in the hidden card
+        dashAlert(sbn, true);
         if (!MAPS.equals(sbn.getPackageName())) return;
         Notification n = sbn.getNotification();
         boolean nav = Notification.CATEGORY_NAVIGATION.equals(n.category)
@@ -135,8 +139,34 @@ public class MapsListener extends NotificationListenerService {
         setMaps(new Hub.MapsTurn(turn, dist, turnName(turn) + (dist >= 0 ? " · " + dist + " m" : "") + " (" + how + ")"));
     }
 
+    /** A call or mail/message notification appeared or went away: tell the bike (icon only, no content). */
+    private void dashAlert(StatusBarNotification sbn, boolean posted) {
+        if (getPackageName().equals(sbn.getPackageName())) return;
+        String category = sbn.getNotification().category;
+        int icon = DashAlerts.categoryOf(sbn.getPackageName(), category);
+        if (icon == 0) return;
+        String key = sbn.getPackageName() + "|" + sbn.getId() + "|" + sbn.getTag();
+        boolean change = posted ? DashAlerts.onPosted(icon, key) : DashAlerts.onRemoved(icon, key);
+        if (!change) return;
+        boolean on = DashAlerts.active(icon) && DashAlerts.enabled(this, icon);
+        BridgeService.sendDashAlert(icon, on ? DashAlerts.ADDED : DashAlerts.REMOVED);
+        Logger.log("Dash " + DashAlerts.name(icon) + " icon " + (on ? "on" : "off"));
+    }
+
+    /** The rider switched a dash icon off: clear it on the bike now. */
+    public static void alertsChanged(android.content.Context c) {
+        for (int icon : new int[]{DashAlerts.CALL, DashAlerts.MAIL}) {
+            if (!DashAlerts.enabled(c, icon) && DashAlerts.active(icon)) {
+                DashAlerts.clear(icon);
+                BridgeService.sendDashAlert(icon, DashAlerts.REMOVED);
+            }
+        }
+    }
+
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
+        NotifCapture.onRemoved(this, sbn);
+        dashAlert(sbn, false);
         if (MAPS.equals(sbn.getPackageName()) && sbn.getId() == navNotificationId) {
             Logger.log("Maps navigation ended");
             lastKey = "";

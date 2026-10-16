@@ -31,12 +31,16 @@
         <package android:name="com.google.android.apps.maps" />
     </queries>
 
+    <!-- backup: only rides, settings and the bike's last values, see res/xml/data_extraction_rules.xml -->
     <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="KawaNav"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:largeHeap="true"
-        android:theme="@android:style/Theme.DeviceDefault.DayNight">
+        android:theme="@android:style/Theme.DeviceDefault.DayNight"
+        android:enableOnBackInvokedCallback="true">
 
         <activity
             android:name=".MainActivity"
@@ -49,6 +53,52 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- the tabs: Home (MainActivity), Bike, Rides, Settings; brought back as they were when reopened -->
+        <activity
+            android:name=".RidesActivity"
+            android:exported="false"
+            android:label="Riding log"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".RideActivity"
+            android:exported="false"
+            android:label="Ride"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".BikeActivity"
+            android:exported="false"
+            android:label="Your bike"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".MaintenanceActivity"
+            android:exported="false"
+            android:label="Maintenance"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden" />
+
+        <activity
+            android:name=".BatteryActivity"
+            android:exported="false"
+            android:label="12 V battery"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".FuelActivity"
+            android:exported="false"
+            android:label="Refuels"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="Settings"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <service
             android:name=".BridgeService"

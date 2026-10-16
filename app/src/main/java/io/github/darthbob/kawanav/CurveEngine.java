@@ -37,6 +37,7 @@ public final class CurveEngine implements LocationListener {
 
     private final Context context;
     private final RoadStore store;
+    private final HazardStore hazards;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
@@ -56,9 +57,18 @@ public final class CurveEngine implements LocationListener {
     private List<CurveDetector.Curve> curves = Collections.emptyList();
     private long outputAt;
 
+    /** Speed cameras of the tiles around the rider, and the one ahead. */
+    private List<Hazards.Camera> cameras = Collections.emptyList();
+    private Hazards.Ahead camera;
+    private long cameraAt;
+    private String cameraTiles = "";
+    /** A region download finished since the last fix: the tiles on disk changed. */
+    private boolean offlineWasRunning;
+
     public CurveEngine(Context context) {
         this.context = context.getApplicationContext();
         this.store = new RoadStore(this.context);
+        this.hazards = new HazardStore(this.context);
     }
 
     public void start() {
@@ -78,6 +88,9 @@ public final class CurveEngine implements LocationListener {
         output = null;
         curves = Collections.emptyList();
         lastMatch = null;
+        camera = null;
+        cameras = Collections.emptyList();
+        cameraTiles = "";
         Hub.curveStatus = "Off";
         Logger.log("Curve detection off");
     }
@@ -89,6 +102,14 @@ public final class CurveEngine implements LocationListener {
     /** Free mode: what to show now (next curve, roundabout or straight), or null. */
     public Hub.Output current() {
         return output != null && fresh() ? output : null;
+    }
+
+    /**
+     * The speed camera ahead within the warning distance, or null. Independent of the offline roads:
+     * it also works where no region is downloaded, as long as one holds the cameras.
+     */
+    public Hazards.Ahead cameraAhead() {
+        return camera != null && System.currentTimeMillis() - cameraAt <= STALE_FIX_MS ? camera : null;
     }
 
     /**
@@ -115,8 +136,10 @@ public final class CurveEngine implements LocationListener {
     @Override
     public void onLocationChanged(Location loc) {
         if (!running) return;
+        Hub.lastFix = loc;
         updateHeading(loc);
         ensureRoads(loc);
+        ensureHazards(loc);
         compute(loc);
     }
 
@@ -140,6 +163,10 @@ public final class CurveEngine implements LocationListener {
         Context c = context;
         int sensitivity = Hub.prefs(c).getInt(Hub.KEY_SENSITIVITY, 1);
         int lookahead = Hub.prefs(c).getInt(Hub.KEY_LOOKAHEAD, 1000);
+        // cameras first: they are not a road feature, so a missing/mismatched road must not hide them
+        camera = Hub.camerasEnabled(c) && !Double.isNaN(heading)
+                ? Hazards.next(cameras, loc.getLatitude(), loc.getLongitude(), heading, Hub.cameraWarnM(c)) : null;
+        cameraAt = System.currentTimeMillis();
         RoadNetwork net = network;
         if (net == null) {
             Hub.curveStatus = busy ? "Loading roads…" : "No offline roads here: download this region under Offline maps";
@@ -225,6 +252,32 @@ public final class CurveEngine implements LocationListener {
             }
         }
         return l;
+    }
+
+    /**
+     * Keeps {@link #cameras} from the stored camera tiles around the rider. They are few and small:
+     * reloaded when the set of tiles with cameras changes (a region was downloaded or deleted).
+     */
+    private void ensureHazards(Location loc) {
+        int ty = RoadStore.tileY(loc.getLatitude()), tx = RoadStore.tileX(loc.getLongitude());
+        List<int[]> tiles = new ArrayList<>();
+        StringBuilder sig = new StringBuilder();
+        for (int[] t : neighbourhood(ty, tx)) {
+            if (!hazards.hasAny(t[0], t[1])) continue;
+            tiles.add(t);
+            sig.append(t[0]).append('_').append(t[1]).append(' ');
+        }
+        // a finished region download replaced the tiles under us: load them again
+        if (offlineWasRunning && !Hub.offlineRunning) {
+            cameraTiles = "";
+            builtTiles = Integer.MIN_VALUE;   // and the roads, which changed with them
+        }
+        offlineWasRunning = Hub.offlineRunning;
+        if (sig.toString().equals(cameraTiles)) return;
+        cameraTiles = sig.toString();
+        List<Hazards.Camera> loaded = hazards.loadAll(tiles);
+        cameras = loaded;
+        if (!loaded.isEmpty()) Logger.log("Cameras: " + loaded.size() + " around " + ty + "_" + tx);
     }
 
     /**

@@ -1,15 +1,11 @@
 package io.github.darthbob.kawanav;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
-import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -19,15 +15,10 @@ import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
-import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -35,57 +26,43 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The app screen: status and start/stop on top, then setup steps (only while something is
- * missing), autostart, riding options and offline maps. Test switches are adb-only, see
- * {@link #handleAdbIntent}; the log is in files/kawanav.log.
+ * The Home tab: the link to the bike and what the dash shows right now, the ride being recorded,
+ * the bike's last values, and a menu of tiles, like Rideology's home screen. Settings that keep
+ * KawaNav from working show up in the orange banner, and the first start walks through them.
+ * Test switches are adb-only, see {@link #handleAdbIntent}; the log is in files/kawanav.log.
  */
-public class MainActivity extends Activity {
-
-    private static final int REQ_PERMS = 1;
-    private static final int REQ_BG_LOCATION = 3;
-    private static final int[] LOOKAHEADS = {500, 1000, 1500, 2000};
-    /** Explanation of "Which curves count"; values from CurveDetector.Sensitivity and its arrow choice. */
-    private static final String CURVES_INFO =
-            "The angle is the total change of direction through the whole bend: 90° is a right-angle turn, "
-            + "180° a hairpin. A bend also has to be tight enough; long sweeping highway bends are not curves.\n\n"
-            + "Only tight ones: from 45°, radius up to ~170 m. Only bends you really have to brake for.\n\n"
-            + "Normal: from 30°, radius up to ~250 m.\n\n"
-            + "Also gentle ones: from 20°, radius up to ~350 m. Two bends in the same direction close "
-            + "together can merge into one.\n\n"
-            + "All over 15°: from 16°, radius up to ~570 m. Everything except the faintest bends; bends close "
-            + "together stay separate. Recommended.\n\n"
-            + "Arrow on the bike's display:\n"
-            + "• Slight: under 55° and wider than 60 m radius\n"
-            + "• Normal: 55° or more, or tighter than 60 m\n"
-            + "• Sharp: 100° or more, or tighter than 30 m\n"
-            + "• Hairpin (U-turn arrow): 150° or more and tighter than 35 m";
-    /** Turn ids that make sense on the Z900 meter (0-43); 44-55 (waypoints) show nothing. */
-    private static final int KAWASAKI_GREEN = 0xFF6BBE45;
-    private static final int OK_GREEN = 0xFF43A047;
-    private static final int WARN_ORANGE = 0xFFFB8C00;
-    /** Dark text on the orange banner (white on orange is hard to read in sunlight). */
-    private static final int BANNER_TEXT = 0xFF1A1A1A;
-    private static final int ERROR_RED = 0xFFE53935;
+public class MainActivity extends KawaActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private SharedPreferences prefs;
-    private RoadStore roadStore;
-    private OfflineRegions offlineRegions;
-    /** Server data date per downloaded region (ms, 0 = unknown), checked once per app start. */
-    private static final java.util.Map<String, Long> serverDates = new java.util.concurrent.ConcurrentHashMap<>();
-    private LinearLayout regionsList;
-    private boolean offlineWasRunning;
-    private boolean night;
 
     // status
-    private TextView statusDot;
-    private TextView statusTitle;
+    private TextView statusChip;
     private TextView statusHint;
     private TextView meterArrow;
+    private Figure meterDistance;
     private TextView meterText;
     private TextView meterSource;
+    // speed camera warning (offline map data)
+    private LinearLayout cameraCard;
+    private TextView cameraText;
+    // warnings the bike sends: tyres, ABS, battery
+    private LinearLayout alertCard;
+    private TextView alertText;
+    private LinearLayout meterTextBlock;
     private Button startButton;
-    // setup
+    // ride being recorded
+    private LinearLayout rideStrip;
+    private TextView rideTitle;
+    private TextView rideStatus;
+    private Button ridePauseButton;
+    // bike
+    private TextView bikeTitle;
+    private Figure bikeRange;
+    private SegmentBar bikeFuel;
+    private TextView bikeFuelText;
+    private Figure bikeOdometer;
+    private TextView bikeUpdated;
+    private LinearLayout bikeStats;
     // banner: settings that keep KawaNav from working fully
     private LinearLayout banner;
     private TextView bannerTitle;
@@ -103,27 +80,6 @@ public class MainActivity extends Activity {
     private boolean setupDialog;   // an explanation dialog of the guide is showing
     private boolean fromSetup;     // the pending permission request comes from the guide
     private boolean listenerSettingsOpened; // notification access settings opened, see onResume
-    private boolean helmetsHidden; // the helmet list was built without Bluetooth permission
-    // autostart
-    private TextView autoBikeSub;
-    private Button autoBikeButton;
-    // riding
-    private TextView freeModeStatus;
-    // debug
-    private LinearLayout debugCard;
-    private TextView debugIconsStatus;
-    private TextView debugGatt;
-    private int titleTaps;
-    private long titleTapAt;
-    // offline
-    private TextView storedView;
-    private AutoCompleteTextView regionInput;
-    private Button regionButton;
-    private TextView regionInfo;
-    private ProgressBar offlineProgress;
-    private TextView offlineStatus;
-    private List<Geofabrik.Region> regions = new ArrayList<>();
-    private Geofabrik.Region selectedRegion;
     // in-app update
     private static final String KEY_UPDATE_SKIPPED = "update_skipped"; // version the user skipped
     private static boolean updateChecked; // once per app start, not again when the screen is rebuilt
@@ -135,8 +91,7 @@ public class MainActivity extends Activity {
         requestWindowFeature(android.view.Window.FEATURE_NO_TITLE); // the screen has its own title
         Logger.init(this);
         prefs = Hub.prefs(this);
-        roadStore = new RoadStore(this);
-        offlineRegions = new OfflineRegions(this, roadStore);
+        BikeStore.load(this);
         setContentView(buildUi());
         // the launch intent is handled once: not again when Android recreates the activity
         // (rotation, restart after a crash, opened from recents)
@@ -159,46 +114,83 @@ public class MainActivity extends Activity {
         pendingIntent = intent; // onResume follows
     }
 
-    /**
-     * Test switches from a PC, e.g.
-     * adb shell am start -n io.github.darthbob.kawanav/.MainActivity --ez bridge true|false
-     * Also: --ez free_mode true|false, --es offline_region bayern, --ez offline_cancel true
-     */
-    /**
-     * Copies the log to Download/KawaNav (readable by adb and file managers, also from a release build):
-     * {@code adb pull /sdcard/Download/KawaNav/}
-     */
+    /** Copies the log (and a notification capture) to Download/KawaNav, see {@link LogExport}. */
     private void exportLog() {
-        android.content.ContentResolver cr = getContentResolver();
-        String stamp = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(new java.util.Date());
-        for (String name : new String[]{"kawanav.log.1", "kawanav.log"}) {
-            java.io.File f = new java.io.File(getFilesDir(), name);
-            if (!f.exists()) continue;
-            android.content.ContentValues v = new android.content.ContentValues();
-            v.put(android.provider.MediaStore.Downloads.DISPLAY_NAME, stamp + "-" + name + ".txt");
-            v.put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain");
-            v.put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "Download/KawaNav");
-            android.net.Uri uri = cr.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
-            if (uri == null) continue;
-            try (java.io.OutputStream out = cr.openOutputStream(uri)) {
-                java.nio.file.Files.copy(f.toPath(), out);
-            } catch (java.io.IOException e) {
-                Logger.log("Log export failed: " + e);
-            }
-        }
-        Logger.log("Log exported to Download/KawaNav");
+        LogExport.export(this);
     }
 
+    /**
+     * Test switches from a PC, e.g.
+     * adb shell am start -n io.github.darthbob.kawanav/io.github.darthbob.kawanav.MainActivity --ez bridge true|false
+     * Also: --ez free_mode true|false, --es offline_region bayern, --ez offline_cancel true, --ez export_log true,
+     * --ez notif_capture true|false, --ez notif_capture_all true|false, --ez cameras true|false,
+     * --ei camera_warn 500 (debug builds)
+     */
     private void handleAdbIntent(Intent i) {
         if (i == null) return;
         if (i.hasExtra("free_mode")) {
             prefs.edit().putBoolean(Hub.KEY_FREE_MODE, i.getBooleanExtra("free_mode", false)).apply();
             BridgeService.settingsChanged();
-            setContentView(buildUi()); // refresh the switch
         }
         if (i.getBooleanExtra("offline_cancel", false)) OfflineService.stop(this);
-        if (i.getBooleanExtra("export_log", false)) exportLog();
+        if (i.getBooleanExtra("export_log", false)) Logger.withLogFiles(this::exportLog);
         if (i.hasExtra(OfflineService.EXTRA_REGION)) OfflineService.startRegion(this, i.getStringExtra(OfflineService.EXTRA_REGION));
+        if (Hub.DEBUG_TOOLS) {
+            // debug builds: vehicle data tests, e.g. --es bike_read 41, --ei init_level 2, --es replay 20261013-190000.txt
+            if (i.hasExtra("bike_read")) {
+                int id;
+                try {
+                    id = Integer.parseInt(String.valueOf(i.getStringExtra("bike_read")), 16);
+                } catch (NumberFormatException e) {
+                    id = -1;
+                }
+                Logger.log("adb: read " + i.getStringExtra("bike_read") + ": " + BridgeService.read(id));
+            }
+            int level = i.getIntExtra("init_level", -1);
+            if (level >= KawaProtocol.INIT_NONE && level <= KawaProtocol.INIT_FULL) {
+                prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, level).apply();
+            }
+            if (i.hasExtra("raw_capture")) prefs.edit().putBoolean(Hub.KEY_DEBUG_CAPTURE, i.getBooleanExtra("raw_capture", false)).apply();
+            if (i.hasExtra("cameras")) {
+                prefs.edit().putBoolean(Hub.KEY_CAMERAS, i.getBooleanExtra("cameras", false)).apply();
+                BridgeService.settingsChanged();
+            }
+            if (i.hasExtra("camera_warn")) {
+                prefs.edit().putInt(Hub.KEY_CAMERA_WARN, i.getIntExtra("camera_warn", Hub.CAMERA_WARN_DEFAULT)).apply();
+            }
+            if (i.hasExtra("notif_capture")) {
+                prefs.edit().putBoolean(Hub.KEY_DEBUG_NOTIF_CAPTURE, i.getBooleanExtra("notif_capture", false)).apply();
+                if (!i.getBooleanExtra("notif_capture", false)) NotifCapture.stop();
+            }
+            if (i.hasExtra("ignore_caps")) {
+                prefs.edit().putBoolean(Hub.KEY_IGNORE_CAPS, i.getBooleanExtra("ignore_caps", false)).apply();
+                BridgeService.settingsChanged();
+            }
+            if (i.hasExtra("notif_capture_all")) {
+                prefs.edit().putBoolean(Hub.KEY_DEBUG_NOTIF_CAPTURE_ALL, i.getBooleanExtra("notif_capture_all", false)).apply();
+            }
+            // open a screen directly, e.g. --es screen rides | bike | settings | ride --es ride <id>
+            if (i.hasExtra("screen")) {
+                String screen = i.getStringExtra("screen");
+                if ("rides".equals(screen)) openTab(TAB_RIDES, null);
+                else if ("bike".equals(screen)) openTab(TAB_BIKE, null);
+                else if ("settings".equals(screen)) openTab(TAB_SETTINGS, i.getStringExtra(EXTRA_SECTION));
+                else if ("fuel".equals(screen)) startActivity(new Intent(this, FuelActivity.class));
+                else if ("battery".equals(screen)) startActivity(new Intent(this, BatteryActivity.class));
+                else if ("maintenance".equals(screen)) startActivity(new Intent(this, MaintenanceActivity.class));
+                else if ("ride".equals(screen)) {
+                    Intent target = new Intent(this, RideActivity.class);
+                    if (i.hasExtra("ride")) target.putExtra(RideActivity.EXTRA_ID, i.getStringExtra("ride"));
+                    startActivity(target);
+                }
+            }
+            if (i.hasExtra("replay")) {
+                // a capture of this phone, or a file copied into the app's files/ (adb push + run-as cp)
+                java.io.File f = new java.io.File(RawCapture.dir(this), i.getStringExtra("replay"));
+                if (!f.isFile()) f = new java.io.File(getFilesDir(), i.getStringExtra("replay"));
+                Logger.log("adb: replay " + f.getName() + ": " + BridgeService.replay(f));
+            }
+        }
         if (i.hasExtra("bridge")) {
             if (i.getBooleanExtra("bridge", false)) {
                 if (!Hub.serviceRunning) BridgeService.start(this);
@@ -247,22 +239,6 @@ public class MainActivity extends Activity {
         }
     };
 
-    // ------------------------------------------------------------------ permissions
-
-    private List<String> missingPermissions() {
-        List<String> need = new ArrayList<>();
-        for (String p : new String[]{Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.POST_NOTIFICATIONS}) {
-            if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) need.add(p);
-        }
-        return need;
-    }
-
-    private void requestMissingPermissions() {
-        List<String> need = missingPermissions();
-        if (!need.isEmpty()) requestPermissions(need.toArray(new String[0]), REQ_PERMS);
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         boolean guide = fromSetup;
@@ -283,57 +259,7 @@ public class MainActivity extends Activity {
             for (String d : denied) if (!shouldShowRequestPermissionRationale(d)) blocked = true;
             if (blocked && !guide) openAppSettings();
         }
-        // Bluetooth just allowed: rebuild the screen so the helmet list shows the paired devices
-        if (requestCode == REQ_PERMS && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
-                == PackageManager.PERMISSION_GRANTED && helmetsHidden) {
-            setContentView(buildUi());
-        }
         updateUi();
-    }
-
-    private void openAppSettings() {
-        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                android.net.Uri.parse("package:" + getPackageName())));
-    }
-
-    private boolean hasBackgroundLocation() {
-        return checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    /**
-     * Autostart begins in the background, where GPS needs location "Allow all the time". Android only
-     * offers that on its settings page, so explain first what to pick there. No-op when granted.
-     */
-    void askBackgroundLocation() {
-        askBackgroundLocation(null, null);
-    }
-
-    /**
-     * @param onContinue run before Android's request opens (null: nothing)
-     * @param onSkip     run when the user picks "Not now" (null: nothing)
-     */
-    private void askBackgroundLocation(Runnable onContinue, Runnable onSkip) {
-        if (hasBackgroundLocation()) return;
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("Location: \"Allow all the time\"")
-                .setMessage("Autostart starts KawaNav while your phone is locked in your pocket. "
-                        + "To show curve warnings then, KawaNav needs GPS in the background.\n\n"
-                        + "On the next screen, select \"Allow all the time\".\n\n"
-                        + "Without it, Google Maps arrows still work, but curve warnings only start "
-                        + "after you open KawaNav.")
-                .setPositiveButton("Continue", (d, w) -> {
-                    if (onContinue != null) onContinue.run();
-                    if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        requestMissingPermissions(); // "all the time" can only follow "while using"
-                    } else {
-                        requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_BG_LOCATION);
-                    }
-                })
-                .setNegativeButton("Not now", (d, w) -> {
-                    if (onSkip != null) onSkip.run();
-                })
-                .setCancelable(false)
-                .show();
     }
 
     // ------------------------------------------------------------------ first-start guide
@@ -501,87 +427,337 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ UI
 
     private View buildUi() {
-        night = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                == Configuration.UI_MODE_NIGHT_YES;
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(20), dp(16), dp(24));
+        night = isNight();
+        LinearLayout root = column();
+        root.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE3), dp(Ui.SPACE4), dp(Ui.SPACE6));
 
-        TextView title = text(26, true);
-        title.setText("KawaNav");
-        if (Hub.DEBUG_TOOLS) title.setOnClickListener(v -> titleTapped());
-        root.addView(title);
-        TextView subtitle = secondary("Google Maps directions and curve warnings on your Kawasaki");
-        subtitle.setPadding(0, 0, 0, dp(8));
-        root.addView(subtitle);
+        LinearLayout head = row();
+        head.setPadding(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
+        head.setMinimumHeight(dp(56));
+        TextView title = display("KawaNav");
+        head.addView(title, weight());
+        statusChip = pill("", Ui.surface(night), Ui.inkSecondary(night));
+        statusChip.setTextSize(13);
+        statusChip.setPadding(dp(10), dp(5), dp(12), dp(5));
+        head.addView(statusChip);
+        root.addView(head);
 
         root.addView(banner());
-        root.addView(statusCard());
-        root.addView(autostartCard());
-        root.addView(ridingCard());
-        root.addView(offlineCard());
-        if (Hub.DEBUG_TOOLS) root.addView(debugCard());
-        root.addView(footer());
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(night ? 0xFF111214 : 0xFFF4F5F7);
-        scroll.addView(root);
-        // Android draws apps behind the status and navigation bar: keep the content out of them
-        // (clipped at the padding, so nothing scrolls underneath the status bar), also above the keyboard
-        scroll.setClipToPadding(true);
-        scroll.setOnApplyWindowInsetsListener((v, insets) -> {
-            android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars()
-                    | android.view.WindowInsets.Type.displayCutout() | android.view.WindowInsets.Type.ime());
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-            return android.view.WindowInsets.CONSUMED;
-        });
-        return scroll;
+        root.addView(bikeAlertCard());
+        root.addView(cameraWarning());
+        root.addView(dashPanel());
+        root.addView(rideStrip());
+        root.addView(sectionHeader(R.drawable.ic_moto, "My vehicle"));
+        root.addView(vehicleCard());
+        root.addView(sectionHeader(R.drawable.ic_grid, "Menu"));
+        root.addView(menu());
+        return tabPage(TAB_HOME, root);
     }
 
-    private LinearLayout statusCard() {
-        LinearLayout c = card();
-        LinearLayout head = row();
-        statusDot = text(18, false);
-        statusDot.setText("●");
-        statusDot.setPadding(0, 0, dp(8), 0);
-        head.addView(statusDot);
-        statusTitle = text(19, true);
-        head.addView(statusTitle, weight());
-        c.addView(head);
-        statusHint = secondary("");
-        c.addView(statusHint);
+    /** Warnings from the bike (tyre pressure, TPMS sensor, ABS, 12 V battery), while they last. */
+    private LinearLayout bikeAlertCard() {
+        alertCard = column();
+        alertCard.setPadding(dp(16), dp(12), dp(16), dp(12));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Ui.dangerFill(night));
+        bg.setCornerRadius(dp(16));
+        alertCard.setBackground(bg);
+        LinearLayout r = row();
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        android.widget.ImageView warn = icon(R.drawable.ic_alert, false);
+        warn.setColorFilter(0xFFFFFFFF);
+        r.addView(warn, iconGap());
+        alertText = text(15, true);
+        alertText.setTextColor(0xFFFFFFFF);
+        r.addView(alertText, weight());
+        alertCard.addView(r);
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, dp(6), 0, dp(6));
+        alertCard.setLayoutParams(lp);
+        alertCard.setVisibility(View.GONE);
+        return alertCard;
+    }
 
+    /**
+     * The speed camera ahead, while it is inside the warning distance: the one thing the rider cannot
+     * see coming. Hidden the rest of the time (the dash shows it too, see BridgeService).
+     */
+    private LinearLayout cameraWarning() {
+        cameraCard = column();
+        cameraCard.setPadding(dp(16), dp(12), dp(16), dp(12));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Ui.warnFill());
+        bg.setCornerRadius(dp(16));
+        cameraCard.setBackground(bg);
+        LinearLayout r = row();
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.addView(icon(R.drawable.ic_camera, false), iconGap());
+        LinearLayout t = column();
+        cameraText = itemTitle("");
+        cameraText.setTextColor(Ui.bannerInk());
+        cameraText.setTextSize(16);
+        t.addView(cameraText);
+        TextView sub = secondary("From the offline map data");
+        sub.setTextColor(Ui.bannerInk());
+        t.addView(sub);
+        r.addView(t, weight());
+        cameraCard.addView(r);
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, 0, 0, dp(Ui.SPACE3));
+        cameraCard.setLayoutParams(lp);
+        cameraCard.setVisibility(View.GONE);
+        return cameraCard;
+    }
+
+    /**
+     * What the rider checks most: what the dash shows right now (the arrow and its distance, big, in a
+     * dark panel like the dash itself), the link to the bike, and Start / Stop.
+     */
+    private LinearLayout dashPanel() {
+        LinearLayout c = panel();
+        TextView label = secondary("On the dash now");
+        c.addView(label);
         LinearLayout meter = row();
-        meter.setPadding(0, dp(14), 0, dp(14));
-        meterArrow = text(40, true);
+        meter.setPadding(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
+        meterArrow = text(52, true);
         meterArrow.setGravity(Gravity.CENTER);
-        meterArrow.setMinWidth(dp(64));
+        meterArrow.setMinWidth(dp(68));
+        meterArrow.setTextColor(Ui.accent(night));
         meter.addView(meterArrow);
         LinearLayout mt = column();
-        mt.setPadding(dp(12), 0, 0, 0);
-        meterText = text(18, true);
+        meterTextBlock = mt;
+        meterDistance = figure(40, Gravity.START);
+        mt.addView(meterDistance.view);
+        meterText = text(16, false);
+        meterText.setTypeface(Ui.titles());
         mt.addView(meterText);
-        meterSource = secondary("");
+        meterSource = text(13, false);
+        meterSource.setTextColor(Ui.highlight(night));
         mt.addView(meterSource);
         meter.addView(mt, weight());
         c.addView(meter);
-
+        statusHint = secondary("");
+        statusHint.setPadding(0, 0, 0, dp(Ui.SPACE3));
+        c.addView(statusHint);
         startButton = primaryButton("", v -> toggleBridge());
         c.addView(startButton, matchWrap());
         return c;
     }
 
-    /** Legal notes at the bottom: riding safety, affiliation, map data credit, licence (GPL-3.0 §5d). */
-    private TextView footer() {
-        TextView t = secondary(RIDING_NOTICE + "\n\n" + AFFILIATION_NOTICE
-                + "\n\nRoad data © OpenStreetMap contributors, available under the Open Database License (ODbL), "
-                + "downloaded from Geofabrik."
-                + "\n\nKawaNav © 2026 Darthbob. Free software under the GNU General Public License v3, "
-                + "without any warranty. Source code: github.com/Darthbob/kawa-nav");
-        t.setTextSize(12);
-        t.setPadding(dp(4), dp(18), dp(4), dp(8));
-        t.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
-        return t;
+    /** While a ride is recorded: its time and distance, Pause / Continue and Stop. Gone otherwise. */
+    private LinearLayout rideStrip() {
+        LinearLayout c = card();
+        LinearLayout head = row();
+        rideTitle = text(16, false);
+        rideTitle.setTypeface(Ui.titles());
+        head.addView(rideTitle, weight());
+        c.addView(head);
+        rideStatus = number(20);
+        rideStatus.setPadding(0, dp(Ui.SPACE1), 0, dp(Ui.SPACE2));
+        c.addView(rideStatus);
+        LinearLayout buttons = row();
+        ridePauseButton = secondaryButton("Pause", v -> {
+            BridgeService.toggleRidePause();
+            handler.postDelayed(this::updateUi, 300);
+        });
+        buttons.addView(ridePauseButton, weight());
+        View gap = new View(this);
+        buttons.addView(gap, new LinearLayout.LayoutParams(dp(Ui.SPACE2), 1));
+        buttons.addView(neutralButton("Stop ride", v -> {
+            BridgeService.stopRide();
+            handler.postDelayed(this::updateUi, 300);
+        }), weight());
+        c.addView(buttons);
+        c.setVisibility(View.GONE);
+        rideStrip = c;
+        return c;
+    }
+
+    /**
+     * The bike's last values, like Rideology's "My vehicle": its name, the range, the fuel gauge and the
+     * odometer. The card opens the Bike tab with everything else.
+     */
+    private LinearLayout vehicleCard() {
+        LinearLayout c = card();
+        LinearLayout head = row();
+        bikeTitle = text(17, false);
+        bikeTitle.setTypeface(Ui.titles());
+        head.addView(bikeTitle, weight());
+        head.addView(chevron());
+        c.addView(head);
+        bikeUpdated = secondary("");
+        c.addView(bikeUpdated);
+
+        bikeStats = row();
+        bikeStats.setPadding(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE1));
+        bikeStats.setGravity(Gravity.BOTTOM);
+        LinearLayout range = column();
+        bikeRange = figure(28, Gravity.START);
+        range.addView(bikeRange.view);
+        range.addView(note("Range"));
+        bikeStats.addView(range, weight());
+        LinearLayout fuel = column();
+        bikeFuel = new SegmentBar(this);
+        fuel.addView(bikeFuel, new LinearLayout.LayoutParams(dp(96), dp(14)));
+        bikeFuelText = note("Fuel");
+        bikeFuelText.setPadding(0, dp(Ui.SPACE2), 0, 0);
+        fuel.addView(bikeFuelText);
+        bikeStats.addView(fuel, weight());
+        LinearLayout odo = column();
+        bikeOdometer = figure(22, Gravity.START);
+        odo.addView(bikeOdometer.view);
+        odo.addView(note("Odometer"));
+        bikeStats.addView(odo, weight());
+        c.addView(bikeStats);
+        c.setOnClickListener(v -> openTab(TAB_BIKE, null));
+        return c;
+    }
+
+    /** Rideology's tile menu: the places a rider goes to now and then. */
+    private View menu() {
+        return statGrid(3,
+                menuTile(R.drawable.ic_list, "Recorded rides", v -> openTab(TAB_RIDES, null)),
+                menuTile(R.drawable.ic_pin, "Walk to the bike", v -> walkToBike()),
+                menuTile(R.drawable.ic_map, "Offline maps", v -> openTab(TAB_SETTINGS, "maps")),
+                menuTile(R.drawable.ic_power, "Start automatically", v -> openTab(TAB_SETTINGS, "autostart")),
+                menuTile(R.drawable.ic_road, "On the road", v -> openTab(TAB_SETTINGS, "road")),
+                menuTile(R.drawable.ic_bell, "Dash icons", v -> openTab(TAB_SETTINGS, "dash")));
+    }
+
+    /** Opens Maps on foot to where the bike was parked (where the link to it was lost). */
+    private void walkToBike() {
+        BikeData.Place p = Hub.bike.parked;
+        if (p == null) {
+            android.widget.Toast.makeText(this, "No parked position yet: it is saved when the link to the bike is lost",
+                    android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        android.net.Uri uri = android.net.Uri.parse(String.format(Locale.ROOT,
+                "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f&travelmode=walking", p.lat, p.lon));
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, uri));
+        } catch (android.content.ActivityNotFoundException e) {
+            android.widget.Toast.makeText(this, "No maps app found", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void updateUi() {
+        updateTabBar();
+        // --- status: a short state in the chip, the details in the panel
+        String chip;
+        int chipInk;
+        if (!Hub.serviceRunning) {
+            chip = "Off";
+            chipInk = Ui.inkSecondary(night);
+            boolean autostart = BikePresence.enabled(this) || prefs.getString(Hub.KEY_HELMET, null) != null;
+            statusHint.setText(autostart && Hub.autostartPaused(this)
+                    ? "Stopped by hand: the automatic start waits until the bike is switched off. Start connects now."
+                    : "Start before the ride, or let KawaNav start by itself (Settings).");
+        } else {
+            boolean noBike = Hub.bikeStatus.startsWith("No paired");
+            chip = Hub.bikeConnected ? "Connected" : noBike ? "Not paired" : "Searching";
+            chipInk = Hub.bikeConnected ? Ui.ok(night) : noBike ? Ui.danger(night) : Ui.warn(night);
+            statusHint.setText(Hub.bikeStatus + (Hub.bikeHint.isEmpty() ? "" : "\n" + Hub.bikeHint));
+        }
+        String chipText = "● " + chip;
+        if (!chipText.contentEquals(statusChip.getText())) statusChip.setText(chipText);
+        statusChip.setTextColor(chipInk);
+
+        Hub.Output out = Hub.output;
+        // the bike's own warnings, one line each, while they last
+        java.util.List<BikeAlerts.Alert> alerts = Hub.bikeAlerts;
+        alertCard.setVisibility(alerts.isEmpty() ? View.GONE : View.VISIBLE);
+        if (!alerts.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (BikeAlerts.Alert a : alerts) {
+                if (sb.length() > 0) sb.append('\n');
+                sb.append(a.title).append(" — ").append(a.detail);
+            }
+            if (!sb.toString().contentEquals(alertText.getText())) alertText.setText(sb);
+        }
+        // the camera warning is shown while the bridge says one is ahead (it also goes to the dash)
+        boolean camera = out != null && out.alert != null;
+        cameraCard.setVisibility(camera ? View.VISIBLE : View.GONE);
+        if (camera && !out.alert.contentEquals(cameraText.getText())) cameraText.setText(out.alert);
+        if (!Hub.serviceRunning || out == null) {
+            meterArrow.setVisibility(View.GONE);
+            meterDistance.view.setVisibility(View.GONE);
+            meterText.setText(Hub.serviceRunning ? "Nothing to show" : "Nothing sent to the bike");
+            boolean maps = Hub.mapsEnabled(this);
+            meterSource.setText(!Hub.serviceRunning ? ""
+                    : maps && Hub.maps != null ? "Google Maps is starting…"
+                    : Hub.freeMode(this) ? (Hub.curveStatus.contains("·") ? "Waiting for GPS" : Hub.curveStatus)
+                    : maps ? "Start navigation in Google Maps, or turn on upcoming curves"
+                    : "Turn on Google Maps directions or upcoming curves");
+        } else {
+            meterArrow.setVisibility(View.VISIBLE);
+            meterArrow.setText(arrow(out.turn));
+            boolean dist = out.distanceM >= 0;
+            meterDistance.view.setVisibility(dist ? View.VISIBLE : View.GONE);
+            if (dist) meterDistance.set(distance(out.distanceM));
+            meterText.setText(turnName(out.turn));
+            meterSource.setText("Maps".equals(out.source) ? "From Google Maps"
+                    : "Camera".equals(out.source) ? "Speed camera from the offline map data"
+                    : "Curve ahead on your road");
+        }
+        meterSource.setVisibility(meterSource.getText().length() > 0 ? View.VISIBLE : View.GONE);
+        // the text sits next to the arrow, or flush left when there is none
+        meterTextBlock.setPadding(meterArrow.getVisibility() == View.VISIBLE ? dp(Ui.SPACE3) : 0, 0, 0, 0);
+        startButton.setText(Hub.serviceRunning ? "Stop KawaNav" : "Start KawaNav");
+        if (Hub.serviceRunning) neutral(startButton);
+        else primary(startButton);
+
+        // --- ride being recorded
+        boolean recording = Hub.rideState != RideRecorder.IDLE;
+        rideStrip.setVisibility(recording ? View.VISIBLE : View.GONE);
+        if (recording) {
+            boolean paused = Hub.rideState == RideRecorder.PAUSED;
+            rideTitle.setText(paused ? "● Ride paused" : "● Recording the ride");
+            rideTitle.setTextColor(paused ? Ui.warn(night) : Ui.recording());
+            rideStatus.setText(Hub.rideText);
+            ridePauseButton.setText(paused ? "Continue" : "Pause");
+        }
+
+        // --- bike
+        BikeData b = Hub.bike;
+        bikeTitle.setText(BikeActivity.name(b, prefs.getString(Hub.KEY_BIKE_NAME, null)));
+        BikeFrames.VehicleInfo info = b.info;
+        bikeStats.setVisibility(info != null ? View.VISIBLE : View.GONE);
+        if (info != null) {
+            bikeRange.set(info.rangeKm >= 0 ? info.rangeKm + " km" : "–");
+            bikeOdometer.set(info.odometerKm >= 0 ? String.format(Locale.ROOT, "%,d km", info.odometerKm) : "–");
+            bikeFuel.set(info.fuelBars, BikeActivity.fuelSegments(info.fuelBars));
+            bikeFuelText.setText(info.fuelBars >= 0 ? "Fuel · " + info.fuelBars + (info.fuelBars == 1 ? " bar" : " bars") : "Fuel");
+        }
+        bikeUpdated.setText(Hub.bikeConnected && info != null ? "Connected"
+                : info == null ? "Odometer, fuel, temperatures, maintenance and riding modes appear once the bike is connected"
+                : BikeActivity.lastRead(b, System.currentTimeMillis()));
+
+        // --- banner: what still keeps KawaNav from working fully
+        android.companion.AssociationInfo bike = BikePresence.association(this);
+        boolean anyAuto = bike != null || prefs.getString(Hub.KEY_HELMET, null) != null;
+        boolean curves = Hub.freeMode(this) || prefs.getInt(Hub.KEY_NAV_CURVES, 0) > 0;
+        boolean perms = missingPermissions().isEmpty();
+        android.bluetooth.BluetoothAdapter bt = getSystemService(android.bluetooth.BluetoothManager.class).getAdapter();
+        int missing = 0;
+        missing += show(permRow, !perms);
+        boolean btOn = perms && bt != null && bt.isEnabled();
+        missing += show(bluetoothRow, perms && bt != null && !bt.isEnabled());
+        missing += show(pairRow, btOn && BridgeService.pairedBike(this) == null);
+        pairSub.setText(Hub.pairStatus.isEmpty() ? PAIR_HINT : Hub.pairStatus);
+        missing += show(gpsRow, curves && !getSystemService(android.location.LocationManager.class).isLocationEnabled());
+        boolean dashAlerts = prefs.getBoolean(Hub.KEY_DASH_CALLS, false) || prefs.getBoolean(Hub.KEY_DASH_MAIL, false);
+        missing += show(accessRow, (Hub.mapsEnabled(this) || dashAlerts) && !hasNotificationAccess());
+        missing += show(batteryRow, !batteryUnrestricted());
+        missing += show(bgLocRow, curves && anyAuto && !hasBackgroundLocation());
+        banner.setVisibility(missing > 0 ? View.VISIBLE : View.GONE);
+        bannerTitle.setText(missing == 1 ? "1 setting needs your attention" : missing + " settings need your attention");
+    }
+
+    /** Shows the banner row when needed; 1 if shown. */
+    private static int show(View row, boolean needed) {
+        row.setVisibility(needed ? View.VISIBLE : View.GONE);
+        return needed ? 1 : 0;
     }
 
     /** Orange banner on top: what still keeps KawaNav from working fully, each with a button to fix it. */
@@ -589,23 +765,30 @@ public class MainActivity extends Activity {
         banner = column();
         banner.setPadding(dp(16), dp(14), dp(16), dp(10));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(WARN_ORANGE);
+        bg.setColor(Ui.warnFill());
         bg.setCornerRadius(dp(16));
         banner.setBackground(bg);
         LinearLayout.LayoutParams lp = matchWrap();
         lp.setMargins(0, dp(6), 0, dp(6));
         banner.setLayoutParams(lp);
         bannerTitle = text(17, true);
-        bannerTitle.setTextColor(BANNER_TEXT);
-        banner.addView(bannerTitle);
+        bannerTitle.setTextColor(Ui.bannerInk());
+        LinearLayout bannerHead = row();
+        android.widget.ImageView warn = icon(R.drawable.ic_alert, false);
+        warn.setColorFilter(Ui.bannerInk());
+        bannerHead.addView(warn);
+        LinearLayout.LayoutParams warnLp = weight();
+        warnLp.leftMargin = dp(Ui.SPACE2);
+        bannerHead.addView(bannerTitle, warnLp);
+        banner.addView(bannerHead);
         TextView sub = text(13, false);
-        sub.setTextColor(BANNER_TEXT);
+        sub.setTextColor(Ui.bannerInk());
         sub.setText("For the best experience on the bike:");
         banner.addView(sub);
         permRow = bannerRow("Allow Bluetooth, location and notifications",
                 "To talk to the bike and find the curves ahead", "Allow", v -> requestMissingPermissions());
         bluetoothRow = bannerRow("Turn on Bluetooth", "KawaNav cannot reach the bike while it is off", "Turn on",
-                v -> startActivity(new Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)));
+                v -> enableBluetooth());
         pairRow = bannerRow("Pair your bike", PAIR_HINT, "Pair", v -> pairBike());
         pairSub = (TextView) pairRow.getTag();
         gpsRow = bannerRow("Turn on location", "Upcoming curves need GPS", "Open",
@@ -627,25 +810,28 @@ public class MainActivity extends Activity {
         r.setPadding(0, dp(10), 0, dp(4));
         LinearLayout t = column();
         TextView tt = text(15, true);
-        tt.setTextColor(BANNER_TEXT);
+        tt.setTextColor(Ui.bannerInk());
         tt.setText(title);
         t.addView(tt);
         TextView st = text(13, false);
-        st.setTextColor(BANNER_TEXT);
+        st.setTextColor(Ui.bannerInk());
         st.setAlpha(0.8f);
         st.setText(sub);
         t.addView(st);
         r.addView(t, weight());
         Button b = button(action, l);
-        b.setTextColor(BANNER_TEXT);
+        b.setTextColor(Ui.bannerInk());
         b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setStateListAnimator(null);
+        b.setMinWidth(dp(72));
         GradientDrawable bb = new GradientDrawable();
         bb.setColor(0xFFFFFFFF);
-        bb.setCornerRadius(dp(20));
+        bb.setCornerRadius(dp(22));
         b.setBackground(bb);
         b.setPadding(dp(16), 0, dp(16), 0);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        b.setMinHeight(dp(Ui.TOUCH_MIN));
         lp.setMargins(dp(10), 0, 0, 0);
         r.addView(b, lp);
         r.setOnClickListener(l);
@@ -656,439 +842,24 @@ public class MainActivity extends Activity {
     private static final String PAIR_HINT = "Ignition on and Rideology closed, then pick your bike";
 
     /** Pairs the phone with the bike (and sets up autostart), see {@link BikePresence#pair}. */
+    /**
+     * Asks Android to switch Bluetooth on. The row only shows with the Bluetooth permission, but the
+     * permission can be taken back while the screen is open: ask for it again then.
+     */
+    private void enableBluetooth() {
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            requestMissingPermissions();
+            return;
+        }
+        startActivity(new Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE));
+    }
+
     private void pairBike() {
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             requestMissingPermissions();
             return;
         }
         BikePresence.pair(this);
-    }
-
-    private LinearLayout autostartCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("Start automatically"));
-        c.addView(secondary("No need to open KawaNav before a ride: it starts by itself, even with the phone locked."));
-
-        LinearLayout bikeRow = settingRow();
-        LinearLayout bt = column();
-        bt.addView(itemTitle("When the bike is switched on"));
-        autoBikeSub = secondary("");
-        bt.addView(autoBikeSub);
-        bikeRow.addView(bt, weight());
-        autoBikeButton = button("", v -> toggleAutostart());
-        bikeRow.addView(autoBikeButton);
-        c.addView(bikeRow);
-
-        LinearLayout helmetRow = settingRow();
-        LinearLayout ht = column();
-        ht.addView(itemTitle("When my helmet connects"));
-        ht.addView(secondary("Your intercom connects by itself when switched on. While it is connected, the bike's display shows the headset icon"));
-        helmetRow.addView(ht, weight());
-        helmetsHidden = checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED;
-        List<android.bluetooth.BluetoothDevice> helmets = helmetsHidden ? new ArrayList<>() : HelmetTrigger.candidates(this);
-        String savedHelmet = prefs.getString(Hub.KEY_HELMET, null);
-        List<String> helmetAddrs = new ArrayList<>();
-        List<String> helmetLabels = new ArrayList<>();
-        helmetAddrs.add(null);
-        helmetLabels.add("Off");
-        for (android.bluetooth.BluetoothDevice d : helmets) {
-            helmetAddrs.add(d.getAddress());
-            helmetLabels.add(d.getName());
-        }
-        // a saved helmet Android does not list right now (Bluetooth permission missing, unpaired)
-        // stays selected: the list's initial selection must not turn the trigger off
-        if (savedHelmet != null && !helmetAddrs.contains(savedHelmet)) {
-            helmetAddrs.add(savedHelmet);
-            helmetLabels.add("Saved");
-        }
-        String[] helmetNames = helmetLabels.toArray(new String[0]);
-        Spinner helmetSpinner = spinner(helmetNames, Math.max(0, helmetAddrs.indexOf(savedHelmet)));
-        helmetSpinner.setOnItemSelectedListener(onSelect(pos -> {
-            String addr = helmetAddrs.get(pos);
-            if (java.util.Objects.equals(addr, prefs.getString(Hub.KEY_HELMET, null))) return;
-            prefs.edit().putString(Hub.KEY_HELMET, addr).apply();
-            Logger.log(addr == null ? "Helmet trigger off" : "Helmet trigger: " + helmetNames[pos]);
-            if (addr != null) askBackgroundLocation();
-        }));
-        helmetRow.addView(helmetSpinner, controlWidth());
-        c.addView(helmetRow);
-        return c;
-    }
-
-    private LinearLayout ridingCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("On the road"));
-        c.addView(switchRow("Google Maps directions", "While Maps is navigating, the bike's display shows its directions",
-                Hub.KEY_MAPS, true));
-
-        Switch free = new Switch(this);
-        free.setChecked(Hub.freeMode(this));
-        free.setOnCheckedChangeListener((b, on) -> {
-            prefs.edit().putBoolean(Hub.KEY_FREE_MODE, on).apply();
-            BridgeService.settingsChanged();
-        });
-        LinearLayout fr = settingRow();
-        LinearLayout ft = column();
-        ft.addView(itemTitle("Show upcoming curves"));
-        ft.addView(secondary("Without navigation, the bike's display shows the next curve of the road you are on"));
-        freeModeStatus = secondary("");
-        ft.addView(freeModeStatus);
-        fr.addView(ft, weight());
-        fr.addView(free);
-        c.addView(fr);
-
-        c.addView(choiceRow("Curve warnings during navigation", "Shown up to 300 m before a curve, between Maps directions",
-                new String[]{"Off", "Sharp only", "All"}, prefs.getInt(Hub.KEY_NAV_CURVES, 0), pos -> {
-                    prefs.edit().putInt(Hub.KEY_NAV_CURVES, pos).apply();
-                    BridgeService.settingsChanged();
-                }));
-        c.addView(choiceRow("Which curves count", "How much a bend must turn to be shown", CURVES_INFO,
-                new String[]{"Only tight ones", "Normal", "Also gentle ones", "All over 15°"}, prefs.getInt(Hub.KEY_SENSITIVITY, 1),
-                pos -> prefs.edit().putInt(Hub.KEY_SENSITIVITY, pos).apply()));
-        String[] la = new String[LOOKAHEADS.length];
-        int laSel = 1;
-        for (int i = 0; i < LOOKAHEADS.length; i++) {
-            la[i] = LOOKAHEADS[i] + " m";
-            if (LOOKAHEADS[i] == prefs.getInt(Hub.KEY_LOOKAHEAD, 1000)) laSel = i;
-        }
-        c.addView(choiceRow("Look ahead", "How far ahead to search for the next curve", la, laSel,
-                pos -> prefs.edit().putInt(Hub.KEY_LOOKAHEAD, LOOKAHEADS[pos]).apply()));
-        c.addView(switchRow("Phone battery", "The bike's display shows the phone's battery (4 bars) and when it is charging",
-                Hub.KEY_PHONE_BATTERY, true));
-        c.addView(switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
-        c.addView(switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
-        return c;
-    }
-
-    private LinearLayout offlineCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("Offline maps"));
-        c.addView(secondary("Curves are only shown where the roads are downloaded. Download the regions you ride "
-                + "in, over Wi-Fi. Regions add up: e.g. Bayern now, Tirol later."));
-        c.addView(secondary("Road data © OpenStreetMap contributors (ODbL)"));
-        storedView = itemTitle("");
-        storedView.setPadding(0, dp(10), 0, dp(4));
-        c.addView(storedView);
-        regionsList = column();
-        c.addView(regionsList);
-
-        TextView add = itemTitle("Download a region");
-        add.setPadding(0, dp(14), 0, dp(4));
-        c.addView(add);
-        regionInput = new AutoCompleteTextView(this);
-        regionInput.setHint("Search a region: Bayern, Tirol, Schweiz…");
-        regionInput.setThreshold(1);
-        regionInput.setSingleLine(true);
-        regionInput.setTextSize(15);
-        regionInput.setOnItemClickListener((parent, v, pos, id) -> {
-            String label = (String) parent.getItemAtPosition(pos);
-            for (Geofabrik.Region r : regions) if (r.label().equals(label)) selectRegion(r);
-            hideKeyboard();
-        });
-        c.addView(regionInput, matchWrap());
-        regionInfo = secondary("");
-        c.addView(regionInfo);
-
-        offlineProgress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        offlineProgress.setIndeterminate(true);
-        c.addView(offlineProgress, matchWrap());
-        offlineStatus = secondary("");
-        c.addView(offlineStatus);
-
-        LinearLayout buttons = row();
-        buttons.setPadding(0, dp(6), 0, 0);
-        regionButton = primaryButton("Download", v -> downloadRegion());
-        buttons.addView(regionButton, weight());
-        c.addView(buttons);
-        loadRegions();
-        refreshRegions();
-        return c;
-    }
-
-    /** Debug builds: seven taps on the title show or hide the debug card. */
-    private void titleTapped() {
-        long now = System.currentTimeMillis();
-        titleTaps = now - titleTapAt < 1000 ? titleTaps + 1 : 1;
-        titleTapAt = now;
-        if (titleTaps < 7) return;
-        titleTaps = 0;
-        boolean show = !prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false);
-        prefs.edit().putBoolean(Hub.KEY_DEBUG_ICONS, show).apply();
-        debugCard.setVisibility(show ? View.VISIBLE : View.GONE);
-        android.widget.Toast.makeText(this, show ? "Debug options shown" : "Debug options hidden",
-                android.widget.Toast.LENGTH_SHORT).show();
-    }
-
-    /** Hidden card to try values of the meter's status icon fields (13 0C frame, see PROTOCOL.md). */
-    private LinearLayout debugCard() {
-        LinearLayout c = card();
-        c.addView(cardTitle("Dash icons (debug)"));
-        c.addView(secondary("Fixed values for the status icon frame, sent every 5 s while the bike is connected. "
-                + "Auto: phone battery, helmet connected, voice and riding log 0. Tap the title 7 times to hide."));
-        c.addView(iconRow("Battery", Hub.KEY_ICON_BATTERY, "0 low, 1–3 bars, 7–10 charging 0–3 bars, 14 error, 15 none"));
-        c.addView(iconRow("Voice", Hub.KEY_ICON_VOICE, "0 idle, 1 wake word, 2 listening, 3 processing, 14 error, 15 none"));
-        c.addView(iconRow("Headset", Hub.KEY_ICON_HEADSET, "0 off, 1 on, 2 blinking, 3 none"));
-        c.addView(iconRow("Riding log", Hub.KEY_ICON_RIDING_LOG, "0 off, 1 recording, 2 paused, 14 error, 15 none"));
-        c.addView(phoneNameRow());
-        debugIconsStatus = secondary("");
-        debugIconsStatus.setTypeface(Typeface.MONOSPACE);
-        debugIconsStatus.setPadding(0, dp(10), 0, 0);
-        c.addView(debugIconsStatus);
-        c.addView(itemTitle("Bluetooth services of the bike"));
-        c.addView(secondary("Listed on each connect while this card is shown. Read-only: only standard values "
-                + "like the firmware version are read, nothing is written."));
-        debugGatt = secondary("");
-        debugGatt.setTypeface(Typeface.MONOSPACE);
-        debugGatt.setTextIsSelectable(true);
-        c.addView(debugGatt);
-        c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
-        debugCard = c;
-        return c;
-    }
-
-    /** Debug: text the meter gets as the phone's name (Bluetooth info on the dash?). */
-    private View phoneNameRow() {
-        LinearLayout box = column();
-        box.setPadding(0, dp(10), 0, 0);
-        box.addView(itemTitle("Phone name on the dash"));
-        box.addView(secondary("Sent now and on every connect, up to " + KawaProtocol.PHONE_NAME_BYTES
-                + " bytes (UTF-8). Empty: nothing is sent."));
-        LinearLayout r = row();
-        android.widget.EditText input = new android.widget.EditText(this);
-        input.setSingleLine(true);
-        input.setTextSize(15);
-        input.setHint("e.g. Hello Z900");
-        input.setText(prefs.getString(Hub.KEY_DEBUG_PHONE_NAME, ""));
-        r.addView(input, weight());
-        r.addView(button("Send", v -> {
-            String name = input.getText().toString().trim();
-            prefs.edit().putString(Hub.KEY_DEBUG_PHONE_NAME, name).apply();
-            hideKeyboard();
-            String msg;
-            if (name.isEmpty()) {
-                msg = "Cleared: no name is sent";
-            } else if (BridgeService.sendPhoneName()) {
-                int bytes = KawaProtocol.phoneNameBytes(name).length;
-                msg = "Sent" + (bytes < name.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
-                        ? " (cut to " + bytes + " bytes)" : "");
-            } else {
-                msg = "Saved: sent when the bike connects";
-            }
-            android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
-        }));
-        box.addView(r);
-        return box;
-    }
-
-    private View iconRow(String title, String key, String values) {
-        String[] items = new String[17];
-        items[0] = "Auto";
-        for (int i = 0; i < 16; i++) items[i + 1] = String.valueOf(i);
-        return choiceRow(title, values, items, Hub.iconSetting(this, key) + 1, pos -> {
-            prefs.edit().putInt(key, pos - 1).apply();
-            BridgeService.settingsChanged();
-        });
-    }
-
-    private void updateUi() {
-        if (debugCard != null && debugCard.getVisibility() == View.VISIBLE) {
-            KawaProtocol.Capabilities caps = Hub.bikeCapabilities;
-            debugIconsStatus.setText("Bike display: " + (caps == null ? "–" : "turn-by-turn "
-                    + (caps.turnByTurn ? "yes" : "no") + ", status icons " + (caps.statusIcons ? "yes" : "no"))
-                    + "\nLast sent: " + Hub.iconsStatus);
-            String gatt = Hub.gattDump.isEmpty() ? "Not read yet: connect the bike with this card shown." : Hub.gattDump;
-            if (!gatt.contentEquals(debugGatt.getText())) debugGatt.setText(gatt); // keeps a text selection
-        }
-        // --- status
-        int color;
-        String title;
-        if (!Hub.serviceRunning) {
-            color = 0xFF9E9E9E;
-            title = "Not running";
-            boolean autostart = BikePresence.enabled(this) || prefs.getString(Hub.KEY_HELMET, null) != null;
-            statusHint.setText(autostart && Hub.autostartPaused(this)
-                    ? "Stopped by hand: the automatic start waits until the bike is switched off. Tap Start to connect now."
-                    : "Tap Start before the ride, or set up an automatic start below.");
-        } else {
-            color = Hub.bikeConnected ? OK_GREEN : WARN_ORANGE;
-            if (Hub.bikeStatus.startsWith("No paired")) color = ERROR_RED;
-            title = Hub.bikeStatus;
-            statusHint.setText(Hub.bikeHint);
-        }
-        statusDot.setTextColor(color);
-        statusTitle.setText(title);
-        statusHint.setVisibility(statusHint.getText().length() > 0 ? View.VISIBLE : View.GONE);
-        Hub.Output out = Hub.output;
-        if (!Hub.serviceRunning) {
-            meterArrow.setText("–");
-            meterText.setText("Nothing sent to the bike");
-            meterSource.setText("");
-        } else if (out == null) {
-            meterArrow.setText("–");
-            meterText.setText("Nothing to show");
-            boolean maps = Hub.mapsEnabled(this);
-            meterSource.setText(maps && Hub.maps != null ? "Google Maps is starting…"
-                    : Hub.freeMode(this) ? (Hub.curveStatus.contains("·") ? "Waiting for GPS" : Hub.curveStatus)
-                    : maps ? "Start navigation in Google Maps, or turn on upcoming curves"
-                    : "Turn on Google Maps directions or upcoming curves");
-        } else {
-            meterArrow.setText(arrow(out.turn));
-            meterText.setText(turnName(out.turn) + (out.distanceM >= 0 ? " · " + distance(out.distanceM) : ""));
-            meterSource.setText("Maps".equals(out.source) ? "From Google Maps" : "Curve ahead on your road");
-        }
-        meterArrow.setTextColor(out != null && Hub.serviceRunning ? KAWASAKI_GREEN : 0xFF9E9E9E);
-        startButton.setText(Hub.serviceRunning ? "Stop" : "Start");
-        tint(startButton, Hub.serviceRunning ? 0xFF616161 : KAWASAKI_GREEN);
-
-        // --- banner: what still keeps KawaNav from working fully
-        android.companion.AssociationInfo bike = BikePresence.association(this);
-        boolean anyAuto = bike != null || prefs.getString(Hub.KEY_HELMET, null) != null;
-        boolean curves = Hub.freeMode(this) || prefs.getInt(Hub.KEY_NAV_CURVES, 0) > 0;
-        boolean perms = missingPermissions().isEmpty();
-        android.bluetooth.BluetoothAdapter bt = getSystemService(android.bluetooth.BluetoothManager.class).getAdapter();
-        int missing = 0;
-        missing += show(permRow, !perms);
-        boolean btOn = perms && bt != null && bt.isEnabled();
-        missing += show(bluetoothRow, perms && bt != null && !bt.isEnabled());
-        missing += show(pairRow, btOn && BridgeService.pairedBike(this) == null);
-        pairSub.setText(Hub.pairStatus.isEmpty() ? PAIR_HINT : Hub.pairStatus);
-        missing += show(gpsRow, curves && !getSystemService(android.location.LocationManager.class).isLocationEnabled());
-        missing += show(accessRow, Hub.mapsEnabled(this) && !hasNotificationAccess());
-        missing += show(batteryRow, !batteryUnrestricted());
-        missing += show(bgLocRow, curves && anyAuto && !hasBackgroundLocation());
-        banner.setVisibility(missing > 0 ? View.VISIBLE : View.GONE);
-        bannerTitle.setText(missing == 1 ? "1 setting needs your attention" : missing + " settings need your attention");
-
-        // --- autostart
-        autoBikeSub.setText(bike != null ? "On for " + bike.getDisplayName()
-                : "Set up once next to the bike, ignition on, Rideology closed");
-        autoBikeButton.setText(bike != null ? "Turn off" : "Set up");
-
-        // --- riding
-        freeModeStatus.setVisibility(Hub.serviceRunning && Hub.freeMode(this)
-                ? View.VISIBLE : View.GONE);
-        freeModeStatus.setText(Hub.curveStatus.contains("·") ? "Active" : Hub.curveStatus);
-
-        // --- offline
-        if (offlineWasRunning && !Hub.offlineRunning) refreshRegions(); // a download just ended
-        offlineWasRunning = Hub.offlineRunning;
-        offlineProgress.setVisibility(Hub.offlineRunning ? View.VISIBLE : View.GONE);
-        boolean showStatus = Hub.offlineRunning || !"–".equals(Hub.offlineStatus);
-        offlineStatus.setVisibility(showStatus ? View.VISIBLE : View.GONE);
-        offlineStatus.setText(Hub.offlineStatus);
-        regionButton.setText(Hub.offlineRunning ? "Cancel" : "Download");
-        tint(regionButton, Hub.offlineRunning ? 0xFF616161 : KAWASAKI_GREEN);
-
-    }
-
-    /** Rebuilds the list of downloaded regions; sizes and update checks run in the background. */
-    private void refreshRegions() {
-        new Thread(() -> {
-            List<OfflineRegions.Region> list = offlineRegions.list();
-            java.util.Map<String, Long> sizes = new java.util.HashMap<>();
-            for (OfflineRegions.Region r : list) sizes.put(r.id, offlineRegions.bytes(r.tiles));
-            java.util.Set<String> other = offlineRegions.unassigned();
-            long otherBytes = offlineRegions.bytes(other);
-            runOnUiThread(() -> showRegions(list, sizes, otherBytes));
-            boolean checked = false;
-            for (OfflineRegions.Region r : list) {
-                if (serverDates.containsKey(r.id)) continue;
-                serverDates.put(r.id, Geofabrik.head(r.pbfUrl)[1]);
-                checked = true;
-            }
-            if (checked) runOnUiThread(() -> showRegions(list, sizes, otherBytes));
-        }, "regions-list").start();
-    }
-
-    private void showRegions(List<OfflineRegions.Region> list, java.util.Map<String, Long> sizes, long otherBytes) {
-        regionsList.removeAllViews();
-        long total = otherBytes;
-        for (Long b : sizes.values()) total += b;
-        storedView.setText(list.isEmpty() && otherBytes == 0 ? "No regions downloaded yet"
-                : String.format(Locale.ROOT, "Downloaded · %.0f MB", Math.max(1, total / 1e6)));
-        java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
-        for (OfflineRegions.Region r : list) {
-            Long server = serverDates.get(r.id);
-            boolean update = server != null && server - r.dataDate >= OfflineRegions.UPDATE_AFTER_MS;
-            String state = server == null ? "Checking for newer data…"
-                    : server == 0 ? "Could not check for newer data (offline?)"
-                    : update ? "Newer data available from " + df.format(new java.util.Date(server))
-                    : "Up to date";
-            String sub = String.format(Locale.ROOT, "Data from %s · %.0f MB\n%s",
-                    df.format(new java.util.Date(r.dataDate)), Math.max(1, sizes.get(r.id) / 1e6), state);
-            regionsList.addView(regionRow(r.label, sub, update ? () -> updateRegion(r) : null,
-                    () -> confirmDeleteRegion(r)));
-        }
-        if (otherBytes > 0) {
-            regionsList.addView(regionRow("Other roads",
-                    String.format(Locale.ROOT, "%.0f MB from earlier downloads, not part of a region", Math.max(1, otherBytes / 1e6)),
-                    null, this::confirmDeleteOther));
-        }
-    }
-
-    private View regionRow(String title, String sub, Runnable onUpdate, Runnable onDelete) {
-        LinearLayout r = settingRow();
-        LinearLayout t = column();
-        t.addView(itemTitle(title));
-        t.addView(secondary(sub));
-        r.addView(t, weight());
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(dp(6), 0, 0, 0);
-        if (onUpdate != null) r.addView(primaryButton("Update", v -> onUpdate.run()), lp);
-        r.addView(button("Delete", v -> onDelete.run()), lp);
-        return r;
-    }
-
-    private void updateRegion(OfflineRegions.Region r) {
-        if (Hub.offlineRunning) return;
-        for (Geofabrik.Region g : regions) {
-            if (g.id.equals(r.id)) {
-                startDownload(g);
-                return;
-            }
-        }
-        startDownload(r.id, r.label);
-    }
-
-    /** Shows the banner row when needed; 1 if shown. */
-    private static int show(View row, boolean needed) {
-        row.setVisibility(needed ? View.VISIBLE : View.GONE);
-        return needed ? 1 : 0;
-    }
-
-    private void confirmDeleteRegion(OfflineRegions.Region r) {
-        if (Hub.offlineRunning) return;
-        new AlertDialog.Builder(this)
-                .setTitle("Delete " + r.label + "?")
-                .setMessage("Its roads are removed from the phone. Roads that another downloaded region also "
-                        + "covers stay.")
-                .setPositiveButton("Delete", (d, w) -> new Thread(() -> {
-                    offlineRegions.delete(r.id);
-                    serverDates.remove(r.id);
-                    runOnUiThread(this::refreshRegions);
-                }, "region-delete").start())
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void confirmDeleteOther() {
-        if (Hub.offlineRunning) return;
-        new AlertDialog.Builder(this)
-                .setTitle("Delete other roads?")
-                .setMessage("Roads from earlier downloads that belong to no region in the list are removed.")
-                .setPositiveButton("Delete", (d, w) -> new Thread(() -> {
-                    offlineRegions.deleteUnassigned();
-                    runOnUiThread(this::refreshRegions);
-                }, "region-delete").start())
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void hideKeyboard() {
-        android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
-        imm.hideSoftInputFromWindow(regionInput.getWindowToken(), 0);
-        regionInput.clearFocus();
     }
 
     // ------------------------------------------------------------------ meter display
@@ -1135,94 +906,7 @@ public class MainActivity extends Activity {
         }
         BridgeService.start(this);
     }
-    private void toggleAutostart() {
-        if (BikePresence.enabled(this)) {
-            BikePresence.disable(this);
-            return;
-        }
-        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            requestMissingPermissions();
-            return;
-        }
-        BluetoothDevice paired = BridgeService.pairedBike(this);
-        if (paired == null) {
-            BikePresence.pair(this); // not paired yet: pair and set up autostart in one go
-        } else {
-            BikePresence.associate(this, paired);
-        }
-    }
-    private void loadRegions() {
-        regionInfo.setText("");
-        new Thread(() -> {
-            try {
-                List<Geofabrik.Region> list = Geofabrik.regions(this);
-                List<String> labels = new ArrayList<>();
-                for (Geofabrik.Region r : list) labels.add(r.label());
-                runOnUiThread(() -> {
-                    regions = list;
-                    regionInput.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, labels));
-                    regionInfo.setText("");
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> regionInfo.setText("Region list not available. Are you online?"));
-            }
-        }, "regions").start();
-    }
-    private void selectRegion(Geofabrik.Region r) {
-        selectedRegion = r;
-        regionInfo.setText(r.label() + ": checking size…");
-        new Thread(() -> {
-            long size = Geofabrik.size(r.pbfUrl);
-            runOnUiThread(() -> {
-                if (selectedRegion != r) return;
-                long free = getCacheDir().getUsableSpace();
-                regionInfo.setText(size < 0 ? r.label() : String.format(java.util.Locale.ROOT,
-                        "%s: %.0f MB download, about %.0f MB stored\nNeeds %.1f GB free while converting (%.1f GB free)",
-                        r.label(), size / 1e6, size / 1e6 * 0.09, (size * 1.25 + 500e6) / 1e9, free / 1e9));
-            });
-        }, "region-size").start();
-    }
-    private void downloadRegion() {
-        if (Hub.offlineRunning) {
-            OfflineService.stop(this);
-            return;
-        }
-        Geofabrik.Region r = selectedRegion;
-        if (r == null || !r.label().equals(regionInput.getText().toString())) {
-            r = null;
-            String typed = regionInput.getText().toString().trim();
-            for (Geofabrik.Region x : regions) {
-                if (x.name.equalsIgnoreCase(typed) || x.label().equalsIgnoreCase(typed)) {
-                    r = x;
-                    break;
-                }
-            }
-        }
-        if (r == null) {
-            regionInfo.setText("Pick a region from the list");
-            return;
-        }
-        startDownload(r);
-    }
 
-    private void startDownload(Geofabrik.Region r) {
-        startDownload(r.id, r.label());
-    }
-
-    /** Downloads (or updates) a region; asks first when not on Wi-Fi. */
-    private void startDownload(String id, String label) {
-        android.net.ConnectivityManager cm = getSystemService(android.net.ConnectivityManager.class);
-        if (cm.isActiveNetworkMetered()) {
-            new android.app.AlertDialog.Builder(this)
-                    .setTitle("Mobile data")
-                    .setMessage("You are not on Wi-Fi. The file for " + label + " can be several hundred MB. Download anyway?")
-                    .setPositiveButton("Download", (d, w) -> OfflineService.startRegion(this, id))
-                    .setNegativeButton("Cancel", null)
-                    .show();
-        } else {
-            OfflineService.startRegion(this, id);
-        }
-    }
     // ------------------------------------------------------------------ in-app update
 
     private void checkForUpdate() {
@@ -1304,187 +988,5 @@ public class MainActivity extends Activity {
                 if (msg != null) android.widget.Toast.makeText(app, msg, android.widget.Toast.LENGTH_LONG).show();
             });
         }, "update-download").start();
-    }
-
-    // ------------------------------------------------------------------ view helpers
-
-    private interface OnPos {
-        void on(int pos);
-    }
-
-    private AdapterView.OnItemSelectedListener onSelect(OnPos f) {
-        return new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                f.on(position);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
-        };
-    }
-
-    private int dp(int v) {
-        return Math.round(v * getResources().getDisplayMetrics().density);
-    }
-
-    private LinearLayout card() {
-        LinearLayout c = column();
-        c.setPadding(dp(16), dp(14), dp(16), dp(14));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(night ? 0xFF1E2024 : 0xFFFFFFFF);
-        bg.setCornerRadius(dp(16));
-        c.setBackground(bg);
-        LinearLayout.LayoutParams lp = matchWrap();
-        lp.setMargins(0, dp(6), 0, dp(6));
-        c.setLayoutParams(lp);
-        return c;
-    }
-
-    private TextView cardTitle(String s) {
-        TextView t = text(17, true);
-        t.setText(s);
-        t.setPadding(0, dp(2), 0, dp(4));
-        return t;
-    }
-
-    private TextView itemTitle(String s) {
-        TextView t = text(15, false);
-        t.setText(s);
-        return t;
-    }
-
-    private TextView secondary(String s) {
-        TextView t = text(13, false);
-        t.setText(s);
-        t.setAlpha(0.65f);
-        return t;
-    }
-
-    /** A row of a card: text on the left, a control on the right. */
-    private LinearLayout settingRow() {
-        LinearLayout r = row();
-        r.setPadding(0, dp(10), 0, dp(4));
-        return r;
-    }
-
-    private View choiceRow(String title, String sub, String[] items, int selected, OnPos f) {
-        return choiceRow(title, sub, null, items, selected, f);
-    }
-
-    /** With info: a link under the text opens it as explanation of the options. */
-    private View choiceRow(String title, String sub, String info, String[] items, int selected, OnPos f) {
-        LinearLayout r = settingRow();
-        LinearLayout t = column();
-        t.addView(itemTitle(title));
-        t.addView(secondary(sub));
-        if (info != null) {
-            TextView more = text(13, false);
-            more.setText("What do the options mean?");
-            more.setTextColor(KAWASAKI_GREEN);
-            more.setPadding(0, dp(4), 0, dp(4));
-            more.setOnClickListener(v -> new AlertDialog.Builder(this)
-                    .setTitle(title)
-                    .setMessage(info)
-                    .setPositiveButton("OK", null)
-                    .show());
-            t.addView(more);
-        }
-        r.addView(t, weight());
-        Spinner s = spinner(items, selected);
-        s.setOnItemSelectedListener(onSelect(f));
-        r.addView(s, controlWidth());
-        return r;
-    }
-
-    private View switchRow(String title, String sub, String key, boolean byDefault) {
-        LinearLayout r = settingRow();
-        LinearLayout t = column();
-        t.addView(itemTitle(title));
-        t.addView(secondary(sub));
-        r.addView(t, weight());
-        Switch s = new Switch(this);
-        s.setChecked(prefs.getBoolean(key, byDefault));
-        s.setOnCheckedChangeListener((b, on) -> {
-            prefs.edit().putBoolean(key, on).apply();
-            BridgeService.settingsChanged();
-        });
-        r.addView(s);
-        return r;
-    }
-
-    private LinearLayout row() {
-        LinearLayout r = new LinearLayout(this);
-        r.setOrientation(LinearLayout.HORIZONTAL);
-        r.setGravity(Gravity.CENTER_VERTICAL);
-        return r;
-    }
-
-    private LinearLayout column() {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(LinearLayout.VERTICAL);
-        return c;
-    }
-
-    private LinearLayout.LayoutParams weight() {
-        return new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-    }
-
-    /** Drop-downs next to a setting's text: fixed width, so the text keeps its room. */
-    private LinearLayout.LayoutParams controlWidth() {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(150), ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(dp(8), 0, 0, 0);
-        return lp;
-    }
-
-    private LinearLayout.LayoutParams matchWrap() {
-        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    }
-
-    private Button button(String text, View.OnClickListener l) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setAllCaps(false);
-        b.setOnClickListener(l);
-        return b;
-    }
-
-    /** Big filled button for the main action of a card. */
-    private Button primaryButton(String text, View.OnClickListener l) {
-        Button b = button(text, l);
-        b.setTextColor(0xFFFFFFFF);
-        b.setTextSize(16);
-        b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setMinHeight(dp(52));
-        b.setStateListAnimator(null);
-        tint(b, KAWASAKI_GREEN);
-        return b;
-    }
-
-    private void tint(Button b, int color) {
-        if (Integer.valueOf(color).equals(b.getTag())) return; // called on every refresh
-        b.setTag(color);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(color);
-        bg.setCornerRadius(dp(26));
-        b.setBackground(new android.graphics.drawable.RippleDrawable(
-                android.content.res.ColorStateList.valueOf(0x33FFFFFF), bg, null));
-    }
-
-    private Spinner spinner(String[] items, int selected) {
-        Spinner s = new Spinner(this);
-        // compact closed view (wraps its text), full-width rows only in the open list
-        ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, items);
-        a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        s.setAdapter(a);
-        s.setSelection(selected);
-        return s;
-    }
-
-    private TextView text(int size, boolean bold) {
-        TextView t = new TextView(this);
-        t.setTextSize(size);
-        if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
-        return t;
     }
 }

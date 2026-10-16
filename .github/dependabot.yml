@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # GitHub Actions in .github/workflows (pinned SHAs and their version comments)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # wait a week before proposing a new release (security updates are not delayed)
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Gradle: the Android Gradle plugin and the test dependencies (the app itself has none)
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      gradle:
+        patterns: ["*"]

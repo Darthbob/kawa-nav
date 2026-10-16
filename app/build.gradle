@@ -16,8 +16,8 @@ android {
         applicationId 'io.github.darthbob.kawanav'
         minSdk 33
         targetSdk 36
-        versionCode 3
-        versionName '0.3'
+        versionCode 14
+        versionName '1.0'
     }
 
     // BuildConfig.DEBUG: the debug card (dash icon tests, phone name, Bluetooth service list) only in debug builds
@@ -44,10 +44,18 @@ android {
     buildTypes {
         debug {
             minifyEnabled false
+            // with the release key where there is one (not in CI): the debug APK of a release then
+            // installs over the normal one and back, keeping rides and settings
+            if (keystoreFile.exists()) signingConfig signingConfigs.release
         }
         release {
             minifyEnabled false
             if (keystoreFile.exists()) signingConfig signingConfigs.release
         }
     }
+}
+
+// Parser and recorder tests run on the JVM (app/src/test); the app itself has no dependencies.
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
 }
