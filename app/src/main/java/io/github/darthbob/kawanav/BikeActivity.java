@@ -700,10 +700,10 @@ public class BikeActivity extends KawaActivity {
             add(r, s, "Acceleration (forward, + = accelerating)", m0.longitudinalG, "%+.2f g");
             add(r, s, "Acceleration (sideways)", m0.lateralG, "%+.2f g");
             add(r, s, "Acceleration (up)", m0.verticalG, "%+.2f g");
-            // which axis each of the three is has not been established (PROTOCOL.md): the numbers stand
+            // the second and third are the roll and yaw rates (PROTOCOL.md, 0x4B); the first is not known
             add(r, s, "IMU rate 1 (unverified)", m0.rate1, "%+.1f");
-            add(r, s, "IMU rate 2 (unverified)", m0.rate2, "%+.1f");
-            add(r, s, "IMU rate 3 (unverified)", m0.rate3, "%+.1f");
+            add(r, s, "IMU roll rate", m0.rate2, "%+.1f");
+            add(r, s, "IMU yaw rate", m0.rate3, "%+.1f");
         }
         // the filtered wheel speeds the suspension unit reports: its own reading of what the wheels do
         if (m0 != null && now - b.imuAt < LIVE_MS && (m0.frontWheelKmh == m0.frontWheelKmh || m0.rearWheelKmh == m0.rearWheelKmh)) {

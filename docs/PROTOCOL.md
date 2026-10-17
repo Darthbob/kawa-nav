@@ -248,8 +248,8 @@ forward and 0.99 g up.
 - 27-28 (`imu_ax_psip3`, "p3") is the **roll rate**: it follows the lean angle's change over 5 s
   (r ≈ +0.40) and nothing else.
 - 17-18 (`imu_ay_psip1`, "p1") is still **unidentified**: no correlation with the lean angle, its
-  change, speed, speed changes, braking or the yaw rate. The app labels all three "IMU rate 1/2/3
-  (unverified)", which now understates what is known.
+  change, speed, speed changes, braking or the yaw rate. The app labels 17-18 "IMU rate 1
+  (unverified)" and the other two by their axis.
 
 Block 45 counts as absent only when **both** bytes 45 and 46 are FF (the other blocks: either one). No
 config nibble gates byte 51.
