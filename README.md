@@ -183,6 +183,7 @@ In the **Settings** tab:
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° (explained in the app) |
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
+| [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | Set the dash clock from the phone | Off | Sets the dash clock once per connection |
 | Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
@@ -222,6 +223,14 @@ bend is shown from 300 m before it, and only if it starts at least 50 m before M
 afterwards the dash goes back to Maps' arrow. "Sharp only" shows sharp bends and hairpins, "All"
 every bend that counts under "Which curves count". Off by default: the dash then shows only Google
 Maps. Needs downloaded roads like free ride.
+
+#### Battery warnings
+
+KawaNav warns when the bike's 12 V battery reads low with the engine off, or is not being charged
+with the engine running. A warning needs both readings the bike gives (the ECU's and the dash's) below
+the threshold, and the meter's next answer 20 s later must say the same: the fuel pump priming before
+a start, or the voltage just after one, is not a battery problem. Switched off, battery warnings are
+not shown; tyre and ABS warnings stay.
 
 #### Phone battery
 

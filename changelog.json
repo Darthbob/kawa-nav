@@ -7,7 +7,8 @@
         "Rides saved before are worked out again when you open them or the riding log: their distance and average speed may change a little",
         "A second ride recorded without restarting the app no longer starts with a jump in distance",
         "No more −60 °C oil (or −40 °C coolant and intake) in the first seconds after connecting; such values in older rides are ignored",
-        "The instant fuel consumption's \"no value\" (102.3) is no longer recorded"
+        "The instant fuel consumption's \"no value\" (102.3) is no longer recorded",
+        "Battery warnings no longer fire on one low reading while the fuel pump primes or just after a start, and can be turned off in Settings"
       ]
     },
     {
