@@ -131,6 +131,12 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   config, and a temperature the bike does not have can come as `00` (the Z500's oil byte, which its
   config marks absent). A Z900 ride had exactly that, −60 °C oil in its first second with bike data
   (below).
+- **Instant fuel consumption** (`b27` bits 1-0 and `b28`, × 0.1) is in **km/L**, not L/100 km: on the
+  62 km ride of 2026-10-17 integrating it over time gives 3.6 L, 5.8 L/100 km, while read as L/100 km
+  it would come to 14.3 L, i.e. 23 L/100 km, far from a Z900's. `99.9` is the top of the scale (it
+  appears in seconds with the throttle nearly closed at 40–50 km/h), the value is absent at a
+  standstill, and it falls as the throttle opens and as speed rises (median 22 km/L at closed
+  throttle, 20–22 at 40–60 km/h, 10 above 100 km/h). (verified on 2026-10-17's rides)
 - **Long form** (the frame the Z900 does not send; longer than 58 bytes) repeats what the 0x41 carries,
   with a second set of valid bits in byte 57 (`qe/b.java:70-82`). (verified)
 
@@ -182,6 +188,13 @@ shifts the high byte; KawaNav keeps the shift, which the masked nibble makes equ
   0x01 front / 0x02 rear acting); byte 38 front master pressure, 39 front caliper (`× 0.1953125`, FF =
   absent), 40 rear master, 41 rear caliper — the masters and the rear caliper are kept raw by Rideology.
   (verified for the layout, not for any brake scaling)
+- **ABS, on the four rides of 2026-10-17:** byte 37 read `00` all the time but for **8 isolated
+  seconds** where it read `02`; only some of those are under braking (one at throttle closed with
+  −0.15 g, one while accelerating at +0.14 g), and the front-to-rear wheel difference in those seconds
+  is no larger than the ride's usual +0.5 km/h. If `02` is "rear acting", it is not an obvious rear
+  cut-in, so what that byte's non-zero values say is still open. The ABS **indicator** (byte 47 bits
+  2-0) read `1` only in the first minute of three rides — 19, 55 and 46 seconds of it with the bike
+  stationary — which reads like the dash's ABS self-test after power-on, not a riding event.
 - Block 45: byte 47 ABS target (bits 7-5) and ABS indicator (bits 2-0), byte 48 bit 0 switching info.
 - Block 75: byte 77 damping value; byte 78 bit 2 suspension calibration, bit 1 suspension status, bit 0
   suspension ECU status.
@@ -207,6 +220,9 @@ All `FF` on bikes without them (Z500, Z900?). (verified)
 | 11-12, 13-14 | rear / front stroke speed, `u16 × 0.001` |
 | 17-18, 27-28, 37-38 | rotation rates "psi p1/p3/p2", little-endian, `x × 163.84/32768 − 163.84`, 0 = absent |
 | 21-22, 31-32, 41-42 | accelerations ay / ax / az, little-endian, `x × 4.1768/32768 − 4.1768` g, 0 = absent |
+| 47-48, 49-50 | filtered front / rear wheel speed, `u16 × 400/32768` km/h |
+| 51 | `tcs_level_hb` (bits 7-5), `tcs_level_lb` (bits 4-2), `kqs_down_operation_flag` (bit 1), `kqs_up_operation_flag` (bit 0) |
+| 52 | wheelie flag (bit 0) |
 
 **The three accelerations are not the bike's axes.** On a Z900 at a standstill the first two read
 −0.70 g and −0.71 g while the third reads 0.05 g: the gravity is split evenly between them, which is what
@@ -220,12 +236,20 @@ reports on its own (+0.52 g of its own against +0.41 g turned, −0.60 against �
 
 KawaNav applies this (`BikeFrames.ImuSusp.longitudinal/vertical/lateral`) and names them accordingly. The
 mounting angle was measured on one bike; a model that mounts its IMU differently would need its own angle,
-which the same standstill check reveals. Which of the three "rotation rates" (17-18, 27-28, 37-38) is which
-axis is **not** established: on that ride one follows the lean angle (r = 0.72), one its rate of change
-(−0.60), the third neither, so the app labels them "IMU rate 1/2/3 (unverified)".
-| 47-48, 49-50 | filtered front / rear wheel speed, `u16 × 400/32768` km/h |
-| 51 | `tcs_level_hb` (bits 7-5), `tcs_level_lb` (bits 4-2), `kqs_down_operation_flag` (bit 1), `kqs_up_operation_flag` (bit 0) |
-| 52 | wheelie flag (bit 0) |
+which the same standstill check reveals. The four rides of 2026-10-17 (171 km) confirm it: at a
+standstill the two accelerations read −0.70 and −0.70 g and the third +0.05, which turns into 0.00 g
+forward and 0.99 g up.
+
+**Two of the three rotation rates (17-18, 27-28, 37-38) are now identified** from the same rides:
+
+- 37-38 (`imu_az_psip2`, Rideology's "p2") is the **yaw rate**: it follows the lean angle
+  (r = +0.62 … +0.79) and the course change from the GPS track (+0.67), and it is near zero on a
+  straight.
+- 27-28 (`imu_ax_psip3`, "p3") is the **roll rate**: it follows the lean angle's change over 5 s
+  (r ≈ +0.40) and nothing else.
+- 17-18 (`imu_ay_psip1`, "p1") is still **unidentified**: no correlation with the lean angle, its
+  change, speed, speed changes, braking or the yaw rate. The app labels all three "IMU rate 1/2/3
+  (unverified)", which now understates what is known.
 
 Block 45 counts as absent only when **both** bytes 45 and 46 are FF (the other blocks: either one). No
 config nibble gates byte 51.
@@ -247,6 +271,12 @@ config nibble gates byte 51.
   or the next (up with the throttle open, down with it closed) — so byte 51 reads like "what the
   electronics did this second", and the 0x4B pair is far more likely an intervention reading than a level.
   "Far more likely" is as far as this goes: Kawasaki's own name says *level*, and nothing proves otherwise.
+- The four rides of 2026-10-17 say more about the quick-shifter bits: `kqs_up` fired on 2/16, 14/85,
+  21/72 and 18/75 of the upshifts, `kqs_down` on 3/17, 12/82, 7/72 and 12/70 of the downshifts, always
+  within a second of the gear change. They are the **quick shifter's operation flags**, set when the
+  rider shifted without the clutch, not for every shift. (verified by correlation, not from the dash)
+- The same four rides had the **0x4A TCS nibbles and the 0x4B TCS pair at 0 in all 171 km**: no
+  intervention was recorded, so they still say nothing about the meaning of those columns.
 
 What would settle it, on a bike: (1) change KTRC between two rides — if neither column follows the setting,
 neither of them is the setting; (2) provoke a deliberate cut-in on a slippery surface with the dash's
@@ -255,7 +285,8 @@ traction-control lamp in view, and compare which column steps with the lamp.
 ### Units
 
 Speed is stored and exported in km/h (converted to mph only at display), rpm in rev/min, lean in
-degrees, temperatures in °C. (verified)
+degrees, temperatures in °C (verified), and the instant fuel consumption in km/L (see 0x45; verified
+on the 2026-10-17 rides).
 
 ## Riding log stream: is there a start/stop?
 
@@ -517,7 +548,7 @@ KawaNav never logs this frame.)
 
 Everything else in this document is protocol knowledge KawaNav does not use yet.
 
-## Verified on the bike (Z900 2026 "Kawasaki-ZR900S", 2026-10-10)
+## Verified on the bike (Z900 2026 "Kawasaki-ZR900S", 2026-10-10 and 2026-10-17)
 
 - Turn frames work with no init sequence: connect, MTU, enable notifies, write the frame.
 - FLAG 1 (rerouting) and FLAG 2 (arrived): no visible effect. Rideology never sends 1; it sends 2 only on
@@ -527,11 +558,16 @@ Everything else in this document is protocol knowledge KawaNav does not use yet.
 - Status icon frames (0x13): the dash redraws them about once a second; faster changes are not shown.
 - Pairing without Rideology (KawaNav's companion association + createBond) works.
 
-### What a Z900 actually sends (recorded ride, 2026-10-15)
+### What a Z900 actually sends (recorded rides, 2026-10-15 and 2026-10-17)
 
 A 24-minute ride recorded by KawaNav on this bike (1450 samples, at rest and moving) shows which fields
 that model fills. That matters more than any scaling question: a value a bike never sends cannot be
 compared with a dash, and it is not "unverified", it is absent.
+
+Four more rides the following day (2026-10-17: 601, 4736, 4978 and 2325 samples, 171 km in all) fill
+the same fields and leave the same 21 columns empty. They were recorded with KawaNav 0.9.2, so their
+`dist_m` still moves in whole-kilometre steps; the 0.9.3 rule on the same data gives 6.66, 61.66, 68.76
+and 32.98 km, never running backwards.
 
 - **Every second**: 0x4A speed, rpm, gear, throttle, acceleration, lean, the TCS nibbles (below), the ABS
   byte 37 (always `00` = ready), the wheelie flag and angle; 0x4B block 45 (the two filtered wheel speeds,
@@ -578,21 +614,19 @@ cell on a bike that does not send it.
 
 | Columns | The question | What there is to go on |
 |---|---|---|
-| `tcs`, `tcs_hi`, `tcs_hb`, `tcs_lb` | the rider's level, an intervention, or something else | two different pairs in two frames; on this ride the 0x4A nibbles stayed `0` and the 0x4B pair moved once, in the second with the largest wheel-speed difference — where `tcs_lb` read `7`, all three bits set, which elsewhere in a 3-bit field means "no value", so even that one observation is ambiguous. See the 0x4B section for the two tests that settle it |
-| `imu_ax_psip3`, `imu_ay_psip1`, `imu_az_psip2` | which rate is roll, pitch and yaw | one follows the lean angle (r = 0.72), one its rate of change (−0.60), the third neither; hence "IMU rate 1/2/3 (unverified)" in the app |
-| `imu_ax_g`, `imu_ay_g`, `imu_az_g` | the IMU's mounting angle | 45°, measured at a standstill on one bike; a model that mounts its IMU differently needs its own angle, which the same check reveals |
-| `kqs_down`, `kqs_up` | an operation flag, or "the electronics did something this second" | `kqs_up` fired 12 times and `kqs_down` 6, each within a second of a gear change (up with the throttle open, down with it closed) |
-| `wheel_speed_setting` | what the number says | Rideology's own column name points at a wheel circumference, not a speed; `0` in all 1448 seconds of this ride |
-| `cruise_on`, `cruise_mode` | what the mode values mean | present but always `0` on this bike |
-| `abs`, `abs_target`, `abs_ind` | what a value other than "ready" says | `00`, `0` and `0` all ride |
-| `wheelie_flag` | the values other than the `0` it read all ride (the 2-bit field's `3` is the all-ones byte, i.e. no value) | only `0` seen |
+| `tcs`, `tcs_hi`, `tcs_hb`, `tcs_lb` | the rider's level, an intervention, or something else | two different pairs in two frames; on 2026-10-15 the 0x4A nibbles stayed `0` and the 0x4B pair moved once, in the second with the largest wheel-speed difference — where `tcs_lb` read `7`, all three bits set, which elsewhere in a 3-bit field means "no value", so even that one observation is ambiguous. All four columns were `0` in all 171 km of 2026-10-17. See the 0x4B section for the two tests that settle it |
+| `imu_ay_psip1` | what the first rotation rate is | the other two are identified (yaw and roll, 0x4B section); this one has no correlation with the lean angle, its change, speed, braking or the yaw rate |
+| `imu_ax_g`, `imu_ay_g`, `imu_az_g` | the IMU's mounting angle | 45°, measured at a standstill on one bike and confirmed on the 2026-10-17 rides; a model that mounts its IMU differently needs its own angle, which the same check reveals |
+| `wheel_speed_setting` | what the number says | Rideology's own column name points at a wheel circumference, not a speed; `0` in every second of all five rides |
+| `cruise_on`, `cruise_mode` | what the mode values mean | present but always `0` on this bike, all five rides |
+| `abs`, `abs_target`, `abs_ind` | what a value other than "ready" says | `abs` read `2` in 8 isolated seconds of 2026-10-17, not all under braking, with ordinary wheel slip; `abs_ind` `1` only in the ABS self-test at the start of a ride (0x4A section); `abs_target` always `0` |
+| `wheelie_flag` | the values other than the `0` it read all ride (the 2-bit field's `3` is the all-ones byte, i.e. no value) | only `0` seen, all five rides |
 
 **Scale or unit never checked against a dash**
 
 | Columns | The scaling used | Note |
 |---|---|---|
-| `fuel_inst` | `u16 × 0.1` | **the unit is not established.** This ride fills 197 different values from 1.0 to 99.9, and 99.9 comes up on purpose — a clamp, or a real ratio. Rideology calls the column `instant_fuel_consumption` |
-| `fuel_rate` | `u16 × 0.02` | the unit is not established either |
+| `fuel_rate` | `u16 × 0.02` | the unit is not established (the instant fuel, by contrast, is km/L: 0x45 above) |
 | `brake_f_bar` | `u8 × 0.1953125`, bar | not sent by this bike |
 | `brake_f_master`, `brake_r_master`, `brake_r_caliper` | kept raw | Rideology keeps these raw too; not sent by this bike |
 | `torque_rider`, `torque_req`, `torque_actual` | `((hi & 0x3F) << 8 \| lo) × 0.2` (nibble 0) | not sent by this bike |
@@ -617,5 +651,6 @@ suspension strokes and stroke speeds.
    view, and see which column steps with the lamp.
 3. **IMU:** at a standstill on a known slope, and on a straight at a known lean, correlate the three
    rotation rates with the lean angle and its rate of change, and the three axes with the bike's own
-   acceleration.
-4. **Instant fuel:** a fill-up measured by hand against the values the ride recorded.
+   acceleration. Two rates are identified; what is left is rate 1 (17-18).
+4. **ABS:** a hard stop that makes the dash's ABS lamp flash, with the raw byte 37 in the capture, would
+   say whether the 8 isolated `02` seconds are an intervention or something else.
