@@ -483,8 +483,9 @@ public final class BikeFrames {
             oilC = temp(v, 19, 60, c, InfoConfig.OIL_TEMP);
             intakeC = temp(v, 20, 40, c, InfoConfig.INTAKE_TEMP);
             boolean fuelValid = current(v, 27, 4, c, InfoConfig.INSTANT_FUEL_VALID);
-            instantFuel = in(v, 28) && present0(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF && fuelValid
-                    ? ((u8(v, 27) & 0x03) << 8 | u8(v, 28)) * 0.1 : Double.NaN;
+            int fuel = in(v, 28) && present0(c, InfoConfig.INSTANT_FUEL) && u8(v, 27) != 0xFF && fuelValid
+                    ? (u8(v, 27) & 0x03) << 8 | u8(v, 28) : -1;
+            instantFuel = fuel >= 0 && fuel != 0x3FF ? fuel * 0.1 : Double.NaN;   // 0x3FF: 102.3, none
             instantFuelValid = zero(c, InfoConfig.INSTANT_FUEL_VALID) && in(v, 27)
                     ? (u8(v, 27) & 0x10) >> 4 : -1;
             // TPMS bytes 45-49: present unless bytes 45 or 46 are FF, as Rideology reads them (qe/b.java);
@@ -521,8 +522,17 @@ public final class BikeFrames {
             return v.length > i && (u8(v, i) & (1 << bit)) == 0;
         }
 
+        /**
+         * A temperature, only once the 0x40 is in, and never 00 or FF.
+         * <p>The config: unlike the other gates, an unknown one hides it. Rideology reads these at nibble 1,
+         * so its default-initialised config (all 0) shows none before the real one arrives. The meter streams
+         * 0x45 before KawaNav has the 0x40, and a temperature the bike does not have can come as 00 (the
+         * Z500's oil byte, which its config marks absent): read without the config, that is -60 °C oil.
+         * <p>00 is the bottom of the scale (−40 °C coolant and intake, −60 °C oil), which no running engine
+         * reads: it is what a sensor that reads nothing sends. Dropping it is KawaNav's rule, not Rideology's.
+         */
         private static double temp(byte[] v, int i, int offset, InfoConfig c, Flag f) {
-            if (!in(v, i) || !has(c, f) || u8(v, i) == 0xFF) return Double.NaN;
+            if (!in(v, i) || c == null || !c.supported(f) || u8(v, i) == 0xFF || u8(v, i) == 0) return Double.NaN;
             return u8(v, i) - offset;
         }
     }

@@ -183,6 +183,8 @@ In the **Settings** tab:
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° (explained in the app) |
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
+| [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
+| [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | Set the dash clock from the phone | Off | Sets the dash clock once per connection |
 | Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
@@ -223,12 +225,29 @@ afterwards the dash goes back to Maps' arrow. "Sharp only" shows sharp bends and
 every bend that counts under "Which curves count". Off by default: the dash then shows only Google
 Maps. Needs downloaded roads like free ride.
 
+#### Fuel economy
+
+The average and instant fuel economy the dash reports come in km/L, whatever the dash's own display
+is set to. KawaNav shows them in the unit picked here — km/L, L/100 km, MPG US or MPG UK, the same
+conversions Rideology uses — with the unit spelled out ("5.2 L/100 km"). Rides and refuels keep
+L/100 km.
+
+#### Battery warnings
+
+KawaNav warns when the bike's 12 V battery reads low with the engine off, or is not being charged
+with the engine running. A warning needs both readings the bike gives (the ECU's and the dash's) below
+the threshold, and the meter's next answer 20 s later must say the same: the fuel pump priming before
+a start, or the voltage just after one, is not a battery problem. Switched off, battery warnings are
+not shown; tyre and ABS warnings stay.
+
 #### Phone battery
 
 While connected, KawaNav sends the phone's battery level to the dash every 5 s, as Rideology does.
 The dash shows 4 steps (Rideology's thresholds): up to 10 %, up to 30 %, up to 70 %, above 70 %.
-While the phone is on a charger, the icon's charging version is sent (same bars). Switched off, the
-icon is removed. Not yet tried on the bike.
+While the phone is on a charger, the icon's charging version is sent (same bars). A reading Android
+cannot give, or a drop that is impossible in five seconds, keeps the last level shown, so the dash
+does not flash its low-battery icon (issue #7). Switched off, the icon is removed. Not yet tried on
+the bike.
 
 #### Headset icon
 
@@ -326,8 +345,9 @@ every channel with its lowest, average and highest, the time the electronics wor
 with the values that caused them, charts, and the ride on an interactive map tied to the charts. It needs
 nothing but Python.
 
-Distance comes from the bike's odometer when the bike reports one, else
-from the GPS track. The dash's
+Distance comes from the bike's odometer and the GPS together: the odometer counts the whole kilometres
+and the GPS track fills in what it cannot see, the part of a kilometre at each end of the ride; with
+only one of them, that one alone. The dash's
 riding-log icon (the small "log" symbol) follows the recorder: recording, paused, or off. The tab also
 keeps your **records** (fastest ride, most lean each way, longest ride, distance per year), and a ride
 that ends announces its summary — distance, time, fuel, best lean, top speed — in a notification that

@@ -257,7 +257,7 @@ public class RideActivity extends KawaActivity {
         lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
         section.addView(tileSurface, lp);
 
-        double km = (r.distBikeM > 0 ? r.distBikeM : r.distGpsM) / 1000;
+        double km = r.km();
         if (r.fuelUsedL > 0 && km > 0) {
             TextView economy = secondary(String.format(Locale.ROOT, "%.1f L/100 km over %,.1f km",
                     r.fuelUsedL / km * 100, km));
@@ -455,7 +455,7 @@ public class RideActivity extends KawaActivity {
     private void export(String kind) {
         if (ride == null || samples == null) return;
         // the ride as Rideology's CSV, as a CSV with every recorded value, as a GPX track, or as the raw
-        // file the app keeps (all 63 columns, what the other two only partly carry)
+        // file the app keeps (all 64 columns of RideTsv.COLUMNS, what the other two only partly carry)
         String text;
         String mime;
         String name;

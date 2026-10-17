@@ -207,6 +207,7 @@ public final class RideStore {
             r.activeMs = o.optLong("activeMs");
             r.distGpsM = o.optDouble("distGpsM", 0);
             r.distBikeM = o.optDouble("distBikeM", 0);
+            r.distM = o.has("distM") ? o.optDouble("distM") : Double.NaN;
             r.maxKmh = o.optDouble("maxKmh", 0);
             r.avgKmh = o.optDouble("avgKmh", 0);
             r.maxRpm = o.optInt("maxRpm");
@@ -278,6 +279,7 @@ public final class RideStore {
             o.put("activeMs", r.activeMs);
             o.put("distGpsM", round(r.distGpsM));
             o.put("distBikeM", round(r.distBikeM));
+            if (r.distM == r.distM) o.put("distM", round(r.distM));
             o.put("maxKmh", round(r.maxKmh));
             o.put("avgKmh", round(r.avgKmh));
             o.put("maxRpm", r.maxRpm);

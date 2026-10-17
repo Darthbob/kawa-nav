@@ -17,6 +17,8 @@ public final class Ride {
     public long start, end;
     public long activeMs;
     public double distGpsM, distBikeM;
+    /** The ride's distance in metres, both of the above together ({@link Distance}); NaN in an older summary. */
+    public double distM = Double.NaN;
     public double maxKmh, avgKmh;
     public int maxRpm;
     public double maxLeanL, maxLeanR;
@@ -32,9 +34,26 @@ public final class Ride {
         return "recording".equals(state) || "paused".equals(state);
     }
 
+    /**
+     * The ride's distance in km, the one every screen and export shows. A summary saved before it kept
+     * {@link #distM} falls back to the old rule (the odometer when it moved, else GPS) until it is redone.
+     */
+    public double km() {
+        return (distM == distM ? distM : distBikeM > 0 ? distBikeM : distGpsM) / 1000;
+    }
+
     public String distance() {
-        double m = distBikeM > 0 ? distBikeM : distGpsM;
+        double m = km() * 1000;
         return m >= 1000 ? String.format(Locale.ROOT, "%.1f km", m / 1000) : String.format(Locale.ROOT, "%.0f m", m);
+    }
+
+    /**
+     * "82 h 39 min" or "39 min", from the number of minutes the dash reports as its total time
+     * (0x41, bytes 51-52: the value is in minutes, not hours — see PROTOCOL.md).
+     */
+    public static String hoursMinutes(int minutes) {
+        int m = Math.max(0, minutes);
+        return m < 60 ? m + " min" : String.format(Locale.ROOT, "%d h %02d min", m / 60, m % 60);
     }
 
     /** "1 h 05 min", "12 min" or, for a short ride, "34 s". */
@@ -59,8 +78,11 @@ public final class Ride {
         bbox[3] = Math.max(bbox[3], lon);
     }
 
-    /** How the saved summary was computed: a ride saved before this version has to be recomputed once. */
-    public static final int SUMMARY_VERSION = 1;
+    /**
+     * How the saved summary was computed: a ride saved before this version has to be recomputed once.
+     * 2: the distance ({@link #distM}), and no temperatures at the bottom of their scale.
+     */
+    public static final int SUMMARY_VERSION = 2;
     /** Which summary the file holds, 0 for a ride saved by a version that did not know about metrics. */
     public int summaryVersion;
 
@@ -193,19 +215,15 @@ public final class Ride {
         boolean tcsSeen = false, absSeen = false, wheelieSeen = false, cruiseSeen = false;
         double speedSum = 0;
         int speedCount = 0;
-        double prevLat = Double.NaN, prevLon = Double.NaN, prevOdo = Double.NaN, prevFuel = Double.NaN;
+        double prevFuel = Double.NaN;
+        Distance dist = new Distance();
         for (RideTsv.Sample s : samples) {
             if ((s.flags & RideTsv.FLAG_BIKE) != 0) hasBike = true;
             if (s.hasGps()) {
                 hasGps = true;
                 addPoint(s.lat, s.lon);
-                if (prevLat == prevLat) {
-                    double d = distanceM(prevLat, prevLon, s.lat, s.lon);
-                    if (d < 500 && (s.gpsAccM != s.gpsAccM || s.gpsAccM < 25)) distGpsM += d; // jumps and bad fixes
-                }
-                prevLat = s.lat;
-                prevLon = s.lon;
             }
+            dist.add(s);
             if (s.kmh == s.kmh) {
                 maxKmh = Math.max(maxKmh, s.kmh);
                 speedSum += s.kmh;
@@ -215,10 +233,6 @@ public final class Ride {
             if (s.lean == s.lean) {
                 if (s.lean > maxLeanR) maxLeanR = s.lean;
                 if (s.lean < maxLeanL) maxLeanL = s.lean;
-            }
-            if (s.odoKm == s.odoKm) {
-                if (prevOdo == prevOdo && s.odoKm >= prevOdo) distBikeM += (s.odoKm - prevOdo) * 1000;
-                prevOdo = s.odoKm;
             }
             if (s.fuelTotalL == s.fuelTotalL) {
                 if (prevFuel == prevFuel && s.fuelTotalL >= prevFuel) fuelUsedL += s.fuelTotalL - prevFuel;
@@ -250,9 +264,11 @@ public final class Ride {
         absOnS = absSeen ? abs : Double.NaN;
         wheelieS = wheelieSeen ? wheelie : Double.NaN;
         cruiseOnS = cruiseSeen ? cruise : Double.NaN;
+        distGpsM = dist.gpsM;
+        distBikeM = dist.bikeM;
+        distM = dist.m();
         // average as the recorder counts it while riding: distance over recorded time (pauses left out),
         // so the list and the ride agree; the mean of the speed samples is only a fallback without a distance
-        double distM = distBikeM > 0 ? distBikeM : distGpsM;
         double hours = activeMs / 3_600_000.0;
         avgKmh = distM > 0 && hours > 0 ? distM / 1000 / hours : speedCount == 0 ? 0 : speedSum / speedCount;
         if (samples.get(0).odoKm == samples.get(0).odoKm) odoStartKm = samples.get(0).odoKm;
@@ -267,6 +283,60 @@ public final class Ride {
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1) * Math.cos(Math.toRadians((lat1 + lat2) / 2));
         return 6371000 * Math.sqrt(dLat * dLat + dLon * dLon);
+    }
+
+    /**
+     * The ride's distance as its samples come in, from the bike's odometer and the GPS together. The 0x41
+     * odometer reads whole kilometres: on its own, a ride's distance moves in 1 km steps and can be nearly
+     * a kilometre off either way, each end of the ride sitting anywhere in its kilometre. So the odometer
+     * counts the kilometres and the GPS track fills in the rest: how far the ride had gone when the
+     * odometer first stepped, and how far it has gone since its last step — at most the kilometre to the
+     * next one, so the distance never runs back, and a GPS that loses the track for a while costs no more
+     * than that kilometre. An odometer that reads finer than a kilometre is taken as it is; until the
+     * odometer has moved (or without one), the GPS alone.
+     */
+    public static final class Distance {
+        /** The GPS track's distance and the odometer's, in metres. */
+        public double gpsM, bikeM;
+        private double prevLat = Double.NaN, prevLon = Double.NaN, prevOdo = Double.NaN;
+        /** An odometer reading with a fraction: this odometer is finer than whole kilometres. */
+        private boolean fine;
+        /** The odometer's and the GPS's distance at the odometer's last step. */
+        private double stepBikeM, stepGpsM;
+        /** How far the ride is ahead of the odometer's count at its steps; NaN until it has stepped. */
+        private double offsetM = Double.NaN;
+
+        /** Takes one recorded second: its position and its odometer, either of them possibly missing. */
+        public void add(RideTsv.Sample s) {
+            if (s.hasGps()) {
+                if (prevLat == prevLat) {
+                    double d = distanceM(prevLat, prevLon, s.lat, s.lon);
+                    if (d < 500 && (s.gpsAccM != s.gpsAccM || s.gpsAccM < 25)) gpsM += d; // jumps and bad fixes
+                }
+                prevLat = s.lat;
+                prevLon = s.lon;
+            }
+            if (s.odoKm == s.odoKm) {
+                if (prevOdo == prevOdo && s.odoKm >= prevOdo) bikeM += (s.odoKm - prevOdo) * 1000;
+                prevOdo = s.odoKm;
+                if (Math.abs(s.odoKm - Math.rint(s.odoKm)) > 1e-6) fine = true;
+            }
+            if (bikeM > stepBikeM) {
+                // the odometer has just turned a kilometre: at its first turn the GPS says how far the ride
+                // really is (the odometer started counting somewhere inside a kilometre); without a track
+                // yet, the odometer's count is all there is
+                if (offsetM != offsetM) offsetM = gpsM > 0 ? gpsM - bikeM : 0;
+                stepBikeM = bikeM;
+                stepGpsM = gpsM;
+            }
+        }
+
+        /** The ride's distance so far, in metres. */
+        public double m() {
+            if (offsetM != offsetM) return gpsM;
+            if (fine) return bikeM;
+            return bikeM + offsetM + Math.min(gpsM - stepGpsM, 1000);
+        }
     }
 
     /** The samples of a recorded ride, newest summary merged in. */

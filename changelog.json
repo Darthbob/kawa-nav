@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "version": "1.0.1",
+      "changes": [
+        "Ride distance uses the odometer and the GPS together: no more 1 km steps, and closer to the real distance",
+        "Rides saved before are worked out again when you open them or the riding log: their distance and average speed may change a little",
+        "A second ride recorded without restarting the app no longer starts with a jump in distance",
+        "No more −60 °C oil (or −40 °C coolant and intake) in the first seconds after connecting; such values in older rides are ignored",
+        "The instant fuel consumption's \"no value\" (102.3) is no longer recorded",
+        "Battery warnings no longer fire on one low reading while the fuel pump primes or just after a start, and can be turned off in Settings",
+        "The bike screen's total time is shown in hours and minutes: the dash reports minutes, not hours",
+        "The phone battery icon on the dash no longer flashes a low or unknown battery when Android briefly gives no reading",
+        "The bike's average and instant fuel economy can be shown in km/L, L/100 km, MPG US or MPG UK (L/100 km by default)"
+      ]
+    },
+    {
       "version": "1.0",
       "changes": [
         "KawaNav is now a joint project of Darthbob and jackyes, with jackyes' features merged in",

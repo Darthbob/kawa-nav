@@ -452,6 +452,144 @@ public class RideTest {
         assertEquals("20261013-1840.csv", RideExport.fileName(r, "csv"));
     }
 
+    /** Older versions wrote a raw 00 temperature down as -40 / -60 C: read back, it is no value. */
+    @Test
+    public void aTemperatureAtTheBottomOfItsScaleReadsAsNone() {
+        RideTsv.Sample s = sample(5, 50, 4000, 3, 0, 45.0, 7.0);
+        s.waterC = -40;
+        s.oilC = -60;
+        s.intakeC = 36;
+        List<RideTsv.Sample> back = RideTsv.parse(Arrays.asList(RideTsv.magic(), RideTsv.header(), s.line()));
+        assertTrue(Double.isNaN(back.get(0).waterC));
+        assertTrue(Double.isNaN(back.get(0).oilC));
+        assertEquals(36, back.get(0).intakeC, 1e-9);
+        Ride r = new Ride();
+        r.summarize(back);
+        assertFalse(r.metric("oil").known());
+        assertFalse(r.metric("coolant").known());
+    }
+
+    /**
+     * A ride north at 10 m/s, so the true distance at second i is 10 i m. The odometer reads whole km and
+     * starts {@code startKm} into its count; it comes every 7 s (a Z900's comes in 3-second runs every 20 s,
+     * KawaNav's poll: PROTOCOL.md). GPS every second, except
+     * the seconds {@code noGps} says.
+     */
+    private static List<RideTsv.Sample> wholeKmRide(int seconds, double startKm, java.util.function.IntPredicate noGps) {
+        List<RideTsv.Sample> out = new ArrayList<>();
+        double degPerM = 180 / Math.PI / 6_371_000;
+        for (int i = 0; i < seconds; i++) {
+            RideTsv.Sample s = bare(i);
+            s.flags = RideTsv.FLAG_BIKE;
+            if (!noGps.test(i)) {
+                s.flags |= RideTsv.FLAG_GPS;
+                s.lat = 44.0 + 10 * i * degPerM;
+                s.lon = 10.0;
+                s.gpsAccM = 5;
+            }
+            if (i % 7 == 0) s.odoKm = Math.floor(startKm + i / 100.0);
+            out.add(s);
+        }
+        return out;
+    }
+
+    /** 12.5 km that a whole-km odometer counts as 13: the GPS fills in what it cannot see. */
+    @Test
+    public void aWholeKmOdometerIsFilledInByTheGps() {
+        Ride r = new Ride();
+        r.summarize(wholeKmRide(1251, 5234.9, i -> false));    // 5234.9 -> 5247.4 km
+        assertEquals(5234, r.odoStartKm, 0);
+        assertEquals(13_000, r.distBikeM, 1e-6);               // the odometer's own count
+        assertEquals(12_500, r.distM, 80);
+        assertEquals(12.5, r.km(), 0.08);
+        assertEquals("12.5 km", r.distance());
+        assertEquals(36, r.avgKmh, 0.3);                       // 12.5 km in 1250 s
+    }
+
+    /** What the recorder writes every second: no kilometre steps, never running back, close to the truth. */
+    @Test
+    public void theRunningDistanceHasNoKilometreSteps() {
+        Ride.Distance d = new Ride.Distance();
+        double prev = 0;
+        for (RideTsv.Sample s : wholeKmRide(1251, 5234.9, i -> false)) {
+            d.add(s);
+            double m = d.m();
+            assertTrue("ran back at " + s.tMs, m >= prev);
+            assertTrue("jumped at " + s.tMs, m - prev <= 100);
+            assertEquals("at " + s.tMs, s.tMs / 100.0, m, 100);
+            prev = m;
+        }
+    }
+
+    /** The odometer keeps count while the GPS has no track: a gap costs nothing once it has stepped again. */
+    @Test
+    public void aGpsGapIsBridgedByTheOdometer() {
+        Ride r = new Ride();
+        r.summarize(wholeKmRide(1251, 5234.9, i -> i >= 300 && i <= 550));
+        assertTrue(r.distGpsM < 10_100);                       // the track alone lost 2.5 km
+        assertEquals(12_500, r.distM, 80);
+    }
+
+    /** Without a GPS track, the odometer's count; without an odometer, the track. */
+    @Test
+    public void eitherDistanceAloneIsTakenAsItIs() {
+        Ride r = new Ride();
+        r.summarize(wholeKmRide(1251, 5234.9, i -> true));
+        assertEquals(13_000, r.distM, 1e-6);
+        List<RideTsv.Sample> noOdometer = wholeKmRide(1251, 5234.9, i -> false);
+        for (RideTsv.Sample s : noOdometer) s.odoKm = Double.NaN;
+        r.summarize(noOdometer);
+        assertEquals(0, r.distBikeM, 0);
+        assertEquals(r.distGpsM, r.distM, 1e-9);
+        assertEquals(12_500, r.distM, 1);
+    }
+
+    /** An odometer finer than a kilometre is taken as it is, whatever the GPS says. */
+    @Test
+    public void aFinerOdometerIsKept() {
+        Ride r = new Ride();
+        r.summarize(ride100());                                // 1 m odometer steps, ~3.2 km of track
+        assertEquals(r.distBikeM, r.distM, 1e-9);
+        assertEquals(r.distBikeM / 1000, r.km(), 1e-9);
+    }
+
+    /** A summary saved before the distance was kept shows what it showed then, until it is redone. */
+    @Test
+    public void anOlderSummaryKeepsItsDistance() {
+        Ride r = new Ride();
+        r.distBikeM = 13_000;
+        r.distGpsM = 13_440;
+        assertEquals(13.0, r.km(), 1e-9);
+        r.distBikeM = 0;
+        assertEquals(13.44, r.km(), 1e-9);
+    }
+
+    /** Every ride gets a new Distance: the previous ride's last odometer reading and position do not count. */
+    @Test
+    public void aSecondRideStartsFromZero() {
+        Ride.Distance first = new Ride.Distance();
+        for (RideTsv.Sample s : wholeKmRide(300, 12_000.2, i -> false)) first.add(s);
+        assertEquals(2_990, first.m(), 100);
+        // the next ride, 38 km further on and somewhere else
+        Ride.Distance second = new Ride.Distance();
+        RideTsv.Sample s = bare(0);
+        s.flags = RideTsv.FLAG_BIKE | RideTsv.FLAG_GPS;
+        s.odoKm = 12_041;
+        s.lat = 45.3;
+        s.lon = 7.2;
+        s.gpsAccM = 5;
+        second.add(s);
+        assertEquals(0, second.m(), 0);                         // no jump at the start of dist_m
+    }
+
+    @Test
+    public void theDashTotalTimeIsMinutes() {
+        assertEquals("82 h 39 min", Ride.hoursMinutes(4959));   // the Z900 in issue #8
+        assertEquals("2 h 00 min", Ride.hoursMinutes(120));
+        assertEquals("59 min", Ride.hoursMinutes(59));
+        assertEquals("0 min", Ride.hoursMinutes(0));
+    }
+
     @Test
     public void distanceBetweenPoints() {
         assertEquals(111.3, Ride.distanceM(45.0, 7.0, 45.001, 7.0), 0.5);

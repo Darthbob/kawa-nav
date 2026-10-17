@@ -156,6 +156,49 @@ public class BikeFramesTest {
         assertEquals(-1, e.tpmsWarnings);
     }
 
+    /**
+     * 00 is the bottom of a temperature's scale (-40 C coolant and intake, -60 C oil): a sensor that reads
+     * nothing, not a reading. The Z500 sends it as its oil temperature.
+     */
+    @Test
+    public void logExtTemperatureZeroIsNone() {
+        byte[] cfg = hx(Z500_40);
+        put(cfg, 8, 0x57);                                 // a config that says all three are there
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(cfg);
+        byte[] v = hx(Z500_45);
+        BikeFrames.LogExt e = (BikeFrames.LogExt) d.decode(v);
+        assertTrue(Double.isNaN(e.oilC));                  // byte 19 is 00
+        assertEquals(40, e.waterC, 0);
+        assertEquals(36, e.intakeC, 0);
+        put(v, 19, 0x8C);
+        e = (BikeFrames.LogExt) d.decode(v);
+        assertEquals(80, e.oilC, 0);
+        put(v, 19, 0x01);
+        e = (BikeFrames.LogExt) d.decode(v);
+        assertEquals(-59, e.oilC, 0);                      // one step above the bottom is a reading
+        put(v, 17, 0x00);
+        put(v, 20, 0x00);
+        e = (BikeFrames.LogExt) d.decode(v);
+        assertTrue(Double.isNaN(e.waterC));
+        assertTrue(Double.isNaN(e.intakeC));
+    }
+
+    @Test
+    public void temperaturesWaitForTheConfig() {
+        // the meter streams 0x45 before the 0x40 is in; the Z500 sends 00 as the oil temperature it has not
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        BikeFrames.LogExt early = (BikeFrames.LogExt) d.decode(hx(Z500_45));
+        assertTrue(Double.isNaN(early.oilC));      // not -60 °C
+        assertTrue(Double.isNaN(early.waterC));
+        assertTrue(Double.isNaN(early.intakeC));
+        d.decode(hx(Z500_40));
+        BikeFrames.LogExt later = (BikeFrames.LogExt) d.decode(hx(Z500_45));
+        assertEquals(40, later.waterC, 0);
+        assertEquals(36, later.intakeC, 0);
+        assertTrue(Double.isNaN(later.oilC));      // the config says the bike has none
+    }
+
     @Test
     public void tuningNotSupported() {
         BikeFrames.Decoder d = new BikeFrames.Decoder();
@@ -259,6 +302,20 @@ public class BikeFramesTest {
         BikeFrames.LogExt plain = (BikeFrames.LogExt) d2.decode(v);
         assertEquals(4.8, plain.instantFuel, 1e-9);
         assertEquals(-1, plain.instantFuelValid);
+    }
+
+    @Test
+    public void instantFuelPlaceholderIsDropped() {
+        // 0x3FF is the dash's "no value" (102.3), dropped like Rideology does; 0x3FE is a reading
+        byte[] v = blank(0x45, 55);
+        put(v, 5, 0x05, 0x15);
+        put(v, 25, 0x05, 0x18);
+        put(v, 27, 0x03, 0xFF);
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(infoConfigNoNibbleMasks());
+        assertTrue(Double.isNaN(((BikeFrames.LogExt) d.decode(v)).instantFuel));
+        put(v, 27, 0x03, 0xFE);
+        assertEquals(102.2, ((BikeFrames.LogExt) d.decode(v)).instantFuel, 1e-9);
     }
 
     @Test

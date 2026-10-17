@@ -87,6 +87,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /** Status icon fields last sent to the meter (one per 4 bits, -1: none since connecting) and when. */
     private int iconsSent = -1;
     private long iconsSentAt;
+    /** The phone's battery percentage to report: the last plausible reading (issue #7). */
+    private final PhoneBattery phoneBattery = new PhoneBattery();
     /** Android's headset (HFP) and A2DP profiles, to see whether the chosen helmet is connected. */
     private BluetoothProfile headsetProfile, a2dpProfile;
     private long lastTick;
@@ -764,7 +766,13 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private void sendIcons(long now) {
         if (!framesAllowed(Hub.bikeCapabilities != null && Hub.bikeCapabilities.statusIcons, "status icons")) return;
         boolean batteryOn = Hub.prefs(this).getBoolean(Hub.KEY_PHONE_BATTERY, true);
-        int percent = getSystemService(BatteryManager.class).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        int reading = getSystemService(BatteryManager.class).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        if (!phoneBattery.accept(reading, now)) {
+            // the dash draws a low or unknown battery with an exclamation: hold the last good reading
+            Logger.log("Icons: phone battery reading " + reading + " ignored, keeping "
+                    + phoneBattery.percent() + " %");
+        }
+        int percent = phoneBattery.percent();
         boolean charging = pluggedIn();
         int battery = icon(Hub.KEY_ICON_BATTERY, batteryOn ? KawaProtocol.batteryLevel(percent, charging) : KawaProtocol.BATTERY_NONE);
         int voice = icon(Hub.KEY_ICON_VOICE, 0);
@@ -1010,7 +1018,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     /** Tyre, ABS and battery warnings: shown on Home while they last, announced once each. */
     private void bikeAlerts(long now) {
-        java.util.List<BikeAlerts.Alert> alerts = BikeAlerts.current(Hub.bike, now);
+        java.util.List<BikeAlerts.Alert> alerts = bikeAlertMonitor.current(Hub.bike, now);
+        if (!Hub.prefs(this).getBoolean(Hub.KEY_BATTERY_WARNINGS, true)) {
+            alerts = BikeAlerts.withoutBattery(alerts);
+        }
         Hub.bikeAlerts = alerts;
         // a warning that went away (tyre pumped up, "low" became "not charging") leaves no stale notification
         java.util.Set<String> ids = new java.util.HashSet<>();
@@ -1179,6 +1190,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private static final int REFUEL_NOTIFICATION_ID = 9_001;
     private final BikeAlerts.Tracker alertTracker = new BikeAlerts.Tracker();
+    private final BikeAlerts.Monitor bikeAlertMonitor = new BikeAlerts.Monitor();
     private static final int BIKE_ALERT_NOTIFICATION_BASE = 10_000;
 
     /** The camera no longer ahead: the next one is announced again. */
