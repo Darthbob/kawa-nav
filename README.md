@@ -236,8 +236,10 @@ not shown; tyre and ABS warnings stay.
 
 While connected, KawaNav sends the phone's battery level to the dash every 5 s, as Rideology does.
 The dash shows 4 steps (Rideology's thresholds): up to 10 %, up to 30 %, up to 70 %, above 70 %.
-While the phone is on a charger, the icon's charging version is sent (same bars). Switched off, the
-icon is removed. Not yet tried on the bike.
+While the phone is on a charger, the icon's charging version is sent (same bars). A reading Android
+cannot give, or a drop that is impossible in five seconds, keeps the last level shown, so the dash
+does not flash its low-battery icon (issue #7). Switched off, the icon is removed. Not yet tried on
+the bike.
 
 #### Headset icon
 
