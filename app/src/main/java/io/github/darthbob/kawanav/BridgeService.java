@@ -1010,7 +1010,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     /** Tyre, ABS and battery warnings: shown on Home while they last, announced once each. */
     private void bikeAlerts(long now) {
-        java.util.List<BikeAlerts.Alert> alerts = BikeAlerts.current(Hub.bike, now);
+        java.util.List<BikeAlerts.Alert> alerts = bikeAlertMonitor.current(Hub.bike, now);
+        if (!Hub.prefs(this).getBoolean(Hub.KEY_BATTERY_WARNINGS, true)) {
+            alerts = BikeAlerts.withoutBattery(alerts);
+        }
         Hub.bikeAlerts = alerts;
         // a warning that went away (tyre pumped up, "low" became "not charging") leaves no stale notification
         java.util.Set<String> ids = new java.util.HashSet<>();
@@ -1179,6 +1182,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private static final int REFUEL_NOTIFICATION_ID = 9_001;
     private final BikeAlerts.Tracker alertTracker = new BikeAlerts.Tracker();
+    private final BikeAlerts.Monitor bikeAlertMonitor = new BikeAlerts.Monitor();
     private static final int BIKE_ALERT_NOTIFICATION_BASE = 10_000;
 
     /** The camera no longer ahead: the next one is announced again. */

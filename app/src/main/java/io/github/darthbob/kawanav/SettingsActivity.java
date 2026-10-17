@@ -280,6 +280,8 @@ public class SettingsActivity extends KawaActivity {
                 pos -> prefs.edit().putInt(Hub.KEY_LOOKAHEAD, LOOKAHEADS[pos]).apply()));
         addRow(c, switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
         addRow(c, switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
+        addRow(c, switchRow("Battery warnings", "When the bike's 12 V battery reads low, or the engine is "
+                + "running and it is not being charged", Hub.KEY_BATTERY_WARNINGS, true));
         addRow(c, switchRow("Speed camera warnings", CAMERAS_INFO, Hub.KEY_CAMERAS, false,
                 on -> BridgeService.settingsChanged()));
         String[] warn = new String[CAMERA_WARNS.length];

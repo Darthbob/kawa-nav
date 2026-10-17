@@ -54,12 +54,12 @@ public final class BikeAlerts {
         }
         BikeFrames.VehicleInfo info = b.info;
         if (info != null && now - b.infoAt <= FRESH_MS) {
-            double v = battery(info);
             boolean running = liveFresh && live.rpm == live.rpm && live.rpm > RUNNING_RPM;
-            if (v == v && running && v < NOT_CHARGING_V) {
+            double v = lowVoltage(info, running ? NOT_CHARGING_V : LOW_BATTERY_V);
+            if (v == v && running) {
                 out.add(new Alert("battery_charging", "Battery is not being charged",
                         String.format(Locale.ROOT, "%.1f V with the engine running: check the charging system", v)));
-            } else if (v == v && !running && v < LOW_BATTERY_V) {
+            } else if (v == v) {
                 out.add(new Alert("battery_low", "Battery is low",
                         String.format(Locale.ROOT, "%.1f V: the bike may not start next time", v)));
             }
@@ -72,9 +72,70 @@ public final class BikeAlerts {
         return info.ecuBatteryV == info.ecuBatteryV ? info.ecuBatteryV : info.meterBatteryV;
     }
 
+    /**
+     * The lowest voltage the bike reports, when **every** reading it gives is below {@code threshold}
+     * (NaN otherwise). The ECU's supply dips under load — the fuel pump priming before a start, a cold
+     * start — while the dash's own reading stays normal, so one channel alone must not raise a warning.
+     * The ECU reading is shown when it is the lower one, as it is the one that dipped.
+     */
+    static double lowVoltage(BikeFrames.VehicleInfo info, double threshold) {
+        boolean ecu = info.ecuBatteryV == info.ecuBatteryV;
+        boolean meter = info.meterBatteryV == info.meterBatteryV;
+        if (!ecu && !meter) return Double.NaN;
+        double low = Double.POSITIVE_INFINITY;
+        if (ecu) {
+            if (!(info.ecuBatteryV < threshold)) return Double.NaN;
+            low = Math.min(low, info.ecuBatteryV);
+        }
+        if (meter) {
+            if (!(info.meterBatteryV < threshold)) return Double.NaN;
+            low = Math.min(low, info.meterBatteryV);
+        }
+        return low;
+    }
+
+    /** The alerts without the battery ones (the "Battery warnings" setting is off). */
+    public static List<Alert> withoutBattery(List<Alert> alerts) {
+        List<Alert> out = new ArrayList<>();
+        for (Alert a : alerts) if (!a.id.startsWith("battery_")) out.add(a);
+        return out;
+    }
+
     private static String tyre(double kpa) {
         return kpa == kpa ? String.format(Locale.ROOT, "%.2f bar now: stop and check it", kpa / 100.0)
                 : "Stop and check it";
+    }
+
+    /**
+     * The bike's warnings as they stand now, with the battery ones held back until a second 0x41 has
+     * said the same thing. The meter answers 0x41 every 20 s, and one reading taken while the pump
+     * primes or the engine has just started is not a battery condition; the next answer, 20 s later,
+     * decides. A battery warning that changes kind (low, then not charging) waits one answer as well.
+     */
+    public static final class Monitor {
+        private long infoAt = Long.MIN_VALUE;
+        private String previousId, confirmedId;
+
+        public List<Alert> current(BikeData b, long now) {
+            List<Alert> out = BikeAlerts.current(b, now);
+            if (b.info == null || now - b.infoAt > FRESH_MS) {
+                infoAt = Long.MIN_VALUE;
+                previousId = confirmedId = null;
+                return out;
+            }
+            String id = null;
+            for (Alert a : out) if (a.id.startsWith("battery_")) id = a.id;
+            if (b.infoAt != infoAt) {
+                confirmedId = id != null && id.equals(previousId) ? id : null;
+                previousId = id;
+                infoAt = b.infoAt;
+            }
+            if (previousId != null && !previousId.equals(confirmedId)) {
+                String held = previousId;
+                out.removeIf(a -> a.id.equals(held));
+            }
+            return out;
+        }
     }
 
     /**
