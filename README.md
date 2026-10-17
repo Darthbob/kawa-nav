@@ -427,8 +427,9 @@ fallback.
 - KawaNav then starts when the bike is switched on or the chosen intercom connects, also with the
   phone locked.
 - After an automatic start it stops itself when the bike has been gone for 5 min.
-- **Stop** by hand (button or notification) pauses autostart until the bike has been switched off
-  (gone for at least 20 s) or for at most 1 hour; **Start** ends the pause.
+- **Stop** by hand (button or notification) pauses the bike's autostart until the bike has been
+  switched off (gone for at least 20 s) or for at most 1 hour; **Start** ends the pause. The helmet
+  intercom always starts KawaNav when it connects, and ends the pause too.
 
 The Start/Stop button on Home is only a manual fallback (autostart missed, testing).
 

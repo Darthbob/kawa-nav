@@ -31,9 +31,11 @@ public class HelmetTrigger extends BroadcastReceiver {
         String helmet = Hub.prefs(context).getString(Hub.KEY_HELMET, null);
         if (d == null || helmet == null || !helmet.equals(d.getAddress())) return;
         Logger.init(context);
+        // the helmet is switched on to ride: it always starts, also after a manual stop (that pause is
+        // for the bike, which advertises again right after Stop; the helmet stays connected then)
         if (Hub.autostartPaused(context)) {
-            Logger.log("Helmet " + d.getName() + " connected, but the bridge was stopped by hand: not starting");
-            return;
+            Hub.setStoppedByUser(context, false);
+            Logger.log("Helmet " + d.getName() + " connected: autostart pause after the manual stop ended");
         }
         if (Hub.serviceRunning) {
             Logger.log("Helmet " + d.getName() + " connected, bridge already running");
