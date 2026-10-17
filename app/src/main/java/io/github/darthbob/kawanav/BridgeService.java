@@ -87,6 +87,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /** Status icon fields last sent to the meter (one per 4 bits, -1: none since connecting) and when. */
     private int iconsSent = -1;
     private long iconsSentAt;
+    /** The phone's battery percentage to report: the last plausible reading (issue #7). */
+    private final PhoneBattery phoneBattery = new PhoneBattery();
     /** Android's headset (HFP) and A2DP profiles, to see whether the chosen helmet is connected. */
     private BluetoothProfile headsetProfile, a2dpProfile;
     private long lastTick;
@@ -764,7 +766,13 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private void sendIcons(long now) {
         if (!framesAllowed(Hub.bikeCapabilities != null && Hub.bikeCapabilities.statusIcons, "status icons")) return;
         boolean batteryOn = Hub.prefs(this).getBoolean(Hub.KEY_PHONE_BATTERY, true);
-        int percent = getSystemService(BatteryManager.class).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        int reading = getSystemService(BatteryManager.class).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        if (!phoneBattery.accept(reading, now)) {
+            // the dash draws a low or unknown battery with an exclamation: hold the last good reading
+            Logger.log("Icons: phone battery reading " + reading + " ignored, keeping "
+                    + phoneBattery.percent() + " %");
+        }
+        int percent = phoneBattery.percent();
         boolean charging = pluggedIn();
         int battery = icon(Hub.KEY_ICON_BATTERY, batteryOn ? KawaProtocol.batteryLevel(percent, charging) : KawaProtocol.BATTERY_NONE);
         int voice = icon(Hub.KEY_ICON_VOICE, 0);
