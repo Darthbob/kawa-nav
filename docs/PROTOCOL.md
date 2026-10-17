@@ -114,6 +114,11 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   own row says only "Total time" with no unit (`vehicle_list_item_totaltime`, from the APK's resources),
   so the "h" KawaNav used to append was its own guess. KawaNav shows hours and minutes now.
   (inferred from the value; not yet checked against the dash's own total-time display)
+- **Average fuel mileage** (bytes 32-33, × 0.1) and **fuel consumption** (bytes 49-50, × 0.1) are in
+  **km/L**, whatever the dash's own unit setting: a Z900 with the dash set to L/100 km sent 19.2,
+  which is its rider's 5.2 L/100 km (100 / 19.2; issue #9). KawaNav shows them in the unit the rider
+  picks, converting as Rideology does (`u6/ib.java`: 100 / v for L/100 km, × 3.78 / 1.61 for MPG US,
+  × 4.54 / 1.61 for MPG UK).
 - Values the meter fills in when it has none are dropped, not shown: `0xFFFFFFFF`, `0xFFFFF` (1048575),
   `0xFFFFF` (13107.1), `8191`, `1023`, `255`, `102.3`, `25.5`, `15`, `127` (`qe/b.java:520-542` and the
   `h.a()`/`q.a()` helpers). (verified)

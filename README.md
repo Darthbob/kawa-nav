@@ -184,6 +184,7 @@ In the **Settings** tab:
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
 | [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
+| [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | Set the dash clock from the phone | Off | Sets the dash clock once per connection |
 | Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
@@ -223,6 +224,13 @@ bend is shown from 300 m before it, and only if it starts at least 50 m before M
 afterwards the dash goes back to Maps' arrow. "Sharp only" shows sharp bends and hairpins, "All"
 every bend that counts under "Which curves count". Off by default: the dash then shows only Google
 Maps. Needs downloaded roads like free ride.
+
+#### Fuel economy
+
+The average and instant fuel economy the dash reports come in km/L, whatever the dash's own display
+is set to. KawaNav shows them in the unit picked here — km/L, L/100 km, MPG US or MPG UK, the same
+conversions Rideology uses — with the unit spelled out ("5.2 L/100 km"). Rides and refuels keep
+L/100 km.
 
 #### Battery warnings
 
