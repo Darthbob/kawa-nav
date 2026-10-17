@@ -3,7 +3,8 @@
     {
       "version": "1.0.2",
       "changes": [
-        "A new version is offered when you open the app, not only after the phone restarted"
+        "A new version is offered when you open the app, not only after the phone restarted",
+        "The Bluetooth device chosen for autostart (helmet intercom, headset, …) always starts KawaNav when it connects, also within the hour after you stopped it by hand"
       ]
     },
     {
