@@ -623,7 +623,7 @@ public class BikeActivity extends KawaActivity {
             add(r, s, "Average fuel economy", i.avgMileage, "%.1f (dash units)");
             add(r, s, "Fuel consumption", i.fuelConsumption, "%.1f (dash units)");
             if (i.avgSpeedKmh >= 0) r.add(new String[]{s, "Average speed", i.avgSpeedKmh + " km/h"});
-            if (i.totalTime >= 0) r.add(new String[]{s, "Total time", i.totalTime + " h"});
+            if (i.totalTime >= 0) r.add(new String[]{s, "Total time", Ride.hoursMinutes(i.totalTime)});
             add(r, s, "Outside temperature", i.outsideC, "%.0f °C");
             // the largest lean the dash keeps for the trip (0x41 bytes 53/54)
             if (i.maxLeanLeft >= 0) r.add(new String[]{s, "Max lean left", i.maxLeanLeft + "°"});

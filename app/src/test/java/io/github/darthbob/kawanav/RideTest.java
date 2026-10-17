@@ -583,6 +583,14 @@ public class RideTest {
     }
 
     @Test
+    public void theDashTotalTimeIsMinutes() {
+        assertEquals("82 h 39 min", Ride.hoursMinutes(4959));   // the Z900 in issue #8
+        assertEquals("2 h 00 min", Ride.hoursMinutes(120));
+        assertEquals("59 min", Ride.hoursMinutes(59));
+        assertEquals("0 min", Ride.hoursMinutes(0));
+    }
+
+    @Test
     public void distanceBetweenPoints() {
         assertEquals(111.3, Ride.distanceM(45.0, 7.0, 45.001, 7.0), 0.5);
         assertEquals(0, Ride.distanceM(45, 7, 45, 7), 1e-9);

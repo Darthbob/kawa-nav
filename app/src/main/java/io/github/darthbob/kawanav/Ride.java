@@ -47,6 +47,15 @@ public final class Ride {
         return m >= 1000 ? String.format(Locale.ROOT, "%.1f km", m / 1000) : String.format(Locale.ROOT, "%.0f m", m);
     }
 
+    /**
+     * "82 h 39 min" or "39 min", from the number of minutes the dash reports as its total time
+     * (0x41, bytes 51-52: the value is in minutes, not hours — see PROTOCOL.md).
+     */
+    public static String hoursMinutes(int minutes) {
+        int m = Math.max(0, minutes);
+        return m < 60 ? m + " min" : String.format(Locale.ROOT, "%d h %02d min", m / 60, m % 60);
+    }
+
     /** "1 h 05 min", "12 min" or, for a short ride, "34 s". */
     public String duration() {
         long min = activeMs / 60_000;

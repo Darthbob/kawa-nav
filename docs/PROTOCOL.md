@@ -109,6 +109,11 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   total time. The two remaining bits of byte 47 — **bit 3 = max lean left, bit 2 = max lean right** —
   are the only valid bits Rideology reads without a config gate (`qe/b.java:419-422`; they reach
   `setMax_lean_angle_L/R` at `qe/b.java:541-544`). (verified)
+- **Total time** (bytes 51-52, 13 bits, 8191 = none) is in **minutes**, not hours: a four-month-old
+  Z900 reported 4959, which as hours would be 206 days of running, as minutes 82 h 39 min. Rideology's
+  own row says only "Total time" with no unit (`vehicle_list_item_totaltime`, from the APK's resources),
+  so the "h" KawaNav used to append was its own guess. KawaNav shows hours and minutes now.
+  (inferred from the value; not yet checked against the dash's own total-time display)
 - Values the meter fills in when it has none are dropped, not shown: `0xFFFFFFFF`, `0xFFFFF` (1048575),
   `0xFFFFF` (13107.1), `8191`, `1023`, `255`, `102.3`, `25.5`, `15`, `127` (`qe/b.java:520-542` and the
   `h.a()`/`q.a()` helpers). (verified)
