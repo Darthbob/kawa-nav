@@ -3,7 +3,7 @@
     {
       "version": "1.0.2",
       "changes": [
-        "The helmet intercom always starts KawaNav when it connects, also within the hour after you stopped it by hand"
+        "The Bluetooth device chosen for autostart (helmet intercom, headset, …) always starts KawaNav when it connects, also within the hour after you stopped it by hand"
       ]
     },
     {

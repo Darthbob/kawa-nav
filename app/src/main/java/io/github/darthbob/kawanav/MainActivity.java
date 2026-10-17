@@ -651,8 +651,8 @@ public class MainActivity extends KawaActivity {
             chipInk = Ui.inkSecondary(night);
             boolean autostart = BikePresence.enabled(this) || prefs.getString(Hub.KEY_HELMET, null) != null;
             statusHint.setText(autostart && Hub.autostartPaused(this)
-                    ? "Stopped by hand: the automatic start waits until the bike is switched off (the helmet "
-                    + "still starts it). Start connects now."
+                    ? "Stopped by hand: the automatic start waits until the bike is switched off (your Bluetooth "
+                    + "device still starts it). Start connects now."
                     : "Start before the ride, or let KawaNav start by itself (Settings).");
         } else {
             boolean noBike = Hub.bikeStatus.startsWith("No paired");
