@@ -279,6 +279,9 @@ public class SettingsActivity extends KawaActivity {
         addRow(c, choiceRow("Look ahead", "How far ahead to search for the next curve", la, laSel,
                 pos -> prefs.edit().putInt(Hub.KEY_LOOKAHEAD, LOOKAHEADS[pos]).apply()));
         addRow(c, switchRow("Distances in feet", "Instead of metres", Hub.KEY_IMPERIAL, false));
+        addRow(c, choiceRow("Fuel economy", "The unit for the bike's average and instant fuel economy",
+                FuelEconomy.LABELS, prefs.getInt(Hub.KEY_FUEL_UNIT, FuelEconomy.DEFAULT),
+                pos -> prefs.edit().putInt(Hub.KEY_FUEL_UNIT, pos).apply()));
         addRow(c, switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
         addRow(c, switchRow("Battery warnings", "When the bike's 12 V battery reads low, or the engine is "
                 + "running and it is not being charged", Hub.KEY_BATTERY_WARNINGS, true));

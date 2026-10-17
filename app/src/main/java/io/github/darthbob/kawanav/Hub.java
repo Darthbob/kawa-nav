@@ -166,6 +166,8 @@ public final class Hub {
     public static final int CAMERA_WARN_DEFAULT = 500;
     /** Warnings about the bike's 12 V battery (low with the engine off, not charging with it running). */
     public static final String KEY_BATTERY_WARNINGS = "battery_warnings";
+    /** The unit fuel economy is shown in: an index into {@link FuelEconomy#LABELS}. */
+    public static final String KEY_FUEL_UNIT = "fuel_unit";
     /** Start recording by itself when the bike is moving (off by default). */
     public static final String KEY_RIDE_AUTO = "ride_auto";
     /** Set while the bridge is being started only because a ride was asked for. */

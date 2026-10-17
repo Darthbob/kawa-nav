@@ -449,7 +449,7 @@ public class BikeActivity extends KawaActivity {
         double v = info == null ? Double.NaN : battery(info);
         battery.setText(Double.isNaN(v) ? "Battery –" : String.format(Locale.ROOT, "Battery %.1f V", v));
 
-        List<String[]> rows = rows(b, now);
+        List<String[]> rows = rows(b, now, prefs.getInt(Hub.KEY_FUEL_UNIT, FuelEconomy.DEFAULT));
         List<String> labels = new ArrayList<>();
         for (String[] r : rows) labels.add(r[0] + "/" + r[1]);
         if (!labels.equals(shownLabels)) {
@@ -611,7 +611,7 @@ public class BikeActivity extends KawaActivity {
     }
 
     /** All rows to show: {section, label, value}; values the bike does not have are left out. */
-    static List<String[]> rows(BikeData b, long now) {
+    static List<String[]> rows(BikeData b, long now, int fuelUnit) {
         List<String[]> r = new ArrayList<>();
         BikeFrames.VehicleInfo i = b.info;
         if (i != null) {
@@ -620,8 +620,11 @@ public class BikeActivity extends KawaActivity {
             if (i.odometerKm >= 0) r.add(new String[]{s, "Odometer", String.format(Locale.ROOT, "%,d km", i.odometerKm)});
             add(r, s, "Trip A", i.tripAKm, "%,.1f km");
             add(r, s, "Trip B", i.tripBKm, "%,.1f km");
-            add(r, s, "Average fuel economy", i.avgMileage, "%.1f (dash units)");
-            add(r, s, "Fuel consumption", i.fuelConsumption, "%.1f (dash units)");
+            // the dash sends both in km/L, whatever its own display is set to (issue #9)
+            String avg = FuelEconomy.format(i.avgMileage, fuelUnit);
+            if (!avg.isEmpty()) r.add(new String[]{s, "Average fuel economy", avg});
+            String consumption = FuelEconomy.format(i.fuelConsumption, fuelUnit);
+            if (!consumption.isEmpty()) r.add(new String[]{s, "Fuel consumption", consumption});
             if (i.avgSpeedKmh >= 0) r.add(new String[]{s, "Average speed", i.avgSpeedKmh + " km/h"});
             if (i.totalTime >= 0) r.add(new String[]{s, "Total time", Ride.hoursMinutes(i.totalTime)});
             add(r, s, "Outside temperature", i.outsideC, "%.0f °C");
