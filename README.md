@@ -126,7 +126,7 @@ The app's own screen is in English.
 
 1. Download the APK from the [Releases](../../releases) page and open it on the phone (allow
    installing apps from your browser or file manager when Android asks). Later versions: KawaNav
-   offers them itself when you open it.
+   offers them itself when you open it (it looks for one at most every 6 hours).
 2. Open KawaNav. On the first start it walks you through pairing, permissions and notification
    access, explaining each step. Anything missing later shows up in an **orange banner** at the top
    of Home, each item with a button that fixes it.
@@ -427,8 +427,10 @@ fallback.
 - KawaNav then starts when the bike is switched on or the chosen intercom connects, also with the
   phone locked.
 - After an automatic start it stops itself when the bike has been gone for 5 min.
-- **Stop** by hand (button or notification) pauses autostart until the bike has been switched off
-  (gone for at least 20 s) or for at most 1 hour; **Start** ends the pause.
+- **Stop** by hand (button or notification) pauses the bike's autostart until the bike has been
+  switched off (gone for at least 20 s) or for at most 1 hour; **Start** ends the pause. The
+  Bluetooth device chosen under "When my helmet connects" always starts KawaNav when it connects,
+  and ends the pause too.
 
 The Start/Stop button on Home is only a manual fallback (autostart missed, testing).
 

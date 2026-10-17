@@ -82,7 +82,10 @@ public class MainActivity extends KawaActivity {
     private boolean listenerSettingsOpened; // notification access settings opened, see onResume
     // in-app update
     private static final String KEY_UPDATE_SKIPPED = "update_skipped"; // version the user skipped
-    private static boolean updateChecked; // once per app start, not again when the screen is rebuilt
+    // when the last update check ran: the notification listener keeps the process alive for days, so it
+    // is checked again whenever the app is opened and this is long enough ago; 0 = not yet, or it failed
+    private static volatile long updateCheckedAt;
+    private static final long UPDATE_CHECK_MS = 6 * 60 * 60_000L;
     private Updater.Release pendingUpdate; // waits for "Install unknown apps", see onResume
 
     @Override
@@ -99,10 +102,6 @@ public class MainActivity extends KawaActivity {
         if (savedInstanceState == null && !fromHistory) pendingIntent = getIntent();
         android.companion.AssociationInfo bike = BikePresence.association(this);
         if (bike != null) BikePresence.observe(this, bike); // make sure the system keeps watching
-        if (!updateChecked) {
-            updateChecked = true;
-            checkForUpdate();
-        }
     }
 
     /** Intent from adb to act on once resumed: services using GPS may only start while we are visible. */
@@ -211,6 +210,11 @@ public class MainActivity extends KawaActivity {
             if (!hasNotificationAccess() && installedFromFile()) handler.post(this::showRestrictedSettingsHelp);
         }
         handler.post(this::continueSetup);
+        long now = System.currentTimeMillis();
+        if (now - updateCheckedAt >= UPDATE_CHECK_MS) {
+            updateCheckedAt = now;
+            checkForUpdate();
+        }
         if (pendingUpdate != null) {
             // back from Android's "Install unknown apps" screen
             Updater.Release r = pendingUpdate;
@@ -651,7 +655,8 @@ public class MainActivity extends KawaActivity {
             chipInk = Ui.inkSecondary(night);
             boolean autostart = BikePresence.enabled(this) || prefs.getString(Hub.KEY_HELMET, null) != null;
             statusHint.setText(autostart && Hub.autostartPaused(this)
-                    ? "Stopped by hand: the automatic start waits until the bike is switched off. Start connects now."
+                    ? "Stopped by hand: the automatic start waits until the bike is switched off (your Bluetooth "
+                    + "device still starts it). Start connects now."
                     : "Start before the ride, or let KawaNav start by itself (Settings).");
         } else {
             boolean noBike = Hub.bikeStatus.startsWith("No paired");
@@ -916,6 +921,7 @@ public class MainActivity extends KawaActivity {
                 if (r != null) runOnUiThread(() -> offerUpdate(r));
             } catch (Exception e) {
                 Logger.log("Update check failed: " + e);
+                updateCheckedAt = 0; // offline, say: try again the next time the app is opened
             }
         }, "update-check").start();
     }

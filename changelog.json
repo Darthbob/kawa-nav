@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "1.0.2",
+      "changes": [
+        "A new version is offered when you open the app, not only after the phone restarted",
+        "The Bluetooth device chosen for autostart (helmet intercom, headset, …) always starts KawaNav when it connects, also within the hour after you stopped it by hand"
+      ]
+    },
+    {
       "version": "1.0.1",
       "changes": [
         "Ride distance uses the odometer and the GPS together: no more 1 km steps, and closer to the real distance",
