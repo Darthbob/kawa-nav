@@ -81,6 +81,12 @@ ALIASES = {
 MAGIC = "#kawanav-ride 1"
 COS45 = math.sqrt(0.5)
 
+# The accelerations are specific forces: on a slope they carry g × sin θ, about 0.0098 g per 1 % of
+# grade (docs/PROTOCOL.md, 0x4A). The forward value is corrected with the slope from the GPS track.
+G_PER_SLOPE_PERCENT = 0.0098
+SLOPE_WINDOW_S = 10.0
+SLOPE_MIN_DISTANCE_M = 80.0
+
 
 def imu_forward(x, y):
     """The bike's forward acceleration from the IMU pair, which is mounted at 45 degrees."""
@@ -108,6 +114,7 @@ class Ride:
         self.rows = sample_rows
         self.header = header
         self.warnings = []
+        self._slopes = None
 
     def __len__(self):
         return len(self.rows)
@@ -140,12 +147,73 @@ class Ride:
     # --- derived values
 
     def forward(self):
-        """Forward acceleration: the bike's own when it sends one, else the turned IMU pair."""
+        """Forward acceleration, slope-corrected.
+
+        The bike's own acceleration (0x4A) and the turned IMU pair are both specific forces: on a
+        slope they carry the gravity component, about 0.0098 g per 1 % of grade. The returned value
+        is the raw one minus that term, with the grade from road_slope_percent(). Where the track
+        has no usable slope the value stays raw.
+        """
         own = self.col("acc_g")
         if any(v is not None for v in own):
-            return own
-        x, y = self.col("imu_ax_g"), self.col("imu_ay_g")
-        return [imu_forward(a, b) for a, b in zip(x, y)]
+            raw = own
+        else:
+            x, y = self.col("imu_ax_g"), self.col("imu_ay_g")
+            raw = [imu_forward(a, b) for a, b in zip(x, y)]
+        slopes = self.road_slope_percent()
+        return [None if a is None else a - (0.0 if s is None else G_PER_SLOPE_PERCENT * s)
+                for a, s in zip(raw, slopes)]
+
+    def track_distance_m(self):
+        """Distance along the GPS track at each row, in metres; None where this row has no fix."""
+        out = [None] * len(self.rows)
+        total, prev = 0.0, None
+        for i, r in enumerate(self.rows):
+            lat, lon = r.get("lat"), r.get("lon")
+            if lat is None or lon is None:
+                continue
+            if prev is not None:
+                d = haversine_m(prev[0], prev[1], lat, lon)
+                if d < 500:                     # the same rule as gps_distance_m: a jump is no distance
+                    total += d
+            out[i] = total
+            prev = (lat, lon)
+        return out
+
+    def road_slope_percent(self):
+        """The road's grade at each row, in %, from a regression of altitude over distance.
+
+        The window is ±SLOPE_WINDOW_S, so the altitude's few metres of noise do not turn into an
+        acceleration. None where the window has fewer than five fixes or covers less than
+        SLOPE_MIN_DISTANCE_M. The result is clamped to ±30 %, beyond anything a road does.
+        """
+        if self._slopes is not None:
+            return self._slopes
+        t = [v / 1000.0 for v in self.seconds()]      # seconds() hands out milliseconds
+        alt = self.col("alt_m")
+        dist = self.track_distance_m()
+        out = [None] * len(self.rows)
+        for i in range(len(self.rows)):
+            lo = bisect.bisect_left(t, t[i] - SLOPE_WINDOW_S)
+            hi = bisect.bisect_right(t, t[i] + SLOPE_WINDOW_S)
+            xs, ys, base = [], [], None
+            for j in range(lo, hi):
+                if dist[j] is None or alt[j] is None:
+                    continue
+                if base is None:
+                    base = dist[j]
+                xs.append(dist[j] - base)
+                ys.append(alt[j])
+            if len(xs) < 5 or xs[-1] - xs[0] < SLOPE_MIN_DISTANCE_M:
+                continue
+            mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+            var = sum((x - mx) ** 2 for x in xs)
+            if var <= 0:
+                continue
+            cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+            out[i] = max(-30.0, min(30.0, 100.0 * cov / var))
+        self._slopes = out
+        return out
 
     def t_ms(self):
         return self.col("t_ms")
@@ -720,7 +788,7 @@ def map_data(ride, events, opts, metrics):
                    ("thr_pct", "Throttle", "%", 0, "seq", {"lo": 0}),
                    ("rpm", "Engine speed", "rpm", 0, "seq", {}),
                    ("gear", "Gear", "", 0, "gear", {}),
-                   ("forward", "Acceleration", "g", 2, "div", {"signed": True}),
+                   ("forward", "Acceleration (slope-corrected)", "g", 2, "div", {"signed": True}),
                    ("alt_m", "Altitude", "m", 0, "seq", {}),
                ) if key in series]
     readout = [dict(key=key, label=label, unit=unit, decimals=d, **extra)

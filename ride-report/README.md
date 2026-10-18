@@ -81,7 +81,7 @@ values its layout has are used). A file that is not a ride is refused with a mes
   | Moment | Rule (change it with the option) |
   |---|---|
   | Wheel slip | the two filtered wheel speeds at least **3 km/h** apart (`--slip`) |
-  | Hard braking | forward acceleration at or below **−0.35 g** (`--brake`) |
+  | Hard braking | forward acceleration, slope-corrected from the GPS altitude, at or below **−0.35 g** (`--brake`) |
   | Front wheel up | the wheelie flag, or **5°** of wheelie angle (`--wheelie`) |
   | Gear changes | the gear is not the one of the second before (with the throttle telling a shift from a clutch) |
   | Traction control | any of the four traction-control readings above zero |
@@ -93,8 +93,8 @@ values its layout has are used). A file that is not a ride is refused with a mes
 
 The two traction-control readings are **not understood**: the app and this tool report "the reading moved",
 not a proven intervention — Kawasaki's own names for them say "level" and its app never interprets them.
-See [docs/PROTOCOL.md](../docs/PROTOCOL.md). The same goes for which of the three rotation rates is
-which axis: they are not reported here for that reason.
+See [docs/PROTOCOL.md](../docs/PROTOCOL.md). The three rotation rates are not reported either: one is yaw
+and one roll, but their unit and scale are still open, so an absolute value would be a guess.
 
 A value the bike did not send is an empty cell in the export, and it is treated as *absent* everywhere —
 never as a zero. A real zero (no throttle, upright, no braking) is a value and is reported as one.

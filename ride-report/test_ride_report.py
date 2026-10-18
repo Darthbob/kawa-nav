@@ -215,6 +215,22 @@ def test_events(tmp):
     _, events = kinds(gentle, "gentle.csv")
     check("a gentle stop is not hard braking", "braking" not in events, events)
 
+    # the accelerations are specific forces: on a descent gravity reads as braking until the slope
+    # correction takes it out (0.0098 g per 1 % of grade, docs/PROTOCOL.md)
+    descent = seconds(30, kmh=60, acc_g=-0.10)
+    for i, s in enumerate(descent):
+        s.update(lat=45.0, lon=7.0 + i * 0.000212, alt_m=100.0 - i * 2.0)   # 60 km/h, -12 %
+    ride = ride_with(tmp, descent, "descent.csv")
+    check("the road's grade comes from the GPS track", near(ride.road_slope_percent()[15], -12.0, 0.3),
+          ride.road_slope_percent()[15])
+    check("slope correction takes the descent out of the acceleration",
+          near(ride.forward()[15], 0.018, 0.03), ride.forward()[15])
+    events = [e.kind for e in rr.find_events(ride, rr.parse_args(["x", "--events", "--brake", "0.05"]))]
+    check("a descent is not hard braking", "braking" not in events, events)
+
+    flat = ride_with(tmp, seconds(5, acc_g=-0.2), "no-track.csv")
+    check("without a track the acceleration stays raw", near(flat.forward()[2], -0.2), flat.forward()[2])
+
     gears = seconds(5, gear=1, thr_pct=30)
     gears[2]["gear"] = 2
     gears[3]["thr_pct"] = 0
