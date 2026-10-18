@@ -89,6 +89,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private long iconsSentAt;
     /** The phone's battery percentage to report: the last plausible reading (issue #7). */
     private final PhoneBattery phoneBattery = new PhoneBattery();
+    /** The missing first battery reading is logged once, not every 5 s. */
+    private boolean batteryUnknownLogged;
     /** Android's headset (HFP) and A2DP profiles, to see whether the chosen helmet is connected. */
     private BluetoothProfile headsetProfile, a2dpProfile;
     private long lastTick;
@@ -766,24 +768,42 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private void sendIcons(long now) {
         if (!framesAllowed(Hub.bikeCapabilities != null && Hub.bikeCapabilities.statusIcons, "status icons")) return;
         boolean batteryOn = Hub.prefs(this).getBoolean(Hub.KEY_PHONE_BATTERY, true);
-        int reading = getSystemService(BatteryManager.class).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        // The sticky battery broadcast is there as soon as the process starts; the battery service's
+        // capacity can answer 0 or unknown for a while after a reconnect on some phones (issue #7).
+        Intent battery = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        int sticky = battery == null ? -1 : PhoneBattery.fromLevel(
+                battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1),
+                battery.getIntExtra(BatteryManager.EXTRA_SCALE, -1));
+        int property = getSystemService(BatteryManager.class).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        int reading = sticky > 0 && sticky <= 100 ? sticky : property;
         if (!phoneBattery.accept(reading, now)) {
             // the dash draws a low or unknown battery with an exclamation: hold the last good reading
-            Logger.log("Icons: phone battery reading " + reading + " ignored, keeping "
-                    + phoneBattery.percent() + " %");
+            Logger.log("Icons: phone battery reading " + reading + " (sticky " + sticky + ", property "
+                    + property + ") ignored, keeping " + phoneBattery.percent() + " %");
         }
         int percent = phoneBattery.percent();
-        boolean charging = pluggedIn();
-        int battery = icon(Hub.KEY_ICON_BATTERY, batteryOn ? KawaProtocol.batteryLevel(percent, charging) : KawaProtocol.BATTERY_NONE);
+        if (batteryOn && percent < 0) {
+            // 15 ("n/a") is drawn with the warning icon too: send no icon frame until Android gives a
+            // reading, instead of flashing an empty battery at every start (issue #7)
+            if (!batteryUnknownLogged) Logger.log("Icons: no phone battery reading yet, holding the status icons");
+            batteryUnknownLogged = true;
+            return;
+        }
+        batteryUnknownLogged = false;
+        // plugged in rather than "charging": the icon should not flip when the phone pauses charging
+        // (full, adaptive charging at 80 %, hot)
+        boolean charging = battery != null && battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
+        int batteryLevel = icon(Hub.KEY_ICON_BATTERY,
+                batteryOn ? KawaProtocol.batteryLevel(percent, charging) : KawaProtocol.BATTERY_NONE);
         int voice = icon(Hub.KEY_ICON_VOICE, 0);
         int headset = icon(Hub.KEY_ICON_HEADSET, helmetConnected() ? 1 : 0);
         // the dash riding-log icon follows the recorder (the debug card can still override it)
         int ridingLog = icon(Hub.KEY_ICON_RIDING_LOG, recorder.state() == RideRecorder.RECORDING ? 1
                 : recorder.state() == RideRecorder.PAUSED ? 2 : 0);
-        int icons = battery << 12 | voice << 8 | headset << 4 | ridingLog;
+        int icons = batteryLevel << 12 | voice << 8 | headset << 4 | ridingLog;
         if (icons == iconsSent && now - iconsSentAt < ICONS_MS) return;
-        byte[] frame = KawaProtocol.meterIndicationFrame(battery, voice, headset, ridingLog);
-        String label = "battery " + battery + " (phone " + percent + "%" + (charging ? " charging" : "") + "), voice " + voice
+        byte[] frame = KawaProtocol.meterIndicationFrame(batteryLevel, voice, headset, ridingLog);
+        String label = "battery " + batteryLevel + " (phone " + percent + "%" + (charging ? " charging" : "") + "), voice " + voice
                 + ", headset " + headset + ", riding log " + ridingLog;
         ble.write(frame, "icons: " + label, true);
         Hub.iconsStatus = label + "\n" + KawaProtocol.hex(frame);
@@ -897,15 +917,6 @@ public class BridgeService extends Service implements KawaBle.Listener {
         String name = Hub.prefs(this).getString(Hub.KEY_DEBUG_PHONE_NAME, "");
         if (name.isEmpty()) return false;
         return ble.write(KawaProtocol.phoneNameFrame(name), "phone name \"" + name + "\"");
-    }
-
-    /**
-     * The phone is on a charger (USB, wireless…). Plugged in rather than "charging": the icon should
-     * not flip to normal when the phone pauses charging (full, adaptive charging at 80 %, hot).
-     */
-    private boolean pluggedIn() {
-        Intent b = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        return b != null && b.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) != 0;
     }
 
     /** A status icon field: the debug value if one is set, else the automatic one. */

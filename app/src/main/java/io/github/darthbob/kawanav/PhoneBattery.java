@@ -17,6 +17,15 @@ final class PhoneBattery {
     private int percent = -1;
     private long at = Long.MIN_VALUE;
 
+    /**
+     * The percentage in a sticky {@code ACTION_BATTERY_CHANGED} broadcast, from its level and scale;
+     * -1 when the broadcast did not answer.
+     */
+    static int fromLevel(int level, int scale) {
+        if (level < 0 || scale <= 0) return -1;
+        return Math.round(level * 100f / scale);
+    }
+
     /** Takes one reading; true when it was plausible and is now the value to show. */
     boolean accept(int reading, long now) {
         if (reading <= 0 || reading > 100) return false;

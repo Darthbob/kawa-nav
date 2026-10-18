@@ -245,9 +245,11 @@ not shown; tyre and ABS warnings stay.
 While connected, KawaNav sends the phone's battery level to the dash every 5 s, as Rideology does.
 The dash shows 4 steps (Rideology's thresholds): up to 10 %, up to 30 %, up to 70 %, above 70 %.
 While the phone is on a charger, the icon's charging version is sent (same bars). A reading Android
-cannot give, or a drop that is impossible in five seconds, keeps the last level shown, so the dash
-does not flash its low-battery icon (issue #7). Switched off, the icon is removed. Not yet tried on
-the bike.
+cannot give, or a drop that is impossible in five seconds, keeps the last level shown. The level comes
+from Android's sticky battery broadcast, with the battery service as a fallback; until there is a
+plausible reading no icon frame is sent at all, rather than an empty battery (the dash draws "not
+available" with its warning icon too). So the dash does not flash its low-battery icon (issue #7).
+Switched off, the icon is removed. Not yet tried on the bike.
 
 #### Headset icon
 

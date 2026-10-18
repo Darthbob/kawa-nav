@@ -59,4 +59,12 @@ public class PhoneBatteryTest {
         assertFalse(b.accept(0, NOW));
         assertEquals(-1, b.percent());                  // the dash keeps showing nothing
     }
+
+    @Test
+    public void theStickyBroadcastLevelBecomesAPercentage() {
+        assertEquals(55, PhoneBattery.fromLevel(55, 100));
+        assertEquals(33, PhoneBattery.fromLevel(1, 3));
+        assertEquals(-1, PhoneBattery.fromLevel(-1, 100));
+        assertEquals(-1, PhoneBattery.fromLevel(50, 0));
+    }
 }

@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "version": "1.0.3",
+      "changes": [
+        "The phone battery icon on the dash no longer shows an empty battery just after connecting: the level comes from Android's battery broadcast, and no icon is sent until there is a real reading"
+      ]
+    },
+    {
       "version": "1.0.2",
       "changes": [
         "A new version is offered when you open the app, not only after the phone restarted",
