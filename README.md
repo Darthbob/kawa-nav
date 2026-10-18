@@ -465,8 +465,11 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   setting** — a calibration number, not a cruise speed. KawaNav shows it raw on the debug card only.
 - **The IMU's three accelerations are turned into the bike's directions** (forward, up, sideways): the
   sensor is mounted at 45° on a Z900 — at rest gravity is split evenly between two channels, and turning
-  them makes it read 0 g forward and 1 g down. The three "rotation rates" are still unidentified and are
-  labelled as such.
+  them makes it read 0 g forward and 1 g down. The accelerations are specific forces: a slope reads as
+  acceleration too, about 0.01 g per 1 % of grade ([docs/PROTOCOL.md](docs/PROTOCOL.md), 0x4A). The app
+  records the bike's raw value; the ride report takes the slope term out with the GPS altitude. Of the
+  three "rotation rates" two are identified — one is yaw, one roll — while the third has no name yet and
+  their unit and scale are still open, so they are shown raw.
 - **The two "traction control" readings are not understood**: 0x4A byte 24 and 0x4B byte 51 carry two
   different pairs with the same name in Rideology (`tcs_level_hb`/`tcs_level_lb`), from different frames,
   and Kawasaki's app never interprets either of them. On a recorded ride the 0x4B pair moved exactly in the

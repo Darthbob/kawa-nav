@@ -185,6 +185,13 @@ Wheelie angle: Rideology's nibble-1 branch masks 0x0F, KawaNav does the same; it
 in both. Rideology adds the two bytes there (`(bArr[22] & 7) + bArr[23]`) where every neighbouring value
 shifts the high byte; KawaNav keeps the shift, which the masked nibble makes equivalent for values in range.
 
+**The acceleration is a specific force, gravity included.** `acc_g` carries the component of gravity
+along the bike's forward axis, not only the bike's own acceleration: at constant speed the 2026-10-17
+rides read about +0.010 g per +1 % of upgrade (+0.07…+0.08 g on +5…+18 % climbs, −0.07…−0.10 g on
+descents). The slope-corrected value is `acc_corr ≈ acc_g − 0.0098 × slope_%`; the empirical
+coefficient is 0.0093–0.0100 and the residual about 0.05 g, because the GPS slope adds noise. Without
+the correction a −12 % descent looks like braking. (inferred from the rides)
+
 - **Byte 24: the two TCS nibbles** (`Ble5Value.s.f11358k`/`f11359l`, written to the realm columns
   `tcs_level_hb`/`tcs_level_lb` of the mid log, `a0/s.java:301-302`). Each nibble is decoded only when its
   0x40 gate (byte 11 bits 1-0 for the high one, byte 12 bits 7-6 for the low) is exactly 0. What the
@@ -234,6 +241,13 @@ All `FF` on bikes without them (Z500, Z900?). (verified)
 | 51 | `tcs_level_hb` (bits 7-5), `tcs_level_lb` (bits 4-2), `kqs_down_operation_flag` (bit 1), `kqs_up_operation_flag` (bit 0) |
 | 52 | wheelie flag (bit 0) |
 
+**The speed channels do not agree with each other.** On the Z900 of 2026-10-17 the filtered front wheel
+(0x4B) reads about 0.7 km/h above the 0x4A speed, the filtered rear about 1.2 % below the front and
+stable with speed, and under braking the two filtered speeds differ by 0.7–0.9 km/h. GPS reads
+2.6–2.9 % above the 0x4A speed at a steady speed. This is calibration, wheel circumference and
+filtering, **not** wheel slip or tyre pressure; the comparison with the dash is still to be done.
+(observed on the rides)
+
 **The three accelerations are not the bike's axes.** On a Z900 at a standstill the first two read
 −0.70 g and −0.71 g while the third reads 0.05 g: the gravity is split evenly between them, which is what
 a sensor mounted at **45°** about the bike's lateral axis does. Turning the pair by 45° gives, at a
@@ -254,7 +268,10 @@ forward and 0.99 g up.
 
 - 37-38 (`imu_az_psip2`, Rideology's "p2") is the **yaw rate**: it follows the lean angle
   (r = +0.62 … +0.79) and the course change from the GPS track (+0.67), and it is near zero on a
-  straight.
+  straight. The **axis** identification is sound, its **scale is not**: with R = v/ω the radius comes
+  out 1.39–1.42× the lean-based R = v²/(g·tan φ) (r = 0.72–0.80 on all four rides), and the unit and
+  scaling of the rotation rates are unresolved. Do not use it for an absolute radius without a
+  calibration. (observed)
 - 27-28 (`imu_ax_psip3`, "p3") is the **roll rate**: it follows the lean angle's change over 5 s
   (r ≈ +0.40) and nothing else.
 - 17-18 (`imu_ay_psip1`, "p1") is still **unidentified**: no correlation with the lean angle, its
@@ -294,9 +311,11 @@ traction-control lamp in view, and compare which column steps with the lamp.
 
 ### Units
 
-Speed is stored and exported in km/h (converted to mph only at display), rpm in rev/min, lean in
-degrees, temperatures in °C (verified), and the instant fuel consumption in km/L (see 0x45; verified
-on the 2026-10-17 rides).
+Speed is stored and exported in km/h (converted to mph only at display), rpm in rev/min, temperatures
+in °C (verified), and the instant fuel consumption in km/L (see 0x45; verified on the 2026-10-17 rides).
+Lean is in degrees, **negative to the left, positive to the right**: checked against the GPS course
+change on the 2026-10-17 rides, 713 of 749 curves agree (95.2 %), and the disagreements are chicanes or
+GPS noise. (inferred from the rides, not from the app)
 
 ## Riding log stream: is there a start/stop?
 
@@ -522,6 +541,9 @@ KawaNav never logs this frame.)
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
 - What the two TCS pairs (0x4A byte 24, 0x4B byte 51) actually report: the rider's level, an intervention,
   or something else. See the 0x4B section for the one observation there is and the two tests that settle it.
+- Unit and scale of the three 0x4B rotation rates (bytes 17-18, 27-28, 37-38): the axes are identified
+  by correlation, but R = v/ω gives a radius 1.39–1.42× the lean-based one, so no absolute value is
+  usable yet. See the 0x4B section.
 - Which *exported columns* carry a doubt of this kind, and what would settle each: the last part of the
   Z900 section below lists them by column.
 - R.Score formula (server side).
@@ -612,6 +634,12 @@ Two more things this ride showed, both on KawaNav's side:
   measures 13.4 km. After 1.0 the odometer counts the kilometres and the GPS fills in between them: how
   far the ride had gone when the odometer first stepped, and how far since its last step (`Ride.Distance`).
   This ride comes to 13.2 km, and its `dist_m` column no longer moves in 1000 m steps.
+
+**Isolated rpm spikes.** The 2026-10-17 rides have four isolated samples with the throttle closed and
+the speed below 2 km/h that read 1808 / 1894 / 2859 / 2699 rpm, each back to 1070–1220 rpm the next
+second, plus 2 s of 0 rpm at 1 km/h in gear 2 followed by 1347 rpm. None is a plausible throttle blip;
+whether the meter or the decoder produces them is not established. Filter isolated rpm outliers before
+reading anything into them. (observed)
 
 ### Which exported values are still doubtful
 
