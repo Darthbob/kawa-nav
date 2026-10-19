@@ -68,20 +68,44 @@ public final class Logger {
      * before any later one (e.g. to copy the files without them changing underneath).
      */
     public static void withLogFiles(Runnable r) {
-        io.execute(r);
+        io.execute(() -> {
+            try {
+                r.run();
+            } catch (Throwable e) {
+                // this is the log's only thread: let the caller's failure be read, not the thread's death
+                warn("log export failed", e);
+            }
+        });
     }
 
-    private static void appendToFile(File dir, String line) {
+    /** Rotates at the size cap, then appends. Package-private so the tests can drive the rotation. */
+    static void appendToFile(File dir, String line) {
         File f = new File(dir, FILE);
         if (f.length() > MAX_FILE_BYTES) {
+            // One move, replacing the old .1 in the same step. Deleting .1 first and then ignoring the
+            // true/false of renameTo meant a failed rename threw the previous backup away *and* left the
+            // full file in place, so the cap never took effect again and the log grew without bound.
             File old = new File(dir, FILE + ".1");
-            old.delete();
-            f.renameTo(old);
+            try {
+                java.nio.file.Files.move(f.toPath(), old.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                warn("log rotation failed", e); // keep appending; it is retried on the next line
+            }
         }
         try (FileWriter w = new FileWriter(f, true)) {
             w.write(line + "\n");
         } catch (IOException e) {
-            Log.w(TAG, "log file write failed", e);
+            warn("log file write failed", e);
+        }
+    }
+
+    /** {@link Log} throws on a plain JVM, where it is a stub: a diagnostic must not take the log down. */
+    private static void warn(String message, Throwable e) {
+        try {
+            Log.w(TAG, message, e);
+        } catch (Throwable noAndroid) {
+            System.out.println(message + ": " + e);
         }
     }
 }
