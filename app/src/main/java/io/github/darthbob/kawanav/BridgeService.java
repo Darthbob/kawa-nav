@@ -57,6 +57,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private static final long SAVE_MS = 60_000;
     /** A GPS fix this recent counts as "where the bike was parked" when the link is lost. */
     private static final long PARKED_FIX_MS = 5 * 60_000;
+    /** At Stop: how long the "clear"/"icons off" frames get before the link is closed anyway. */
+    private static final long DISCONNECT_AFTER_MS = KawaBle.OP_TIMEOUT_MS + 1000;
+
     /** Frame types that may be read on request (debug card, adb): reads only, never settings writes. */
     private static final int[] READABLE = {0x03, 0x1A, 0x1B, 0x1D, 0x1E, 0x40, 0x41, 0x45, 0x47, 0x48};
 
@@ -316,6 +319,19 @@ public class BridgeService extends Service implements KawaBle.Listener {
         return null;
     }
 
+    /**
+     * Brings the call/mail icons on the dash in line with the phone. Needed on every connection: the
+     * listener only reports changes, so an alert posted while the bridge was down was never sent, and a
+     * dash that was off (or another bike) may show an icon from before. Called after connecting.
+     */
+    private void reconcileDashIcons() {
+        for (int icon : new int[]{DashAlerts.CALL, DashAlerts.MAIL}) {
+            int event = DashAlerts.desiredEvent(icon, DashAlerts.active(icon), DashAlerts.enabled(this, icon));
+            if (event == DashAlerts.NOTHING) continue;
+            if (sendDashAlert(icon, event)) DashAlerts.sent(icon, event);
+        }
+    }
+
     /** The meter answered the shift-lamp write: read the general settings back to show what it holds now. */
     private void afterShiftLamp(boolean answered) {
         BikeFrames.GeneralSettings g = Hub.bike.general;
@@ -334,7 +350,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
     public static boolean sendDashAlert(int category, int event) {
         if (instance == null || !instance.ble.isReady()) return false;
         byte[] frame = DashAlerts.frame(category, event);
-        return instance.ble.write(frame, "dash alert: " + DashAlerts.describe(category, event), true);
+        boolean ok = instance.ble.write(frame, "dash alert: " + DashAlerts.describe(category, event), true);
+        if (ok) DashAlerts.sent(category, event); // so the reconnect reconcile does not repeat it
+        return ok;
     }
 
     /** Debug: plays a capture file back as if the bike sent it (bridge running, bike data screens update). */
@@ -491,7 +509,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
             // because of a misread capability must not be left with it on screen.
             b.write(KawaProtocol.clearFrame(), "clear", true);
             b.write(KawaProtocol.meterIndicationFrame(KawaProtocol.BATTERY_NONE, 0, 0, 0), "icons off", true);
-            new Handler(Looper.getMainLooper()).postDelayed(b::disconnect, 500);
+            // close the link only once both frames are on the wire: disconnecting on a fixed delay cut
+            // them off (they are still queued, and disconnect() empties the queue), which left the last
+            // arrow and the status icons on the dash
+            b.disconnectAfterQueueFrames(b::disconnect, DISCONNECT_AFTER_MS);
         } else {
             b.disconnect();
         }
@@ -592,7 +613,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
             clockSynced = false;
             recorder.linkBack();
             if (RawCapture.enabled(this)) RawCapture.start(this);
+            // a new link may be a dash that was off (or another bike): it can show anything, so forget
+            // what the previous connection was told and reconcile from scratch
+            DashAlerts.forgetSent();
             tick(); // the arrow first
+            reconcileDashIcons(); // a call/mail that arrived while the bridge was down is still shown
             handler.postDelayed(startup, STARTUP_DELAY_MS);
         }
         updateNotification();

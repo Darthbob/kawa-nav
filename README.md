@@ -36,7 +36,9 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 
 - 🧭 **Google Maps directions on the dash**: KawaNav reads Google Maps' navigation notification and sends
   arrow + distance to the dash. The arrow is recognised from Maps' own icon (language independent);
-  the text decides roundabout exit numbers and highway ramps/exits. Waze is not supported: its
+  the text decides roundabout exit numbers and highway ramps/exits — and, when the text names a side
+  of its own ("Take the ramp on the left"), the side it names, while a text that names only the kind
+  of maneuver ("Take the exit") leaves Maps' arrow alone instead of overriding its side. Waze is not supported: its
   notification only says it is running, with no turn in it — checked on a phone, see
   [docs/WAZE.md](docs/WAZE.md).
 - 🌀 **Free ride: upcoming curves**: without navigation, the dash shows the next curve of the road you
@@ -171,6 +173,11 @@ Once a second KawaNav decides what goes on the dash:
    beyond it, the straight arrow with the distance to the next curve (searched up to 3 km).
 3. Otherwise nothing.
 
+Turning KawaNav off (or "Stop") clears the dash first — the arrow, the distance and the phone battery
+icon — and only then lets the link go, instead of leaving the last arrow on the meter. A live frame the
+meter sent incomplete (a Bluetooth packet cut short) is dropped whole rather than decoded: half a frame
+used to read as a lean of −100° or a gear of 15 for one second.
+
 ### 🔧 Settings
 
 In the **Settings** tab:
@@ -267,6 +274,10 @@ Only matters when KawaNav reads a Maps instruction from its text instead of its 
 roundabout is then shown clockwise, a roundabout exit without a number ("turn right at the
 roundabout") counts from the other side, and a U-turn without a direction turns right. Free ride
 reads the direction of a roundabout from the road itself and needs no setting.
+
+A roundabout whose arrow Maps drew *and* whose number the text names ("at the roundabout, take the
+4th exit") keeps the direction of Maps' arrow and takes only the number from the text; the setting is
+not consulted there, because the arrow already shows which way around the roundabout goes.
 
 ### 📊 Bike data
 

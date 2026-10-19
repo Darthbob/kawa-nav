@@ -107,25 +107,18 @@ public class MapsListener extends NotificationListenerService {
         int dist = MapsParser.parseDistance(instruction);
         IconMemory.Hit hit = icons.lookup(hash);
 
-        // Decision order: explicit roundabout exit number in the text (the icon shows the exit's
-        // direction, not its number) > icon (taught > library > learned) > text.
-        int turn;
+        // The icon shows the side Maps committed to, the text the kind it is sure about: a text that
+        // names a ramp or an exit but no side must not flip an arrow that already points the right way.
+        int turn = MapsParser.chooseTurn(instruction, hit == null ? null : hit.turn, leftHand);
         String how;
-        if (MapsParser.hasRoundaboutExitNumber(instruction)) {
-            turn = parsed;
-            how = "text, roundabout exit number";
-        } else if (hit != null && (hit.turn <= 10 || hit.turn == 16 || hit.turn == 17)
-                && parsed >= 12 && parsed <= 17) {
-            // Maps draws on-ramps and most exits with the plain turn/straight arrows, and all merges
-            // with one icon; the text says which one it is
-            turn = parsed;
-            how = hit.source + " + text";
-        } else if (hit != null) {
-            turn = hit.turn;
+        if (hit == null) {
+            how = turn == KawaProtocol.TURN_NONE ? "not recognised" : "text";
+        } else if (turn == hit.turn) {
             how = hit.source;
+        } else if (MapsParser.hasRoundaboutExitNumber(instruction)) {
+            how = "text, roundabout exit number";
         } else {
-            turn = parsed;
-            how = parsed == KawaProtocol.TURN_NONE ? "not recognised" : "text";
+            how = hit.source + " + text";
         }
 
         icons.collect(hash, icon, parsed, instruction);
@@ -156,10 +149,12 @@ public class MapsListener extends NotificationListenerService {
     /** The rider switched a dash icon off: clear it on the bike now. */
     public static void alertsChanged(android.content.Context c) {
         for (int icon : new int[]{DashAlerts.CALL, DashAlerts.MAIL}) {
-            if (!DashAlerts.enabled(c, icon) && DashAlerts.active(icon)) {
-                DashAlerts.clear(icon);
-                BridgeService.sendDashAlert(icon, DashAlerts.REMOVED);
-            }
+            if (DashAlerts.enabled(c, icon)) continue;
+            if (DashAlerts.clear(icon)) Logger.log("Dash " + DashAlerts.name(icon) + " icon off (settings)");
+            // one path for sending, so what the meter was told is recorded: else every later
+            // connection would send this clear again
+            int event = DashAlerts.desiredEvent(icon, false, false);
+            if (event != DashAlerts.NOTHING) BridgeService.sendDashAlert(icon, event);
         }
     }
 

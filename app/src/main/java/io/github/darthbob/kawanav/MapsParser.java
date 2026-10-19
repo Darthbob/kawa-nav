@@ -44,12 +44,15 @@ public final class MapsParser {
     static final String[] SLIGHT = {"leicht", "slight", "halb", "légèrement", "ligeramente", "levemente",
             "leggermente", "flauw", "licht ", "ligeiramente", "lekko", "mírně", "svagt", "lätt ", "let ",
             "svakt", "slakt", "loivasti", "ελαφρώς", "плавно", "слегка"};
-    static final String[] MERGE = {"einfädeln", "merge", "insérez", "insertion", "incorpór", "incorpor",
+    // "|merge" and "|ramp|"/"|rampa|" are anchored: "emergent" contains "merge", and "Rampart Street"
+    // starts with "ramp", so neither may turn the arrow on its own. Inflected forms are listed in their
+    // own right ("rampa di accesso", "insertion", …) instead of loosening the anchor.
+    static final String[] MERGE = {"einfädeln", "|merge", "insérez", "insertion", "incorpór", "incorpor",
             "immett", "voeg in", "invoeg", "junte-se", "włącz", "připojte", "zařaďte", "anslut", "flet",
             "liity", "συγχων"};
-    static final String[] ON_RAMP = {"auffahrt", "auffahren", "ramp", "bretelle", "acceso", "entrata",
-            "rampa di accesso", "oprit", "rampa de acesso", "wjazd", "nájezd", "påfart", "tilkørsel",
-            "påkørsel", "påkjørsel", "ράμπα", "въезд"};
+    static final String[] ON_RAMP = {"auffahrt", "auffahren", "|ramp|", "|rampa|", "bretelle", "acceso",
+            "entrata", "rampa di accesso", "oprit", "rampa de acesso", "wjazd", "nájezd", "påfart",
+            "tilkørsel", "påkjørsel", "ράμπα", "въезд"};
     static final String[] EXIT = {"ausfahrt", "|exit|", "sortie", "salida", "uscita", "afrit",
             "afslag", "saída", "zjazd", "zjedź", "výjezd", "sjezd", "avfart", "frakørsel", "avkjørsel",
             "avkjøring", "poistu", "έξοδο", "съезд", "съезжайте"};
@@ -125,7 +128,36 @@ public final class MapsParser {
 
     /** True when the text names the roundabout exit by number ("die 2. Ausfahrt", "3rd exit"). */
     public static boolean hasRoundaboutExitNumber(String text) {
-        return isRoundabout(text) && roundaboutExit(text.toLowerCase(Locale.ROOT).replaceAll("\\([^)]*\\)", " ")) > 0;
+        if (text == null || !isRoundabout(text)) return false;
+        return exitIn(text.toLowerCase(Locale.ROOT).replaceAll("\\([^)]*\\)", " ")) > 0;
+    }
+
+    /** The roundabout exit the text names, or -1: see {@link #exitIn}. */
+    public static int roundaboutExit(String text) {
+        return text == null ? -1 : exitIn(text.toLowerCase(Locale.ROOT).replaceAll("\\([^)]*\\)", " "));
+    }
+
+    /**
+     * Kawasaki turn id of a roundabout exit (1..12), in the rotation of the traffic side: right-hand
+     * traffic drives counter-clockwise (ids 30..41), left-hand traffic clockwise (18..29).
+     */
+    public static int roundaboutTurn(int exit, boolean leftHandTraffic) {
+        exit = Math.max(1, Math.min(exit, 12));
+        return leftHandTraffic ? 17 + exit : 29 + exit;
+    }
+
+    /** The exit number a roundabout turn id shows, or -1 when the id is not a roundabout exit. */
+    public static int roundaboutExitOf(int turn) {
+        if (turn >= 18 && turn <= 29) return turn - 17;
+        if (turn >= 30 && turn <= 41) return turn - 29;
+        return -1;
+    }
+
+    /** True when the text names a side at all (left / right in any of the supported languages). */
+    public static boolean sideKnown(String text) {
+        if (text == null) return false;
+        String t = text.toLowerCase(Locale.ROOT).replaceAll("\\([^)]*\\)", " ");
+        return has(t, LEFT) || has(t, RIGHT);
     }
 
     /** Kawasaki turn id for an instruction, or TURN_NONE. */
@@ -137,7 +169,7 @@ public final class MapsParser {
         boolean right = has(t, RIGHT);
 
         if (has(t, ROUNDABOUT)) {
-            int exit = roundaboutExit(t);
+            int exit = exitIn(t);
             if (exit < 1) {
                 // no number: "Im Kreisverkehr geradeaus/rechts/links…" (seen in Maps, Oct 2026)
                 if (has(t, U_TURN)) exit = 4;
@@ -145,9 +177,7 @@ public final class MapsParser {
                 else if (left) exit = leftHandTraffic ? 1 : 3;
                 else exit = 2; // geradeaus / straight / unknown
             }
-            exit = Math.min(exit, 12);
-            // right-hand traffic drives counter-clockwise (ids 30..41), left-hand clockwise (18..29)
-            return leftHandTraffic ? 17 + exit : 29 + exit;
+            return roundaboutTurn(exit, leftHandTraffic);
         }
         if (has(t, U_TURN)) {
             if (right) return 8;
@@ -179,7 +209,12 @@ public final class MapsParser {
         return KawaProtocol.TURN_NONE;
     }
 
-    private static int roundaboutExit(String t) {
+    /**
+     * The exit number of a roundabout instruction, or -1. The digits must sit next to the word for
+     * exit; an ordinal word only counts inside the clause the roundabout (or exit) word is in — a
+     * place name ("Prima Straße, dann Kreisverkehr") must not decide which exit to take.
+     */
+    private static int exitIn(String t) {
         Matcher m = EXIT_NUMBER.matcher(t);
         if (m.find()) {
             String g = m.group(1) != null ? m.group(1) : m.group(2);
@@ -189,28 +224,140 @@ public final class MapsParser {
                 // fall through to ordinal words
             }
         }
+        // The ordinal counts from the word it belongs to: "Kreisverkehr, zweite Ausfahrt" names the
+        // exit in the second clause, and "die zweite Ausfahrt" does so without naming a roundabout.
+        // The roundabout word is the fallback ("At the roundabout, take the second exit" has both).
+        int at = indexOf(t, EXIT);
+        if (at < 0) at = indexOf(t, ROUNDABOUT);
+        String clause = clauseAt(t, at);
         for (int i = 0; i < ORDINALS.length; i++) {
-            if (has(t, ORDINALS[i])) return i + 1;
+            if (has(clause, ORDINALS[i])) return i + 1;
         }
         return -1;
     }
 
-    private static boolean has(String t, String... words) {
-        for (String w : words) {
-            if (w.indexOf('|') < 0 ? t.contains(w) : hasAnchored(t, w)) return true;
+    /** Clause separators: the exit number is not taken from a different part of the instruction. */
+    private static final Pattern CLAUSE = Pattern.compile("[.,;:!?·]|\\bdann\\b|\\bthen\\b");
+
+    /**
+     * The clause of {@code t} that names the maneuver, and the one after it. The number and the word it
+     * counts do not always share a clause: "Kreisverkehr, zweite Ausfahrt" puts the roundabout in the
+     * first and the exit in the second. A clause in front of it is never looked at, which is what keeps
+     * "Prima Straße, dann Kreisverkehr" from choosing an exit.
+     */
+    private static String clauseAt(String t, int at) {
+        if (at < 0) return "";
+        Matcher m = CLAUSE.matcher(t);
+        int start = 0, seps = 0;
+        while (m.find()) {
+            if (m.end() <= at) {
+                start = m.end();
+            } else if (++seps == 1) {
+                continue;                       // the clause's own end: the next one is included
+            } else {
+                return t.substring(start, m.start());
+            }
         }
-        return false;
+        return t.substring(start);
+    }
+
+    /**
+     * The arrow to show, from the instruction text and the arrow Maps drew in the notification
+     * (null: no icon). The icon wins: it shows the side Maps committed to, while the text often
+     * names no side at all. The text still decides the maneuver kind it is sure about, and an
+     * explicit roundabout exit number.
+     */
+    public static int chooseTurn(String text, Integer iconTurn, boolean leftHandTraffic) {
+        int parsed = parseTurn(text, leftHandTraffic);
+        if (iconTurn == null) return parsed;
+        if (text != null && isRoundabout(text) && hasRoundaboutExitNumber(text)) {
+            // the icon shows the exit's direction, not its number: the text knows the number, the
+            // icon only the rotation, so take the text's number in the icon's direction
+            int exit = roundaboutExit(text);
+            int exits = roundaboutExitOf(iconTurn);
+            boolean clockwise = exits < 0 || iconTurn < 30;
+            return roundaboutTurn(exit, clockwise);
+        }
+        // A roundabout id carries the exit and its rotation: the text's "rechts" beside the word for
+        // roundabout means the same thing, and Maps' arrow is the one that counted the exits.
+        if (iconTurn >= 18 && iconTurn <= 41) return iconTurn;
+        // A roundabout text names no kind the icon could be missing: the arrow Maps drew is the one it
+        // counted the exits with, so the text's vague "rechts" does not turn it into an exit id here.
+        if (text != null && isRoundabout(text)) return iconTurn;
+        int kind = kindOf(text);
+        if (kind == KawaProtocol.TURN_NONE) {
+            // no kind to take from the text: the icon stands, unless the text names a side of its own
+            return sideKnown(text) ? parsed : iconTurn;
+        }
+        // The text is sure of the kind, the icon of the side: a plain right arrow with "Take the ramp"
+        // is the ramp on the right (13), not the plain turn (2). A side in the text wins over the icon.
+        Boolean left = sideOf(text);
+        if (left == null) left = sideOfIcon(iconTurn);
+        return left == null ? parsed : kindTurn(kind, left);
+    }
+
+    /** The side the text names, or null when it names none. */
+    private static Boolean sideOf(String text) {
+        String t = text.toLowerCase(Locale.ROOT).replaceAll("\\([^)]*\\)", " ");
+        int l = indexOf(t, LEFT), r = indexOf(t, RIGHT);
+        if (l < 0 && r < 0) return null;
+        if (l < 0) return Boolean.FALSE;
+        return r < 0 || l < r;
+    }
+
+    /** The side a turn id points to, or null when it has none (straight, fork middle, destinations). */
+    static Boolean sideOfIcon(int turn) {
+        switch (turn) {
+            case 1: case 3: case 5: case 7: case 9: case 12: case 14: case 16: return Boolean.TRUE;
+            case 2: case 4: case 6: case 8: case 10: case 13: case 15: case 17: return Boolean.FALSE;
+            default: return null;
+        }
+    }
+
+    /** The turn id of a maneuver kind in a side: ramp, exit or merge, left or right. */
+    private static int kindTurn(int kind, boolean left) {
+        if (kind == KawaProtocol.TURN_MERGE) return left ? 16 : 17;
+        if (kind == KawaProtocol.TURN_EXIT) return left ? 14 : 15;
+        return left ? 12 : 13;
+    }
+
+    /**
+     * The maneuver kind of an instruction, or {@link KawaProtocol#TURN_NONE} when it names none: a
+     * kind is what the text can override on an icon (a ramp and a turn share one arrow), and what an
+     * exit id requires.
+     */
+    public static int kindOf(String text) {
+        if (text == null) return KawaProtocol.TURN_NONE;
+        String t = text.toLowerCase(Locale.ROOT).replaceAll("\\([^)]*\\)", " ");
+        if (has(t, MERGE)) return KawaProtocol.TURN_MERGE;
+        if (has(t, EXIT)) return KawaProtocol.TURN_EXIT;    // "bretelle de sortie" is an exit, not a ramp
+        if (has(t, ON_RAMP)) return KawaProtocol.TURN_RAMP;
+        return KawaProtocol.TURN_NONE;
+    }
+
+    private static boolean has(String t, String... words) {
+        return indexOf(t, words) >= 0;
+    }
+
+    /** Position of the first match of any of these words, or -1. */
+    private static int indexOf(String t, String... words) {
+        int best = -1;
+        for (String w : words) {
+            int at = w.indexOf('|') < 0 ? t.indexOf(w) : indexOfAnchored(t, w);
+            if (at >= 0 && (best < 0 || at < best)) best = at;
+        }
+        return best;
     }
 
     /** Match for a word with "|" anchors: no letter may touch an anchored side. */
-    private static boolean hasAnchored(String t, String w) {
+    private static int indexOfAnchored(String t, String w) {
         boolean start = w.startsWith("|"), end = w.endsWith("|");
         String core = w.substring(start ? 1 : 0, w.length() - (end ? 1 : 0));
         for (int i = t.indexOf(core); i >= 0; i = t.indexOf(core, i + 1)) {
             int j = i + core.length();
             if ((!start || i == 0 || !Character.isLetter(t.charAt(i - 1)))
-                    && (!end || j == t.length() || !Character.isLetter(t.charAt(j)))) return true;
+                    && (!end || j == t.length() || !Character.isLetter(t.charAt(j)))) return i;
         }
-        return false;
+        return -1;
     }
 }

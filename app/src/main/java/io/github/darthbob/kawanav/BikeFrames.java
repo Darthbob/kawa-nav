@@ -587,8 +587,9 @@ public final class BikeFrames {
 
         Telemetry(byte[] v, InfoConfig c) {
             super(v);
-            // values sit in 10-byte blocks like the other frames; a block whose header is FF is absent
-            boolean blk1 = blockOk(v, 5), blk2 = blockOk(v, 15);
+            // values sit in 10-byte blocks like the other frames; a block whose header is FF is absent,
+            // and one the frame stops inside of counts as absent too: its values were never sent
+            boolean blk1 = fullBlock(v, 5), blk2 = fullBlock(v, 15);
             int speedMode = mode(c, InfoConfig.WHEEL_SPEED);
             boolean speedOn = blk1 && speedMode >= 0;
             double raw9 = ((u8(v, 9) & 0x01) << 8) | u8(v, 10);
@@ -603,7 +604,7 @@ public final class BikeFrames {
             rpmAlt = rpmOn ? (rpmMode == 1 ? raw15 : quarter) : -1;
             // single bytes the meter leaves at FF when it has no value: FF would read as gear 15,
             // throttle 199 % and so on, so they count as absent (the dash shows dashes there)
-            int gearByte = blk1 && v.length > 13 ? u8(v, 13) : 0xFF;
+            int gearByte = blk1 ? u8(v, 13) : 0xFF;
             gear = gearByte != 0xFF && (gearByte & 0x0F) != 0x0F && has(c, InfoConfig.GEAR) ? gearByte & 0x0F : -1;
             int thrMode = mode(c, InfoConfig.THROTTLE);
             // mode 1 counts the byte out of 255 (FF is a full throttle), mode 0 out of 128: past that
@@ -621,7 +622,7 @@ public final class BikeFrames {
                     ? leanMode == 1 ? (((u8(v, 19) & 0x0F) << 8) | u8(v, 20)) * 0.1
                     : (((u8(v, 19) & 0x07) << 8) | u8(v, 20)) * 0.1953125 - 100.0
                     : Double.NaN;
-            int wheelieBits = blk2 && v.length > 21 ? u8(v, 21) : 0xFF;
+            int wheelieBits = blk2 ? u8(v, 21) : 0xFF;
             // a flag has two states: the "value" 3 is an all-ones byte, not a wheelie
             wheelie = wheelieBits != 0xFF && (wheelieBits & 0x03) != 0x03 && present0(c, InfoConfig.WHEELIE)
                     ? wheelieBits & 0x03 : -1;
@@ -671,6 +672,16 @@ public final class BikeFrames {
             if (!block || mode < 0 || u8(v, i) == 0xFF && u8(v, i + 1) == 0xFF) return -1;
             return mode == 1 ? ((u8(v, i) & 0x0F) << 8) | u8(v, i + 1)
                     : (int) ((((u8(v, i) & 0x3F) << 8) | u8(v, i + 1)) * 0.2);
+        }
+
+        /**
+         * The 10-byte block at {@code offset} is there in full: header present and all ten bytes on
+         * the wire. A frame truncated by the ATT MTU (23 bytes unless the meter answers the request)
+         * otherwise reads its values past the end, where {@link FrameReader#u8} returns -1 — which is
+         * how a 20-byte frame turns into a lean of -100° and a gear of 15.
+         */
+        private static boolean fullBlock(byte[] v, int offset) {
+            return blockOk(v, offset) && v.length >= offset + 9;
         }
 
         /** The block at {@code offset} has a header (marker and id not FF). */
@@ -951,10 +962,33 @@ public final class BikeFrames {
         public ServiceConfig service;
         public GeneralCaps caps;
 
-        /** The decoded frame, or a plain {@link Frame} for types KawaNav does not decode; null for an empty one. */
+        /** True once a frame shorter than the length in its own header has been reported. */
+        private boolean shortFrameLogged;
+
+        /**
+         * The decoded frame, or a plain {@link Frame} for types KawaNav does not decode; null for an
+         * empty one and for a frame that is shorter than the length its header states.
+         *
+         * <p>Byte 1 is the frame's length minus 3, so a complete frame satisfies
+         * {@code v.length == (v[1] & 0xFF) + 3}. A frame cut short (an ATT MTU smaller than the frame,
+         * a torn notification) has to be dropped rather than decoded: every byte it is missing reads
+         * as -1, which turns into a lean of -100°, a gear of 15 and a negative speed. Only
+         * {@code RIDING_LOG} frames say so; the other types are short by design (their own header
+         * fields carry other things), so this is checked for the types whose values are read blind.
+         */
         public Frame decode(byte[] v) {
             if (v == null || v.length == 0) return null;
-            switch (v[0] & 0xFF) {
+            int type = v[0] & 0xFF;
+            if ((type == RIDING_LOG || type == RIDING_LOG_HIGH) && v.length >= 2
+                    && v.length < (v[1] & 0xFF) + 3) {
+                if (!shortFrameLogged) {
+                    shortFrameLogged = true;
+                    System.out.println("Bike: dropping short " + name(type) + " frames (" + v.length
+                            + " of " + ((v[1] & 0xFF) + 3) + " bytes): the values were never sent");
+                }
+                return null;
+            }
+            switch (type) {
                 case ACK: return new Ack(v);
                 case STATUS: return new Status(v);
                 case MODEL_INFO: return new ModelInfo(v);

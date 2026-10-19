@@ -43,7 +43,7 @@ public final class KawaBle {
         default void onTx(byte[] frame) {}
     }
 
-    private static final long OP_TIMEOUT_MS = 3000;
+    static final long OP_TIMEOUT_MS = 3000;
     /** Frames the meter streams on its own (riding log): logged as a count every {@link #STREAM_LOG_MS}. */
     private static final int[] STREAMED = {0x45, 0x4A, 0x4B};
     private static final long STREAM_LOG_MS = 30_000;
@@ -87,6 +87,13 @@ public final class KawaBle {
     };
     /** Connects in a row that found no Kawasaki service (wrong device, stale cache): reconnects slow down. */
     private int missingStreak;
+
+    /** Action waiting for the queue to drain, and its backstop: see {@link #disconnectAfterQueueFrames}. */
+    private Runnable drainAction;
+    private final Runnable drainBackstop = () -> {
+        Runnable a = takeDrainAction();
+        if (a != null) a.run();
+    };
 
     private BluetoothGatt gatt;
     private BluetoothGattCharacteristic writeChar;
@@ -158,6 +165,9 @@ public final class KawaBle {
         urgent.clear();
         urgentLabels.clear();
         busy = false;
+        // a pending "after the queue" action is moot: the link is going down anyway
+        main.removeCallbacks(drainBackstop);
+        takeDrainAction();
         writeChar = null;
         if (gatt != null) {
             gatt.disconnect();
@@ -235,9 +245,46 @@ public final class KawaBle {
         if (!busy) next();
     }
 
+    /**
+     * Runs {@code r} once every queued write has gone out, or after {@code timeoutMs} at the latest.
+     * Stopping the bridge sends a "clear" and an "icons off" frame that only matter if they are still
+     * on the wire when the link closes; disconnecting on a fixed delay would cut them off.
+     */
+    public void disconnectAfterQueueFrames(Runnable r, long timeoutMs) {
+        drainAction = r;
+        main.postDelayed(drainBackstop, timeoutMs);
+        if (!busy) next();
+    }
+
+    private Runnable takeDrainAction() {
+        Runnable a = drainAction;
+        drainAction = null;
+        return a;
+    }
+
+    /** True when every queued frame has gone out and no GATT operation is outstanding. */
+    private boolean idle() {
+        return !busy && waiting == WAIT_NONE && queue.isEmpty() && urgent.isEmpty();
+    }
+
+    /**
+     * Runs the waiting drain action, if any. Only when nothing is left to send: a write that merely
+     * timed out (its callback never came) must not look like "the queue drained" and cut a frame that
+     * was never handed to Android.
+     */
+    private void runDrainAction() {
+        if (!idle()) return;
+        Runnable a = takeDrainAction();
+        if (a != null) {
+            main.removeCallbacks(drainBackstop);
+            a.run();
+        }
+    }
+
     private void next() {
         if (gatt == null) {
             busy = false;
+            runDrainAction();
             return;
         }
         // dash frames first; they only exist once the link is ready (setup ops stay in order)
@@ -245,6 +292,7 @@ public final class KawaBle {
         Runnable op = frame != null ? null : queue.poll();
         if (frame == null && op == null) {
             busy = false;
+            runDrainAction(); // nothing left to send: whoever waits for the queue can go on
             return;
         }
         busy = true;

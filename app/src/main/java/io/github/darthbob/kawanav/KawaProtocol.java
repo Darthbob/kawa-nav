@@ -28,6 +28,11 @@ public final class KawaProtocol {
 
     public static final int TURN_NONE = 0xFF;
     /**
+     * The turn ids the instruction text can name by kind alone, so {@link MapsParser#kindOf} can say
+     * "this is a merge" without knowing a side: merge, exit and on-ramp. See {@link #TURN_NAMES}.
+     */
+    public static final int TURN_MERGE = 16, TURN_EXIT = 15, TURN_RAMP = 13;
+    /**
      * What KawaNav sends for a speed camera warning: the dash has no camera icon, so it shows the
      * destination flag (43) with the distance, the closest thing its turn set has.
      */

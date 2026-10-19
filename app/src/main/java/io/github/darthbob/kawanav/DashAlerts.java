@@ -17,6 +17,8 @@ public final class DashAlerts {
     public static final int CALL = 1, MAIL = 6;
     /** What happened to the icon. */
     public static final int ADDED = 0, REMOVED = 2;
+    /** {@link #desiredEvent}: nothing has to be sent for this icon. */
+    public static final int NOTHING = -1;
 
     /**
      * Frame 0x12 (15 bytes), as Rideology sends it (oh/b.java:301-323):
@@ -104,6 +106,33 @@ public final class DashAlerts {
     public static boolean active(int category) {
         java.util.Set<String> set = ACTIVE.get(category);
         return set != null && !set.isEmpty();
+    }
+
+    /** What the meter was last told about each icon (only frames that actually went out). */
+    private static final java.util.Map<Integer, Integer> SENT = new java.util.HashMap<>();
+
+    /**
+     * What has to be sent for one icon so the dash matches the phone, or {@link #NOTHING} when it
+     * already does. {@link #onPosted}/{@link #onRemoved} only report changes, so an alert that
+     * appeared while the bridge was down would never reach the dash: the bridge asks this again on
+     * every connect and sends the answer.
+     */
+    public static int desiredEvent(int category, boolean active, boolean enabled) {
+        boolean wanted = active && enabled;
+        boolean shown = SENT.get(category) != null && SENT.get(category) == ADDED;
+        if (wanted) return shown ? NOTHING : ADDED;
+        // nothing should be on: only clear it when we are the ones who put it there
+        return shown ? REMOVED : NOTHING;
+    }
+
+    /** The event reached the meter: remember it, so {@link #desiredEvent} stops asking for it. */
+    public static void sent(int category, int event) {
+        SENT.put(category, event);
+    }
+
+    /** Test seam: forget what the meter was told (a fresh process, or a new connection to a new dash). */
+    static void forgetSent() {
+        SENT.clear();
     }
 
     /** Debug text. */

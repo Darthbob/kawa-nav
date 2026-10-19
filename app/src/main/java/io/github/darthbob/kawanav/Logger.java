@@ -26,16 +26,33 @@ public final class Logger {
     private static final long MAX_FILE_BYTES = 2_000_000;
 
     private static final SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.ROOT);
-    private static final Handler main = new Handler(Looper.getMainLooper());
+    private static final Handler main = mainHandler();
     private static final java.util.concurrent.ExecutorService io =
             java.util.concurrent.Executors.newSingleThreadExecutor(r -> new Thread(r, "log-io"));
     private static File dir;
+
+    /**
+     * The main-thread handler, or null where there is none. On a plain JVM (the unit tests) there is no
+     * Android looper at all: asking for one throws, which would take the class down on its first use and
+     * with it every store that logs. {@link #log} prints to the console there instead.
+     */
+    private static Handler mainHandler() {
+        try {
+            return new Handler(Looper.getMainLooper());
+        } catch (Throwable noAndroid) {
+            return null;
+        }
+    }
 
     public static void init(Context context) {
         if (dir == null) dir = context.getApplicationContext().getFilesDir();
     }
 
     public static void log(String line) {
+        if (main == null) {
+            System.out.println(line);
+            return;
+        }
         if (Looper.myLooper() != Looper.getMainLooper()) {
             main.post(() -> log(line));
             return;

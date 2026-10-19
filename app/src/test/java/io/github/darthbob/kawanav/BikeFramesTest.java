@@ -644,6 +644,62 @@ public class BikeFramesTest {
         assertEquals(-1, t.damping);
     }
 
+    // ------------------------------------------------------------------ a frame cut short
+
+    /**
+     * Every real sample above satisfies {@code length == byte 1 + 3}, the identity the drop is based on:
+     * a frame that is whole is never the one that gets thrown away.
+     */
+    @Test
+    public void everyRealSampleFrameCarriesItsOwnLength() {
+        for (String s : new String[]{Z500_03, Z500_1A, Z500_1B, Z500_1D, Z500_1E, Z500_40, Z500_41,
+                Z500_45, Z500_47, Z500_48, Z500_4B}) {
+            byte[] v = hx(s);
+            assertEquals(s, v.length, (v[1] & 0xFF) + 3);
+        }
+    }
+
+    /**
+     * The MTU stays 23 when the meter does not answer the request, so the first notification of a 55-byte
+     * frame arrives with 20 bytes and a header that still says 55. Decoding it invented a lean of -100°,
+     * a gear of 15 and a negative speed — values the bike never sent.
+     */
+    @Test
+    public void aFrameTruncatedAtTheAttMtuIsDropped() {
+        byte[] whole = telemetryFrame();
+        byte[] cut = java.util.Arrays.copyOf(whole, 20);
+        assertEquals("the header still announces the whole frame", 55, (cut[1] & 0xFF) + 3);
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        assertNull("nothing of it may reach the dash", d.decode(cut));
+        // the same frame in full is decoded: the drop is not a blanket refusal
+        assertTrue(d.decode(whole) instanceof BikeFrames.Telemetry);
+    }
+
+    @Test
+    public void aTruncatedImuFrameIsDropped() {
+        byte[] cut = java.util.Arrays.copyOf(hx(Z500_4B), 20);
+        assertNull(new BikeFrames.Decoder().decode(cut));
+    }
+
+    /**
+     * A frame the meter itself announces as short: block 1 is whole, block 2 is not. The values that did
+     * arrive are kept — refusing them too would lose a whole frame — and the missing ones stay absent
+     * instead of reading past the end of the array (where {@code u8} answers -1).
+     */
+    @Test
+    public void aFrameThatStopsInsideABlockKeepsTheValuesItHas() {
+        byte[] v = blank(0x4A, 20);
+        put(v, 5, 0x05, 0x15, 0x27, 0x10, 0x00, 0x64, 0x0F, 0xA0, 0x03, 0xFF);
+        put(v, 15, 0x05, 0x16);   // block 2 announces itself, its bytes were never sent
+        BikeFrames.Telemetry t = telemetry(infoConfig(0x04, 0x05, 0x00), v);
+        assertEquals(100.0, t.speedKmh, 1e-9);
+        assertEquals(4000, t.rpm);
+        assertEquals(3, t.gear);
+        assertTrue("not -100.2°", Double.isNaN(t.leanDeg));
+        assertTrue("not 0.01 g from a byte read as -1", Double.isNaN(t.accelG));
+        assertTrue(Double.isNaN(t.wheelieDeg));
+    }
+
     @Test
     public void telemetryZ500SampleConfig() {
         // the Z500 sample config: speed nibble 1 (raw 9 bit), rpm nibble 0, throttle nibble 1, no lean
