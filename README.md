@@ -444,6 +444,10 @@ fallback.
   switched off (gone for at least 20 s) or for at most 1 hour; **Start** ends the pause. The
   Bluetooth device chosen under "When my helmet connects" always starts KawaNav when it connects,
   and ends the pause too.
+- An automatic start needs the "Nearby devices" permission. If it was revoked (Android Settings →
+  Apps → KawaNav → Permissions) the phone still tells KawaNav the bike is there, but it cannot talk
+  to it: nothing happens, the log says so, and Home's orange banner asks for the permission. Turning
+  it back on is enough — the association does not have to be set up again.
 
 The Start/Stop button on Home is only a manual fallback (autostart missed, testing).
 
@@ -454,6 +458,11 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   `CLOSE_WAZE_CHANNEL`, no distance, no turn, no arrow), so there is nothing to read. Details and the
   evidence: [docs/WAZE.md](docs/WAZE.md).
 - Only German and English Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
+- **The extras KawaNav reads from its start intent are debug-only.** KawaNav's screen can be started by
+  any app on the phone (Android requires it for the launcher), so a release build ignores
+  `--ez free_mode`, `--ez export_log`, `--ez bridge` and the rest; `-e offline_region <id>` likewise
+  starts nothing. Debug builds act on them as before. Nothing else about the app can be driven from
+  outside.
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
 - The camera warning is what OpenStreetMap has, nothing else: no mobile or temporary checks, and no
