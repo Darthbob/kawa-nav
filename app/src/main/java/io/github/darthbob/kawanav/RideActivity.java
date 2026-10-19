@@ -440,6 +440,16 @@ public class RideActivity extends KawaActivity {
     }
 
     private void confirmDelete() {
+        // Still being written: deleting it would unlink the file the recorder keeps appending to, and
+        // the ride would come back finished, with no track at all, at the next stop. Say so instead.
+        if (RideStore.isOpen(id)) {
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("This ride is being recorded")
+                    .setMessage("Stop the ride first (the record button on Home), then delete it.")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
         new android.app.AlertDialog.Builder(this)
                 .setTitle("Delete this ride?")
                 .setMessage("The recorded ride and its track are removed from the phone.")

@@ -30,12 +30,20 @@ public final class RideStore {
 
     private static final ExecutorService io = Executors.newSingleThreadExecutor(r -> new Thread(r, "ride-io"));
 
-    private final File dir;
-    private Writer out;
+    /**
+     * Guards the one open sample file. The writer is static because only one ride can be recorded at a
+     * time in a process, while several {@code RideStore}s exist at once (the recorder's and one per
+     * screen): with the state per instance, the ride screen's store could not tell that the ride it was
+     * asked to delete is the one being written, and deleted it from under the recorder.
+     */
+    private static final Object LOCK = new Object();
+    private static Writer out;
     /** Header width of a file being appended to that an older version wrote (0 = today's). */
-    private int appendedWidth;
-    private long writtenAt;
-    private String openId;
+    private static int appendedWidth;
+    private static long writtenAt;
+    private static String openId;
+
+    private final File dir;
 
     public RideStore(Context c) {
         this(new File(c.getFilesDir(), DIR));
@@ -56,10 +64,26 @@ public final class RideStore {
         }
     }
 
+    /** Forgets the open sample file: tests only, so one case cannot leak into the next. */
+    static void resetForTests() {
+        synchronized (LOCK) {
+            out = null;
+            openId = null;
+            appendedWidth = 0;
+            writtenAt = 0;
+        }
+    }
+
     // ------------------------------------------------------------------ recording
 
     /** Opens (or creates) the sample file of a ride and writes its header. */
-    public synchronized void open(Ride ride, boolean append) {
+    public void open(Ride ride, boolean append) {
+        synchronized (LOCK) {
+            openLocked(ride, append);
+        }
+    }
+
+    private void openLocked(Ride ride, boolean append) {
         try {
             close();
             File f = tsv(ride.id);
@@ -104,7 +128,13 @@ public final class RideStore {
     }
 
     /** Appends one recorded second. */
-    public synchronized void append(RideTsv.Sample s) {
+    public void append(RideTsv.Sample s) {
+        synchronized (LOCK) {
+            appendLocked(s);
+        }
+    }
+
+    private void appendLocked(RideTsv.Sample s) {
         if (out == null) return;
         try {
             String line = s.line();
@@ -122,7 +152,13 @@ public final class RideStore {
     }
 
     /** Closes the sample file (nothing is compressed here: that happens later, off the main thread). */
-    public synchronized void close() {
+    public void close() {
+        synchronized (LOCK) {
+            closeLocked();
+        }
+    }
+
+    private void closeLocked() {
         if (out == null) return;
         try {
             out.flush();
@@ -212,8 +248,10 @@ public final class RideStore {
     }
 
     /** True while the sample file of this ride is still being written. */
-    public boolean isOpen(String id) {
-        return id != null && id.equals(openId);
+    public static boolean isOpen(String id) {
+        synchronized (LOCK) {
+            return id != null && id.equals(openId);
+        }
     }
 
     // ------------------------------------------------------------------ summaries
@@ -385,13 +423,24 @@ public final class RideStore {
         save(r);
     }
 
-    /** Deletes a ride's summary and samples. */
-    public synchronized void delete(String id) {
-        close();
-        new File(dir, id + ".json").delete();
-        tsv(id).delete();
-        gz(id).delete();
-        new File(dir, id + ".tsv.gz.tmp").delete(); // a compression that never finished
+    /**
+     * Deletes a ride's summary and samples. A ride that is still being recorded is refused: deleting it
+     * unlinks the file the recorder keeps writing into, every later sample goes nowhere, and the summary
+     * is written back as a finished ride with no track at all. Better to keep a ride the rider can stop
+     * and delete afterwards than to lose it without a word.
+     */
+    public void delete(String id) {
+        synchronized (LOCK) {
+            if (isOpen(id)) {
+                Logger.log("Ride: refused to delete " + id + ": it is being recorded");
+                return;
+            }
+            closeLocked();
+            new File(dir, id + ".json").delete();
+            tsv(id).delete();
+            gz(id).delete();
+            new File(dir, id + ".tsv.gz.tmp").delete(); // a compression that never finished
+        }
     }
 
     /** A ride the app was still writing (killed): continues it if it was a moment ago, else recovers it. */
@@ -401,12 +450,20 @@ public final class RideStore {
             List<RideTsv.Sample> s = samples(r.id);
             long lastAt = s.isEmpty() ? r.end : s.get(s.size() - 1).epochMs;
             if (System.currentTimeMillis() - lastAt <= RESUME_MS) return r;
-            r.state = "recovered";
-            r.summarize(s);
-            r.samples = s.size();
+            // the samples are what the summary is worked out from; only when they are there does the
+            // state say recovered. With no readable track the periodic summary is all that is left, and
+            // its own sample count must stand: writing 0 over it would report a ride that recorded
+            // nothing, which reads like a ride that simply had no GPS.
+            if (s.isEmpty()) {
+                r.state = "incomplete";
+            } else {
+                r.state = "recovered";
+                r.summarize(s);
+                r.samples = s.size();
+            }
             save(r);
             compact(r.id);
-            Logger.log("Ride: " + r.id + " recovered after a restart (" + r.samples + " samples)");
+            Logger.log("Ride: " + r.id + " " + r.state + " after a restart (" + r.samples + " samples)");
         }
         return null;
     }

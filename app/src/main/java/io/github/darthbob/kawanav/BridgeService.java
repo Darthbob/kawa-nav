@@ -750,6 +750,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.rideState = recorder.state();
         Hub.rideText = recorder.state() == RideRecorder.IDLE ? ""
                 : RideStats.rideStatusLine(recorder.distanceM(), recorder.activeMs(), recorder.partialGps());
+        // which ride is being written: the ride list marks that row, and refuses to delete it
+        Ride current = recorder.state() == RideRecorder.IDLE ? null : recorder.ride();
+        Hub.rideId = current == null ? null : current.id;
 
         Hub.Output out = decide();
         Hub.output = out;

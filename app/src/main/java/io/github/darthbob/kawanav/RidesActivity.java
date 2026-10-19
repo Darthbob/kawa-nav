@@ -248,7 +248,10 @@ public class RidesActivity extends KawaActivity {
         t.addView(name);
         String when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                 .format(new java.util.Date(r.start));
-        String state = "recovered".equals(r.state) ? " · recovered after a restart" : "";
+        String state = r.id.equals(Hub.rideId) ? " · recording now"
+                : "recovered".equals(r.state) ? " · recovered after a restart"
+                : "incomplete".equals(r.state) ? " · track lost"
+                : "";
         t.addView(secondary(when + state));
         Figure distance = figure(24, android.view.Gravity.START);
         distance.set(r.distance());

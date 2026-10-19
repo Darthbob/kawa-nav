@@ -175,6 +175,8 @@ public final class Hub {
     /** Ride state ({@link RideRecorder#IDLE}, RECORDING, PAUSED) and its "3.4 km · 12 min" text, for the UI. */
     public static int rideState;
     public static String rideText = "";
+    /** The id of the ride being recorded, or null: which row of the ride list is still being written. */
+    public static String rideId;
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
 

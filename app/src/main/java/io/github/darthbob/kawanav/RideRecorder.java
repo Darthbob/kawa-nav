@@ -182,6 +182,7 @@ public final class RideRecorder implements android.location.LocationListener {
         Ride finished = ride;
         ride = null;
         state = IDLE;
+        Hub.rideId = null; // nothing is being written any more, so the ride is deletable again
         // what the ride came to, where the rider will see it (the recording itself is over by then)
         if (!line.isEmpty()) {
             BridgeService.announceRide(context, name.isEmpty() ? Ride.defaultName(finished.start) : name,

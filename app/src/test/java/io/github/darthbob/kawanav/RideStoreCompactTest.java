@@ -23,6 +23,12 @@ public class RideStoreCompactTest {
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 
+    /** The open ride is per process, not per store: one case must not leak into the next. */
+    @org.junit.After
+    public void forgetTheOpenRide() {
+        RideStore.resetForTests();
+    }
+
     private static Ride ride(String id) {
         Ride r = new Ride();
         r.id = id;
@@ -99,6 +105,29 @@ public class RideStoreCompactTest {
         store.compact("never-recorded");
         store.awaitIdle();
         assertFalse(new File(tmp.getRoot(), "never-recorded.tsv.gz").exists());
+    }
+
+    @Test
+    public void deletingTheRideBeingRecordedIsRefused() {
+        RideStore recorder = new RideStore(tmp.getRoot());
+        recorder.open(ride("live"), false);
+        for (int i = 0; i < 3; i++) recorder.append(at(i));
+        // the ride screen builds its own store, which is how a delete used to slip past the recorder
+        RideStore other = new RideStore(tmp.getRoot());
+        other.delete("live");
+        assertTrue("the ride is still being written, so it stays",
+                new File(tmp.getRoot(), "live.tsv").exists());
+        recorder.append(at(3)); // the samples the delete would have thrown away
+        recorder.close();
+        assertEquals(4, other.samples("live").size());
+    }
+
+    @Test
+    public void aFinishedRideCanStillBeDeleted() {
+        RideStore store = withRide("ride");
+        new RideStore(tmp.getRoot()).delete("ride");
+        assertFalse(new File(tmp.getRoot(), "ride.tsv").exists());
+        assertTrue(store.samples("ride").isEmpty());
     }
 
     @Test
