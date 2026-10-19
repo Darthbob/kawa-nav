@@ -30,7 +30,7 @@ import java.util.Locale;
  * Keeps the link to the bike and, once a second, sends whatever should be on the meter:
  * the Google Maps maneuver if Maps is navigating, else the next curve in free mode, else nothing.
  */
-@SuppressLint("MissingPermission") // BLUETOOTH_CONNECT is required before MainActivity starts us
+@SuppressLint("MissingPermission") // every Bluetooth call is behind Hub.bluetoothAllowed / a SecurityException catch
 public class BridgeService extends Service implements KawaBle.Listener {
 
     private static final String CHANNEL = "bridge";
@@ -519,6 +519,14 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private void connectBike() {
         if (destroyed) return;
         handler.removeCallbacks(connectRunnable);
+        // the permission can be revoked while the service runs (autostart path): every Bluetooth call
+        // below would throw SecurityException on the main thread
+        if (!Hub.bluetoothAllowed(this)) {
+            Hub.bikeStatus = "Bluetooth not allowed";
+            Hub.bikeHint = Hub.BLUETOOTH_HINT;
+            Logger.log("Bridge: " + Hub.BLUETOOTH_HINT);
+            return;
+        }
         BluetoothDevice d = findBike();
         if (d == null) {
             Hub.bikeStatus = "No paired Kawasaki found";
@@ -540,16 +548,23 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     /** The saved bike, else the first paired device named "Kawasaki…"; null if none / Bluetooth off. */
     public static BluetoothDevice pairedBike(Context c) {
-        BluetoothAdapter a = ((BluetoothManager) c.getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
-        if (a == null || !a.isEnabled()) return null;
-        String saved = Hub.prefs(c).getString(Hub.KEY_DEVICE, null);
-        BluetoothDevice kawasaki = null;
-        for (BluetoothDevice d : a.getBondedDevices()) {
-            if (d.getAddress().equals(saved)) return d;
-            String n = d.getName();
-            if (kawasaki == null && n != null && n.toLowerCase(Locale.ROOT).contains("kawasaki")) kawasaki = d;
+        try {
+            BluetoothAdapter a = ((BluetoothManager) c.getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
+            if (a == null || !a.isEnabled()) return null;
+            String saved = Hub.prefs(c).getString(Hub.KEY_DEVICE, null);
+            BluetoothDevice kawasaki = null;
+            for (BluetoothDevice d : a.getBondedDevices()) {
+                if (d.getAddress().equals(saved)) return d;
+                String n = d.getName();
+                if (kawasaki == null && n != null && n.toLowerCase(Locale.ROOT).contains("kawasaki")) kawasaki = d;
+            }
+            return kawasaki;
+        } catch (SecurityException e) {
+            // the permission can be revoked between the check and here (or while scanning): the caller
+            // is told "no bike", the app says why, and nothing crashes on the main thread
+            Logger.log("Bluetooth not allowed: " + e.getMessage());
+            return null;
         }
-        return kawasaki;
     }
 
     @Override
@@ -953,6 +968,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     };
 
     private void openAudioProfiles() {
+        if (!Hub.bluetoothAllowed(this)) return; // the permission can be gone on an autostart
         BluetoothAdapter a = ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
         if (a == null) return;
         a.getProfileProxy(this, audioProfiles, BluetoothProfile.HEADSET);
@@ -960,7 +976,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     private void closeAudioProfiles() {
-        BluetoothAdapter a = ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
+        BluetoothAdapter a = Hub.bluetoothAllowed(this)
+                ? ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter() : null;
         if (a == null) return;
         if (headsetProfile != null) a.closeProfileProxy(BluetoothProfile.HEADSET, headsetProfile);
         if (a2dpProfile != null) a.closeProfileProxy(BluetoothProfile.A2DP, a2dpProfile);

@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  * {@link #pair} does the same and then pairs (bonds) the phone with the bike, so Rideology is not
  * needed for the first pairing.
  */
-@SuppressLint("MissingPermission") // BLUETOOTH_CONNECT is granted before autostart can be set up
+@SuppressLint("MissingPermission") // every Bluetooth call is behind Hub.bluetoothAllowed
 public class BikePresence extends CompanionDeviceService {
 
     public static final int REQ_ASSOCIATE = 2;
@@ -90,6 +90,12 @@ public class BikePresence extends CompanionDeviceService {
         }
         if (Hub.serviceRunning) {
             Logger.log("Autostart: bike seen (" + how + "), bridge already running");
+            return;
+        }
+        // the user may have revoked "Nearby devices" while the association stays: starting the bridge
+        // would throw SecurityException on the first Bluetooth call, on the main thread
+        if (!Hub.bluetoothAllowed(this)) {
+            Logger.log("Autostart: bike seen (" + how + "), but " + Hub.BLUETOOTH_HINT);
             return;
         }
         Logger.log("Autostart: bike seen (" + how + "), starting the bridge");

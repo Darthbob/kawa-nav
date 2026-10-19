@@ -123,17 +123,26 @@ public class MainActivity extends KawaActivity {
      * adb shell am start -n io.github.darthbob.kawanav/io.github.darthbob.kawanav.MainActivity --ez bridge true|false
      * Also: --ez free_mode true|false, --es offline_region bayern, --ez offline_cancel true, --ez export_log true,
      * --ez notif_capture true|false, --ez notif_capture_all true|false, --ez cameras true|false,
-     * --ei camera_warn 500 (debug builds)
+     * --ei camera_warn 500
+     * Every one of them is a debug-build switch: {@link Hub#adbAllowed} refuses them all in a release
+     * build, because this activity is exported and any installed app could send them.
      */
     private void handleAdbIntent(Intent i) {
         if (i == null) return;
-        if (i.hasExtra("free_mode")) {
+        // This activity is exported, so a release build must ignore every control extra: see Hub.adbAllowed.
+        if (Hub.adbAllowed("free_mode", Hub.DEBUG_TOOLS) && i.hasExtra("free_mode")) {
             prefs.edit().putBoolean(Hub.KEY_FREE_MODE, i.getBooleanExtra("free_mode", false)).apply();
             BridgeService.settingsChanged();
         }
-        if (i.getBooleanExtra("offline_cancel", false)) OfflineService.stop(this);
-        if (i.getBooleanExtra("export_log", false)) Logger.withLogFiles(this::exportLog);
-        if (i.hasExtra(OfflineService.EXTRA_REGION)) OfflineService.startRegion(this, i.getStringExtra(OfflineService.EXTRA_REGION));
+        if (Hub.adbAllowed("offline_cancel", Hub.DEBUG_TOOLS) && i.getBooleanExtra("offline_cancel", false)) {
+            OfflineService.stop(this);
+        }
+        if (Hub.adbAllowed("export_log", Hub.DEBUG_TOOLS) && i.getBooleanExtra("export_log", false)) {
+            Logger.withLogFiles(this::exportLog);
+        }
+        if (Hub.adbAllowed(OfflineService.EXTRA_REGION, Hub.DEBUG_TOOLS) && i.hasExtra(OfflineService.EXTRA_REGION)) {
+            OfflineService.startRegion(this, i.getStringExtra(OfflineService.EXTRA_REGION));
+        }
         if (Hub.DEBUG_TOOLS) {
             // debug builds: vehicle data tests, e.g. --es bike_read 41, --ei init_level 2, --es replay 20261013-190000.txt
             if (i.hasExtra("bike_read")) {
@@ -190,7 +199,7 @@ public class MainActivity extends KawaActivity {
                 Logger.log("adb: replay " + f.getName() + ": " + BridgeService.replay(f));
             }
         }
-        if (i.hasExtra("bridge")) {
+        if (Hub.DEBUG_TOOLS && i.hasExtra("bridge")) {
             if (i.getBooleanExtra("bridge", false)) {
                 if (!Hub.serviceRunning) BridgeService.start(this);
             } else {

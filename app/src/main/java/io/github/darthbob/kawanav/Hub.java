@@ -234,4 +234,40 @@ public final class Hub {
     public static SharedPreferences prefs(Context c) {
         return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
+
+    /**
+     * True when the runtime Bluetooth permission is granted. The user can revoke it (Settings, "Nearby
+     * devices") while the companion-device association stays: every Bluetooth call then throws
+     * {@link SecurityException}, so the background entry points must ask before starting the bridge.
+     */
+    public static boolean bluetoothAllowed(Context c) {
+        return c.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** What the app says when the Bluetooth permission is missing: it cannot talk to the bike. */
+    public static final String BLUETOOTH_HINT =
+            "KawaNav is not allowed to use Bluetooth: open KawaNav and allow \"Nearby devices\".";
+
+    /**
+     * Extras that only a debug build acts on. {@link MainActivity} is exported, so a release build must
+     * ignore every control extra a calling app could send (and the debug tools rely on this list).
+     */
+    public static final String[] DEBUG_EXTRAS = {"free_mode", "offline_cancel", "export_log",
+            "bike_read", "init_level", "raw_capture", "cameras", "camera_warn", "notif_capture",
+            "ignore_caps", "notif_capture_all", "screen", "replay", "bridge"};
+
+    /**
+     * True when {@link MainActivity} may act on this launch-intent extra. Every extra KawaNav handles
+     * from an intent is a control extra, so a release build acts on none of them: the activity is
+     * exported and any installed app could otherwise start a region download, export the log or stop
+     * the bridge. Debug builds (see {@link #DEBUG_TOOLS}) act on them as before.
+     */
+    public static boolean adbAllowed(String extra, boolean debugTools) {
+        if (extra == null || !debugTools) return false;
+        for (String e : DEBUG_EXTRAS) {
+            if (e.equals(extra)) return true;
+        }
+        return OfflineService.EXTRA_REGION.equals(extra);
+    }
 }

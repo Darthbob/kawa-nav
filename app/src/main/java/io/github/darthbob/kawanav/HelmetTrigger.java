@@ -27,10 +27,17 @@ public class HelmetTrigger extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (!BluetoothDevice.ACTION_ACL_CONNECTED.equals(intent.getAction())) return;
+        Logger.init(context);
+        // the user may have revoked "Nearby devices": getAddress()/getName() would throw, and the
+        // bridge could not talk to the bike either
+        if (!Hub.bluetoothAllowed(context)) {
+            Logger.log("Helmet connected, but " + Hub.BLUETOOTH_HINT);
+            return;
+        }
         BluetoothDevice d = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
         String helmet = Hub.prefs(context).getString(Hub.KEY_HELMET, null);
         if (d == null || helmet == null || !helmet.equals(d.getAddress())) return;
-        Logger.init(context);
+
         // the helmet is switched on to ride: it always starts, also after a manual stop (that pause is
         // for the bike, which advertises again right after Stop; the helmet stays connected then)
         if (Hub.autostartPaused(context)) {
@@ -53,6 +60,7 @@ public class HelmetTrigger extends BroadcastReceiver {
     /** Paired Classic Bluetooth audio devices (headsets, intercoms) that can serve as trigger. */
     public static List<BluetoothDevice> candidates(Context c) {
         List<BluetoothDevice> out = new ArrayList<>();
+        if (!Hub.bluetoothAllowed(c)) return out;
         BluetoothAdapter a = ((BluetoothManager) c.getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
         if (a == null) return out;
         for (BluetoothDevice d : a.getBondedDevices()) {
