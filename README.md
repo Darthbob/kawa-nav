@@ -328,7 +328,11 @@ They are kept on the phone and included in Android's backup.
 The round button in the middle of the bottom bar (or turning "Start recording by itself" on) records one
 line per second: the bike's values that second and the phone's position. Tapping it again pauses,
 continues or stops the ride (Home shows the same buttons while a ride runs); a ride that was running when the app was killed is continued after a restart, and one that was
-left behind is marked "recovered" and its summary rebuilt from the file.
+left behind is marked "recovered" and its summary rebuilt from the file. One whose track cannot be read
+back at all is marked "track lost" instead and keeps the numbers of its last summary, so it does not read
+like a ride that recorded nothing. In the list the ride being recorded is marked "· recording now" and
+cannot be deleted until it is stopped: deleting it would unlink the file the recorder is writing into,
+and the ride would come back as a finished ride with no track.
 
 While a ride runs, Home shows its distance, its time and, when the phone has no fix, "no GPS track" —
 the case of a background autostart in an area where KawaNav could not ask for GPS yet. It asks again as
@@ -408,7 +412,8 @@ Settings → "Offline maps", preferably over Wi-Fi.
   storage of about 1.25 × the file size + 500 MB.
 - The extract is converted on the phone into road tiles and then deleted. Examples on a Pixel 9:
   Oberbayern 258 MB → 22 MB stored in ~35 s; Germany 4.8 GB → 383 MB stored in ~23 min (9 min
-  download, 14 min conversion).
+  download, 14 min conversion). Android stops such a download after six hours in a day (the limit on
+  background data work); the app then says so in the notification and the download can be started again.
 - Each region is listed with its data date and size. **Update** appears when Geofabrik's data is
   30 days newer; **Delete** removes the region's tiles, except tiles another downloaded region also
   uses (regions overlap, e.g. a state inside its country, and share border tiles).

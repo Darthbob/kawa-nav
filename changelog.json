@@ -10,7 +10,11 @@
         "A Bluetooth packet the meter sends cut short is ignored instead of reading as a lean of about −100° or a gear of 15 for a second",
         "Turning KawaNav off clears the dash first (arrow, distance, phone battery icon) instead of leaving the last arrow on the meter",
         "A call or message that arrives while KawaNav is not connected to the bike is shown on the dash as soon as it connects again",
-        "An automatic start now says what is missing if the \"Nearby devices\" permission was revoked, instead of doing nothing"
+        "An automatic start now says what is missing if the \"Nearby devices\" permission was revoked, instead of doing nothing",
+        "A ride that is still being recorded is marked in the ride list and cannot be deleted until you stop it",
+        "A ride whose track could not be recovered after a restart says \"track lost\" instead of reading as a ride that recorded 0 samples",
+        "An offline-region download that Android stops because it ran too long says so and can be started again, instead of taking the app down with it",
+        "The first-start guide no longer skips a question if the app is closed while it is on screen: the same step comes back"
       ]
     },
     {
