@@ -159,6 +159,24 @@ public class RideStatsTest {
         assertEquals(100.0, years.get(1).km, 1e-9);
     }
 
+    // ------------------------------------------------------------------ the line shown while riding
+
+    @Test
+    public void theRideLineSaysWhenTheTrackIsMissing() {
+        long active = 41 * 60_000L + 12_000L;      // just under an hour: minutes and seconds only
+        assertEquals("3.4 km · 41:12", RideStats.rideStatusLine(3400, active, false));
+        assertEquals("3.4 km · 41:12 · no GPS track", RideStats.rideStatusLine(3400, active, true));
+        assertFalse(RideStats.rideStatusLine(3400, active, false).contains(RideStats.NO_TRACK));
+    }
+
+    @Test
+    public void theRideLineKeepsItsNumbers() {
+        assertEquals("0.0 km · 0:00", RideStats.rideStatusLine(0, 0, false));
+        assertEquals("12.3 km · 1:05:03", RideStats.rideStatusLine(12_345, 3_903_000L, false));
+        // a clock that went backwards cannot produce a negative time
+        assertEquals("0.0 km · 0:00", RideStats.rideStatusLine(0, -1, false));
+    }
+
     @Test
     public void theLineAFinishedRideIsAnnouncedWith() {
         Ride r = ride(at(2026, 4, 4), 150, 100, 132, 44, 48, 9);

@@ -180,4 +180,25 @@ public final class RideStats {
         }
         return sb.toString();
     }
+
+    /** What the app says while a ride runs without a GPS track (a background start without GPS). */
+    public static final String NO_TRACK = "no GPS track";
+
+    /**
+     * The ride status line the UI and the ride notification show: "12.3 km · 0:41:12", with
+     * {@link #NO_TRACK} added while the recorder has no fix, so the rider learns it during the ride
+     * and not from the ride list afterwards.
+     */
+    public static String rideStatusLine(double metres, long activeMs, boolean partialGps) {
+        String line = String.format(java.util.Locale.ROOT, "%.1f km · %s", metres / 1000, duration(activeMs));
+        return partialGps ? line + " · " + NO_TRACK : line;
+    }
+
+    /** Milliseconds as h:mm:ss (or m:ss under an hour). */
+    public static String duration(long ms) {
+        long s = Math.max(0, ms) / 1000;
+        long h = s / 3600;
+        return h > 0 ? String.format(java.util.Locale.ROOT, "%d:%02d:%02d", h, (s % 3600) / 60, s % 60)
+                : String.format(java.util.Locale.ROOT, "%d:%02d", s / 60, s % 60);
+    }
 }

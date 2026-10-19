@@ -55,10 +55,31 @@ public final class OfflineRegions {
     private final HazardStore hazards;
 
     public OfflineRegions(Context context, RoadStore store, HazardStore hazards) {
-        this.dir = new File(context.getApplicationContext().getFilesDir(), "regions");
+        this(new File(context.getApplicationContext().getFilesDir(), "regions"), store, hazards);
+    }
+
+    /** Plain-directory constructor, so the record files can be tested without a phone. */
+    OfflineRegions(File dir, RoadStore store, HazardStore hazards) {
+        this.dir = dir;
         if (!dir.isDirectory()) dir.mkdirs();
         this.store = store;
         this.hazards = hazards;
+    }
+
+    /**
+     * A region id may contain a path separator — Geofabrik's ids do, e.g. {@code us/alabama} — so it can
+     * never be used as a file name: {@code us/alabama.poly} would need a directory that is not there, and
+     * {@code regions/us/alabama.json} would be invisible to {@link #list()}, which reads one flat folder.
+     * The real id stays inside the record; only the file name is folded.
+     */
+    public static String safeKey(String id) {
+        if (id == null) return "";
+        String key = id.replace('/', '_').replace('\\', '_').replace("..", "");
+        // a dot at either end names the folder itself ("." → ".json"), so it carries nothing
+        while (!key.isEmpty() && (key.charAt(0) == '.' || key.charAt(key.length() - 1) == '.')) {
+            key = key.charAt(0) == '.' ? key.substring(1) : key.substring(0, key.length() - 1);
+        }
+        return key;
     }
 
     /** All downloaded regions, sorted by label. */
@@ -100,11 +121,12 @@ public final class OfflineRegions {
         o.put("tiles", new JSONArray(tiles));
         o.put("hazards", camerasScanned);
         o.put("hazardTiles", new JSONArray(hazardTiles));
-        File tmp = new File(dir, id + ".tmp");
+        String file = safeKey(id);
+        File tmp = new File(dir, file + ".tmp");
         try (OutputStream out = new FileOutputStream(tmp)) {
             out.write(o.toString().getBytes(StandardCharsets.UTF_8));
         }
-        if (!tmp.renameTo(new File(dir, id + ".json"))) throw new Exception("cannot store the region record");
+        if (!tmp.renameTo(new File(dir, file + ".json"))) throw new Exception("cannot store the region record");
         if (old != null) {
             Set<String> gone = new HashSet<>(old.tiles);
             gone.removeAll(tiles);
@@ -121,7 +143,7 @@ public final class OfflineRegions {
     /** Removes the region and its tiles that no other region uses. */
     public synchronized void delete(String id) {
         Region r = find(id);
-        new File(dir, id + ".json").delete();
+        new File(dir, safeKey(id) + ".json").delete();
         if (r != null) {
             deleteUnused(r.tiles);
             for (String k : r.hazardTiles) if (!usedHazard(k)) hazards.delete(k);

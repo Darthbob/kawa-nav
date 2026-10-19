@@ -38,12 +38,22 @@ public final class RideStore {
     private String openId;
 
     public RideStore(Context c) {
-        dir = new File(c.getFilesDir(), DIR);
+        this(new File(c.getFilesDir(), DIR));
+    }
+
+    /** The rides live in {@code files/rides/}; a plain directory keeps this testable without a phone. */
+    RideStore(File dir) {
+        this.dir = dir;
         dir.mkdirs();
     }
 
-    static File dir(Context c) {
-        return new File(c.getFilesDir(), DIR);
+    /** Waits for the store's own thread: tests only (the app never blocks on a ride write). */
+    void awaitIdle() {
+        try {
+            io.submit(() -> { }).get(10, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     // ------------------------------------------------------------------ recording
@@ -123,22 +133,37 @@ public final class RideStore {
         openId = null;
     }
 
-    /** Gzips a finished ride's samples on the background thread and removes the plain file. */
+    /**
+     * Gzips a finished ride's samples on the background thread and removes the plain file. The gzip is
+     * written to a temporary name and renamed into place: an app killed (or a full disk) halfway would
+     * otherwise leave a truncated {@code .tsv.gz} beside the whole {@code .tsv}, and the truncated one
+     * is the one a reader picks, so the ride would be lost for good. The plain file goes only after the
+     * compressed one is complete.
+     */
     public void compact(String id) {
         io.execute(() -> {
             File plain = tsv(id);
             File gz = new File(dir, id + ".tsv.gz");
-            if (!plain.exists()) return;
-            try (java.io.InputStream in = new java.io.FileInputStream(plain);
-                 java.io.OutputStream raw = new java.io.FileOutputStream(gz);
-                 java.util.zip.GZIPOutputStream zip = new java.util.zip.GZIPOutputStream(raw)) {
-                byte[] buf = new byte[8192];
-                for (int n; (n = in.read(buf)) > 0; ) zip.write(buf, 0, n);
-                plain.delete();
+            File tmp = new File(dir, id + ".tsv.gz.tmp");
+            if (!plain.exists()) {
+                tmp.delete();
+                return;
+            }
+            try {
+                try (java.io.InputStream in = new java.io.FileInputStream(plain);
+                     java.util.zip.GZIPOutputStream zip = new java.util.zip.GZIPOutputStream(
+                             new java.io.FileOutputStream(tmp))) {
+                    byte[] buf = new byte[8192];
+                    for (int n; (n = in.read(buf)) > 0; ) zip.write(buf, 0, n);
+                    zip.finish(); // writes the deflate tail and the CRC: the file was not whole before
+                }
+                if (!tmp.renameTo(gz)) throw new IOException("cannot rename " + tmp);
             } catch (IOException e) {
                 Logger.log("Ride: cannot compress " + id + ": " + e);
-                gz.delete();
+                tmp.delete();
+                return; // the plain file stays: the ride is still readable
             }
+            if (!plain.delete()) Logger.log("Ride: " + id + " left as both .tsv and .tsv.gz");
         });
     }
 
@@ -148,14 +173,30 @@ public final class RideStore {
         return new File(dir, id + ".tsv");
     }
 
+    private File gz(String id) {
+        return new File(dir, id + ".tsv.gz");
+    }
+
     private File sampleFile(String id) {
-        File gz = new File(dir, id + ".tsv.gz");
+        File gz = gz(id);
         return gz.exists() ? gz : tsv(id);
     }
 
-    /** The samples of a ride, whatever state the file is in (plain or gzipped); empty when unreadable. */
+    /**
+     * The samples of a ride, whatever state the file is in (plain or gzipped). When the compressed file
+     * cannot be read (a truncated one left by an older version), the plain one is tried before giving
+     * up: the ride is still there, and one unreadable file must not hide it.
+     */
     public List<RideTsv.Sample> samples(String id) {
         File f = sampleFile(id);
+        List<RideTsv.Sample> out = read(f, id);
+        File plain = tsv(id);
+        if (!out.isEmpty() || f.equals(plain) || !plain.exists()) return out;
+        Logger.log("Ride: " + f.getName() + " unreadable, falling back to " + plain.getName());
+        return read(plain, id);
+    }
+
+    private static List<RideTsv.Sample> read(File f, String id) {
         if (!f.exists()) return new ArrayList<>();
         try (BufferedReader r = f.getName().endsWith(".gz")
                 ? new BufferedReader(new java.io.InputStreamReader(new java.util.zip.GZIPInputStream(new java.io.FileInputStream(f)),
@@ -165,7 +206,7 @@ public final class RideStore {
             for (String line; (line = r.readLine()) != null; ) lines.add(line);
             return RideTsv.parse(lines);
         } catch (Exception e) {
-            Logger.log("Ride: cannot read " + id + ": " + e);
+            Logger.log("Ride: cannot read " + f.getName() + ": " + e);
             return new ArrayList<>();
         }
     }
@@ -349,7 +390,8 @@ public final class RideStore {
         close();
         new File(dir, id + ".json").delete();
         tsv(id).delete();
-        new File(dir, id + ".tsv.gz").delete();
+        gz(id).delete();
+        new File(dir, id + ".tsv.gz.tmp").delete(); // a compression that never finished
     }
 
     /** A ride the app was still writing (killed): continues it if it was a moment ago, else recovers it. */

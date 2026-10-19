@@ -95,9 +95,11 @@ public class OfflineService extends Service {
         Logger.log("Offline region: " + r.label() + " from " + r.pbfUrl);
         File dir = new File(getCacheDir(), "geofabrik");
         dir.mkdirs();
-        File poly = new File(dir, id + ".poly");
+        // a Geofabrik id can contain "/" (us/alabama): folded for the file names, see OfflineRegions.safeKey
+        String key = OfflineRegions.safeKey(id);
+        File poly = new File(dir, key + ".poly");
         Geofabrik.download(r.polyUrl(), poly, null);
-        File pbf = new File(dir, id + ".osm.pbf");
+        File pbf = new File(dir, key + ".osm.pbf");
         long[] head = Geofabrik.head(r.pbfUrl);
         long size = head[0];
         long dataDate = head[1] > 0 ? head[1] : System.currentTimeMillis();

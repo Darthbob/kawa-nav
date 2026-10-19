@@ -265,13 +265,6 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 || (askedLevel == 0 && onBike >= 1 && onBike <= 5 && onBike != 0);
     }
 
-    /** "1 h 05 min" for the ride card and the notification. */
-    private static String rideDuration(long ms) {
-        long min = ms / 60_000;
-        return min >= 60 ? min / 60 + " h " + String.format(java.util.Locale.ROOT, "%02d", min % 60) + " min"
-                : min + " min";
-    }
-
     // ------------------------------------------------------------------ ride recording
 
     /** Starts recording a ride; starts the bridge first when it is not running. */
@@ -444,6 +437,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE | ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             boolean was = locationAllowed;
             locationAllowed = true;
+            if (!was && recorder != null) {
+                // a ride started in the background had no GPS: let it join now that the app is visible
+                recorder.gpsBecameUsable();
+            }
             if (!was && curve != null) {
                 Logger.log("GPS enabled for curve detection");
                 applySettings();
@@ -726,8 +723,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
         // the ride state is for the UI, so it is updated whether or not the bike is connected
         Hub.rideState = recorder.state();
-        Hub.rideText = recorder.state() == RideRecorder.IDLE ? "" : String.format(java.util.Locale.ROOT,
-                "%.1f km · %s", recorder.distanceM() / 1000, rideDuration(recorder.activeMs()));
+        Hub.rideText = recorder.state() == RideRecorder.IDLE ? ""
+                : RideStats.rideStatusLine(recorder.distanceM(), recorder.activeMs(), recorder.partialGps());
 
         Hub.Output out = decide();
         Hub.output = out;
