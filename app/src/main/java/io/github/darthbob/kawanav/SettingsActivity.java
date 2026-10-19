@@ -117,6 +117,7 @@ public class SettingsActivity extends KawaActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        BikePresence.invalidate(); // back from the system's Bluetooth settings: the link may be gone
         handler.post(refresh);
         if (pendingSection != null) {
             String s = pendingSection;

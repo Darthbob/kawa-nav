@@ -68,6 +68,10 @@ public class MainActivity extends KawaActivity {
     private TextView bannerTitle;
     private View permRow, bluetoothRow, pairRow, gpsRow, accessRow, batteryRow, bgLocRow;
     private TextView pairSub;
+    /** How often the banner re-reads the system (see updateUi): its checks are binder calls. */
+    private static final long BANNER_MS = 4000;
+    private long bannerAt;
+    private boolean permsOk, btEnabled, pairedOk, locationOn, notifAccess, batteryOk, backgroundLocation;
     // first start: walks through every permission once (see continueSetup)
     private static final String KEY_SETUP_STEP = "setup_step";
     private static final String KEY_NOTICE_SEEN = "riding_notice_seen";
@@ -79,6 +83,7 @@ public class MainActivity extends KawaActivity {
     private boolean setupWaiting;  // a permission dialog or settings screen of the guide is open
     private boolean setupDialog;   // an explanation dialog of the guide is showing
     private boolean fromSetup;     // the pending permission request comes from the guide
+    private int stepInFlight = -1; // the guide step whose dialog is open (in memory: see setupStepDone)
     private boolean listenerSettingsOpened; // notification access settings opened, see onResume
     // in-app update
     private static final String KEY_UPDATE_SKIPPED = "update_skipped"; // version the user skipped
@@ -212,7 +217,13 @@ public class MainActivity extends KawaActivity {
     protected void onResume() {
         super.onResume();
         BridgeService.appVisible();
-        setupWaiting = false; // back from the guide's permission dialog or settings screen
+        BikePresence.invalidate(); // back from the system's Bluetooth settings: the link may be gone
+        bannerAt = 0;              // and the banner's own checks are due again
+        // back from the guide's permission dialog or settings screen: that step is over, so the guide
+        // moves on. Only when the wait was the guide's — an ordinary resume must not spend a step.
+        boolean guideReturned = setupWaiting;
+        setupWaiting = false;
+        if (guideReturned) setupStepDone();
         if (listenerSettingsOpened) {
             listenerSettingsOpened = false;
             // back without notification access: with a downloaded APK, Android greys the switch out
@@ -259,7 +270,7 @@ public class MainActivity extends KawaActivity {
         if (guide) {
             // Android may answer without showing anything (declined before): go on right away
             setupWaiting = false;
-            handler.post(this::continueSetup);
+            handler.post(this::setupStepDone);
         }
         List<String> denied = requestCode == REQ_BG_LOCATION
                 ? (hasBackgroundLocation() ? new ArrayList<>() : List.of(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
@@ -302,11 +313,30 @@ public class MainActivity extends KawaActivity {
         int step = prefs.getInt(KEY_SETUP_STEP, 0);
         while (step < SETUP_STEPS) {
             int s = step++;
-            prefs.edit().putInt(KEY_SETUP_STEP, step).apply();
+            // The step in progress is what is stored here; it is advanced only once the step is over
+            // (setupStepDone). Writing the *next* one before running the step marked it done before its
+            // permission dialog was even answered: the app killed while that dialog was on screen left
+            // the step consumed, and its permission was never asked again.
+            prefs.edit().putInt(KEY_SETUP_STEP, s).apply();
             if (!setupNeeded(s)) continue;
+            stepInFlight = s;
             runSetupStep(s);
             return;
         }
+        prefs.edit().putInt(KEY_SETUP_STEP, SETUP_STEPS).apply(); // nothing left to ask for
+    }
+
+    /**
+     * The guide's step is over — answered, declined, or back from a settings screen — so the next one
+     * is offered. Idempotent for one step: the return from a permission dialog can arrive through both
+     * onResume and onRequestPermissionsResult, and only the first of them must advance.
+     */
+    private void setupStepDone() {
+        if (stepInFlight < 0) return;
+        int s = stepInFlight;
+        stepInFlight = -1;
+        prefs.edit().putInt(KEY_SETUP_STEP, s + 1).apply();
+        continueSetup();
     }
 
     private boolean setupNeeded(int step) {
@@ -335,7 +365,7 @@ public class MainActivity extends KawaActivity {
                     fromSetup = true;
                 }, () -> {
                     setupDialog = false;
-                    continueSetup();
+                    setupStepDone(); // declined or not available: the step is over either way
                 });
                 break;
             case 2:
@@ -351,7 +381,7 @@ public class MainActivity extends KawaActivity {
                         })
                         .setNegativeButton("Not now", (d, w) -> {
                             setupDialog = false;
-                            continueSetup();
+                            setupStepDone();
                         })
                         .setCancelable(false)
                         .show();
@@ -747,23 +777,35 @@ public class MainActivity extends KawaActivity {
                 : info == null ? "Odometer, fuel, temperatures, maintenance and riding modes appear once the bike is connected"
                 : BikeActivity.lastRead(b, System.currentTimeMillis()));
 
-        // --- banner: what still keeps KawaNav from working fully
+        // --- banner: what still keeps KawaNav from working fully. The checks behind it are binder
+        // round-trips (companion device, Bluetooth, location, power, permissions); on the half-second
+        // refresh that was six of them twice a second, on the main thread. They are read every few
+        // seconds instead, and again on resume — which is when a permission or setting can have changed.
+        long nowBanner = System.currentTimeMillis();
+        if (nowBanner - bannerAt >= BANNER_MS) {
+            bannerAt = nowBanner;
+            permsOk = missingPermissions().isEmpty();
+            android.bluetooth.BluetoothAdapter bt = getSystemService(android.bluetooth.BluetoothManager.class).getAdapter();
+            btEnabled = bt != null && bt.isEnabled();
+            pairedOk = BridgeService.pairedBike(this) != null;
+            locationOn = getSystemService(android.location.LocationManager.class).isLocationEnabled();
+            notifAccess = hasNotificationAccess();
+            batteryOk = batteryUnrestricted();
+            backgroundLocation = hasBackgroundLocation();
+        }
         android.companion.AssociationInfo bike = BikePresence.association(this);
         boolean anyAuto = bike != null || prefs.getString(Hub.KEY_HELMET, null) != null;
         boolean curves = Hub.freeMode(this) || prefs.getInt(Hub.KEY_NAV_CURVES, 0) > 0;
-        boolean perms = missingPermissions().isEmpty();
-        android.bluetooth.BluetoothAdapter bt = getSystemService(android.bluetooth.BluetoothManager.class).getAdapter();
         int missing = 0;
-        missing += show(permRow, !perms);
-        boolean btOn = perms && bt != null && bt.isEnabled();
-        missing += show(bluetoothRow, perms && bt != null && !bt.isEnabled());
-        missing += show(pairRow, btOn && BridgeService.pairedBike(this) == null);
+        missing += show(permRow, !permsOk);
+        missing += show(bluetoothRow, permsOk && !btEnabled);
+        missing += show(pairRow, permsOk && btEnabled && !pairedOk);
         pairSub.setText(Hub.pairStatus.isEmpty() ? PAIR_HINT : Hub.pairStatus);
-        missing += show(gpsRow, curves && !getSystemService(android.location.LocationManager.class).isLocationEnabled());
+        missing += show(gpsRow, curves && !locationOn);
         boolean dashAlerts = prefs.getBoolean(Hub.KEY_DASH_CALLS, false) || prefs.getBoolean(Hub.KEY_DASH_MAIL, false);
-        missing += show(accessRow, (Hub.mapsEnabled(this) || dashAlerts) && !hasNotificationAccess());
-        missing += show(batteryRow, !batteryUnrestricted());
-        missing += show(bgLocRow, curves && anyAuto && !hasBackgroundLocation());
+        missing += show(accessRow, (Hub.mapsEnabled(this) || dashAlerts) && !notifAccess);
+        missing += show(batteryRow, !batteryOk);
+        missing += show(bgLocRow, curves && anyAuto && !backgroundLocation);
         banner.setVisibility(missing > 0 ? View.VISIBLE : View.GONE);
         bannerTitle.setText(missing == 1 ? "1 setting needs your attention" : missing + " settings need your attention");
     }

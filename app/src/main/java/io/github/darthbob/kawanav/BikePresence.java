@@ -39,6 +39,14 @@ public class BikePresence extends CompanionDeviceService {
 
     public static final int REQ_ASSOCIATE = 2;
 
+    /** The cached {@link #association} (see there): a binder call the UI must not repeat at 2 Hz. */
+    private static final Object CACHE = new Object();
+    private static AssociationInfo cached;
+    private static boolean cachedValid;
+    /** The bond-state receiver of a pairing in flight, so it can be unregistered before the next one. */
+    private static BroadcastReceiver bondReceiver;
+    private static Context bondContext;
+
     // ------------------------------------------------------------------ presence events
 
     @Override
@@ -112,10 +120,30 @@ public class BikePresence extends CompanionDeviceService {
         return c.getSystemService(CompanionDeviceManager.class);
     }
 
-    /** The association with the bike, or null when autostart is not set up. */
+    /**
+     * The association with the bike, or null when autostart is not set up. Cached: the Home and
+     * Settings screens ask for it on their half-second refresh, and {@code getMyAssociations} is a
+     * binder round-trip to the companion-device service — twice a second, on the main thread, for as
+     * long as either screen is in front. {@link #invalidate()} is called wherever the association can
+     * change (pairing, turning autostart off, the companion-device callbacks) and from the screens'
+     * onResume, so one removed from the system Bluetooth settings is picked up on the way back.
+     */
     public static AssociationInfo association(Context c) {
-        List<AssociationInfo> l = cdm(c).getMyAssociations();
-        return l.isEmpty() ? null : l.get(0);
+        synchronized (CACHE) {
+            if (!cachedValid) {
+                List<AssociationInfo> l = cdm(c).getMyAssociations();
+                cached = l.isEmpty() ? null : l.get(0);
+                cachedValid = true;
+            }
+            return cached;
+        }
+    }
+
+    /** Forgets the cached association: the next {@link #association} reads the real one again. */
+    public static void invalidate() {
+        synchronized (CACHE) {
+            cachedValid = false;
+        }
     }
 
     public static boolean enabled(Context c) {
@@ -151,8 +179,12 @@ public class BikePresence extends CompanionDeviceService {
             paired(c, d);
             return;
         }
+        // one pairing at a time: the receiver lives on the application context, so a second tap while
+        // the first is still in flight would leave the first one registered for the life of the process
+        // (every later bond-state event, for any device, going to a handler nobody owns).
+        unregisterBondReceiver();
         Context app = c.getApplicationContext();
-        app.registerReceiver(new BroadcastReceiver() {
+        BroadcastReceiver r = new BroadcastReceiver() {
             @Override
             public void onReceive(Context ctx, Intent i) {
                 BluetoothDevice b = i.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
@@ -160,21 +192,37 @@ public class BikePresence extends CompanionDeviceService {
                 int state = i.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);
                 if (state == BluetoothDevice.BOND_BONDED) {
                     paired(ctx, b);
-                    app.unregisterReceiver(this);
+                    unregisterBondReceiver();
                 } else if (state == BluetoothDevice.BOND_NONE) {
                     Hub.pairStatus = "Pairing failed: ignition on, Rideology closed, then try again";
                     Logger.log("Pairing with " + d.getAddress() + " failed or was declined");
-                    app.unregisterReceiver(this);
+                    unregisterBondReceiver();
                 }
             }
-        }, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED), Context.RECEIVER_EXPORTED);
+        };
+        bondReceiver = r;
+        bondContext = app;
+        app.registerReceiver(r, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED), Context.RECEIVER_EXPORTED);
         Logger.log("Pairing with " + info.getDisplayName() + " (" + d.getAddress() + ")…");
         if (d.createBond()) {
             Hub.pairStatus = "Pairing… confirm on the phone (and the dash) if asked";
         } else {
             Hub.pairStatus = "Pairing could not start: ignition on, then try again";
             Logger.log("Pairing could not start (createBond refused)");
+            unregisterBondReceiver(); // no bond event will ever come: do not keep the receiver
         }
+    }
+
+    /** Drops the bond-state receiver of a pairing: it finished, failed, or a new attempt replaced it. */
+    private static void unregisterBondReceiver() {
+        if (bondReceiver == null) return;
+        try {
+            bondContext.unregisterReceiver(bondReceiver);
+        } catch (IllegalArgumentException e) {
+            // already gone: the system dropped it with the context
+        }
+        bondReceiver = null;
+        bondContext = null;
     }
 
     private static void paired(Context c, BluetoothDevice d) {
@@ -182,6 +230,9 @@ public class BikePresence extends CompanionDeviceService {
         Hub.pairStatus = "";
         Logger.log("Paired with " + d.getName() + " (" + d.getAddress() + ")");
     }
+
+    // Note: invalidate() is called from the association callbacks below and from disable(), never from
+    // paired(): pairing bonds the phone with a bike the association already points at.
 
     private static void associate(Activity a, BluetoothDevice paired, boolean thenPair) {
         AssociationRequest.Builder b = new AssociationRequest.Builder().setSingleDevice(false);
@@ -205,6 +256,7 @@ public class BikePresence extends CompanionDeviceService {
             @Override
             public void onAssociationCreated(AssociationInfo info) {
                 Logger.log("Autostart: linked to " + info.getDisplayName() + " (" + info.getDeviceMacAddress() + ")");
+                invalidate();
                 observe(a, info);
                 if (thenPair) bond(a, info);
                 if (a instanceof MainActivity) ((MainActivity) a).askBackgroundLocation();
@@ -238,6 +290,7 @@ public class BikePresence extends CompanionDeviceService {
         AssociationInfo info = association(c);
         if (info == null) return;
         cdm(c).disassociate(info.getId());
+        invalidate();
         Logger.log("Autostart off (bike link removed)");
     }
 }
