@@ -59,9 +59,12 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   and export as Rideology's CSV or as GPX. Since 0.8 the ride also holds what the suspension unit and the
   body were doing (travel, accelerations, rotation rates, filtered wheel speeds) and the rest of the live
   frame (torque, brake pressures, ABS state, damping, cruise control). A ride survives the app being
-  killed.
+  killed, and so does its sample file: a compression interrupted while the app is killed leaves the
+  plain file in place instead of a half-written one, and the ride is compressed again next time.
 - 🔔 **Call and mail icons on the dash**: the dash shows an icon while a call comes in or a mail or
-  message arrives. Only the fact there is one is sent: no numbers, no names, nothing stored.
+  message arrives. Only the fact there is one is sent: no numbers, no names, nothing stored. An icon
+  that appeared while KawaNav was not connected is sent as soon as it connects again, so a call that
+  came in with the bike off is not lost.
 - 🕐 **Dash clock from the phone**: optional, once per connection, like Rideology.
 - 🔧 **Settings on the bike**: reads the ride settings (riding mode, power, KTRC, quickshifter, and the
   suspension settings on bikes that have them) and, in debug builds, writes riding mode/power/KTRC/KQS
@@ -327,6 +330,10 @@ line per second: the bike's values that second and the phone's position. Tapping
 continues or stops the ride (Home shows the same buttons while a ride runs); a ride that was running when the app was killed is continued after a restart, and one that was
 left behind is marked "recovered" and its summary rebuilt from the file.
 
+While a ride runs, Home shows its distance, its time and, when the phone has no fix, "no GPS track" —
+the case of a background autostart in an area where KawaNav could not ask for GPS yet. It asks again as
+soon as the app is opened or the ride is continued, and the track then starts from that point.
+
 The **Rides** tab ("Riding log") lists them with totals for this week, this month and this year. The
 **Records** card keeps the best of the log — fastest ride, most lean each way, longest ride, hottest engine,
 hardest braking, most suspension travel — and the totals add up the fuel used, the consumption and the time
@@ -405,6 +412,9 @@ Settings → "Offline maps", preferably over Wi-Fi.
 - Each region is listed with its data date and size. **Update** appears when Geofabrik's data is
   30 days newer; **Delete** removes the region's tiles, except tiles another downloaded region also
   uses (regions overlap, e.g. a state inside its country, and share border tiles).
+- Regions whose Geofabrik name contains "/" (all the US states, `us/alabama` …) download and are listed
+  like any other: the "/" is folded into "_" for the files on the phone, and the region keeps the name
+  Geofabrik gave it.
 
 ### 🚨 Speed cameras
 
