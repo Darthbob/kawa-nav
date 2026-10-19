@@ -33,7 +33,7 @@ higher version in `changelog.json`; the version in `app/build.gradle` decides wh
   `Ui`; UI text is English.
 - Shared state between services and UI and the setting keys are in `Hub`; log with `Logger`.
 - When behaviour users notice changes, update README.md too.
-- Build and test: `gradle assembleDebug testDebugUnitTest` (Gradle 8.14.x as in CI, JDK 17+; there
+- Build and test: `gradle assembleDebug testDebugUnitTest` (Gradle 9.6.x as in CI, JDK 17+; there
   is no Gradle wrapper).
 
 ## Never commit
