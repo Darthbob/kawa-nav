@@ -27,6 +27,8 @@ public class OfflineService extends Service {
     private static final int NOTIFICATION_ID = 3;
 
     private static volatile boolean cancel;
+    /** Set when the system stopped the download for running too long, so the rider is told why. */
+    private static volatile boolean timedOut;
     private Thread worker;
 
     public static void startRegion(Context c, String regionId) {
@@ -51,6 +53,7 @@ public class OfflineService extends Service {
         String region = intent == null ? null : intent.getStringExtra(EXTRA_REGION);
         if (region == null || worker != null) return START_NOT_STICKY;
         cancel = false;
+        timedOut = false;
         Hub.offlineRunning = true;
         // keep the CPU on with the screen off: converting a state takes a few minutes
         android.os.PowerManager.WakeLock wl = getSystemService(android.os.PowerManager.class)
@@ -60,8 +63,10 @@ public class OfflineService extends Service {
             try {
                 runRegion(region);
             } catch (PbfImporter.CancelledException e) {
-                status("Cancelled (the download resumes when you start it again)");
-                Logger.log("Offline download cancelled");
+                status(timedOut ? "Stopped by Android: a download may only run so long. Start it again."
+                        : "Cancelled (the download resumes when you start it again)");
+                Logger.log(timedOut ? "Offline download stopped by the system (foreground service timeout)"
+                        : "Offline download cancelled");
             } catch (Throwable e) {
                 status("Failed: " + (e instanceof OutOfMemoryError ? "region too large for this phone, pick a smaller one" : e.getMessage()));
                 Logger.log("Offline download failed: " + e);
@@ -73,6 +78,24 @@ public class OfflineService extends Service {
         }, "offline-download");
         worker.start();
         return START_NOT_STICKY;
+    }
+
+    /**
+     * Android 15+ (this app targets 36) gives a {@code dataSync} foreground service six hours in any
+     * twenty-four and then calls this; if the service is not stopped within a few seconds the system
+     * throws and the app goes down with a crash. A region that takes that long cannot be downloaded
+     * anyway, so the worker is cancelled and its own {@code finally} does the clearing up: the wake
+     * lock released, {@code Hub.offlineRunning} cleared, the notification closed.
+     *
+     * <p>Declared without {@code @Override}: {@code Service.onTimeout(int, int)} only exists from API
+     * 35, while this builds against 33 locally, and the annotation would not compile there. The
+     * signature matches, so the system's virtual call lands here on the versions that have it.
+     */
+    public void onTimeout(int startId, int fgsType) {
+        Logger.log("Offline download stopped by Android: the dataSync foreground service ran too long");
+        timedOut = true;
+        cancel = true;
+        stopSelf();
     }
 
     @Override
@@ -98,7 +121,20 @@ public class OfflineService extends Service {
         // a Geofabrik id can contain "/" (us/alabama): folded for the file names, see OfflineRegions.safeKey
         String key = OfflineRegions.safeKey(id);
         File poly = new File(dir, key + ".poly");
-        Geofabrik.download(r.polyUrl(), poly, null);
+        // one Progress for both downloads: the border file is small, but it is a network round-trip
+        // too, and Cancel has to be seen there rather than only once the big file starts
+        Geofabrik.Progress progress = new Geofabrik.Progress() {
+            @Override
+            public void bytes(long done, long total) {
+                status(String.format(Locale.ROOT, "%s: downloading %.0f / %.0f MB", label, done / 1e6, total / 1e6));
+            }
+
+            @Override
+            public boolean cancelled() {
+                return cancel;
+            }
+        };
+        Geofabrik.download(r.polyUrl(), poly, progress);
         File pbf = new File(dir, key + ".osm.pbf");
         long[] head = Geofabrik.head(r.pbfUrl);
         long size = head[0];
@@ -113,17 +149,7 @@ public class OfflineService extends Service {
         long t0 = System.currentTimeMillis();
         // a complete file from a cancelled conversion today is reused
         if (!pbf.exists() || System.currentTimeMillis() - pbf.lastModified() > 12 * 3600_000L) {
-            Geofabrik.download(r.pbfUrl, pbf, new Geofabrik.Progress() {
-                @Override
-                public void bytes(long done, long total) {
-                    status(String.format(Locale.ROOT, "%s: downloading %.0f / %.0f MB", label, done / 1e6, total / 1e6));
-                }
-
-                @Override
-                public boolean cancelled() {
-                    return cancel;
-                }
-            });
+            Geofabrik.download(r.pbfUrl, pbf, progress);
         }
         Logger.log(String.format(Locale.ROOT, "Offline region: %.0f MB downloaded in %d s", pbf.length() / 1e6,
                 (System.currentTimeMillis() - t0) / 1000));
