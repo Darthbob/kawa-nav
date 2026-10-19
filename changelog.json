@@ -1,6 +1,19 @@
 {
   "versions": [
     {
+      "version": "1.0.4",
+      "changes": [
+        "Rides are safer: if the app is killed while it compresses a finished ride, the ride is kept whole instead of being lost",
+        "Offline maps of the individual US states can be downloaded again (their names contain a \"/\", which broke the download)",
+        "Home shows \"no GPS track\" while a ride runs without a GPS fix, instead of the missing track turning up only in the ride list afterwards",
+        "Turns are shown correctly again: a street name no longer changes the arrow (\"Rampart Street\" was read as a ramp, \"Emergent Avenue\" as a merge), and a roundabout exit is taken from the part of the instruction that names it",
+        "A Bluetooth packet the meter sends cut short is ignored instead of reading as a lean of about −100° or a gear of 15 for a second",
+        "Turning KawaNav off clears the dash first (arrow, distance, phone battery icon) instead of leaving the last arrow on the meter",
+        "A call or message that arrives while KawaNav is not connected to the bike is shown on the dash as soon as it connects again",
+        "An automatic start now says what is missing if the \"Nearby devices\" permission was revoked, instead of doing nothing"
+      ]
+    },
+    {
       "version": "1.0.3",
       "changes": [
         "The phone battery icon on the dash no longer shows an empty battery just after connecting: the level comes from Android's battery broadcast, and no icon is sent until there is a real reading"
