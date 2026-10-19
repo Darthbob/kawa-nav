@@ -1,7 +1,6 @@
 package io.github.darthbob.kawanav;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
@@ -9,15 +8,14 @@ import android.graphics.drawable.Drawable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Maps Google Maps notification icons to Kawasaki turn ids.
  *
  * Maps draws the notification arrow from its maneuver drawables, so the icon identifies the
- * maneuver independent of language and wording. Sources: icons taught by hand (corrections) first,
- * then the library of all Maps maneuver icons ({@link MapsIcons}).
+ * maneuver independent of language and wording. The source is the library of all Maps maneuver
+ * icons ({@link MapsIcons}).
  *
  * Icons are compared as a 32x32 mask of the drawn area (cropped to its bounding box, so padding and
  * scale do not matter) with a small tolerance for antialiasing.
@@ -27,7 +25,6 @@ public final class IconMemory {
     private static final int MAX_DIFF_BITS = 40; // ~4 % of the mask
     private static final int MAX_COLLECTED = 500;
 
-    public static final String SOURCE_TAUGHT = "taught icon";
     public static final String SOURCE_LIBRARY = "Maps icon";
     /** Library value for icons without direction information: ignore, use the text. */
     public static final int NOT_A_MANEUVER = -1;
@@ -44,11 +41,9 @@ public final class IconMemory {
     }
 
     private final Context context;
-    private final SharedPreferences taught;
 
     public IconMemory(Context context) {
         this.context = context.getApplicationContext();
-        taught = this.context.getSharedPreferences("icons", Context.MODE_PRIVATE);
         // automatic learning was replaced by the Maps icon library; drop its old data
         this.context.getSharedPreferences("icons_learned", Context.MODE_PRIVATE).edit().clear().apply();
     }
@@ -113,9 +108,7 @@ public final class IconMemory {
     /** Turn for this icon, or null when unknown or without direction information. */
     public Hit lookup(String hash) {
         if (hash == null) return null;
-        Integer t = nearest(hash, taughtMap());
-        if (t != null) return new Hit(t, SOURCE_TAUGHT);
-        t = nearest(hash, MapsIcons.library(context));
+        Integer t = nearest(hash, MapsIcons.library(context));
         if (t != null && t != NOT_A_MANEUVER) return new Hit(t, SOURCE_LIBRARY);
         return null;
     }
@@ -133,14 +126,6 @@ public final class IconMemory {
         }
         return bestDiff <= MAX_DIFF_BITS ? best : null;
     }
-
-    private Map<String, Integer> taughtMap() {
-        Map<String, Integer> m = new HashMap<>();
-        for (Map.Entry<String, ?> e : taught.getAll().entrySet()) m.put(e.getKey(), (Integer) e.getValue());
-        return m;
-    }
-
-    // ------------------------------------------------------------------ teaching
 
     // ------------------------------------------------------------------ collecting
 
