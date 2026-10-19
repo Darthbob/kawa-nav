@@ -450,21 +450,29 @@ public final class RideStore {
             List<RideTsv.Sample> s = samples(r.id);
             long lastAt = s.isEmpty() ? r.end : s.get(s.size() - 1).epochMs;
             if (System.currentTimeMillis() - lastAt <= RESUME_MS) return r;
-            // the samples are what the summary is worked out from; only when they are there does the
-            // state say recovered. With no readable track the periodic summary is all that is left, and
-            // its own sample count must stand: writing 0 over it would report a ride that recorded
-            // nothing, which reads like a ride that simply had no GPS.
-            if (s.isEmpty()) {
-                r.state = "incomplete";
-            } else {
-                r.state = "recovered";
-                r.summarize(s);
-                r.samples = s.size();
-            }
+            recover(r, s);
             save(r);
             compact(r.id);
             Logger.log("Ride: " + r.id + " " + r.state + " after a restart (" + r.samples + " samples)");
         }
         return null;
+    }
+
+    /**
+     * What a ride the app was still writing becomes now that it is not: the samples are what the summary
+     * is worked out from, so only when they are there does the state say recovered. With no readable
+     * track the periodic summary is all that is left, and its own sample count must stand — writing 0
+     * over it would report a ride that recorded nothing, which reads like a ride that simply had no GPS.
+     * Separate from {@link #resumeCandidate} because that one reads and writes the ride's JSON file,
+     * which the JVM tests cannot do; this is the decision itself.
+     */
+    static void recover(Ride r, List<RideTsv.Sample> samples) {
+        if (samples.isEmpty()) {
+            r.state = "incomplete";
+        } else {
+            r.state = "recovered";
+            r.summarize(samples);
+            r.samples = samples.size();
+        }
     }
 }
