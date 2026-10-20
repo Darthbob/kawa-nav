@@ -55,7 +55,7 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   throttle, lean angle). The last values are kept, so they are there with the ignition off, and the
   phone remembers where the bike was parked ("Walk to the bike").
 - 🗺️ **Ride recording**: records once a second — the bike's values and the phone's GPS track — and keeps
-  the rides with a summary, a track coloured by speed on a map you can zoom, charts for any value (touch to see where you were)
+  the rides with a summary, a track on a map you can zoom coloured by the value the chart shows, charts you can zoom for any value (touch to see where you were)
   and export as Rideology's CSV or as GPX. Since 0.8 the ride also holds what the suspension unit and the
   body were doing (travel, accelerations, rotation rates, filtered wheel speeds) and the rest of the live
   frame (torque, brake pressures, ABS state, damping, cruise control). A ride survives the app being
@@ -352,8 +352,10 @@ has:
   them; the rotation rates and the rear wheel slip from lowest to highest, as their average says
   nothing), how long traction control, ABS, cruise control and the front wheel coming up were at work,
   the time in each gear, and the gear changes with those the quick shifter made;
-- the track, coloured by speed, with a dot where the ride started, over an OpenStreetMap map: pinch or
-  double-tap to zoom, drag to move around, and the corner button shows the whole ride again. The map
+- the track, with a dot where the ride started, over an OpenStreetMap map, coloured by the value picked
+  for the chart below — blue where it was lowest, then green, orange, red where it was highest (the
+  speed until another value is picked); the note under the map gives the values the colours stand for.
+  Pinch or double-tap to zoom, drag to move around, and the corner button shows the whole ride again. The map
   is fetched for the area you look at and kept on the phone for a while; without a network the track is
   drawn on its own. It can be turned off in Settings → "Map under the track";
 - charts for any value the ride recorded — speed (from the bike and from the GPS), engine speed, gear,
@@ -362,7 +364,10 @@ has:
   speeds, the rear wheel's slip against the front, the wheelie angle and more. The **torque** is one chart
   with three lines on one scale — what the throttle asks for, what the engine control asks for, what the
   engine gives — so the moments the electronics take torque away show as the lines parting. Picking a
-  value and touching the line marks that second on the track and names the value under the chart. A
+  value and touching the line marks that second on the track and names the value under the chart.
+  Pinch the chart (or double-tap it) to zoom in on a stretch of the ride, move along it with two fingers,
+  and the corner button shows the whole ride again; zoomed in, the scale follows what is shown and the
+  rest of the track on the map is faded, so the stretch is easy to find. A
   value only shows up when the bike sends it: a Z900, for one, sends no torque, no suspension speeds and
   no raw brake values;
 - rename (the pencil at the top), delete, and export: **CSV** with Rideology's column layout (so the tools

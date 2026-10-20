@@ -71,6 +71,56 @@ public class ChartViewTest {
     }
 
     @Test
+    public void theMapIsColouredByTheLineInTheAccentColour() {
+        RideTsv.Sample s = new RideTsv.Sample();
+        s.torque_rider = 40;
+        s.torque_actual = 36;
+        s.imu_az_psip2 = 2;
+        assertEquals(36, ChartView.mapValue(s, ChartView.Series.TORQUE), 1e-9);   // what the engine gives
+        assertEquals(2, ChartView.mapValue(s, ChartView.Series.YAW_RATE), 1e-9);
+    }
+
+    @Test
+    public void theZoomedStretchStaysInsideTheRide() {
+        long total = 3_600_000;
+        assertArrayEquals(new long[]{600_000, 660_000}, ChartView.window(600_000, 60_000, total));
+        // dragged past either end: it stops at the end, keeping its length
+        assertArrayEquals(new long[]{0, 60_000}, ChartView.window(-30_000, 60_000, total));
+        assertArrayEquals(new long[]{3_540_000, 3_600_000}, ChartView.window(3_590_000, 60_000, total));
+        // zoomed out further than the ride: the whole ride
+        assertArrayEquals(new long[]{0, total}, ChartView.window(-5, 2 * total, total));
+    }
+
+    @Test
+    public void aTouchFindsTheClosestSecond() {
+        java.util.List<RideTsv.Sample> ride = new java.util.ArrayList<>();
+        for (long t : new long[]{0, 1000, 2000, 5000, 6000}) {   // a gap after 2 s
+            RideTsv.Sample s = new RideTsv.Sample();
+            s.tMs = t;
+            ride.add(s);
+        }
+        assertEquals(0, ChartView.nearest(ride, -500));
+        assertEquals(1, ChartView.nearest(ride, 1400));
+        assertEquals(2, ChartView.nearest(ride, 3000));
+        assertEquals(3, ChartView.nearest(ride, 4000));
+        assertEquals(4, ChartView.nearest(ride, 9000));
+        assertEquals(3, ChartView.firstAtOrAfter(ride, 2001));
+        assertEquals(5, ChartView.firstAtOrAfter(ride, 6001));
+    }
+
+    @Test
+    public void theTimeAxisReadsSecondsOnceZoomedIn() {
+        assertEquals("12:05", ChartView.clock(725_000));
+        assertEquals("1:02:05", ChartView.clock(3_725_000));
+        assertEquals("45 min", ChartView.minutes(2_700_000));
+        assertEquals("1 h 05 min", ChartView.minutes(3_900_000));
+    }
+
+    private static void assertArrayEquals(long[] expected, long[] actual) {
+        org.junit.Assert.assertArrayEquals(expected, actual);
+    }
+
+    @Test
     public void theLineUnderTheChartNamesThePickedValue() {
         RideTsv.Sample s = new RideTsv.Sample();
         s.torque_rider = 40;

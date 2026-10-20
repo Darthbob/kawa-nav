@@ -19,8 +19,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The ride's track: the recorded positions joined, coloured by speed (blue slow, green, orange, red
- * fast), over OpenStreetMap's map when it is on (see {@link MapTiles}; without a network the track is
+ * The ride's track: the recorded positions joined, coloured by the value the chart below shows (blue
+ * lowest, green, orange, red highest; the speed until it is told otherwise) and faded outside the
+ * stretch the chart is zoomed to, over OpenStreetMap's map when it is on (see {@link MapTiles}; without a network the track is
  * drawn alone, as before). Pinch or double-tap to zoom, drag to move; {@link #fit()} shows the whole
  * ride again.
  */
@@ -46,6 +47,15 @@ public final class TrackView extends View {
     /** Each sample in Web Mercator (0..1), NaN without a position; and its colour. */
     private double[] wx, wy;
     private int[] colours;
+    /** What the colours follow, one value per sample (the chart's value); null: the speed. */
+    private double[] values;
+    /** The values the colour scale runs from (blue) and to (red); NaN when there is nothing to colour by. */
+    private double low = Double.NaN, high = Double.NaN;
+    /** The stretch of the ride the chart shows (ms since the start); the rest of the track is drawn faded. */
+    private long windowFrom = Long.MIN_VALUE, windowTo = Long.MAX_VALUE;
+    /** A sample the chart has no value for, and the faded part of the track outside the chart's stretch. */
+    static final int NO_VALUE = 0xFF9E9E9E;
+    private static final int FADED_ALPHA = 70;
     private double minX, maxX, minY, maxY;
     /** What is shown: the centre in Web Mercator, and how many screen pixels the whole world is wide. */
     private double cx, cy, ppw;
@@ -114,6 +124,9 @@ public final class TrackView extends View {
     public void set(List<RideTsv.Sample> samples, int marked) {
         if (samples != this.samples) {
             this.samples = samples;
+            values = null;                       // another ride's values: back to the speed
+            windowFrom = Long.MIN_VALUE;
+            windowTo = Long.MAX_VALUE;
             project();
             moved = false;
             fit();
@@ -126,6 +139,39 @@ public final class TrackView extends View {
     /** True when OpenStreetMap's map is drawn under the track (its credit then goes on the map too). */
     public boolean hasMap() {
         return tiles != null;
+    }
+
+    /**
+     * Colours the track by these values, one per sample (NaN: none that second): blue for the lowest,
+     * then green, orange, red for the highest. The scale runs between the 2nd and the 98th percentile, so
+     * one odd second (an rpm spike) does not wash the rest of the ride out into one colour.
+     */
+    public void colourBy(double[] values) {
+        this.values = values;
+        recolour();
+        invalidate();
+    }
+
+    /** The value the colour scale starts from (blue), NaN when nothing is coloured. */
+    public double low() {
+        return low;
+    }
+
+    /** The value the colour scale reaches (red), NaN when nothing is coloured. */
+    public double high() {
+        return high;
+    }
+
+    /** The stretch of the ride the chart shows, in ms since the start: the rest of the track is faded. */
+    public void setWindow(long fromMs, long toMs) {
+        windowFrom = fromMs;
+        windowTo = toMs;
+        invalidate();
+    }
+
+    private boolean inWindow(int i) {
+        long t = samples.get(i).tMs;
+        return t >= windowFrom && t <= windowTo;
     }
 
     @Override
@@ -170,9 +216,6 @@ public final class TrackView extends View {
         if (samples == null || samples.isEmpty()) return;
         int n = samples.size();
         double[] x = new double[n], y = new double[n];
-        int[] c = new int[n];
-        double maxSpeed = 1;
-        for (RideTsv.Sample s : samples) if (s.kmh == s.kmh) maxSpeed = Math.max(maxSpeed, s.kmh);
         minX = minY = Double.MAX_VALUE;
         maxX = maxY = -Double.MAX_VALUE;
         for (int i = 0; i < n; i++) {
@@ -183,7 +226,6 @@ public final class TrackView extends View {
             }
             x[i] = MapTiles.x(s.lon);
             y[i] = MapTiles.y(s.lat);
-            c[i] = colour(s.kmh, maxSpeed, s.lean);
             minX = Math.min(minX, x[i]);
             maxX = Math.max(maxX, x[i]);
             minY = Math.min(minY, y[i]);
@@ -192,6 +234,23 @@ public final class TrackView extends View {
         if (minX > maxX) return; // no positions at all
         wx = x;
         wy = y;
+        recolour();
+    }
+
+    /** Each drawn point's colour, on a scale over the points that are drawn (those with a position). */
+    private void recolour() {
+        if (wx == null) return;
+        int n = wx.length;
+        boolean given = values != null && values.length == n;
+        double[] drawn = new double[n];
+        for (int i = 0; i < n; i++) {
+            drawn[i] = wx[i] != wx[i] ? Double.NaN : given ? values[i] : samples.get(i).kmh;
+        }
+        double[] range = colourRange(drawn);
+        low = range[0];
+        high = range[1];
+        int[] c = new int[n];
+        for (int i = 0; i < n; i++) c[i] = colourFor(drawn[i], low, high);
         colours = c;
     }
 
@@ -272,12 +331,15 @@ public final class TrackView extends View {
         float step = density * 1.5f;   // closer points than this add nothing to the line
         float margin = density * 8;
 
-        // the line, under it a casing that keeps it readable on any map colour
+        // the part of the ride outside the chart's stretch first, faded, so the part inside is on top
+        drawLine(canvas, false, halfW, halfH, step, margin);
+
+        // the line, under it a casing that keeps it readable on any map colour (the faded part has none)
         path.reset();
         float lastX = 0, lastY = 0;
         boolean first = true;
         for (int i = 0; i < wx.length; i++) {
-            if (wx[i] != wx[i]) {
+            if (wx[i] != wx[i] || !inWindow(i)) {
                 first = true; // a gap: start a new piece
                 continue;
             }
@@ -294,25 +356,7 @@ public final class TrackView extends View {
             first = false;
         }
         if (tiles != null) canvas.drawPath(path, casing);
-
-        first = true;
-        for (int i = 0; i < wx.length; i++) {
-            if (wx[i] != wx[i]) {
-                first = true;
-                continue;
-            }
-            float x = (float) ((wx[i] - cx) * ppw + halfW), y = (float) ((wy[i] - cy) * ppw + halfH);
-            if (!first) {
-                if (Math.abs(x - lastX) < step && Math.abs(y - lastY) < step) continue;
-                if (!offScreen(lastX, lastY, x, y, margin)) {
-                    line.setColor(colours[i]);
-                    canvas.drawLine(lastX, lastY, x, y, line);
-                }
-            }
-            lastX = x;
-            lastY = y;
-            first = false;
-        }
+        drawLine(canvas, true, halfW, halfH, step, margin);
 
         // where the ride started, and the second picked on the chart
         for (int i = 0; i < wx.length; i++) {
@@ -324,6 +368,33 @@ public final class TrackView extends View {
         if (marked >= 0 && marked < wx.length && wx[marked] == wx[marked]) {
             dot(canvas, (float) ((wx[marked] - cx) * ppw + halfW), (float) ((wy[marked] - cy) * ppw + halfH),
                     5, Ui.markerOnTrack(), 0xFF171717);
+        }
+    }
+
+    /**
+     * The coloured line, one segment per second: the part inside the chart's stretch ({@code inside}), or
+     * the rest, faded. A segment belongs where the second it ends on does.
+     */
+    private void drawLine(Canvas canvas, boolean inside, float halfW, float halfH, float step, float margin) {
+        float lastX = 0, lastY = 0;
+        boolean first = true;
+        for (int i = 0; i < wx.length; i++) {
+            if (wx[i] != wx[i]) {
+                first = true;
+                continue;
+            }
+            float x = (float) ((wx[i] - cx) * ppw + halfW), y = (float) ((wy[i] - cy) * ppw + halfH);
+            if (!first) {
+                if (Math.abs(x - lastX) < step && Math.abs(y - lastY) < step) continue;
+                if (inWindow(i) == inside && !offScreen(lastX, lastY, x, y, margin)) {
+                    line.setColor(colours[i]);
+                    if (!inside) line.setAlpha(FADED_ALPHA);
+                    canvas.drawLine(lastX, lastY, x, y, line);
+                }
+            }
+            lastX = x;
+            lastY = y;
+            first = false;
         }
     }
 
@@ -398,13 +469,40 @@ public final class TrackView extends View {
         return new ColorMatrixColorFilter(m);
     }
 
-    /** Slow blue, then green, orange, red for the fastest part. Leaning hard turns the line's ends darker. */
-    static int colour(double kmh, double maxSpeed, double lean) {
-        if (kmh != kmh) return 0xFF9E9E9E;
-        double f = kmh / maxSpeed;
-        if (f < 0.35) return 0xFF3D7BFF;
-        if (f < 0.6) return 0xFF43A047;
-        if (f < 0.85) return 0xFFFB8C00;
-        return 0xFFE53935;
+    /** The colour scale's stops, lowest to highest: blue, green, orange, red. */
+    private static final int[] STOPS = {0xFF3D7BFF, 0xFF43A047, 0xFFFB8C00, 0xFFE53935};
+
+    /**
+     * {low, high} of the colour scale: the 2nd and the 98th percentile of the values that are there (NaN,
+     * NaN when none is).
+     */
+    static double[] colourRange(double[] values) {
+        int n = 0;
+        for (double v : values) if (v == v) n++;
+        if (n == 0) return new double[]{Double.NaN, Double.NaN};
+        double[] sorted = new double[n];
+        int k = 0;
+        for (double v : values) if (v == v) sorted[k++] = v;
+        java.util.Arrays.sort(sorted);
+        return new double[]{sorted[(int) Math.round(0.02 * (n - 1))], sorted[(int) Math.round(0.98 * (n - 1))]};
+    }
+
+    /** A value's colour on the scale from {@code low} (blue) to {@code high} (red); grey without a value. */
+    static int colourFor(double v, double low, double high) {
+        if (v != v || low != low) return NO_VALUE;
+        if (high - low < 1e-9) return gradient(0.5);   // one value all ride: the middle of the scale
+        return gradient((v - low) / (high - low));
+    }
+
+    /** The scale at {@code f} (0 = blue … 1 = red, clamped), blended between its stops. */
+    static int gradient(double f) {
+        f = Math.max(0, Math.min(1, f)) * (STOPS.length - 1);
+        int i = Math.min(STOPS.length - 2, (int) f);
+        double t = f - i;
+        int a = STOPS[i], b = STOPS[i + 1];
+        int r = (int) Math.round(((a >> 16) & 0xFF) * (1 - t) + ((b >> 16) & 0xFF) * t);
+        int g = (int) Math.round(((a >> 8) & 0xFF) * (1 - t) + ((b >> 8) & 0xFF) * t);
+        int bl = (int) Math.round((a & 0xFF) * (1 - t) + (b & 0xFF) * t);
+        return 0xFF000000 | (r << 16) | (g << 8) | bl;
     }
 }

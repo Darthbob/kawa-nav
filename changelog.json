@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "1.1.1",
+      "changes": [
+        "A ride's chart can be zoomed: pinch or double-tap to look at a stretch closely, move along it with two fingers, and the corner button shows the whole ride again. Zoomed in, the scale follows what is shown and the rest of the track on the map is faded",
+        "The track on the map takes the colours of the value picked for the chart, from blue where it was lowest to red where it was highest, and the note under the map says which values the colours stand for"
+      ]
+    },
+    {
       "version": "1.1",
       "changes": [
         "A ride's track is drawn over an OpenStreetMap map: pinch or double-tap to zoom in, drag to move around, and the corner button shows the whole ride again. Settings → \"Map under the track\" turns the map off",

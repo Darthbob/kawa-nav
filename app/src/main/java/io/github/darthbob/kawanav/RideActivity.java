@@ -39,6 +39,8 @@ public class RideActivity extends KawaActivity {
     private LinearLayout chartCard;
     private LinearLayout trackCard;
     private TrackView track;
+    /** Under the map: what the track's colours mean right now. */
+    private TextView trackNote;
     private ChartView chart;
     private TextView cursor;
     private android.widget.Spinner seriesSpinner;
@@ -147,9 +149,24 @@ public class RideActivity extends KawaActivity {
         lp.height = dp(260);
         lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
         c.addView(frame, lp);
-        c.addView(note("Blue is the slowest part of the ride, red the fastest. The green dot is where "
-                + "it started. Pinch or double-tap the map to zoom, drag it to move around."));
+        trackNote = note("");
+        c.addView(trackNote);
         return c;
+    }
+
+    /** What the track's colours mean: they follow the value picked for the chart. */
+    private void describeColours(ChartView.Series series) {
+        double lo = track.low(), hi = track.high();
+        String f = "%." + series.decimals + "f";
+        String unit = series.unit.isEmpty() ? "" : " " + series.unit;
+        String scale = lo == lo
+                ? String.format(Locale.ROOT, "The colours follow the chart: %s from blue (" + f + "%s or less) to "
+                        + "red (" + f + "%s or more)%s.", series.title.toLowerCase(Locale.ROOT), lo, unit, hi, unit,
+                        series.lineCount() > 1 ? ", " + series.lines[series.lineCount() - 1] + " line" : "")
+                : "This ride has no " + series.title.toLowerCase(Locale.ROOT) + " where it has a position: the "
+                        + "track is grey.";
+        trackNote.setText(scale + " The green dot is where it started; zooming the chart fades the rest of the "
+                + "ride. Pinch or double-tap the map to zoom, drag it to move around.");
     }
 
     /** OpenStreetMap's credit, on the map as its tile policy asks; a tap opens its copyright page. */
@@ -178,10 +195,14 @@ public class RideActivity extends KawaActivity {
         seriesSpinner = spinner(names, 0);
         seriesSpinner.setOnItemSelectedListener(onSelect(this::showChart));
         head.addView(seriesSpinner, controlWidth());
-        c.addView(head);
         chart = new ChartView(this);
+        head.addView(headerAction(R.drawable.ic_fit, "Show the whole ride on the chart", v -> chart.showAll()),
+                new LinearLayout.LayoutParams(dp(Ui.TOUCH_MIN), dp(Ui.TOUCH_MIN)));
+        c.addView(head);
+        // the map fades what the chart is not showing, so a zoomed stretch can be found on the track
+        chart.setOnWindow((from, to) -> track.setWindow(from, to));
         LinearLayout.LayoutParams lp = matchWrap();
-        lp.height = dp(140);
+        lp.height = dp(180);   // taller than before the chart could zoom: room to read a short stretch
         c.addView(chart, lp);
         cursor = secondary("");
         c.addView(cursor);
@@ -194,8 +215,13 @@ public class RideActivity extends KawaActivity {
         ChartView.Series series = SERIES[Math.max(0, Math.min(SERIES.length - 1, which))];
         String availability = missingSeries(series) ? " · this ride has no " + series.title.toLowerCase(Locale.ROOT)
                 : "";
-        cursor.setText("Touch the line to see the second" + availability
+        cursor.setText("Touch the line to see the second, pinch or double-tap to zoom in" + availability
                 + (hasInterventions() ? " · marks below: traction control (orange), ABS (red)" : ""));
+        // the track takes the chart's colours: the same value, from blue (lowest) to red (highest)
+        double[] values = new double[samples.size()];
+        for (int i = 0; i < values.length; i++) values[i] = ChartView.mapValue(samples.get(i), series);
+        track.colourBy(values);
+        describeColours(series);
         chart.set(samples, series, index -> {
             track.set(samples, index);
             RideTsv.Sample s = samples.get(index);
