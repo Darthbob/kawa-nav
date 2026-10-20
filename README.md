@@ -353,9 +353,15 @@ has:
   double-tap to zoom, drag to move around, and the corner button shows the whole ride again. The map
   is fetched for the area you look at and kept on the phone for a while; without a network the track is
   drawn on its own. It can be turned off in Settings → "Map under the track";
-- charts for any value the ride recorded — speed, engine speed, gear, throttle, lean angle,
-  temperatures, tyres, battery, brake pressure, suspension travel, the body's accelerations, the filtered
-  wheel speeds and more; picking one and touching the line marks that second on the track;
+- charts for any value the ride recorded — speed (from the bike and from the GPS), engine speed, gear,
+  throttle, lean angle, the roll and yaw rates, temperatures, tyres, battery, fuel use, brake pressure and
+  the raw brake values, suspension travel and its speed, the body's accelerations, the filtered wheel
+  speeds, the rear wheel's slip against the front, the wheelie angle and more. The **torque** is one chart
+  with three lines on one scale — what the throttle asks for, what the engine control asks for, what the
+  engine gives — so the moments the electronics take torque away show as the lines parting. Picking a
+  value and touching the line marks that second on the track and names the value under the chart. A
+  value only shows up when the bike sends it: a Z900, for one, sends no torque, no suspension speeds and
+  no raw brake values;
 - rename (the pencil at the top), delete, and export: **CSV** with Rideology's column layout (so the tools
   people already use for Rideology exports can read it) or **GPX** with the values as extensions for map
   programs. Two more carry everything a ride recorded: **CSV (all values)**, one column per recorded value

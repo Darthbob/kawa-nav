@@ -81,8 +81,9 @@ public final class Ride {
     /**
      * How the saved summary was computed: a ride saved before this version has to be recomputed once.
      * 2: the distance ({@link #distM}), and no temperatures at the bottom of their scale.
+     * 3: the torque, the fuel use, the suspension speeds and the raw brake values.
      */
-    public static final int SUMMARY_VERSION = 2;
+    public static final int SUMMARY_VERSION = 3;
     /** Which summary the file holds, 0 for a ride saved by a version that did not know about metrics. */
     public int summaryVersion;
 
@@ -145,13 +146,24 @@ public final class Ride {
     private static final Metric[] TEMPLATE = {
             new Metric("rpm", "Engine speed", ENGINE, "rpm", 0, s -> s.rpm),
             new Metric("throttle", "Throttle", ENGINE, "%", 0, s -> s.thrPct),
+            // the bike's own units: the torque values compare with each other, the fuel use with itself
+            new Metric("torque_rider", "Torque asked by the throttle", ENGINE, "bike units", 0, s -> s.torque_rider),
+            new Metric("torque_req", "Torque the engine control asks for", ENGINE, "bike units", 0, s -> s.torque_req),
+            new Metric("torque_actual", "Torque from the engine", ENGINE, "bike units", 0, s -> s.torque_actual),
+            new Metric("fuel_rate", "Fuel use", ENGINE, "dash units", 2, s -> s.fuelRate),
             new Metric("susp_f", "Front suspension", CHASSIS, "mm", 1, s -> s.susp_f_stroke_mm),
             new Metric("susp_r", "Rear suspension", CHASSIS, "mm", 1, s -> s.susp_r_stroke_mm),
+            new Metric("susp_f_speed", "Front suspension speed (unverified)", CHASSIS, "bike units", 2, s -> s.susp_f_stroke_vp),
+            new Metric("susp_r_speed", "Rear suspension speed (unverified)", CHASSIS, "bike units", 2, s -> s.susp_r_stroke_vp),
             new Metric("accel", "Acceleration", CHASSIS, "g", 2, s -> s.accG),
             new Metric("wheelie", "Wheelie angle", CHASSIS, "°", 1, s -> s.wheelie_deg),
             new Metric("tyre_f", "Front tyre", CHASSIS, "bar", 2, s -> s.tyreFrontKpa / 100),
             new Metric("tyre_r", "Rear tyre", CHASSIS, "bar", 2, s -> s.tyreRearKpa / 100),
             new Metric("brake_f", "Front brake", BRAKES, "bar", 1, s -> s.brakeFrontBar),
+            // kept raw, as Rideology keeps them
+            new Metric("brake_f_master", "Front brake master (unverified)", BRAKES, "raw", 0, s -> s.brake_f_master),
+            new Metric("brake_r_master", "Rear brake master (unverified)", BRAKES, "raw", 0, s -> s.brake_r_master),
+            new Metric("brake_r_caliper", "Rear brake caliper (unverified)", BRAKES, "raw", 0, s -> s.brake_r_caliper),
             new Metric("battery", "Battery", BRAKES, "V", 2, s -> s.batteryV),
             new Metric("coolant", "Coolant", TEMPERATURES, "°C", 0, s -> s.waterC),
             new Metric("oil", "Oil", TEMPERATURES, "°C", 0, s -> s.oilC),

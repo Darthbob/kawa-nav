@@ -3,7 +3,8 @@
     {
       "version": "1.1",
       "changes": [
-        "A ride's track is drawn over an OpenStreetMap map: pinch or double-tap to zoom in, drag to move around, and the corner button shows the whole ride again. Settings → \"Map under the track\" turns the map off"
+        "A ride's track is drawn over an OpenStreetMap map: pinch or double-tap to zoom in, drag to move around, and the corner button shows the whole ride again. Settings → \"Map under the track\" turns the map off",
+        "A ride shows more of what it recorded: the torque as three lines on one chart (asked by the throttle, by the engine control, given by the engine), the roll and yaw rates, the GPS speed, the rear wheel's slip, the wheelie angle, the fuel use, the suspension speeds and the raw brake values, when the bike sends them"
       ]
     },
     {

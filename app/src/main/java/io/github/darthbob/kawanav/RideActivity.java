@@ -24,6 +24,9 @@ public class RideActivity extends KawaActivity {
     /** Every value a ride can have; the list offers the ones this ride recorded. */
     private static final ChartView.Series[] ALL_SERIES = ChartView.Series.values();
     private ChartView.Series[] SERIES = ALL_SERIES;
+    /** What the line under the chart always shows for the touched second, whichever value is picked. */
+    private static final java.util.Set<ChartView.Series> ALWAYS_SHOWN = java.util.EnumSet.of(ChartView.Series.SPEED,
+            ChartView.Series.RPM, ChartView.Series.GEAR, ChartView.Series.THROTTLE, ChartView.Series.LEAN);
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private RideStore store;
@@ -196,8 +199,11 @@ public class RideActivity extends KawaActivity {
         chart.set(samples, series, index -> {
             track.set(samples, index);
             RideTsv.Sample s = samples.get(index);
+            // the values every second shows, then the one picked when it is not among them
+            String picked = ALWAYS_SHOWN.contains(series) ? "" : " · " + ChartView.describe(s, series);
             cursor.setText(String.format(Locale.ROOT, "%s · %.0f km/h · %d rpm · %s · %.0f %% · %.1f°",
-                    seconds(s.tMs), num(s.kmh), Math.round(num(s.rpm)), gear(s.gear), num(s.thrPct), num(s.lean)));
+                    seconds(s.tMs), num(s.kmh), Math.round(num(s.rpm)), gear(s.gear), num(s.thrPct), num(s.lean))
+                    + picked);
         });
     }
 
@@ -229,10 +235,7 @@ public class RideActivity extends KawaActivity {
     }
 
     private boolean missingSeries(ChartView.Series series) {
-        for (RideTsv.Sample s : samples) {
-            double v = ChartView.value(s, series);
-            if (v == v) return false;
-        }
+        for (RideTsv.Sample s : samples) if (ChartView.has(s, series)) return false;
         return true;
     }
 

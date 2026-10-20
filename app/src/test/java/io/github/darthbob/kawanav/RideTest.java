@@ -115,12 +115,41 @@ public class RideTest {
         r.summarize(ride100());
         // the fixture has no 0x4B/0x45/0x41 values beyond coolant, the odometer and the GPS accuracy
         for (String key : new String[]{"oil", "intake", "outside", "accel", "wheelie", "susp_f", "susp_r",
-                "tyre_f", "tyre_r", "brake_f", "battery", "altitude"}) {
+                "tyre_f", "tyre_r", "brake_f", "battery", "altitude", "torque_rider", "torque_req", "torque_actual",
+                "fuel_rate", "susp_f_speed", "susp_r_speed", "brake_f_master", "brake_r_master", "brake_r_caliper"}) {
             assertFalse("expected " + key + " to be unknown", r.metric(key).known());
         }
         assertFalse(r.sections().contains(Ride.CHASSIS));
         assertTrue(r.sections().contains(Ride.ENGINE));
         assertTrue(r.metric("gps_acc").known());       // the fixture's fixes have an accuracy
+        assertFalse(r.sections().contains(Ride.CHASSIS));
+    }
+
+    @Test
+    public void torqueFuelUseAndRawBrakesAreSummarizedWhenTheBikeSendsThem() {
+        List<RideTsv.Sample> in = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            RideTsv.Sample s = bare(i);
+            s.torque_rider = 10 + i;      // 10..13
+            s.torque_req = 20 + i;        // 20..23
+            s.torque_actual = 30 + i;     // 30..33
+            s.fuelRate = 0.5;
+            s.brake_r_caliper = i;        // 0..3: the first second's 0 is a reading
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(10, r.metric("torque_rider").min, 1e-9);
+        assertEquals(13, r.metric("torque_rider").max, 1e-9);
+        assertEquals(21.5, r.metric("torque_req").mean, 1e-9);
+        assertEquals(33, r.metric("torque_actual").max, 1e-9);
+        assertEquals(4, r.metric("fuel_rate").n);
+        assertEquals(0, r.metric("brake_r_caliper").min, 1e-9);
+        assertTrue(r.sections().contains(Ride.ENGINE));
+        assertTrue(r.sections().contains(Ride.BRAKES));
+        // what this bike did not send stays out of the screen
+        assertFalse(r.metric("brake_f_master").known());
+        assertFalse(r.metric("susp_f_speed").known());
         assertFalse(r.sections().contains(Ride.CHASSIS));
     }
 
