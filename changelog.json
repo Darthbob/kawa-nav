@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "version": "1.1",
+      "changes": [
+        "A ride's track is drawn over an OpenStreetMap map: pinch or double-tap to zoom in, drag to move around, and the corner button shows the whole ride again. Settings → \"Map under the track\" turns the map off"
+      ]
+    },
+    {
       "version": "1.0.4",
       "changes": [
         "Rides are safer: if the app is killed while it compresses a finished ride, the ride is kept whole instead of being lost",

@@ -324,6 +324,9 @@ public class SettingsActivity extends KawaActivity {
         LinearLayout c = group();
         addRow(c, switchRow("Start recording by itself", "As soon as the bike is connected and moving",
                 Hub.KEY_RIDE_AUTO, false));
+        addRow(c, switchRow("Map under the track", "OpenStreetMap's map behind a ride's track. The map is "
+                + "fetched from openstreetmap.org for the area you look at, and kept on the phone for a while",
+                Hub.KEY_RIDE_MAP, true));
         addRow(c, listRow(R.drawable.ic_list, "Recorded rides", "Everything you have recorded, with track and charts",
                 null, true, v -> openTab(TAB_RIDES, null)));
         return c;

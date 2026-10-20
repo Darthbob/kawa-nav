@@ -117,19 +117,53 @@ public class RideActivity extends KawaActivity {
 
     private LinearLayout trackCard() {
         LinearLayout c = card();
-        c.addView(iconTitle(R.drawable.ic_route, cardTitle("Track")));
         track = new TrackView(this);
+        LinearLayout head = row();
+        head.addView(iconTitle(R.drawable.ic_route, cardTitle("Track")), weight());
+        head.addView(headerAction(R.drawable.ic_fit, "Show the whole ride", v -> track.fit()),
+                new LinearLayout.LayoutParams(dp(Ui.TOUCH_MIN), dp(Ui.TOUCH_MIN)));
+        c.addView(head);
         GradientDrawable well = new GradientDrawable();
         well.setColor(Ui.surfaceSunken(night));
         well.setCornerRadius(dp(Ui.RADIUS_TILE));
         track.setBackground(well);
+        track.setClipToOutline(true);   // the map keeps the well's round corners
+        android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+        frame.addView(track, new android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+        if (track.hasMap()) {
+            android.widget.FrameLayout.LayoutParams at = new android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                    android.view.Gravity.BOTTOM | android.view.Gravity.END);
+            at.setMargins(0, 0, dp(Ui.SPACE1), dp(Ui.SPACE1));   // clear of the round corner
+            frame.addView(attribution(), at);
+        }
         LinearLayout.LayoutParams lp = matchWrap();
-        lp.height = dp(180);   // the numbers above matter more than a tall map
+        lp.height = dp(260);
         lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
-        c.addView(track, lp);
+        c.addView(frame, lp);
         c.addView(note("Blue is the slowest part of the ride, red the fastest. The green dot is where "
-                + "it started."));
+                + "it started. Pinch or double-tap the map to zoom, drag it to move around."));
         return c;
+    }
+
+    /** OpenStreetMap's credit, on the map as its tile policy asks; a tap opens its copyright page. */
+    private TextView attribution() {
+        TextView t = text(10, false);
+        t.setText("© OpenStreetMap contributors");
+        t.setTextColor(night ? 0xFFDDDDDD : 0xFF333333);
+        t.setBackgroundColor(night ? 0xB3000000 : 0xB3FFFFFF);
+        t.setPadding(dp(4), dp(1), dp(4), dp(1));
+        t.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.openstreetmap.org/copyright")));
+            } catch (android.content.ActivityNotFoundException e) {
+                // no browser: the credit is still shown
+            }
+        });
+        return t;
     }
 
     private LinearLayout chartCard() {

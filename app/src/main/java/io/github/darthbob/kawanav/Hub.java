@@ -170,6 +170,11 @@ public final class Hub {
     public static final String KEY_FUEL_UNIT = "fuel_unit";
     /** Start recording by itself when the bike is moving (off by default). */
     public static final String KEY_RIDE_AUTO = "ride_auto";
+    /**
+     * OpenStreetMap's map under a recorded ride's track (on unless turned off). The map pictures come from
+     * openstreetmap.org, which then sees the area looked at: the one thing about a ride that leaves the phone.
+     */
+    public static final String KEY_RIDE_MAP = "ride_map";
     /** Set while the bridge is being started only because a ride was asked for. */
     public static final String KEY_RIDE_WANTED = "ride_wanted";
     /** Ride state ({@link RideRecorder#IDLE}, RECORDING, PAUSED) and its "3.4 km · 12 min" text, for the UI. */

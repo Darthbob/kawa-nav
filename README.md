@@ -55,7 +55,7 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   throttle, lean angle). The last values are kept, so they are there with the ignition off, and the
   phone remembers where the bike was parked ("Walk to the bike").
 - 🗺️ **Ride recording**: records once a second — the bike's values and the phone's GPS track — and keeps
-  the rides with a summary, a track coloured by speed, charts for any value (touch to see where you were)
+  the rides with a summary, a track coloured by speed on a map you can zoom, charts for any value (touch to see where you were)
   and export as Rideology's CSV or as GPX. Since 0.8 the ride also holds what the suspension unit and the
   body were doing (travel, accelerations, rotation rates, filtered wheel speeds) and the rest of the live
   frame (torque, brake pressures, ABS state, damping, cruise control). A ride survives the app being
@@ -349,7 +349,10 @@ has:
   folding sections — engine, chassis and suspension, brakes and electronics, temperatures, data quality
   — each with the lowest, average and highest of every value that ride recorded, and how long traction
   control, ABS, cruise control and the front wheel coming up were at work;
-- the track, coloured by speed, with a dot where the ride started;
+- the track, coloured by speed, with a dot where the ride started, over an OpenStreetMap map: pinch or
+  double-tap to zoom, drag to move around, and the corner button shows the whole ride again. The map
+  is fetched for the area you look at and kept on the phone for a while; without a network the track is
+  drawn on its own. It can be turned off in Settings → "Map under the track";
 - charts for any value the ride recorded — speed, engine speed, gear, throttle, lean angle,
   temperatures, tyres, battery, brake pressure, suspension travel, the body's accelerations, the filtered
   wheel speeds and more; picking one and touching the line marks that second on the track;
@@ -377,7 +380,10 @@ keeps your **records** (fastest ride, most lean each way, longest ride, distance
 that ends announces its summary — distance, time, fuel, best lean, top speed — in a notification that
 opens it.
 
-Everything stays on the phone: no account, no upload. Only Android's own backup takes the rides, the
+Everything stays on the phone: no account, no upload. The one exception is the map under a track: its
+pictures come from openstreetmap.org, which so sees the area of the map you look at (not the track, nor
+any of the ride's values); switch "Map under the track" off and nothing is fetched. Only Android's own
+backup takes the rides, the
 refuels, the battery readings, the maintenance log, the settings and the bike's last values along to a new
 phone, and the cloud backup only when it is
 end-to-end encrypted (phone with a screen lock); offline maps and the log are left out.
@@ -536,6 +542,8 @@ particular purpose. See [LICENSE](LICENSE) for the full text.
 Road data: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, available under
 the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/), downloaded by the app
 from [Geofabrik](https://download.geofabrik.de). The repository and the APK contain no map data.
+The map under a ride's track is OpenStreetMap's own (© OpenStreetMap contributors), fetched from
+tile.openstreetmap.org under its [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
 Frame layouts for the bike's data, settings and riding log were cross-checked against
 [Zen3515's Home Assistant integration for Rideology bikes](https://github.com/Zen3515/homeassistant-kawasaki-rideology-ble)
