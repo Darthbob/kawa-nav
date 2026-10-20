@@ -116,13 +116,126 @@ public class RideTest {
         // the fixture has no 0x4B/0x45/0x41 values beyond coolant, the odometer and the GPS accuracy
         for (String key : new String[]{"oil", "intake", "outside", "accel", "wheelie", "susp_f", "susp_r",
                 "tyre_f", "tyre_r", "brake_f", "battery", "altitude", "torque_rider", "torque_req", "torque_actual",
-                "fuel_rate", "susp_f_speed", "susp_r_speed", "brake_f_master", "brake_r_master", "brake_r_caliper"}) {
+                "fuel_rate", "susp_f_speed", "susp_r_speed", "brake_f_master", "brake_r_master", "brake_r_caliper",
+                "fuel_inst", "accel_fwd", "accel_side", "accel_up", "roll_rate", "yaw_rate", "imu_rate1", "wheel_f",
+                "wheel_r", "rear_slip", "gps_speed"}) {
             assertFalse("expected " + key + " to be unknown", r.metric(key).known());
         }
-        assertFalse(r.sections().contains(Ride.CHASSIS));
         assertTrue(r.sections().contains(Ride.ENGINE));
         assertTrue(r.metric("gps_acc").known());       // the fixture's fixes have an accuracy
-        assertFalse(r.sections().contains(Ride.CHASSIS));
+        // the chassis section is there for the lean angle (0x4A) alone
+        for (Ride.Metric m : r.metrics) {
+            if (Ride.CHASSIS.equals(m.section) && m.known()) assertEquals("lean", m.key);
+        }
+        assertFalse(r.sections().contains(Ride.BRAKES));
+        assertTrue(Double.isNaN(r.kqsUp));             // no quick-shifter column at all
+    }
+
+    @Test
+    public void theImuAccelerationsAreTurnedAsTheChartTurnsThem() {
+        List<RideTsv.Sample> in = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            RideTsv.Sample s = bare(i);
+            // at a standstill on the 2026-10-17 rides: the 45° pair at -0.70 g each (PROTOCOL.md, 0x4B)
+            s.imu_ax_g = -0.70;
+            s.imu_ay_g = -0.70;
+            s.imu_az_g = 0.05;
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(0, r.metric("accel_fwd").max, 1e-9);
+        assertEquals(0.99, r.metric("accel_up").mean, 0.005);
+        assertEquals(0.05, r.metric("accel_side").min, 1e-9);
+        assertTrue(r.sections().contains(Ride.CHASSIS));
+    }
+
+    @Test
+    public void theLeanIsSummarizedEitherSideAndTheRatesOnlyByTheirExtremes() {
+        List<RideTsv.Sample> in = new ArrayList<>();
+        double[] lean = {-30, 10, 20};
+        double[] roll = {-4, 1, 6};
+        for (int i = 0; i < 3; i++) {
+            RideTsv.Sample s = bare(i);
+            s.lean = lean[i];
+            s.imu_ax_psip3 = roll[i];
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        Ride.Metric l = r.metric("lean");
+        assertEquals(10, l.min, 1e-9);
+        assertEquals(20, l.mean, 1e-9);                // how far over, on average, whichever side
+        assertEquals(30, l.max, 1e-9);
+        assertFalse(l.extremes);
+        Ride.Metric rr = r.metric("roll_rate");
+        assertTrue(rr.extremes);                       // it averages out around zero: lowest and highest only
+        assertEquals(-4, rr.min, 1e-9);
+        assertEquals(6, rr.max, 1e-9);
+        assertTrue(r.metric("yaw_rate").extremes);
+        assertTrue(r.metric("rear_slip").extremes);
+    }
+
+    @Test
+    public void theSlipIsLeftOutBelowWalkingPace() {
+        List<RideTsv.Sample> in = new ArrayList<>();
+        double[][] wheels = {{100, 110}, {80, 76}, {5, 9}};   // front, rear
+        for (int i = 0; i < wheels.length; i++) {
+            RideTsv.Sample s = bare(i);
+            s.wheel_f_kmh = wheels[i][0];
+            s.wheel_r_kmh = wheels[i][1];
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        Ride.Metric slip = r.metric("rear_slip");
+        assertEquals(2, slip.n);                       // the 5 km/h second says nothing
+        assertEquals(-5, slip.min, 1e-9);
+        assertEquals(10, slip.max, 1e-9);
+        assertEquals(110, r.metric("wheel_r").max, 1e-9);
+    }
+
+    @Test
+    public void theTimeInEachGearAndTheShiftsAreCounted() {
+        List<RideTsv.Sample> in = new ArrayList<>();
+        double[] gear = {0, 1, 1, 2, 4, 3, 0, 2, Double.NaN, 3};
+        double[] up = {0, 0, 1, 1, 0, 0, 0, 0, 0, 1};               // one shift held over two seconds, then one
+        double[] down = {0, 0, 0, 0, 0, 1, 0, 0, Double.NaN, 0};
+        for (int i = 0; i < gear.length; i++) {
+            RideTsv.Sample s = bare(i);
+            s.gear = gear[i];
+            s.kqs_up = up[i];
+            s.kqs_down = down[i];
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(2, r.gearS[0]);                   // neutral
+        assertEquals(2, r.gearS[1]);
+        assertEquals(2, r.gearS[2]);
+        assertEquals(2, r.gearS[3]);
+        assertEquals(1, r.gearS[4]);
+        // 1→2, 2→4 (two steps), 2→3 across the second without a gear; 4→3 down. Through neutral counts not.
+        assertEquals(4, r.shiftsUp);
+        assertEquals(1, r.shiftsDown);
+        assertEquals(2, r.kqsUp, 1e-9);
+        assertEquals(1, r.kqsDown, 1e-9);
+        assertTrue(r.sections().contains(Ride.ENGINE));   // the gears alone make the engine section
+    }
+
+    @Test
+    public void aRideWithoutAGearHasNoGearRows() {
+        List<RideTsv.Sample> in = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            RideTsv.Sample s = bare(i);
+            s.waterC = 80;
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(null, r.gearS);
+        assertEquals(0, r.shiftsUp);
+        assertFalse(r.sections().contains(Ride.ENGINE));
     }
 
     @Test

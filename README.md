@@ -347,8 +347,11 @@ has:
 
 - a summary: six tiles (time, average, top speed, max lean, highest engine speed, fuel used) and then
   folding sections — engine, chassis and suspension, brakes and electronics, temperatures, data quality
-  — each with the lowest, average and highest of every value that ride recorded, and how long traction
-  control, ABS, cruise control and the front wheel coming up were at work;
+  — each with the lowest, average and highest of every value that ride recorded (the body's
+  accelerations, the lean either side, the wheel and GPS speeds and the instant fuel economy among
+  them; the rotation rates and the rear wheel slip from lowest to highest, as their average says
+  nothing), how long traction control, ABS, cruise control and the front wheel coming up were at work,
+  the time in each gear, and the gear changes with those the quick shifter made;
 - the track, coloured by speed, with a dot where the ride started, over an OpenStreetMap map: pinch or
   double-tap to zoom, drag to move around, and the corner button shows the whole ride again. The map
   is fetched for the area you look at and kept on the phone for a while; without a network the track is

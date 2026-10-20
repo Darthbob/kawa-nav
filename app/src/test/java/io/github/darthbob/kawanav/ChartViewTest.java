@@ -57,13 +57,13 @@ public class ChartViewTest {
 
     @Test
     public void theRearWheelSlipIsHowMuchFasterItTurnsThanTheFront() {
-        assertEquals(10, ChartView.rearSlip(100, 110), 1e-9);      // spinning up under power
-        assertEquals(-10, ChartView.rearSlip(100, 90), 1e-9);      // braked harder than the front
-        assertEquals(0, ChartView.rearSlip(50, 50), 1e-9);
+        assertEquals(10, Ride.rearSlip(100, 110), 1e-9);      // spinning up under power
+        assertEquals(-10, Ride.rearSlip(100, 90), 1e-9);      // braked harder than the front
+        assertEquals(0, Ride.rearSlip(50, 50), 1e-9);
         // crawling, or a wheel speed missing: nothing worth a ratio
-        assertTrue(Double.isNaN(ChartView.rearSlip(ChartView.SLIP_MIN_KMH - 1, 20)));
-        assertTrue(Double.isNaN(ChartView.rearSlip(Double.NaN, 50)));
-        assertTrue(Double.isNaN(ChartView.rearSlip(50, Double.NaN)));
+        assertTrue(Double.isNaN(Ride.rearSlip(Ride.SLIP_MIN_KMH - 1, 20)));
+        assertTrue(Double.isNaN(Ride.rearSlip(Double.NaN, 50)));
+        assertTrue(Double.isNaN(Ride.rearSlip(50, Double.NaN)));
         RideTsv.Sample s = new RideTsv.Sample();
         s.wheel_f_kmh = 80;
         s.wheel_r_kmh = 84;

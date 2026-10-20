@@ -315,6 +315,15 @@ public final class RideStore {
             r.absOnS = o.has("absOnS") ? o.optDouble("absOnS") : Double.NaN;
             r.wheelieS = o.has("wheelieS") ? o.optDouble("wheelieS") : Double.NaN;
             r.cruiseOnS = o.has("cruiseOnS") ? o.optDouble("cruiseOnS") : Double.NaN;
+            org.json.JSONArray gears = o.optJSONArray("gearS");
+            if (gears != null) {
+                r.gearS = new int[Ride.MAX_GEAR + 1];
+                for (int g = 0; g < Math.min(gears.length(), r.gearS.length); g++) r.gearS[g] = gears.optInt(g);
+            }
+            r.shiftsUp = o.optInt("shiftsUp");
+            r.shiftsDown = o.optInt("shiftsDown");
+            r.kqsUp = o.has("kqsUp") ? o.optDouble("kqsUp") : Double.NaN;
+            r.kqsDown = o.has("kqsDown") ? o.optDouble("kqsDown") : Double.NaN;
             org.json.JSONArray bbox = o.optJSONArray("bbox");
             if (bbox != null && bbox.length() == 4) {
                 r.bbox = new double[]{bbox.getDouble(0), bbox.getDouble(1), bbox.getDouble(2), bbox.getDouble(3)};
@@ -390,6 +399,15 @@ public final class RideStore {
             if (r.absOnS == r.absOnS) o.put("absOnS", round(r.absOnS));
             if (r.wheelieS == r.wheelieS) o.put("wheelieS", round(r.wheelieS));
             if (r.cruiseOnS == r.cruiseOnS) o.put("cruiseOnS", round(r.cruiseOnS));
+            if (r.gearS != null) {
+                org.json.JSONArray g = new org.json.JSONArray();
+                for (int s : r.gearS) g.put(s);
+                o.put("gearS", g);
+                o.put("shiftsUp", r.shiftsUp);
+                o.put("shiftsDown", r.shiftsDown);
+            }
+            if (r.kqsUp == r.kqsUp) o.put("kqsUp", round(r.kqsUp));
+            if (r.kqsDown == r.kqsDown) o.put("kqsDown", round(r.kqsDown));
             if (r.bbox != null) {
                 org.json.JSONArray b = new org.json.JSONArray();
                 for (double d : r.bbox) b.put(d);

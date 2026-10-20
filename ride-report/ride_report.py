@@ -26,7 +26,9 @@ import sys
 
 # ------------------------------------------------------------------ what a ride records
 
-# key, label, section, unit, decimals — the same channels and wording as the app's ride summary
+# key, label, section, unit, decimals — the same lowest / average / highest rows and wording as the app's
+# ride summary. The app has a few more this report leaves out: the rows it shows only from lowest to
+# highest (the rotation rates, the rear wheel slip), the time in each gear and the gear changes.
 CHANNELS = [
     ("rpm", "Engine speed", "Engine", "rpm", 0),
     ("thr_pct", "Throttle", "Engine", "%", 0),
@@ -34,11 +36,15 @@ CHANNELS = [
     ("torque_req", "Torque the engine control asks for", "Engine", "bike units", 0),
     ("torque_actual", "Torque from the engine", "Engine", "bike units", 0),
     ("fuel_rate", "Fuel use", "Engine", "dash units", 2),
+    ("fuel_inst", "Fuel economy, instant", "Engine", "km/L", 1),
     ("susp_f_stroke_mm", "Front suspension", "Chassis and suspension", "mm", 1),
     ("susp_r_stroke_mm", "Rear suspension", "Chassis and suspension", "mm", 1),
     ("susp_f_stroke_vp", "Front suspension speed (unverified)", "Chassis and suspension", "bike units", 2),
     ("susp_r_stroke_vp", "Rear suspension speed (unverified)", "Chassis and suspension", "bike units", 2),
     ("acc_g", "Acceleration (the bike's own)", "Chassis and suspension", "g", 2),
+    ("lean_abs", "Lean angle, either side", "Chassis and suspension", "°", 1),
+    ("wheel_f_kmh", "Front wheel (filtered)", "Chassis and suspension", "km/h", 0),
+    ("wheel_r_kmh", "Rear wheel (filtered)", "Chassis and suspension", "km/h", 0),
     ("wheelie_deg", "Wheelie angle", "Chassis and suspension", "°", 1),
     ("tyre_f_kpa", "Front tyre", "Chassis and suspension", "bar", 2),
     ("tyre_r_kpa", "Rear tyre", "Chassis and suspension", "bar", 2),
@@ -51,6 +57,7 @@ CHANNELS = [
     ("oil_c", "Oil", "Temperatures", "°C", 0),
     ("intake_c", "Intake air", "Temperatures", "°C", 0),
     ("outside_c", "Outside", "Temperatures", "°C", 0),
+    ("gps_kmh", "Speed (GPS)", "Data quality", "km/h", 0),
     ("gps_acc_m", "GPS accuracy", "Data quality", "m", 1),
     ("alt_m", "Altitude", "Data quality", "m", 0),
     # derived from the IMU pair (see imu_forward/up/lateral below)
@@ -418,6 +425,10 @@ def metrics_of(ride):
             x, y = ride.col("imu_ax_g"), ride.col("imu_ay_g")
             for a, b in zip(x, y):
                 m.add(imu_up(a, b))
+        elif key == "lean_abs":
+            # how far over, whichever side (the app's "either side" row)
+            for v in ride.col("lean_deg"):
+                m.add(None if v is None else abs(v))
         elif key == "imu_side":
             for v in ride.col("imu_az_g"):
                 m.add(v)

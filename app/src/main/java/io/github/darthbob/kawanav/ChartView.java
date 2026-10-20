@@ -66,9 +66,6 @@ public final class ChartView extends View {
         }
     }
 
-    /** Below this front-wheel speed the slip is not worked out: a ratio of two crawling wheels says nothing. */
-    static final double SLIP_MIN_KMH = 10;
-
     public interface OnPoint {
         void onSample(int index);
     }
@@ -142,7 +139,7 @@ public final class ChartView extends View {
             case BRAKE_R_CALIPER: return s.brake_r_caliper;
             case SUSP_SPEED_FRONT: return s.susp_f_stroke_vp;
             case SUSP_SPEED_REAR: return s.susp_r_stroke_vp;
-            case REAR_SLIP: return rearSlip(s.wheel_f_kmh, s.wheel_r_kmh);
+            case REAR_SLIP: return Ride.rearSlip(s.wheel_f_kmh, s.wheel_r_kmh);
             case WHEELIE_ANGLE: return s.wheelie_deg;
             case RPM: return s.rpm;
             case GEAR: return s.gear;
@@ -178,16 +175,6 @@ public final class ChartView extends View {
             if (v == v) return true;
         }
         return false;
-    }
-
-    /**
-     * How much faster the rear wheel turns than the front, in % of the front: positive while the rear
-     * spins up under power, negative while it is braked harder. NaN below {@link #SLIP_MIN_KMH} or
-     * without both filtered wheel speeds.
-     */
-    static double rearSlip(double frontKmh, double rearKmh) {
-        if (frontKmh != frontKmh || rearKmh != rearKmh || frontKmh < SLIP_MIN_KMH) return Double.NaN;
-        return (rearKmh - frontKmh) / frontKmh * 100;
     }
 
     /** "Yaw rate +3.2", "Torque 40 / 38 / 36": the series at one second, for the line under the chart. */

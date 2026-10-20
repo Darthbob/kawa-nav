@@ -82,8 +82,10 @@ public final class Ride {
      * How the saved summary was computed: a ride saved before this version has to be recomputed once.
      * 2: the distance ({@link #distM}), and no temperatures at the bottom of their scale.
      * 3: the torque, the fuel use, the suspension speeds and the raw brake values.
+     * 4: the IMU accelerations, wheel and GPS speeds, lean, instant fuel economy, rotation rates, rear
+     * wheel slip, the time in each gear and the gear changes.
      */
-    public static final int SUMMARY_VERSION = 3;
+    public static final int SUMMARY_VERSION = 4;
     /** Which summary the file holds, 0 for a ride saved by a version that did not know about metrics. */
     public int summaryVersion;
 
@@ -99,6 +101,11 @@ public final class Ride {
     public static final class Metric {
         public final String key, label, section, unit;
         public final int decimals;
+        /**
+         * Only the lowest and the highest are worth showing: a value that swings both ways around zero
+         * (a rotation rate, the wheel slip) averages out to nothing.
+         */
+        public final boolean extremes;
         /** Reads the value out of a sample; not saved (the key does that). */
         final java.util.function.ToDoubleFunction<RideTsv.Sample> of;
         public double min = Double.NaN, mean = Double.NaN, max = Double.NaN;
@@ -108,11 +115,17 @@ public final class Ride {
 
         Metric(String key, String label, String section, String unit, int decimals,
                java.util.function.ToDoubleFunction<RideTsv.Sample> of) {
+            this(key, label, section, unit, decimals, false, of);
+        }
+
+        Metric(String key, String label, String section, String unit, int decimals, boolean extremes,
+               java.util.function.ToDoubleFunction<RideTsv.Sample> of) {
             this.key = key;
             this.label = label;
             this.section = section;
             this.unit = unit;
             this.decimals = decimals;
+            this.extremes = extremes;
             this.of = of;
         }
 
@@ -151,11 +164,28 @@ public final class Ride {
             new Metric("torque_req", "Torque the engine control asks for", ENGINE, "bike units", 0, s -> s.torque_req),
             new Metric("torque_actual", "Torque from the engine", ENGINE, "bike units", 0, s -> s.torque_actual),
             new Metric("fuel_rate", "Fuel use", ENGINE, "dash units", 2, s -> s.fuelRate),
+            // km/L whatever the dash is set to (PROTOCOL.md, 0x45)
+            new Metric("fuel_inst", "Fuel economy, instant", ENGINE, "km/L", 1, s -> s.fuelInst),
             new Metric("susp_f", "Front suspension", CHASSIS, "mm", 1, s -> s.susp_f_stroke_mm),
             new Metric("susp_r", "Rear suspension", CHASSIS, "mm", 1, s -> s.susp_r_stroke_mm),
             new Metric("susp_f_speed", "Front suspension speed (unverified)", CHASSIS, "bike units", 2, s -> s.susp_f_stroke_vp),
             new Metric("susp_r_speed", "Rear suspension speed (unverified)", CHASSIS, "bike units", 2, s -> s.susp_r_stroke_vp),
             new Metric("accel", "Acceleration", CHASSIS, "g", 2, s -> s.accG),
+            // the IMU pair is mounted at 45°: turned as the chart turns it (BikeFrames.ImuSusp)
+            new Metric("accel_fwd", "Acceleration, forward", CHASSIS, "g", 2,
+                    s -> BikeFrames.ImuSusp.longitudinal(s.imu_ax_g, s.imu_ay_g)),
+            new Metric("accel_side", "Acceleration, sideways", CHASSIS, "g", 2,
+                    s -> BikeFrames.ImuSusp.lateral(s.imu_az_g)),
+            new Metric("accel_up", "Acceleration, up", CHASSIS, "g", 2,
+                    s -> BikeFrames.ImuSusp.vertical(s.imu_ax_g, s.imu_ay_g)),
+            // either side: how far, and how far on average, the bike was leant over (the tiles have each side)
+            new Metric("lean", "Lean angle, either side", CHASSIS, "°", 1, s -> Math.abs(s.lean)),
+            // the rotation rates' scale is not established (PROTOCOL.md, 0x4B)
+            new Metric("roll_rate", "Roll rate", CHASSIS, "bike units", 1, true, s -> s.imu_ax_psip3),
+            new Metric("yaw_rate", "Yaw rate", CHASSIS, "bike units", 1, true, s -> s.imu_az_psip2),
+            new Metric("imu_rate1", "IMU rate 1 (unverified)", CHASSIS, "bike units", 1, true, s -> s.imu_ay_psip1),
+            new Metric("wheel_f", "Front wheel (filtered)", CHASSIS, "km/h", 0, s -> s.wheel_f_kmh),
+            new Metric("wheel_r", "Rear wheel (filtered)", CHASSIS, "km/h", 0, s -> s.wheel_r_kmh),
             new Metric("wheelie", "Wheelie angle", CHASSIS, "°", 1, s -> s.wheelie_deg),
             new Metric("tyre_f", "Front tyre", CHASSIS, "bar", 2, s -> s.tyreFrontKpa / 100),
             new Metric("tyre_r", "Rear tyre", CHASSIS, "bar", 2, s -> s.tyreRearKpa / 100),
@@ -164,11 +194,14 @@ public final class Ride {
             new Metric("brake_f_master", "Front brake master (unverified)", BRAKES, "raw", 0, s -> s.brake_f_master),
             new Metric("brake_r_master", "Rear brake master (unverified)", BRAKES, "raw", 0, s -> s.brake_r_master),
             new Metric("brake_r_caliper", "Rear brake caliper (unverified)", BRAKES, "raw", 0, s -> s.brake_r_caliper),
+            new Metric("rear_slip", "Rear wheel slip", BRAKES, "%", 0, true,
+                    s -> rearSlip(s.wheel_f_kmh, s.wheel_r_kmh)),
             new Metric("battery", "Battery", BRAKES, "V", 2, s -> s.batteryV),
             new Metric("coolant", "Coolant", TEMPERATURES, "°C", 0, s -> s.waterC),
             new Metric("oil", "Oil", TEMPERATURES, "°C", 0, s -> s.oilC),
             new Metric("intake", "Intake air", TEMPERATURES, "°C", 0, s -> s.intakeC),
             new Metric("outside", "Outside", TEMPERATURES, "°C", 0, s -> s.outsideC),
+            new Metric("gps_speed", "Speed (GPS)", QUALITY, "km/h", 0, s -> s.gpsKmh),
             new Metric("gps_acc", "GPS accuracy", QUALITY, "m", 1, s -> s.gpsAccM),
             new Metric("altitude", "Altitude", QUALITY, "m", 0, s -> s.altM),
     };
@@ -180,9 +213,22 @@ public final class Ride {
         Metric[] out = new Metric[TEMPLATE.length];
         for (int i = 0; i < TEMPLATE.length; i++) {
             Metric t = TEMPLATE[i];
-            out[i] = new Metric(t.key, t.label, t.section, t.unit, t.decimals, t.of);
+            out[i] = new Metric(t.key, t.label, t.section, t.unit, t.decimals, t.extremes, t.of);
         }
         return out;
+    }
+
+    /** Below this front-wheel speed the slip is not worked out: a ratio of two crawling wheels says nothing. */
+    static final double SLIP_MIN_KMH = 10;
+
+    /**
+     * How much faster the rear wheel turns than the front, in % of the front: positive while the rear
+     * spins up under power, negative while it is braked harder. NaN below {@link #SLIP_MIN_KMH} or
+     * without both filtered wheel speeds.
+     */
+    static double rearSlip(double frontKmh, double rearKmh) {
+        if (frontKmh != frontKmh || rearKmh != rearKmh || frontKmh < SLIP_MIN_KMH) return Double.NaN;
+        return (rearKmh - frontKmh) / frontKmh * 100;
     }
 
     /** The channel with this key, or null. */
@@ -197,6 +243,8 @@ public final class Ride {
         for (Metric m : metrics) {
             if (m.known() && !out.contains(m.section)) out.add(m.section);
         }
+        // the gears are engine rows too, and a ride can have them without any other engine value
+        if (gearS != null && !out.contains(ENGINE)) out.add(0, ENGINE);
         return out;
     }
 
@@ -206,6 +254,18 @@ public final class Ride {
      * traction-control level means nothing, the time it cut in does. NaN when the ride has no such column.
      */
     public double tcsOnS = Double.NaN, absOnS = Double.NaN, wheelieS = Double.NaN, cruiseOnS = Double.NaN;
+
+    /** The highest gear counted; a reading above it is not a gear (an older decoder's cut-short frame). */
+    static final int MAX_GEAR = 9;
+    /** Seconds in each gear, the index is the gear (0 = neutral); null when the ride has no gear at all. */
+    public int[] gearS;
+    /** Gear changes read from the gear column, each step counted (3 → 5 in one second is two). */
+    public int shiftsUp, shiftsDown;
+    /**
+     * Shifts the quick shifter made, from its operation flags: set when the rider shifted without the
+     * clutch, not for every shift (PROTOCOL.md, 0x4B byte 51). NaN when the ride has no such column.
+     */
+    public double kqsUp = Double.NaN, kqsDown = Double.NaN;
 
     /** Recomputes the summary from the recorded samples (after a crash, or to check the file). */
     public void summarize(List<RideTsv.Sample> samples) {
@@ -228,6 +288,12 @@ public final class Ride {
         double speedSum = 0;
         int speedCount = 0;
         double prevFuel = Double.NaN;
+        int[] gears = new int[MAX_GEAR + 1];
+        boolean gearSeen = false;
+        int prevGear = -1;
+        shiftsUp = shiftsDown = 0;
+        double kqsU = 0, kqsD = 0, prevKqsU = Double.NaN, prevKqsD = Double.NaN;
+        boolean kqsSeen = false;
         Distance dist = new Distance();
         for (RideTsv.Sample s : samples) {
             if ((s.flags & RideTsv.FLAG_BIKE) != 0) hasBike = true;
@@ -270,7 +336,29 @@ public final class Ride {
                 cruiseSeen = true;
                 if (s.cruise_on > 0) cruise++;
             }
+            if (s.gear == s.gear) {
+                int g = (int) Math.round(s.gear);
+                if (g >= 0 && g <= MAX_GEAR) {
+                    gears[g]++;
+                    gearSeen = true;
+                    // a change through neutral is not a shift up or down the box (N sits between 1 and 2)
+                    if (prevGear > 0 && g > 0 && g != prevGear) {
+                        if (g > prevGear) shiftsUp += g - prevGear;
+                        else shiftsDown += prevGear - g;
+                    }
+                    prevGear = g;
+                }
+            }
+            // a flag held over two seconds is one shift: count the seconds it comes on
+            if (s.kqs_up == s.kqs_up || s.kqs_down == s.kqs_down) kqsSeen = true;
+            if (s.kqs_up > 0 && !(prevKqsU > 0)) kqsU++;
+            if (s.kqs_down > 0 && !(prevKqsD > 0)) kqsD++;
+            prevKqsU = s.kqs_up;
+            prevKqsD = s.kqs_down;
         }
+        gearS = gearSeen ? gears : null;
+        kqsUp = kqsSeen ? kqsU : Double.NaN;
+        kqsDown = kqsSeen ? kqsD : Double.NaN;
         // seen but never on is 0 seconds ("never cut in"); a column the ride does not have stays unknown
         tcsOnS = tcsSeen ? tcs : Double.NaN;
         absOnS = absSeen ? abs : Double.NaN;

@@ -328,9 +328,12 @@ public class RideActivity extends KawaActivity {
             any |= addSeconds(g, "Cruise control", r.cruiseOnS);
         }
         if (Ride.CHASSIS.equals(name)) any |= addSeconds(g, "Front wheel up", r.wheelieS);
+        if (Ride.ENGINE.equals(name)) any |= addGears(g, r);
         if (!any) return null;
         if (hasRanges(r, name)) {
-            TextView legend = note("Lowest, average and highest of the seconds the bike sent this.");
+            TextView legend = note("Lowest, average and highest of the seconds the bike sent this"
+                    + (hasExtremes(r, name) ? "; where an average says nothing (rotation rates, slip), the lowest "
+                    + "to the highest." : "."));
             legend.setPadding(0, dp(Ui.SPACE2), 0, 0);
             g.addView(legend);
         }
@@ -371,10 +374,39 @@ public class RideActivity extends KawaActivity {
         return sec;
     }
 
-    /** "lowest / average / highest unit", the three numbers every value row carries. */
+    /** "lowest / average / highest unit", the three numbers a value row carries; "lowest to highest unit" for one that swings both ways. */
     private static String range(Ride.Metric m) {
         String f = "%," + "." + m.decimals + "f";
+        if (m.extremes) return String.format(Locale.ROOT, f + " to " + f + " %s", m.min, m.max, m.unit);
         return String.format(Locale.ROOT, f + " / " + f + " / " + f + " %s", m.min, m.mean, m.max, m.unit);
+    }
+
+    /** True when the section has a row that shows only its lowest and highest. */
+    private static boolean hasExtremes(Ride r, String name) {
+        for (Ride.Metric m : r.metrics) if (name.equals(m.section) && m.known() && m.extremes) return true;
+        return false;
+    }
+
+    /**
+     * The time in each gear, with its share of the ride, and the gear changes: all of them, then those the
+     * quick shifter made. False when the ride has no gear.
+     */
+    private boolean addGears(LinearLayout group, Ride r) {
+        if (r.gearS == null) return false;
+        long total = 0;
+        for (int s : r.gearS) total += s;
+        if (total == 0) return false;
+        for (int gear = 0; gear < r.gearS.length; gear++) {
+            int s = r.gearS[gear];
+            if (s == 0) continue;
+            add(group, gear == 0 ? "In neutral" : "In gear " + gear,
+                    String.format(Locale.ROOT, "%s (%.0f %%)", seconds((double) s), 100.0 * s / total));
+        }
+        add(group, "Gear changes", r.shiftsUp + " up, " + r.shiftsDown + " down");
+        if (r.kqsUp == r.kqsUp) {
+            add(group, "With the quick shifter", String.format(Locale.ROOT, "%.0f up, %.0f down", r.kqsUp, r.kqsDown));
+        }
+        return true;
     }
 
     /** A line for a system that either worked or did not: its time when it did, "never" when it did not. */
