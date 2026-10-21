@@ -64,9 +64,33 @@ public class SettingsActivity extends KawaActivity {
             + "• Hairpins only\n"
             + "• Sharp and hairpins\n"
             + "• All curves: also normal and slight bends\n\n"
+            + "\"Also when too fast\" adds the bends you come at too fast for your pace, with \"slow down\"; "
+            + "it works also with this one off.\n\n"
             + "It works with or without navigation, whatever the display shows. During navigation, a bend "
             + "right before Maps' next maneuver is left to Maps' own voice. Needs downloaded roads, like the "
             + "curves on the display. The voice is the phone's text-to-speech, in English.";
+
+    /** "Also when too fast", index: the {@link CurveAlerts} pace. */
+    private static final String[] PACE_NAMES = {"Off", "Relaxed", "Normal", "Sporty", "Fast"};
+
+    /** Explanation of "Also when too fast", with each pace's speeds from CurveAlerts. */
+    private static String curvePaceInfo() {
+        StringBuilder s = new StringBuilder("Your pace is how far you lean through a bend. From the bend's radius "
+                + "in the map data it gives the speed you would take the bend at:\n");
+        for (int p = CurveAlerts.RELAXED; p <= CurveAlerts.FAST; p++) {
+            s.append(String.format(Locale.ROOT, "\n• %s (%.0f°): %.0f km/h at a radius of 30 m, %.0f km/h at 100 m",
+                    PACE_NAMES[p], CurveAlerts.PACE_LEAN[p], CurveAlerts.okSpeed(30, p) * 3.6,
+                    CurveAlerts.okSpeed(100, p) * 3.6));
+        }
+        return s.append(String.format(Locale.ROOT, "\n\nComing at a bend more than %.0f%% faster than that, you hear "
+                + "it with \"slow down\" (\"Bend left, slow down\") when gentle braking would only just be enough: "
+                + "about 0.3 g, after %.1f s to hear it and react. If you are slowing down enough already, "
+                + "nothing is said.\n\n"
+                + "Any kind of bend, also with \"Spoken curve warnings\" off, as long as it counts under \"Which "
+                + "curves count\". The radius from the map is rough, and a wide line makes a bend wider than "
+                + "the road: the speeds err on the careful side.",
+                (CurveAlerts.TOO_FAST - 1) * 100, CurveAlerts.REACTION_S)).toString();
+    }
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private RoadStore roadStore;
@@ -298,6 +322,12 @@ public class SettingsActivity extends KawaActivity {
                 CURVE_SOUND_INFO, new String[]{"Off", "Hairpins only", "Sharp and hairpins", "All curves"},
                 prefs.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), pos -> {
                     prefs.edit().putInt(Hub.KEY_CURVE_SOUND, pos).apply();
+                    BridgeService.settingsChanged();
+                }));
+        addRow(c, choiceRow("Also when too fast", "Any bend, with \"slow down\", when you come at it faster than "
+                + "your pace takes it", curvePaceInfo(), PACE_NAMES,
+                prefs.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF), pos -> {
+                    prefs.edit().putInt(Hub.KEY_CURVE_PACE, pos).apply();
                     BridgeService.settingsChanged();
                 }));
         addRow(c, switchRow("Speak only through a headset", "Quiet while no Bluetooth or wired headset is "

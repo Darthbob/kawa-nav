@@ -719,7 +719,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         boolean free = Hub.freeMode(this);
         boolean navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, 0) > 0;
         boolean cameras = Hub.camerasEnabled(this);
-        boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF;
+        boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF
+                || Hub.prefs(this).getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF) > CurveAlerts.PACE_OFF;
         if ((free || navCurves || cameras || spoken) && locationAllowed) {
             curve.start();
         } else {
@@ -1083,8 +1084,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     /**
-     * Spoken curve warnings: the next curve of the chosen kinds, a few seconds before it, once (see
-     * {@link CurveAlerts}). Whatever the dash shows: during navigation too, except at Maps' maneuver.
+     * Spoken curve warnings: the next curve of the chosen kinds a few seconds before it, or one the rider
+     * comes at too fast for the chosen pace, once each (see {@link CurveAlerts}). Whatever the dash shows:
+     * during navigation too, except at Maps' maneuver.
      */
     private void sayCurve(long now) {
         if (curveSound == null || !locationAllowed) return;
@@ -1093,11 +1095,14 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.MapsTurn m = Hub.mapsEnabled(this) ? Hub.maps : null;
         double maneuver = m == null ? Double.POSITIVE_INFINITY : m.distanceM;
         double speed = curve.speed();
-        CurveAlerts.Ahead c = curveAlerts.next(curve.curvesAhead(), speed,
-                p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), maneuver, now);
-        if (c == null) return;
-        String text = CurveAlerts.phrase(c.turn);
-        Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h", text, c.startDist, speed * 3.6));
+        CurveAlerts.Warning w = curveAlerts.next(curve.curvesAhead(), speed,
+                p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), p.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF),
+                maneuver, now);
+        if (w == null) return;
+        String text = w.text();
+        Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h (radius %.0f m%s)", text,
+                w.curve.startDist, speed * 3.6, w.curve.minRadius,
+                Double.isInfinite(w.okSpeed) ? "" : String.format(Locale.ROOT, ", pace %.0f km/h", w.okSpeed * 3.6)));
         curveSound.say(text);
     }
 

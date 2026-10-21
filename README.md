@@ -46,7 +46,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   continues the road, and on straights the straight arrow with the distance to the next curve.
   Works from offline OpenStreetMap data, no mobile data needed while riding.
 - 🗣️ **Spoken curve warnings** (optional, off by default): "Sharp bend left", "Hairpin right" in your
-  helmet a few seconds before the bend, for the kinds of bend you choose. With or without navigation.
+  helmet a few seconds before the bend, for the kinds of bend you choose, and "Bend left, slow down"
+  when you come at a bend too fast for your pace. With or without navigation.
 - 🔋 **Phone battery and headset on the dash**: the dash's phone battery icon shows the phone's charge
   in 4 bars, like with Rideology, and that it is charging; the headset icon shows while your helmet
   intercom is connected.
@@ -193,6 +194,7 @@ In the **Settings** tab:
 | [Show upcoming curves](#show-upcoming-curves) | On | Free ride when Maps is not navigating |
 | [Curve warnings during navigation](#curve-warnings-during-navigation) | Off | Off / sharp only / all curves between Maps directions |
 | [Spoken curve warnings](#spoken-curve-warnings) | Off | Off / hairpins only / sharp and hairpins / all curves, said in the helmet |
+| [Also when too fast](#too-fast-for-your-pace) | Off | Off / Relaxed / Normal / Sporty / Fast: any bend, with "slow down" |
 | [Speak only through a headset](#spoken-curve-warnings) | On | No spoken warnings while no headset is connected |
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° (explained in the app) |
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
@@ -258,6 +260,30 @@ sharp bends and hairpins, or all curves that count under "Which curves count". O
 - **Hear a curve warning** → Play says "Sharp bend left" right away, to set the volume in the helmet.
 
 Needs downloaded roads like free ride.
+
+##### Too fast for your pace
+
+**Also when too fast** (off by default) says a bend of any kind, with "slow down" ("Bend left, slow
+down"), when you come at it faster than your pace takes it. It works also with "Spoken curve
+warnings" off, for the bends that count under "Which curves count". The pace is how far you lean
+through a bend; from the bend's radius in the map data it gives the speed you would take it at
+(v² = g · r · tan lean):
+
+| Pace | Lean | Radius 30 m | 60 m | 100 m | 200 m |
+|---|---|---|---|---|---|
+| Relaxed | 20° | 37 km/h | 53 km/h | 68 km/h | 96 km/h |
+| Normal | 28° | 45 km/h | 64 km/h | 82 km/h | 116 km/h |
+| Sporty | 35° | 52 km/h | 73 km/h | 94 km/h | 133 km/h |
+| Fast | 42° | 59 km/h | 83 km/h | 107 km/h | 151 km/h |
+
+- Too fast means more than 10% over that speed.
+- It is said once gentle braking would only just be enough: 2.5 s to hear it and react, then about
+  0.3 g down to the pace's speed, at most 500 m before the bend. If you are already slowing down
+  enough, the distance you need shrinks faster than the distance left, and nothing is said.
+- A bend of a kind you chose under "Spoken curve warnings" gets "slow down" added when you are too
+  fast for it at the moment it is said.
+- The radius from the map is rough, and a wide line makes a bend wider than the road: the speeds err
+  on the careful side.
 
 #### Fuel economy
 

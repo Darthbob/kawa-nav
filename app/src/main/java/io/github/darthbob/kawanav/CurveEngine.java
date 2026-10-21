@@ -144,7 +144,7 @@ public final class CurveEngine implements LocationListener {
         List<CurveAlerts.Ahead> out = new ArrayList<>(curves.size());
         for (CurveDetector.Curve c : curves) {
             double[] at = net.unproject(c.startX, c.startY);
-            out.add(new CurveAlerts.Ahead(c.turn, c.startDist, at[0], at[1]));
+            out.add(new CurveAlerts.Ahead(c.turn, c.startDist, c.minRadius, at[0], at[1]));
         }
         return out;
     }
