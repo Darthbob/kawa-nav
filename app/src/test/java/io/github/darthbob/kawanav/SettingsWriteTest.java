@@ -176,4 +176,23 @@ public class SettingsWriteTest {
         assertEquals(50.0, moving.speedKmh, 1e-9);
         assertEquals("the bike must stand still", SettingsWrite.blockedBecause(moving, 200, tuning));
     }
+
+    @Test
+    public void statusKeepsTheOutcomeUntilItIsRead() {
+        String idle = SettingsWrite.readiness(null);
+        assertEquals("Ready", idle);
+        assertEquals("Not ready: the bike must stand still", SettingsWrite.readiness("the bike must stand still"));
+        // a running write wins over everything
+        assertEquals("Sending…", SettingsWrite.status("Sending…", "Not sent: x", 0, idle));
+        // a refusal survives the next refreshes instead of turning into "Ready" a second later
+        assertEquals("Not sent: the bike is not connected",
+                SettingsWrite.status("", "Not sent: the bike is not connected", 1_000, idle));
+        assertEquals("Not sent: x", SettingsWrite.status("", "Not sent: x", SettingsWrite.OUTCOME_MS - 1, idle));
+        // and goes once it is old, or when there is none
+        assertEquals(idle, SettingsWrite.status("", "Not sent: x", SettingsWrite.OUTCOME_MS, idle));
+        assertEquals(idle, SettingsWrite.status("", "", 0, idle));
+        assertEquals(idle, SettingsWrite.status(null, null, 0, idle));
+        // a clock set back must not keep an outcome for ever
+        assertEquals(idle, SettingsWrite.status("", "Not sent: x", -5, idle));
+    }
 }

@@ -499,6 +499,11 @@ after sending.
   which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
   dash clock stays as it is.
 
+Under its choices the ride-settings card says whether a press would send now: "Ready", or why not
+("Not ready: the bike must stand still"). After a press both cards show for 30 seconds what came of it:
+why it was not sent, that the bike gave no answer or refused it, or (for the ride settings) whether the
+settings it reads back are the ones sent.
+
 Rideology does not write the suspension settings (KECS) on these dashes either, so KawaNav only reads
 them.
 

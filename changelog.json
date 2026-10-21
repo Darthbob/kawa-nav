@@ -4,7 +4,8 @@
       "version": "1.2.1",
       "changes": [
         "With \"Beeps instead of words\", a speed camera now sounds like a two-tone siren (high-low, high-low, in both ears), so it can no longer be taken for the two beeps of a sharp bend",
-        "The bike's screen can change riding mode, power, KTRC, the quickshifter and the dash shift lamp in the normal app too, not only in the debug one. This has not been tried on a bike yet: check the dash after sending"
+        "The bike's screen can change riding mode, power, KTRC, the quickshifter and the dash shift lamp in the normal app too, not only in the debug one. This has not been tried on a bike yet: check the dash after sending",
+        "The ride-settings and shift-lamp cards say why a write was not sent, and what came of it: no answer, refused, or the settings the bike reads back"
       ]
     },
     {

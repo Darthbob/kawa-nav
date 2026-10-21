@@ -173,6 +173,25 @@ public final class SettingsWrite {
         return null;
     }
 
+    /** How long what came of the last write (or why it was not sent) stays on its card. */
+    public static final long OUTCOME_MS = 30_000;
+
+    /**
+     * The status line of a write card: the write that is running, else what came of the last one while it
+     * is recent ({@code outcomeAgeMs} under {@link #OUTCOME_MS}), else {@code idle}. A refused or answered
+     * write must not be overwritten by "Ready" on the next refresh before the rider has read it.
+     */
+    public static String status(String job, String outcome, long outcomeAgeMs, String idle) {
+        if (job != null && !job.isEmpty()) return job;
+        if (outcome != null && !outcome.isEmpty() && outcomeAgeMs >= 0 && outcomeAgeMs < OUTCOME_MS) return outcome;
+        return idle;
+    }
+
+    /** "Ready", or why a ride-settings write would not be sent now ({@code blocked} from {@link #blockedBecause}). */
+    public static String readiness(String blocked) {
+        return blocked == null ? "Ready" : "Not ready: " + blocked;
+    }
+
     /** Debug text for a result code. */
     public static String describeResult(int result) {
         switch (result) {
