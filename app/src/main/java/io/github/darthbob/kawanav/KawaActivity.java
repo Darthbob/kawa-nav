@@ -1026,10 +1026,16 @@ public abstract class KawaActivity extends Activity {
 
     /** With info: a link under the text opens it as explanation of the options. */
     protected View choiceRow(String title, String sub, String info, String[] items, int selected, OnPos f) {
+        return choiceRow(title, sub, info, null, items, selected, f);
+    }
+
+    /** @param under a line under the text that the caller keeps up to date (a status), or null */
+    protected View choiceRow(String title, String sub, String info, View under, String[] items, int selected, OnPos f) {
         LinearLayout r = settingRow();
         LinearLayout t = column();
         t.addView(itemTitle(title));
         t.addView(secondary(sub));
+        if (under != null) t.addView(under);
         if (info != null) {
             TextView more = text(13, false);
             more.setText("What do the options mean?");

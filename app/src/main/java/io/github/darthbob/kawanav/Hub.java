@@ -188,7 +188,7 @@ public final class Hub {
     public static final String KEY_CURVE_SOUND = "curve_sound";
     /**
      * Bends also said, with "slow down", when the rider comes at them too fast for this pace:
-     * {@link CurveAlerts#PACE_OFF} (default), RELAXED, NORMAL, SPORTY or FAST.
+     * {@link CurveAlerts#PACE_OFF} (default), RELAXED, NORMAL, SPORTY, FAST or FROM_RIDES.
      */
     public static final String KEY_CURVE_PACE = "curve_pace";
     /** Spoken curve warnings only while a headset is connected (on unless turned off). */

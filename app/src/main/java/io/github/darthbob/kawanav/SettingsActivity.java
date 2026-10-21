@@ -71,17 +71,21 @@ public class SettingsActivity extends KawaActivity {
             + "curves on the display. The voice is the phone's text-to-speech, in English.";
 
     /** "Also when too fast", index: the {@link CurveAlerts} pace. */
-    private static final String[] PACE_NAMES = {"Off", "Relaxed", "Normal", "Sporty", "Fast"};
+    private static final String[] PACE_NAMES = {"Off", "Relaxed", "Normal", "Sporty", "Fast", "From my rides"};
 
     /** Explanation of "Also when too fast", with each pace's speeds from CurveAlerts. */
     private static String curvePaceInfo() {
         StringBuilder s = new StringBuilder("Your pace is how far you lean through a bend. From the bend's radius "
                 + "in the map data it gives the speed you would take the bend at:\n");
         for (int p = CurveAlerts.RELAXED; p <= CurveAlerts.FAST; p++) {
+            double lean = CurveAlerts.PACE_LEAN[p];
             s.append(String.format(Locale.ROOT, "\n• %s (%.0f°): %.0f km/h at a radius of 30 m, %.0f km/h at 100 m",
-                    PACE_NAMES[p], CurveAlerts.PACE_LEAN[p], CurveAlerts.okSpeed(30, p) * 3.6,
-                    CurveAlerts.okSpeed(100, p) * 3.6));
+                    PACE_NAMES[p], lean, CurveAlerts.okSpeed(30, lean) * 3.6, CurveAlerts.okSpeed(100, lean) * 3.6));
         }
+        s.append(String.format(Locale.ROOT, "\n• From my rides: the lean you usually reach in a bend in your "
+                + "last %d rides, once they hold %d bends; Normal until then. A bend counts from %.0f km/h and "
+                + "%d° of lean. Needs rides recorded with the bike connected, and is worked out again each time "
+                + "KawaNav starts", RideStats.BEND_RIDES, RideStats.MIN_BENDS, Ride.Bends.MIN_KMH, Ride.Bends.MIN_PEAK));
         return s.append(String.format(Locale.ROOT, "\n\nComing at a bend more than %.0f%% faster than that, you hear "
                 + "it with \"slow down\" (\"Bend left, slow down\") when gentle braking would only just be enough: "
                 + "about 0.3 g, after %.1f s to hear it and react. If you are slowing down enough already, "
@@ -110,6 +114,10 @@ public class SettingsActivity extends KawaActivity {
     private TextView freeModeStatus;
     /** Speaks "Hear a curve warning"; started on the first tap. */
     private CurveSound sampleSound;
+    /** Under "Also when too fast": the lean from the rides, for "From my rides". */
+    private TextView paceStatus;
+    private RideStats.BendLean ridesLean;
+    private boolean ridesLeanAsked;
     // offline
     private LinearLayout regionsList;
     private boolean offlineWasRunning;
@@ -175,6 +183,38 @@ public class SettingsActivity extends KawaActivity {
     protected void onDestroy() {
         if (sampleSound != null) sampleSound.shutdown();
         super.onDestroy();
+    }
+
+    /**
+     * Under "Also when too fast" with "From my rides" chosen: the lean the rides give, or why they give none
+     * yet. Worked out once per screen, in the background (it reads the rides' files).
+     */
+    private void showPaceStatus(int pace) {
+        if (pace != CurveAlerts.FROM_RIDES) {
+            paceStatus.setVisibility(View.GONE);
+            return;
+        }
+        paceStatus.setVisibility(View.VISIBLE);
+        RideStats.BendLean l = ridesLean;
+        if (l == null) {
+            paceStatus.setText("Looking at your rides…");
+            if (ridesLeanAsked) return;
+            ridesLeanAsked = true;
+            RideStore store = new RideStore(this);
+            new Thread(() -> {
+                RideStats.BendLean found = store.usualBendLean();
+                runOnUiThread(() -> {
+                    ridesLean = found;
+                    showPaceStatus(prefs.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF));
+                });
+            }, "rides-lean").start();
+        } else if (l.known()) {
+            paceStatus.setText(String.format(Locale.ROOT, "You usually lean %.0f° in a bend: %d bends in your last %d %s",
+                    Math.min(CurveAlerts.MAX_LEAN, l.degrees), l.bends, l.rides, l.rides == 1 ? "ride" : "rides"));
+        } else {
+            paceStatus.setText(String.format(Locale.ROOT, "%d of the %d bends it needs in your rides so far: "
+                    + "Normal until then", l.bends, RideStats.MIN_BENDS));
+        }
     }
 
     /** "Hear a curve warning": the phrase a sharp bend gets, through whatever the phone plays on now. */
@@ -324,12 +364,16 @@ public class SettingsActivity extends KawaActivity {
                     prefs.edit().putInt(Hub.KEY_CURVE_SOUND, pos).apply();
                     BridgeService.settingsChanged();
                 }));
+        paceStatus = secondary("");
+        paceStatus.setTextColor(Ui.accent(night));
+        int pace = prefs.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
         addRow(c, choiceRow("Also when too fast", "Any bend, with \"slow down\", when you come at it faster than "
-                + "your pace takes it", curvePaceInfo(), PACE_NAMES,
-                prefs.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF), pos -> {
+                + "your pace takes it", curvePaceInfo(), paceStatus, PACE_NAMES, pace, pos -> {
                     prefs.edit().putInt(Hub.KEY_CURVE_PACE, pos).apply();
                     BridgeService.settingsChanged();
+                    showPaceStatus(pos);
                 }));
+        showPaceStatus(pace);
         addRow(c, switchRow("Speak only through a headset", "Quiet while no Bluetooth or wired headset is "
                 + "connected, so the phone itself does not speak", Hub.KEY_CURVE_SOUND_HEADSET, true));
         LinearLayout sr = settingRow();

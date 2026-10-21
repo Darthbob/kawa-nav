@@ -47,7 +47,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   Works from offline OpenStreetMap data, no mobile data needed while riding.
 - 🗣️ **Spoken curve warnings** (optional, off by default): "Sharp bend left", "Hairpin right" in your
   helmet a few seconds before the bend, for the kinds of bend you choose, and "Bend left, slow down"
-  when you come at a bend too fast for your pace. With or without navigation.
+  when you come at a bend too fast for your pace, a pace you pick or the one your recorded rides
+  show. With or without navigation.
 - 🔋 **Phone battery and headset on the dash**: the dash's phone battery icon shows the phone's charge
   in 4 bars, like with Rideology, and that it is charging; the headset icon shows while your helmet
   intercom is connected.
@@ -194,7 +195,7 @@ In the **Settings** tab:
 | [Show upcoming curves](#show-upcoming-curves) | On | Free ride when Maps is not navigating |
 | [Curve warnings during navigation](#curve-warnings-during-navigation) | Off | Off / sharp only / all curves between Maps directions |
 | [Spoken curve warnings](#spoken-curve-warnings) | Off | Off / hairpins only / sharp and hairpins / all curves, said in the helmet |
-| [Also when too fast](#too-fast-for-your-pace) | Off | Off / Relaxed / Normal / Sporty / Fast: any bend, with "slow down" |
+| [Also when too fast](#too-fast-for-your-pace) | Off | Off / Relaxed / Normal / Sporty / Fast / From my rides: any bend, with "slow down" |
 | [Speak only through a headset](#spoken-curve-warnings) | On | No spoken warnings while no headset is connected |
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° (explained in the app) |
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
@@ -275,6 +276,22 @@ through a bend; from the bend's radius in the map data it gives the speed you wo
 | Normal | 28° | 45 km/h | 64 km/h | 82 km/h | 116 km/h |
 | Sporty | 35° | 52 km/h | 73 km/h | 94 km/h | 133 km/h |
 | Fast | 42° | 59 km/h | 83 km/h | 107 km/h | 151 km/h |
+
+**From my rides** leans as you do: the lean you usually reach in a bend in your recorded rides.
+
+- Every ride counts its bends: seconds from 30 km/h leant the same way by more than 10°, each bend
+  counted with the most lean it reached, if that is at least 15° (sweeps where nobody leans are
+  left out) and at most 60° (no lean anyone rides).
+- Your usual lean is the middle one of the bends in your last 20 rides that have any: half of them
+  taken with less lean, half with more. It is used up to 45°.
+- It needs 30 bends. Until then it leans as Normal, and the setting says how many bends it has so far.
+- It is worked out again each time KawaNav starts, so a ride finished today counts from the next start.
+  Rides recorded before this version count once they are summarised again, which happens the first
+  time this is worked out, or when they are opened.
+- The lean comes from the bike, so only rides recorded with the bike connected have bends. It is the
+  bike's own reading as recorded (its scaling is among the [known limitations](#-known-limitations)).
+
+Then:
 
 - Too fast means more than 10% over that speed.
 - It is said once gentle braking would only just be enough: 2.5 s to hear it and react, then about

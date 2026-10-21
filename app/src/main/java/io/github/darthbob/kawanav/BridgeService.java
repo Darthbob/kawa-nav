@@ -71,6 +71,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /** Says the curves while the spoken curve warnings are on, else null. */
     private CurveSound curveSound;
     private final CurveAlerts curveAlerts = new CurveAlerts();
+    /** The rider's usual lean for the "From my rides" pace, worked out once per start; null until then. */
+    private RideStats.BendLean ridesLean;
+    private boolean ridesLeanAsked;
     private RideRecorder recorder;
     /** Decodes the meter's frames; new per connection (it remembers the bike's config frames). */
     private BikeFrames.Decoder decoder = new BikeFrames.Decoder();
@@ -719,8 +722,22 @@ public class BridgeService extends Service implements KawaBle.Listener {
         boolean free = Hub.freeMode(this);
         boolean navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, 0) > 0;
         boolean cameras = Hub.camerasEnabled(this);
+        int pace = Hub.prefs(this).getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
         boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF
-                || Hub.prefs(this).getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF) > CurveAlerts.PACE_OFF;
+                || pace > CurveAlerts.PACE_OFF;
+        if (pace == CurveAlerts.FROM_RIDES && !ridesLeanAsked) {
+            ridesLeanAsked = true;
+            RideStore store = recorder.store();
+            new Thread(() -> {
+                RideStats.BendLean l = store.usualBendLean(); // reads the rides' files
+                handler.post(() -> {
+                    ridesLean = l;
+                    Logger.log(l.known()
+                            ? String.format(Locale.ROOT, "Curve pace from rides: %.0f° (%d bends, %d rides)", l.degrees, l.bends, l.rides)
+                            : "Curve pace from rides: " + l.bends + " bends so far, leaning as Normal");
+                });
+            }, "rides-lean").start();
+        }
         if ((free || navCurves || cameras || spoken) && locationAllowed) {
             curve.start();
         } else {
@@ -1096,7 +1113,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         double maneuver = m == null ? Double.POSITIVE_INFINITY : m.distanceM;
         double speed = curve.speed();
         CurveAlerts.Warning w = curveAlerts.next(curve.curvesAhead(), speed,
-                p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), p.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF),
+                p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), paceLean(p.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF)),
                 maneuver, now);
         if (w == null) return;
         String text = w.text();
@@ -1104,6 +1121,15 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 w.curve.startDist, speed * 3.6, w.curve.minRadius,
                 Double.isInfinite(w.okSpeed) ? "" : String.format(Locale.ROOT, ", pace %.0f km/h", w.okSpeed * 3.6)));
         curveSound.say(text);
+    }
+
+    /** The lean of the chosen pace, degrees, 0 for none. "From my rides" leans as Normal until the rides say more. */
+    private double paceLean(int pace) {
+        if (pace == CurveAlerts.FROM_RIDES) {
+            RideStats.BendLean l = ridesLean;
+            return l != null && l.known() ? l.degrees : CurveAlerts.PACE_LEAN[CurveAlerts.NORMAL];
+        }
+        return pace > CurveAlerts.PACE_OFF && pace < CurveAlerts.PACE_LEAN.length ? CurveAlerts.PACE_LEAN[pace] : 0;
     }
 
     /** Tyre, ABS and battery warnings: shown on Home while they last, announced once each. */

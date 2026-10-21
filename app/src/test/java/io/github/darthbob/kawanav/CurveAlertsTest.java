@@ -39,7 +39,7 @@ public class CurveAlertsTest {
     /** By kind only (no pace): the curve said, or null. */
     private static CurveAlerts.Ahead say(CurveAlerts a, List<CurveAlerts.Ahead> curves, double speed, int level,
                                          double maneuverM, long now) {
-        CurveAlerts.Warning w = a.next(curves, speed, level, CurveAlerts.PACE_OFF, maneuverM, now);
+        CurveAlerts.Warning w = a.next(curves, speed, level, 0, maneuverM, now);
         return w == null ? null : w.curve;
     }
 
@@ -47,9 +47,14 @@ public class CurveAlertsTest {
         return say(new CurveAlerts(), curves, speed, level, NONE, 0);
     }
 
+    /** The lean of a fixed pace. */
+    private static double lean(int pace) {
+        return CurveAlerts.PACE_LEAN[pace];
+    }
+
     /** Too fast only (no kinds). */
     private static CurveAlerts.Warning tooFast(CurveAlerts a, CurveAlerts.Ahead c, double speed, int pace, long now) {
-        return a.next(list(c), speed, CurveAlerts.OFF, pace, NONE, now);
+        return a.next(list(c), speed, CurveAlerts.OFF, lean(pace), NONE, now);
     }
 
     // ------------------------------------------------------------------ by kind
@@ -83,8 +88,8 @@ public class CurveAlertsTest {
         List<CurveAlerts.Ahead> c = list(curve(HAIRPIN_RIGHT, 40, 0, 10));
         assertNull(say(c, 2, CurveAlerts.ALL));
         assertNull(say(c, Double.NaN, CurveAlerts.ALL));
-        assertNull(new CurveAlerts().next(c, KMH_90, CurveAlerts.OFF, CurveAlerts.PACE_OFF, NONE, 0));
-        assertNull(new CurveAlerts().next(c, 2, CurveAlerts.OFF, CurveAlerts.RELAXED, NONE, 0));
+        assertNull(new CurveAlerts().next(c, KMH_90, CurveAlerts.OFF, 0, NONE, 0));
+        assertNull(new CurveAlerts().next(c, 2, CurveAlerts.OFF, lean(CurveAlerts.RELAXED), NONE, 0));
     }
 
     @Test
@@ -147,17 +152,28 @@ public class CurveAlertsTest {
 
     @Test
     public void nothingAheadSaysNothing() {
-        assertNull(new CurveAlerts().next(Collections.emptyList(), KMH_90, CurveAlerts.ALL, CurveAlerts.FAST, NONE, 0));
+        assertNull(new CurveAlerts().next(Collections.emptyList(), KMH_90, CurveAlerts.ALL, lean(CurveAlerts.FAST), NONE, 0));
     }
 
     // ------------------------------------------------------------------ too fast for the pace
 
     @Test
     public void thePacesSpeedsFollowTheLean() {
-        assertEquals(37, CurveAlerts.okSpeed(30, CurveAlerts.RELAXED) * 3.6, 1);
-        assertEquals(82, CurveAlerts.okSpeed(100, CurveAlerts.NORMAL) * 3.6, 1);
-        assertEquals(73, CurveAlerts.okSpeed(60, CurveAlerts.SPORTY) * 3.6, 1);
-        assertEquals(151, CurveAlerts.okSpeed(200, CurveAlerts.FAST) * 3.6, 1);
+        assertEquals(37, CurveAlerts.okSpeed(30, lean(CurveAlerts.RELAXED)) * 3.6, 1);
+        assertEquals(82, CurveAlerts.okSpeed(100, lean(CurveAlerts.NORMAL)) * 3.6, 1);
+        assertEquals(73, CurveAlerts.okSpeed(60, lean(CurveAlerts.SPORTY)) * 3.6, 1);
+        assertEquals(151, CurveAlerts.okSpeed(200, lean(CurveAlerts.FAST)) * 3.6, 1);
+    }
+
+    @Test
+    public void aLeanFromTheRidesIsUsedAsItIsUpToTheLimit() {
+        // the rider usually leans 31°: between Normal and Sporty
+        assertEquals(68, CurveAlerts.okSpeed(60, 31) * 3.6, 1);
+        // a reading beyond 45° leans 45°
+        assertEquals(CurveAlerts.okSpeed(60, CurveAlerts.MAX_LEAN), CurveAlerts.okSpeed(60, 55), 1e-9);
+        CurveAlerts.Warning w = new CurveAlerts().next(list(curve(LEFT, 100, 0, 60)), KMH_90, CurveAlerts.OFF, 31, NONE, 0);
+        assertNotNull(w);
+        assertTrue(w.slowDown);
     }
 
     @Test
@@ -229,11 +245,11 @@ public class CurveAlertsTest {
     public void aBendOfTheChosenKindSaysSlowDownWhenTooFastAlready() {
         // a sharp bend of 25 m radius: Normal takes it at 41 km/h
         CurveAlerts.Warning fast = new CurveAlerts().next(list(curve(SHARP_LEFT, 140, 0, 25)), KMH_90,
-                CurveAlerts.SHARP, CurveAlerts.NORMAL, NONE, 0);
+                CurveAlerts.SHARP, lean(CurveAlerts.NORMAL), NONE, 0);
         assertNotNull(fast);
         assertEquals("Sharp bend left, slow down", fast.text());
         CurveAlerts.Warning slow = new CurveAlerts().next(list(curve(SHARP_LEFT, 55, 0, 25)), 10,
-                CurveAlerts.SHARP, CurveAlerts.NORMAL, NONE, 0);
+                CurveAlerts.SHARP, lean(CurveAlerts.NORMAL), NONE, 0);
         assertNotNull(slow);
         assertFalse(slow.slowDown);
         assertEquals("Sharp bend left", slow.text());

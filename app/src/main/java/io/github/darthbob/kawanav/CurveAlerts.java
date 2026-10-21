@@ -15,10 +15,15 @@ final class CurveAlerts {
 
     /** Values of {@link Hub#KEY_CURVE_SOUND}: which kinds of bend are always said. */
     static final int OFF = 0, HAIRPINS = 1, SHARP = 2, ALL = 3;
-    /** Values of {@link Hub#KEY_CURVE_PACE}: the riding pace a bend can be too fast for. */
-    static final int PACE_OFF = 0, RELAXED = 1, NORMAL = 2, SPORTY = 3, FAST = 4;
-    /** How far each pace leans through a bend, degrees (index: the pace). */
+    /**
+     * Values of {@link Hub#KEY_CURVE_PACE}: the riding pace a bend can be too fast for. FROM_RIDES leans
+     * as the rider usually does in the recorded rides ({@link RideStats#usualBendLean}).
+     */
+    static final int PACE_OFF = 0, RELAXED = 1, NORMAL = 2, SPORTY = 3, FAST = 4, FROM_RIDES = 5;
+    /** How far each fixed pace leans through a bend, degrees (index: the pace). */
     static final double[] PACE_LEAN = {0, 20, 28, 35, 42};
+    /** The most a pace leans, also one from the rides: beyond it the tyres set the limit, not the rider. */
+    static final double MAX_LEAN = 45;
 
     /** A bend of a chosen kind is said this long before it starts, at the current speed ... */
     static final double LEAD_S = 6;
@@ -101,12 +106,14 @@ final class CurveAlerts {
      * @param curves    the curves ahead, nearest first
      * @param speed     m/s
      * @param level     the kinds always said: {@link #OFF}, {@link #HAIRPINS}, {@link #SHARP} or {@link #ALL}
-     * @param pace      the pace a bend is too fast for: {@link #PACE_OFF}, {@link #RELAXED} ... {@link #FAST}
+     * @param lean      the lean of the pace a bend is too fast for, degrees ({@link #PACE_LEAN}, or the
+     *                  rider's own); 0 or NaN: no pace
      * @param maneuverM distance to the next Google Maps maneuver: infinite when Maps is not navigating,
      *                  negative when it has none or it is imminent (Maps speaks then, nothing is said)
      */
-    Warning next(List<Ahead> curves, double speed, int level, int pace, double maneuverM, long now) {
-        if ((level <= OFF && pace <= PACE_OFF) || !(speed >= MIN_SPEED) || maneuverM < 0) return null;
+    Warning next(List<Ahead> curves, double speed, int level, double lean, double maneuverM, long now) {
+        boolean pace = lean > 0;
+        if ((level <= OFF && !pace) || !(speed >= MIN_SPEED) || maneuverM < 0) return null;
         while (!said.isEmpty() && now - said.peekFirst().at > FORGET_MS) said.removeFirst();
         if (now - lastAt < MIN_GAP_MS) return null;
         double lead = Math.max(MIN_LEAD_M, Math.min(MAX_LEAD_M, speed * LEAD_S));
@@ -114,7 +121,7 @@ final class CurveAlerts {
             if (c.startDist <= CurveDetector.ENTERED_M) continue;
             if (c.startDist > Math.max(lead, MAX_SLOW_M) || c.startDist > maneuverM - BEFORE_MANEUVER_M) return null;
             if (wasSaid(c)) continue;
-            double ok = pace > PACE_OFF ? okSpeed(c.minRadius, pace) : Double.POSITIVE_INFINITY;
+            double ok = pace ? okSpeed(c.minRadius, lean) : Double.POSITIVE_INFINITY;
             boolean slowDown = speed > ok * TOO_FAST;
             boolean byKind = level > OFF && severity(c.turn) >= minSeverity(level) && c.startDist <= lead;
             // a rider already braking enough gets there in time: the distance needed shrinks faster
@@ -128,10 +135,9 @@ final class CurveAlerts {
         return null;
     }
 
-    /** The speed (m/s) at which a pace takes a bend of this radius: v² = g · r · tan(lean). */
-    static double okSpeed(double radius, int pace) {
-        double lean = PACE_LEAN[Math.max(0, Math.min(PACE_LEAN.length - 1, pace))];
-        return Math.sqrt(G * radius * Math.tan(Math.toRadians(lean)));
+    /** The speed (m/s) at which a pace leaning this far (degrees) takes a bend of this radius: v² = g · r · tan(lean). */
+    static double okSpeed(double radius, double lean) {
+        return Math.sqrt(G * radius * Math.tan(Math.toRadians(Math.min(MAX_LEAN, lean))));
     }
 
     /** Metres needed to hear the warning, react and brake gently from {@code speed} down to {@code ok}. */
