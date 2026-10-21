@@ -5,7 +5,9 @@
       "changes": [
         "With \"Beeps instead of words\", a speed camera now sounds like a two-tone siren (high-low, high-low, in both ears), so it can no longer be taken for the two beeps of a sharp bend",
         "The bike's screen can change riding mode, power, KTRC, the quickshifter and the dash shift lamp in the normal app too, not only in the debug one. This has not been tried on a bike yet: check the dash after sending",
-        "The ride-settings and shift-lamp cards say why a write was not sent, and what came of it: no answer, refused, or the settings the bike reads back"
+        "The ride-settings and shift-lamp cards say why a write was not sent, and what came of it: no answer, refused, or the settings the bike reads back",
+        "The mail icon on the dash also lights for WhatsApp, Telegram, Signal, Messenger, Threema, Outlook and Samsung's messages and mail, and a WhatsApp, Telegram or Signal call lights the call icon. Notifications that stay on (\"WhatsApp Web is active\", a backup) light nothing",
+        "The ride settings can carry a name, as Rideology sends the title of a setting. Whether the dash shows it is not known yet"
       ]
     },
     {

@@ -168,6 +168,8 @@ public final class Hub {
     public static final String KEY_BATTERY_WARNINGS = "battery_warnings";
     /** The unit fuel economy is shown in: an index into {@link FuelEconomy#LABELS}. */
     public static final String KEY_FUEL_UNIT = "fuel_unit";
+    /** The profile name sent with the ride settings ("" = none), kept for the next write. */
+    public static final String KEY_SETTINGS_NAME = "settings_name";
     /** Start recording by itself when the bike is moving (off by default). */
     public static final String KEY_RIDE_AUTO = "ride_auto";
     /**

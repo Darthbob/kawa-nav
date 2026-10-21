@@ -56,13 +56,49 @@ public class DashAlertsTest {
 
     @Test
     public void categoriesFromPackages() {
-        assertEquals(DashAlerts.CALL, DashAlerts.categoryOf("com.google.android.dialer", "call"));
-        assertEquals(DashAlerts.CALL, DashAlerts.categoryOf("com.samsung.android.dialer", "missed_call"));
-        assertEquals(0, DashAlerts.categoryOf("com.google.android.dialer", "msg")); // chat, not a call
-        assertEquals(DashAlerts.MAIL, DashAlerts.categoryOf("com.google.android.apps.messaging", "msg"));
-        assertEquals(DashAlerts.MAIL, DashAlerts.categoryOf("com.google.android.gm", "email"));
-        assertEquals(0, DashAlerts.categoryOf("com.whatsapp", "msg")); // not on Rideology's list
-        assertEquals(0, DashAlerts.categoryOf(null, "call"));
+        assertEquals(DashAlerts.CALL, DashAlerts.categoryOf("com.google.android.dialer", "call", true));
+        assertEquals(DashAlerts.CALL, DashAlerts.categoryOf("com.samsung.android.dialer", "missed_call", false));
+        assertEquals(0, DashAlerts.categoryOf("com.google.android.dialer", "msg", false)); // chat, not a call
+        assertEquals(DashAlerts.MAIL, DashAlerts.categoryOf("com.google.android.apps.messaging", "msg", false));
+        assertEquals(DashAlerts.MAIL, DashAlerts.categoryOf("com.google.android.gm", "email", false));
+        assertEquals(0, DashAlerts.categoryOf("com.example.game", "msg", false)); // on no list
+        assertEquals(0, DashAlerts.categoryOf(null, "call", false));
+    }
+
+    @Test
+    public void messengersBeyondRideologysList() {
+        for (String app : new String[]{"com.whatsapp", "com.whatsapp.w4b", "org.telegram.messenger",
+                "org.thoughtcrime.securesms", "com.facebook.orca", "ch.threema.app"}) {
+            assertEquals(app, DashAlerts.MAIL, DashAlerts.categoryOf(app, "msg", false));
+            assertEquals(app, DashAlerts.MAIL, DashAlerts.categoryOf(app, null, false)); // no category set
+            // a WhatsApp/Telegram/Signal call rings the call icon, as a dialer's does
+            assertEquals(app, DashAlerts.CALL, DashAlerts.categoryOf(app, "call", true));
+            assertEquals(app, DashAlerts.CALL, DashAlerts.categoryOf(app, "missed_call", false));
+        }
+        assertEquals(DashAlerts.MAIL, DashAlerts.categoryOf("com.microsoft.office.outlook", "email", false));
+        assertEquals(DashAlerts.MAIL, DashAlerts.categoryOf("com.samsung.android.messaging", "msg", false));
+        // a mail app's call-category notification is not a call: only messengers have calls
+        assertEquals(DashAlerts.MAIL, DashAlerts.categoryOf("com.google.android.gm", "call", false));
+    }
+
+    @Test
+    public void ongoingNotificationsOfMessengersAreNotMessages() {
+        // "WhatsApp Web is active", a backup in progress, a call already answered and going on
+        assertEquals(0, DashAlerts.categoryOf("com.whatsapp", "service", true));
+        assertEquals(0, DashAlerts.categoryOf("com.whatsapp", "progress", true));
+        assertEquals(0, DashAlerts.categoryOf("org.telegram.messenger", null, true));
+        assertEquals(0, DashAlerts.categoryOf("com.google.android.gm", "progress", true));
+    }
+
+    @Test
+    public void ancsNamesForTheDebugTest() {
+        assertEquals("call", DashAlerts.name(DashAlerts.CALL));
+        assertEquals("mail/message", DashAlerts.name(DashAlerts.MAIL));
+        assertEquals("ANCS 2 Missed call", DashAlerts.name(2));
+        assertEquals("ANCS 4 Social", DashAlerts.name(4));
+        assertEquals("11 Entertainment", DashAlerts.ancsName(11));
+        assertEquals("12", DashAlerts.ancsName(12));
+        assertEquals(12, DashAlerts.ANCS.length);
     }
 
     // ------------------------------------------------------------------ what the dash is told on connect

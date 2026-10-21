@@ -138,6 +138,8 @@ public class SettingsActivity extends KawaActivity {
     private LinearLayout notifDebugCard;
     private TextView notifStatus;
     private TextView debugBike;
+    /** Debug: the ANCS category the dash-notification test sends. */
+    private int ancsTest = 2;
     private TextView debugIconsStatus;
     private TextView debugGatt;
     private int titleTaps;
@@ -642,6 +644,7 @@ public class SettingsActivity extends KawaActivity {
             reads.addView(b, lp);
         }
         c.addView(reads);
+        c.addView(ancsTestRow());
         debugBike = secondary("");
         debugBike.setTypeface(Typeface.MONOSPACE);
         debugBike.setTextIsSelectable(true);
@@ -650,6 +653,31 @@ public class SettingsActivity extends KawaActivity {
         c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
         bikeDebugCard = c;
         return c;
+    }
+
+    /**
+     * Debug: sends a dash notification (0x12) of any ANCS category, to see whether the dash shows anything
+     * for the ones Rideology never sends (missed call, social, schedule …). Display only: nothing is set.
+     */
+    private View ancsTestRow() {
+        LinearLayout box = column();
+        String[] names = new String[DashAlerts.ANCS.length];
+        for (int i = 0; i < names.length; i++) names[i] = DashAlerts.ancsName(i);
+        box.addView(choiceRow("Dash notification test", "Rideology only sends 1 (call) and 6 (mail). Show one, "
+                + "look at the dash, then clear it", names, ancsTest, pos -> ancsTest = pos));
+        LinearLayout r = row();
+        for (int event : new int[]{DashAlerts.ADDED, DashAlerts.REMOVED}) {
+            Button b = button(event == DashAlerts.ADDED ? "Show" : "Clear", v -> android.widget.Toast.makeText(this,
+                    BridgeService.sendDashAlert(ancsTest, event) ? "Sent: " + DashAlerts.describe(ancsTest, event)
+                            : "Bike not connected", android.widget.Toast.LENGTH_SHORT).show());
+            b.setTextColor(Ui.accent(night));
+            outline(b);
+            LinearLayout.LayoutParams lp = weight();
+            lp.rightMargin = dp(Ui.SPACE1);
+            r.addView(b, lp);
+        }
+        box.addView(r);
+        return box;
     }
 
     /** Debug: text the meter gets as the phone's name (Bluetooth info on the dash?). */

@@ -66,7 +66,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   killed, and so does its sample file: a compression interrupted while the app is killed leaves the
   plain file in place instead of a half-written one, and the ride is compressed again next time.
 - 🔔 **Call and mail icons on the dash**: the dash shows an icon while a call comes in or a mail or
-  message arrives. Only the fact there is one is sent: no numbers, no names, nothing stored. An icon
+  message arrives, also from WhatsApp, Telegram, Signal, Messenger, Threema and Outlook (their calls
+  light the call icon). Only the fact there is one is sent: no numbers, no names, nothing stored. An icon
   that appeared while KawaNav was not connected is sent as soon as it connects again, so a call that
   came in with the bike off is not lost.
 - 🕐 **Dash clock from the phone**: optional, once per connection, like Rideology.
@@ -205,8 +206,8 @@ In the **Settings** tab:
 | [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | Set the dash clock from the phone | Off | Sets the dash clock once per connection |
-| Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
-| Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Messages, LINE, …) |
+| Call icon on the dash | Off | Shows an icon while a call comes in, also a WhatsApp/Telegram/Signal call (needs notification access) |
+| Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Outlook, Messages, WhatsApp, Telegram, Signal, …) |
 | [Speed camera warnings](#-speed-cameras) | Off | Cameras on the phone and on the dash |
 | [Say speed cameras](#-speed-cameras) | Off | Each camera also said in the helmet (or beeped) |
 | [Distances in feet](#distances-in-feet) | Off | Imperial distances |
@@ -491,10 +492,11 @@ Since 1.2.1 they can be written back from the normal app too, not only from the 
 writes have not been tried on a bike yet**: each card and each confirmation says so, so check the dash
 after sending.
 
-- **Ride settings**: riding mode, power, KTRC and quickshifter. KawaNav refuses to send unless the bike
-  is connected, standing still, in neutral and with the throttle closed (Rideology itself only asks for
-  standing still), asks for confirmation, waits for the meter's answer and reads the settings back to
-  compare.
+- **Ride settings**: riding mode, power, KTRC and quickshifter, and optionally a name for them (up to
+  18 bytes, as Rideology sends the title of a setting; whether the dash shows it is not known yet).
+  KawaNav refuses to send unless the bike is connected, standing still, in neutral and with the
+  throttle closed (Rideology itself only asks for standing still), asks for confirmation, waits for the
+  meter's answer and reads the settings back to compare.
 - **Dash shift lamp**: when the lamp lights (off / tachometer / LED / both, as the dash allows) and at
   which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
   dash clock stays as it is.

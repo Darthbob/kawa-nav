@@ -97,11 +97,33 @@ public final class SettingsWrite {
         return b;
     }
 
-    /** The profile name as at most 18 UTF-8 bytes, zero padded (the app cuts at 18, ae/j.java:362). */
+    /** Room for the profile name in the write: 18 UTF-8 bytes (bytes 17-24, 27-34, 37-38). */
+    public static final int NAME_BYTES = 18;
+
+    /**
+     * The profile name as it fits: trimmed, and cut after the last whole character that fits in
+     * {@link #NAME_BYTES} UTF-8 bytes. Rideology cuts at 18 bytes even inside a character
+     * (ae/j.java:362); KawaNav never sends half an "è".
+     */
+    public static String fitName(String name) {
+        if (name == null) return "";
+        String s = name.trim();
+        int bytes = 0;
+        for (int i = 0; i < s.length(); ) {
+            int cp = s.codePointAt(i);
+            int n = cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+            if (bytes + n > NAME_BYTES) return s.substring(0, i).trim();
+            bytes += n;
+            i += Character.charCount(cp);
+        }
+        return s;
+    }
+
+    /** The profile name as at most 18 UTF-8 bytes, zero padded, cut at a whole character ({@link #fitName}). */
     static byte[] nameBytes(String name) {
-        byte[] text = name == null ? new byte[0] : name.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        byte[] out = new byte[18];
-        System.arraycopy(text, 0, out, 0, Math.min(18, text.length));
+        byte[] text = fitName(name).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] out = new byte[NAME_BYTES];
+        System.arraycopy(text, 0, out, 0, Math.min(NAME_BYTES, text.length));
         return out;
     }
 

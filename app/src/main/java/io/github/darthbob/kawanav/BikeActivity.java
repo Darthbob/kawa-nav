@@ -43,6 +43,8 @@ public class BikeActivity extends KawaActivity {
     /** Says how many riding modes the bike announced, so "Rider 4" missing from the list makes sense. */
     private TextView modeNote;
     private TextView settingsStatus;
+    /** The profile name sent with the settings (shown on the dash? not known yet). */
+    private android.widget.EditText settingsName;
     private Button settingsSend;
     private LinearLayout lampCard;
     private android.widget.Spinner lampStatusSpinner, lampRpmSpinner;
@@ -210,8 +212,8 @@ public class BikeActivity extends KawaActivity {
         section.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"));
         LinearLayout c = group();
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
-                + "screen. The bike must be standing still, in neutral and with the throttle closed. "
-                + NOT_TRIED));
+                + "screen, and a name for them if you give one. The bike must be standing still, in neutral "
+                + "and with the throttle closed. " + NOT_TRIED));
         modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
         modeNote = secondary("");
         powerSpinner = spinner(SettingsWrite.POWER, 0);
@@ -222,6 +224,18 @@ public class BikeActivity extends KawaActivity {
         addRow(c, settingRowWith("Power", powerSpinner));
         addRow(c, settingRowWith("KTRC", ktrcSpinner));
         addRow(c, settingRowWith("KQS", kqsSpinner));
+        settingsName = new android.widget.EditText(this);
+        settingsName.setSingleLine(true);
+        settingsName.setTextSize(15);
+        settingsName.setTextColor(Ui.ink(night));
+        settingsName.setHint("Name (optional)");
+        settingsName.setText(prefs.getString(Hub.KEY_SETTINGS_NAME, ""));
+        LinearLayout nameRow = settingRow();
+        nameRow.addView(itemTitle("Name"), weight());
+        nameRow.addView(settingsName, controlWidth());
+        addRow(c, nameRow);
+        c.addView(secondary("Up to " + SettingsWrite.NAME_BYTES + " bytes, sent with the settings as Rideology "
+                + "sends the title of a setting. Whether the dash shows it anywhere is not known yet."));
         settingsStatus = secondary("");
         settingsStatus.setPadding(0, dp(Ui.SPACE2), 0, dp(10));
         c.addView(settingsStatus);
@@ -244,6 +258,8 @@ public class BikeActivity extends KawaActivity {
         BikeFrames.VehicleSettings s = Hub.bike.settings;
         String now = s == null ? "unknown" : "mode " + s.ridingMode + ", power " + s.power + ", KTRC " + s.ktrc
                 + ", KQS " + s.kqs + " (numbers as the bike reports them)";
+        String name = SettingsWrite.fitName(settingsName.getText().toString());
+        prefs.edit().putString(Hub.KEY_SETTINGS_NAME, name).apply();
         new android.app.AlertDialog.Builder(this)
                 .setTitle("Send settings to the bike?")
                 .setMessage("The bike must stand still, be in neutral and have the throttle closed. KawaNav "
@@ -251,14 +267,15 @@ public class BikeActivity extends KawaActivity {
                         + now + "\n\nSending: " + SettingsWrite.MODES[modeSpinner.getSelectedItemPosition()] + ", power "
                         + SettingsWrite.POWER[powerSpinner.getSelectedItemPosition()] + ", KTRC "
                         + SettingsWrite.KTRC[ktrcSpinner.getSelectedItemPosition()] + ", KQS "
-                        + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()] + ".\n\n" + NOT_TRIED)
+                        + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()]
+                        + (name.isEmpty() ? ", no name" : ", name \"" + name + "\"") + ".\n\n" + NOT_TRIED)
                 .setPositiveButton("Send", (d, w) -> {
                     // spinner positions start at 0, the bike's numbers at 1; KEBC goes back as the bike has it
                     BikeFrames.VehicleSettings now2 = Hub.bike.settings;
                     int kebc = now2 != null && now2.kebc >= 0 ? now2.kebc : 0;
                     String problem = BridgeService.writeSettings(modeSpinner.getSelectedItemPosition() + 1,
                             powerSpinner.getSelectedItemPosition() + 1, ktrcSpinner.getSelectedItemPosition(),
-                            kqsSpinner.getSelectedItemPosition() + 1, kebc, "");
+                            kqsSpinner.getSelectedItemPosition() + 1, kebc, name);
                     if (problem != null) {
                         BridgeService.noteSettings("Not sent: " + problem);
                         settingsStatus.setText(BridgeService.settingsOutcome);

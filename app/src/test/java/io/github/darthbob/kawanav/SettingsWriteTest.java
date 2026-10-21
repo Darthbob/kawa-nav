@@ -139,6 +139,20 @@ public class SettingsWriteTest {
     }
 
     @Test
+    public void nameIsCutAtAWholeCharacter() {
+        assertEquals("Track", SettingsWrite.fitName("  Track  "));
+        assertEquals("", SettingsWrite.fitName(null));
+        assertEquals("abcdefghijklmnopqr", SettingsWrite.fitName("abcdefghijklmnopqrstuvwxyz"));
+        // 17 ASCII bytes and an "è" (2 bytes) do not fit in 18: the "è" goes, not half of it
+        assertEquals("abcdefghijklmnopq", SettingsWrite.fitName("abcdefghijklmnopqè"));
+        assertEquals("Pista bagnata è", SettingsWrite.fitName("Pista bagnata è"));    // 16 bytes
+        assertEquals("ああああああ", SettingsWrite.fitName("あああああああ"));        // 3 bytes each: six fit
+        byte[] f = SettingsWrite.frame(0, 0, 1, 0, 0, "abcdefghijklmnopqè");
+        assertEquals('q', f[37]);
+        assertEquals(0, f[38]);     // padding, not the first byte of the "è"
+    }
+
+    @Test
     public void results() {
         assertEquals(0, SettingsWrite.result(hx("482a004800050900" + "ffffffffffffffffffffffffffffffffffffffff")));
         assertEquals(0x10, SettingsWrite.result(hx("482a004800050910" + "ffffffffffffffffffffffffffffffffffffffff")));
