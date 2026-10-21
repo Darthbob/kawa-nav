@@ -186,12 +186,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
     public static String settingsJob = "";
 
     /**
-     * Writes ride settings to the bike: riding mode, power, KTRC, KQS and the profile name. Only from
-     * debug builds for now (it has never been tried on a bike), only while standing still, in neutral and
-     * with the throttle closed. Returns null when the job started, else why it did not.
+     * Writes ride settings to the bike: riding mode, power, KTRC, KQS and the profile name. Not tried on a
+     * bike yet: only while standing still, in neutral and with the throttle closed, and the settings are
+     * read back to compare. Returns null when the job started, else why it did not.
      */
     public static String writeSettings(int mode, int power, int ktrcLevel, int kqs, int kebc, String name) {
-        if (!Hub.DEBUG_TOOLS) return "writing settings is not enabled in this build yet";
         if (instance == null || !instance.ble.isReady()) return "the bike is not connected";
         if (!instance.requests.idle()) return "the bike is still answering another request, try again";
         long age = System.currentTimeMillis() - Hub.bike.liveAt;
@@ -306,10 +305,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /**
      * Sets the shift lamp on the meter: when it lights (status) and at which engine speed (level code
      * 1..61). The clock is left as it is, the way Rideology's lamp-only write does it. The meter's answer
-     * carries the result in byte 7 and is read back afterwards. Debug builds only until it has been tried.
+     * carries the result in byte 7 and is read back afterwards. Not tried on a bike yet.
      */
     public static String writeShiftLamp(int status, int level) {
-        if (!Hub.DEBUG_TOOLS) return "writing to the dash is not enabled in this build yet";
         if (instance == null || !instance.ble.isReady()) return "the bike is not connected";
         BikeFrames.GeneralCaps caps = Hub.bike.caps;
         if (caps == null || !caps.shiftLampSettable) return "this dash does not take shift-lamp settings";

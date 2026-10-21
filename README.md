@@ -71,9 +71,9 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   came in with the bike off is not lost.
 - 🕐 **Dash clock from the phone**: optional, once per connection, like Rideology.
 - 🔧 **Settings on the bike**: reads the ride settings (riding mode, power, KTRC, quickshifter, and the
-  suspension settings on bikes that have them) and, in debug builds, writes riding mode/power/KTRC/KQS
-  and the dash shift lamp after a confirmation. The riding-mode list follows the bike: four modes, or
-  seven (Rider 2-4) on a bike that announces them.
+  suspension settings on bikes that have them), and writes riding mode/power/KTRC/KQS and the dash
+  shift lamp after a confirmation (not tried on a bike yet). The riding-mode list follows the bike: four
+  modes, or seven (Rider 2-4) on a bike that announces them.
 - 🌍 **Offline maps**: download regions (country, state, district) from Geofabrik, see their data date,
   update and delete them one by one.
 - 🚨 **Speed camera warnings** (optional, off by default): taken from the same offline map data, shown on
@@ -487,8 +487,9 @@ end-to-end encrypted (phone with a screen lock); offline maps and the log are le
 The bike's screen reads the ride settings (riding mode, power, KTRC, quickshifter, engine brake, and the
 suspension settings on bikes that have them) and shows them with the name and the number the bike sent.
 
-**Writing them back is in debug builds only for now** — it has not been tried on a bike yet — and the
-card is marked `DEBUG`:
+Since 1.2.1 they can be written back from the normal app too, not only from the debug build. **The
+writes have not been tried on a bike yet**: each card and each confirmation says so, so check the dash
+after sending.
 
 - **Ride settings**: riding mode, power, KTRC and quickshifter. KawaNav refuses to send unless the bike
   is connected, standing still, in neutral and with the throttle closed (Rideology itself only asks for
@@ -593,8 +594,8 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   camera icon on the dash (it shows the destination flag with the distance). Not tried on the bike yet.
 - The refuel diary, the battery log and the ride records never touch the bike; they are kept on the phone
   (and included in Android's backup).
-- **Writing settings and the shift lamp is debug builds only** until it has been tried on a bike, and the
-  names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
+- **Writing settings and the shift lamp has not been tried on a bike yet** (check the dash after
+  sending), and the names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
   number the bike sent, not instead of it.
 - The **scaling of the riding-log values** (speed, engine speed, throttle, lean angle) is chosen from
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with

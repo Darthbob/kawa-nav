@@ -575,8 +575,8 @@ KawaNav never logs this frame.)
 | Ride recording | 0x45, 0x4A, 0x4B + GPS | records locally; the suspension/IMU values (0x4B: travel, accelerations, rotation rates, filtered wheel speeds, TCS/KQS flags) and the rest of 0x4A (torque, brake pressures, ABS target, damping, cruise) are recorded per second since 0.8; nothing on the meter drives it (no start/stop frame); like Rideology, KawaNav asks for 0x45 at connect and when a recording starts without one |
 | Dash icons | 0x13 (battery, headset, riding log), 0x12 (call, mail) | sent; the riding-log icon follows the recorder. Not yet seen on a dash |
 | Clock | 0x1B write | optional setting, off by default; preserves the shift lamp |
-| Settings write | 0x48 (block 09, byte 7 = 1) | debug builds only until tried on a bike: riding mode, power, KTRC, KQS |
-| Shift lamp write | 0x1B (block 0x4A) | debug builds only; range and modes taken from the meter's 0x1A answer |
+| Settings write | 0x48 (block 09, byte 7 = 1) | riding mode, power, KTRC, KQS; in all builds since 1.2.1 (debug only before), not yet tried on a bike |
+| Shift lamp write | 0x1B (block 0x4A) | in all builds since 1.2.1 (debug only before), not yet tried on a bike; range and modes taken from the meter's 0x1A answer |
 
 Everything else in this document is protocol knowledge KawaNav does not use yet.
 

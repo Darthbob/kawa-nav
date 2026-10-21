@@ -9,7 +9,7 @@ import java.util.Locale;
  *
  * <p>KawaNav is stricter than the app about when a write may be sent: the app only wants the bike
  * standing still (its own threshold is "under 5 km/h"), KawaNav also requires neutral and a closed
- * throttle, and stays in debug builds until this has been tried on a real bike.
+ * throttle, because this has not been tried on a real bike yet.
  * Pure Java (no Android) so the frame and the result handling can be unit-tested.
  */
 public final class SettingsWrite {

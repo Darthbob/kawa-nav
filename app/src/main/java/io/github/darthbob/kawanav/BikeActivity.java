@@ -25,6 +25,8 @@ public class BikeActivity extends KawaActivity {
 
     /** Live values (riding log) count as current this long. */
     private static final long LIVE_MS = 10_000;
+    /** On both write cards and their confirmations, until the writes have been tried on a bike. */
+    private static final String NOT_TRIED = "Not tried on a bike yet: check the dash after sending.";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView title;
@@ -199,19 +201,17 @@ public class BikeActivity extends KawaActivity {
     };
 
     /**
-     * Sends ride settings to the bike: riding mode, power, KTRC and KQS. Only in debug builds for now —
-     * the write has never been tried on a bike — and only while the bike is standing still, in neutral
-     * and with the throttle closed (the app itself only wants it standing still).
+     * Sends ride settings to the bike: riding mode, power, KTRC and KQS. The write has not been tried on a
+     * bike yet, so the card says so; it is only sent while the bike is standing still, in neutral and with
+     * the throttle closed (the app itself only wants it standing still).
      */
     private LinearLayout settingsCard() {
         LinearLayout section = column();
-        LinearLayout headRow = row();
-        headRow.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"), weight());
-        headRow.addView(debugPill());
-        section.addView(headRow);
+        section.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"));
         LinearLayout c = group();
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
-                + "screen. The bike must be standing still, in neutral and with the throttle closed."));
+                + "screen. The bike must be standing still, in neutral and with the throttle closed. "
+                + NOT_TRIED));
         modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
         modeNote = secondary("");
         powerSpinner = spinner(SettingsWrite.POWER, 0);
@@ -251,7 +251,7 @@ public class BikeActivity extends KawaActivity {
                         + now + "\n\nSending: " + SettingsWrite.MODES[modeSpinner.getSelectedItemPosition()] + ", power "
                         + SettingsWrite.POWER[powerSpinner.getSelectedItemPosition()] + ", KTRC "
                         + SettingsWrite.KTRC[ktrcSpinner.getSelectedItemPosition()] + ", KQS "
-                        + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()] + ".")
+                        + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()] + ".\n\n" + NOT_TRIED)
                 .setPositiveButton("Send", (d, w) -> {
                     // spinner positions start at 0, the bike's numbers at 1; KEBC goes back as the bike has it
                     BikeFrames.VehicleSettings now2 = Hub.bike.settings;
@@ -268,19 +268,16 @@ public class BikeActivity extends KawaActivity {
     }
 
     /**
-     * The dash's shift lamp: when it lights and at which engine speed. Like the ride-settings write this
-     * is a debug-build tool until the write has been tried on a bike; the meter's own limits (0x1A) decide
-     * which statuses and levels are offered.
+     * The dash's shift lamp: when it lights and at which engine speed. Like the ride-settings write it has
+     * not been tried on a bike yet; the meter's own limits (0x1A) decide which statuses and levels are
+     * offered.
      */
     private LinearLayout lampCard() {
         LinearLayout section = column();
-        LinearLayout headRow = row();
-        headRow.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"), weight());
-        headRow.addView(debugPill());
-        section.addView(headRow);
+        section.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"));
         LinearLayout c = group();
         c.addView(secondary("Writes only the shift lamp; the dash clock stays as it is. The bike must be "
-                + "connected (it does not have to be standing still)."));
+                + "connected (it does not have to be standing still). " + NOT_TRIED));
         lampStatusSpinner = spinner(new String[]{"Off"}, 0);
         lampRpmSpinner = spinner(new String[]{"3,000 rpm"}, 0);
         addRow(c, settingRowWith("Lights up", lampStatusSpinner));
@@ -328,7 +325,8 @@ public class BikeActivity extends KawaActivity {
                 .setTitle("Send the shift lamp to the dash?")
                 .setMessage("The dash will light its shift lamp at "
                         + String.format(Locale.ROOT, "%,d rpm", SettingsWrite.lampRpm(level))
-                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + "."))
+                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + ".")
+                        + "\n\n" + NOT_TRIED)
                 .setPositiveButton("Send", (d, w) -> {
                     String problem = BridgeService.writeShiftLamp(status, level);
                     if (problem != null) lampStatusText.setText("Not sent: " + problem);
@@ -462,7 +460,7 @@ public class BikeActivity extends KawaActivity {
         BikeFrames.GeneralCaps caps = b.caps;
         // "connected" or data that just arrived (a replay, or a link that dropped a moment ago)
         boolean live = Hub.bikeConnected || now - b.liveAt < 5000 || now - b.settingsAt < 5000;
-        boolean canLamp = Hub.DEBUG_TOOLS && live && caps != null && caps.shiftLampSettable;
+        boolean canLamp = live && caps != null && caps.shiftLampSettable;
         lampCard.setVisibility(canLamp ? View.VISIBLE : View.GONE);
         if (canLamp) {
             if (lampRpmSpinner.getAdapter() == null || lampRpmSpinner.getAdapter().getCount() <= 1) {
@@ -479,7 +477,7 @@ public class BikeActivity extends KawaActivity {
                     : job);
         }
 
-        boolean canWrite = Hub.DEBUG_TOOLS && live && b.tuning != null && b.tuning.any();
+        boolean canWrite = live && b.tuning != null && b.tuning.any();
         settingsCard.setVisibility(canWrite ? View.VISIBLE : View.GONE);
         if (canWrite) {
             int modes = SettingsWrite.modeCount(b.tuning);
