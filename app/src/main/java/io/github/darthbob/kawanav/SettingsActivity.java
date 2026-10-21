@@ -422,7 +422,8 @@ public class SettingsActivity extends KawaActivity {
         addRow(c, choiceRow("Warn about a camera", "How far before it the warning comes",
                 warn, warnSel, pos -> prefs.edit().putInt(Hub.KEY_CAMERA_WARN, CAMERA_WARNS[pos]).apply()));
         addRow(c, switchRow("Say speed cameras", "With speed camera warnings on, each camera is also said in the "
-                + "helmet when its warning comes (\"Speed camera ahead, limit 50\"), or beeped. Like the curve "
+                + "helmet when its warning comes (\"Speed camera ahead, limit 50\"), or with beeps a two-tone "
+                + "siren, nothing like a bend's beeps. Like the curve "
                 + "warnings, only through a headset unless that is switched off", Hub.KEY_CAMERA_VOICE, false));
         return c;
     }

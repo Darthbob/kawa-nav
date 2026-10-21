@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "version": "1.2.1",
+      "changes": [
+        "With \"Beeps instead of words\", a speed camera now sounds like a two-tone siren (high-low, high-low, in both ears), so it can no longer be taken for the two beeps of a sharp bend"
+      ]
+    },
+    {
       "version": "1.2",
       "changes": [
         "Spoken curve warnings: KawaNav can say the coming bend in your helmet, like \"Sharp bend left\" or \"Hairpin right\", about 6 seconds before it at your speed and once per bend, with or without navigation. Settings → \"Spoken curve warnings\" picks hairpins only, sharp bends and hairpins, or all curves; \"Hear a curve warning\" plays one to set the volume",

@@ -268,7 +268,8 @@ sharp bends and hairpins, or all curves that count under "Which curves count". O
 - **Beeps instead of words** (off by default): the bend beeps in the ear of its side (the other ear
   hears it faintly, so a mono intercom still plays it). One beep for a slight or normal bend, two for
   a sharp one, three for a hairpin; higher and quicker when you are too fast for it. A bend named with
-  it follows after a short pause, in its own ear. A phone without text-to-speech beeps anyway.
+  it follows after a short pause, in its own ear. A speed camera, if it is said, sounds like a siren
+  instead ([Say speed cameras](#-speed-cameras)). A phone without text-to-speech beeps anyway.
 - **Hear a curve warning** → Play plays the warning for a sharp bend to the left right away ("Sharp
   bend left", or its two beeps), to set the volume in the helmet.
 
@@ -544,7 +545,8 @@ over within 250 m, so the maneuver stays visible longer.
   OpenStreetMap knows the limit, it is shown with it.
 - **Say speed cameras** (off by default): each camera is also said in the helmet when its warning
   comes — "Speed camera ahead, limit 50", "Red-light camera ahead" — or, with "Beeps instead of
-  words", two rising tones. It follows the [spoken curve warnings](#spoken-curve-warnings)' rules
+  words", a two-tone siren: high-low, high-low without a break, in both ears, so it cannot be taken
+  for the beeps of a bend, also through a mono intercom. It follows the [spoken curve warnings](#spoken-curve-warnings)' rules
   (only through a headset unless that is switched off) and waits for a bend being said to finish.
 - Camera data in OpenStreetMap is incomplete, sometimes outdated, and can be missing where you ride:
   **this is not a radar detector and no reason to rely on it.** Speed limits and road signs always apply.

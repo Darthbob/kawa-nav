@@ -94,11 +94,34 @@ public class CurveBeepsTest {
     }
 
     @Test
-    public void aCameraIsTwoTonesInBothEars() {
+    public void aCameraIsASirenInBothEars() {
         short[] pcm = CurveBeeps.camera();
-        assertEquals(2, beeps(pcm, LEFT).size());
+        // one sound without a break, the length of its four tones
+        List<int[]> runs = beeps(pcm, LEFT);
+        assertEquals(1, runs.size());
+        int tone = CurveBeeps.SIREN_TONE_MS * CurveBeeps.RATE / 1000;
+        assertEquals(CurveBeeps.SIREN_TONES * tone, pcm.length / 2);
         int last = pcm.length / 2 - 1;
         assertEquals(energy(pcm, LEFT, 0, last), energy(pcm, RIGHT, 0, last), 1);
+        // high, low, high, low
+        for (int i = 0; i < CurveBeeps.SIREN_TONES; i++) {
+            int[] part = {i * tone + tone / 8, (i + 1) * tone - tone / 8};
+            double hz = crossings(pcm, LEFT, part) / 2.0 / ((part[1] - part[0] + 1) / (double) CurveBeeps.RATE);
+            assertEquals("tone " + i, i % 2 == 0 ? CurveBeeps.SIREN_HIGH_HZ : CurveBeeps.SIREN_LOW_HZ, hz, 40);
+        }
+    }
+
+    @Test
+    public void aCameraSoundsLikeNoBend() {
+        // every bend is beeps of at most BEEP_MS with gaps; the camera is one sound far longer than a beep
+        int cameraFrames = beeps(CurveBeeps.camera(), LEFT).get(0)[1] + 1;
+        for (int turn : new int[]{1, 2, 3, 4, 5, 6, 7, 8}) {
+            for (boolean fast : new boolean[]{false, true}) {
+                for (int[] run : beeps(CurveBeeps.bends(turn, fast, turn % 2 == 0 ? 3 : 4), LEFT)) {
+                    assertTrue(run[1] - run[0] + 1 < cameraFrames / 3);
+                }
+            }
+        }
     }
 
     @Test
