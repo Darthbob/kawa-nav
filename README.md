@@ -45,6 +45,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   are on (slight / normal / sharp / hairpin) with its distance, roundabouts with the exit that
   continues the road, and on straights the straight arrow with the distance to the next curve.
   Works from offline OpenStreetMap data, no mobile data needed while riding.
+- 🗣️ **Spoken curve warnings** (optional, off by default): "Sharp bend left", "Hairpin right" in your
+  helmet a few seconds before the bend, for the kinds of bend you choose. With or without navigation.
 - 🔋 **Phone battery and headset on the dash**: the dash's phone battery icon shows the phone's charge
   in 4 bars, like with Rideology, and that it is charging; the headset icon shows while your helmet
   intercom is connected.
@@ -190,6 +192,8 @@ In the **Settings** tab:
 | [Google Maps directions](#google-maps-directions) | On | Off: Maps is ignored, free ride also runs during navigation |
 | [Show upcoming curves](#show-upcoming-curves) | On | Free ride when Maps is not navigating |
 | [Curve warnings during navigation](#curve-warnings-during-navigation) | Off | Off / sharp only / all curves between Maps directions |
+| [Spoken curve warnings](#spoken-curve-warnings) | Off | Off / hairpins only / sharp and hairpins / all curves, said in the helmet |
+| [Speak only through a headset](#spoken-curve-warnings) | On | No spoken warnings while no headset is connected |
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° (explained in the app) |
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
@@ -234,6 +238,26 @@ bend is shown from 300 m before it, and only if it starts at least 50 m before M
 afterwards the dash goes back to Maps' arrow. "Sharp only" shows sharp bends and hairpins, "All"
 every bend that counts under "Which curves count". Off by default: the dash then shows only Google
 Maps. Needs downloaded roads like free ride.
+
+#### Spoken curve warnings
+
+KawaNav says the kind of bend and its direction — "Hairpin right", "Sharp bend left", "Bend left",
+"Slight bend right", the kinds of the dash's arrow — about 6 seconds before the bend starts at your
+speed: 50 m before it when slow, up to 300 m when fast. Pick which bends are said: hairpins only,
+sharp bends and hairpins, or all curves that count under "Which curves count". Off by default.
+
+- Each bend is said once, however often the curves are found again on the way to it, and nothing is
+  said below 10 km/h. A bend that comes less than 4 s after the last warning waits for its turn.
+- It works with or without navigation, whatever the dash shows. During navigation a bend within 50 m
+  of Maps' next maneuver is left to Maps' own voice, and nothing is said while Maps names no distance.
+- The voice is the phone's text-to-speech, in English (the phone's own voice reads the words if no
+  English voice is installed). It plays as navigation guidance, like Google Maps' voice: it goes to
+  the helmet intercom and turns music down while it speaks.
+- **Speak only through a headset** (on by default) keeps it quiet while no Bluetooth or wired headset
+  is connected, so the phone does not speak out of a pocket.
+- **Hear a curve warning** → Play says "Sharp bend left" right away, to set the volume in the helmet.
+
+Needs downloaded roads like free ride.
 
 #### Fuel economy
 
@@ -500,6 +524,10 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   outside.
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
+- **Spoken curve warnings are not tried on the bike yet.** They come from the same map data as the
+  arrows, so a bend drawn wrongly in OpenStreetMap is said wrongly, and the GPS is about a second
+  behind. An intercom connected only as a phone headset (no music profile) may leave the voice on the
+  phone's speaker.
 - The camera warning is what OpenStreetMap has, nothing else: no mobile or temporary checks, and no
   camera icon on the dash (it shows the destination flag with the distance). Not tried on the bike yet.
 - The refuel diary, the battery log and the ride records never touch the bike; they are kept on the phone

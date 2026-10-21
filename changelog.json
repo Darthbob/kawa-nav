@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "version": "1.2",
+      "changes": [
+        "Spoken curve warnings: KawaNav can say the coming bend in your helmet, like \"Sharp bend left\" or \"Hairpin right\", about 6 seconds before it at your speed and once per bend, with or without navigation. Settings → \"Spoken curve warnings\" picks hairpins only, sharp bends and hairpins, or all curves; \"Hear a curve warning\" plays one to set the volume"
+      ]
+    },
+    {
       "version": "1.1.1",
       "changes": [
         "A ride's chart can be zoomed: pinch or double-tap to look at a stretch closely, move along it with two fingers, and the corner button shows the whole ride again. Zoomed in, the scale follows what is shown and the rest of the track on the map is faded",

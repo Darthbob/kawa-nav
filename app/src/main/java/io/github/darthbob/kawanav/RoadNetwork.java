@@ -174,6 +174,11 @@ public final class RoadNetwork {
         return new double[]{(lon - lon0) * kx, (lat - lat0) * ky};
     }
 
+    /** Latitude and longitude of a point in this network's metres: the reverse of {@link #project}. */
+    public double[] unproject(double x, double y) {
+        return new double[]{lat0 + y / ky, lon0 + x / kx};
+    }
+
     /** Distance from the data centre, to decide when to fetch a new area. */
     public double distanceFromCenter(double lat, double lon) {
         double[] p = project(lat, lon);

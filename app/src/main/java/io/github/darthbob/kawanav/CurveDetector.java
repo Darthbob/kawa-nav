@@ -62,13 +62,16 @@ public final class CurveDetector {
         public final double endDist;
         public final double angle;       // signed total heading change, + = right
         public final double minRadius;   // tightest part, metres
+        public final double startX, startY; // where it starts, in the path's metres
 
-        Curve(int turn, double startDist, double endDist, double angle, double minRadius) {
+        Curve(int turn, double startDist, double endDist, double angle, double minRadius, double startX, double startY) {
             this.turn = turn;
             this.startDist = startDist;
             this.endDist = endDist;
             this.angle = angle;
             this.minRadius = minRadius;
+            this.startX = startX;
+            this.startY = startY;
         }
 
         @Override
@@ -106,10 +109,10 @@ public final class CurveDetector {
             win[i] = s;
         }
 
-        scan(d, win, half, sens.curvingPerWindow, sens.minAngle, out);
+        scan(pts, d, win, half, sens.curvingPerWindow, sens.minAngle, out);
         if (sens.gentlePerWindow > 0) {
             List<Curve> gentle = new ArrayList<>();
-            scan(d, win, half, sens.gentlePerWindow, sens.minAngle, gentle);
+            scan(pts, d, win, half, sens.gentlePerWindow, sens.minAngle, gentle);
             for (Curve g : gentle) {
                 boolean overlaps = false;
                 for (Curve c : out) {
@@ -123,7 +126,8 @@ public final class CurveDetector {
     }
 
     /** Finds the bends where the windowed heading change reaches {@code threshold}; adds those turning at least minAngle. */
-    private static void scan(double[] d, double[] win, int half, double threshold, double minAngle, List<Curve> out) {
+    private static void scan(double[][] pts, double[] d, double[] win, int half, double threshold, double minAngle,
+                             List<Curve> out) {
         int m = d.length;
         int i = 0;
         while (i < m) {
@@ -161,8 +165,12 @@ public final class CurveDetector {
             if (Math.abs(total) >= minAngle) {
                 double start = (from + 1) * STEP;
                 double end = (to + 1) * STEP;
-                if (a == 0) start = 0; // already in the bend
-                out.add(new Curve(classify(total, minRadius), start, end, total, minRadius));
+                double[] at = pts[from + 1];
+                if (a == 0) { // already in the bend
+                    start = 0;
+                    at = pts[0];
+                }
+                out.add(new Curve(classify(total, minRadius), start, end, total, minRadius, at[0], at[1]));
             }
             i = Math.max(b + 1, j);
         }

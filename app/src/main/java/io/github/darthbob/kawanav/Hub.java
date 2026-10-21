@@ -184,6 +184,10 @@ public final class Hub {
     public static String rideId;
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
+    /** Curves said by voice: {@link CurveAlerts#OFF} (default), HAIRPINS, SHARP or ALL. */
+    public static final String KEY_CURVE_SOUND = "curve_sound";
+    /** Spoken curve warnings only while a headset is connected (on unless turned off). */
+    public static final String KEY_CURVE_SOUND_HEADSET = "curve_sound_headset";
 
     /** Free mode (show upcoming curves) is on unless turned off; Google Maps navigation takes priority. */
     /** Speed camera warnings are on. */

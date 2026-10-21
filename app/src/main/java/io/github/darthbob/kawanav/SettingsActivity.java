@@ -55,6 +55,18 @@ public class SettingsActivity extends KawaActivity {
             + "• Normal: 55° or more, or tighter than 60 m\n"
             + "• Sharp: 100° or more, or tighter than 30 m\n"
             + "• Hairpin (U-turn arrow): 150° or more and tighter than 35 m";
+    /** Explanation of "Spoken curve warnings"; values from CurveAlerts. */
+    private static final String CURVE_SOUND_INFO =
+            "KawaNav says the kind of bend and its direction, like \"Sharp bend left\" or \"Hairpin right\", "
+            + "about 6 seconds before the bend starts at your speed: from 50 m before it when slow up to 300 m "
+            + "when fast. Each bend once, and nothing below 10 km/h.\n\n"
+            + "The kinds are those of the arrow on the bike's display (see \"Which curves count\"):\n"
+            + "• Hairpins only\n"
+            + "• Sharp and hairpins\n"
+            + "• All curves: also normal and slight bends\n\n"
+            + "It works with or without navigation, whatever the display shows. During navigation, a bend "
+            + "right before Maps' next maneuver is left to Maps' own voice. Needs downloaded roads, like the "
+            + "curves on the display. The voice is the phone's text-to-speech, in English.";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private RoadStore roadStore;
@@ -72,6 +84,8 @@ public class SettingsActivity extends KawaActivity {
     private boolean helmetsHidden; // the helmet list was built without Bluetooth permission
     // on the road
     private TextView freeModeStatus;
+    /** Speaks "Hear a curve warning"; started on the first tap. */
+    private CurveSound sampleSound;
     // offline
     private LinearLayout regionsList;
     private boolean offlineWasRunning;
@@ -131,6 +145,18 @@ public class SettingsActivity extends KawaActivity {
     protected void onPause() {
         handler.removeCallbacks(refresh);
         super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (sampleSound != null) sampleSound.shutdown();
+        super.onDestroy();
+    }
+
+    /** "Hear a curve warning": the phrase a sharp bend gets, through whatever the phone plays on now. */
+    private void playCurveSample() {
+        if (sampleSound == null) sampleSound = new CurveSound(this);
+        sampleSound.say(CurveAlerts.phrase(3));
     }
 
     private final Runnable refresh = new Runnable() {
@@ -268,6 +294,21 @@ public class SettingsActivity extends KawaActivity {
                     prefs.edit().putInt(Hub.KEY_NAV_CURVES, pos).apply();
                     BridgeService.settingsChanged();
                 }));
+        addRow(c, choiceRow("Spoken curve warnings", "Said in your helmet a few seconds before the curve",
+                CURVE_SOUND_INFO, new String[]{"Off", "Hairpins only", "Sharp and hairpins", "All curves"},
+                prefs.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), pos -> {
+                    prefs.edit().putInt(Hub.KEY_CURVE_SOUND, pos).apply();
+                    BridgeService.settingsChanged();
+                }));
+        addRow(c, switchRow("Speak only through a headset", "Quiet while no Bluetooth or wired headset is "
+                + "connected, so the phone itself does not speak", Hub.KEY_CURVE_SOUND_HEADSET, true));
+        LinearLayout sr = settingRow();
+        LinearLayout st = column();
+        st.addView(itemTitle("Hear a curve warning"));
+        st.addView(secondary("Says \"" + CurveAlerts.phrase(3) + "\" now, to set the volume in the helmet"));
+        sr.addView(st, weight());
+        sr.addView(secondaryButton("Play", v -> playCurveSample()));
+        addRow(c, sr);
         addRow(c, choiceRow("Which curves count", "How much a bend must turn to be shown", CURVES_INFO,
                 new String[]{"Only tight ones", "Normal", "Also gentle ones", "All over 15°"}, prefs.getInt(Hub.KEY_SENSITIVITY, 1),
                 pos -> prefs.edit().putInt(Hub.KEY_SENSITIVITY, pos).apply()));

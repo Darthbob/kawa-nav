@@ -68,6 +68,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private KawaBle ble;
     private CurveEngine curve;
+    /** Says the curves while the spoken curve warnings are on, else null. */
+    private CurveSound curveSound;
+    private final CurveAlerts curveAlerts = new CurveAlerts();
     private RideRecorder recorder;
     /** Decodes the meter's frames; new per connection (it remembers the bike's config frames). */
     private BikeFrames.Decoder decoder = new BikeFrames.Decoder();
@@ -501,6 +504,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             BikeStore.save(this);
         }
         curve.stop();
+        if (curveSound != null) curveSound.shutdown();
         closeAudioProfiles();
         KawaBle b = ble;
         if (b.isReady()) {
@@ -715,10 +719,18 @@ public class BridgeService extends Service implements KawaBle.Listener {
         boolean free = Hub.freeMode(this);
         boolean navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, 0) > 0;
         boolean cameras = Hub.camerasEnabled(this);
-        if ((free || navCurves || cameras) && locationAllowed) {
+        boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF;
+        if ((free || navCurves || cameras || spoken) && locationAllowed) {
             curve.start();
         } else {
             curve.stop();
+        }
+        // the speech engine starts with the setting, so the first curve is not said late
+        if (spoken && curveSound == null) {
+            curveSound = new CurveSound(this);
+        } else if (!spoken && curveSound != null) {
+            curveSound.shutdown();
+            curveSound = null;
         }
         tick();
     }
@@ -758,6 +770,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.output = out;
         if (out != null && out.cameraId >= 0) cameraAlert(out);
         else cameraGone();
+        sayCurve(now);
         bikeAlerts(now);
         refuelCheck(now);
         batteryCheck(now);
@@ -1067,6 +1080,25 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 .setAutoCancel(true)
                 .build();
         getSystemService(NotificationManager.class).notify(CAMERA_NOTIFICATION_ID, n);
+    }
+
+    /**
+     * Spoken curve warnings: the next curve of the chosen kinds, a few seconds before it, once (see
+     * {@link CurveAlerts}). Whatever the dash shows: during navigation too, except at Maps' maneuver.
+     */
+    private void sayCurve(long now) {
+        if (curveSound == null || !locationAllowed) return;
+        SharedPreferences p = Hub.prefs(this);
+        if (p.getBoolean(Hub.KEY_CURVE_SOUND_HEADSET, true) && !CurveSound.headsetConnected(this)) return;
+        Hub.MapsTurn m = Hub.mapsEnabled(this) ? Hub.maps : null;
+        double maneuver = m == null ? Double.POSITIVE_INFINITY : m.distanceM;
+        double speed = curve.speed();
+        CurveAlerts.Ahead c = curveAlerts.next(curve.curvesAhead(), speed,
+                p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), maneuver, now);
+        if (c == null) return;
+        String text = CurveAlerts.phrase(c.turn);
+        Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h", text, c.startDist, speed * 3.6));
+        curveSound.say(text);
     }
 
     /** Tyre, ABS and battery warnings: shown on Home while they last, announced once each. */

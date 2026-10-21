@@ -26,9 +26,13 @@
     <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
     <uses-permission android:name="android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
 
-    <!-- needed to load Google Maps' notification icons (resource-based Icons) -->
+    <!-- needed to load Google Maps' notification icons (resource-based Icons); the text-to-speech
+         engine for the spoken curve warnings -->
     <queries>
         <package android:name="com.google.android.apps.maps" />
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 
     <!-- backup: only rides, settings and the bike's last values, see res/xml/data_extraction_rules.xml -->
