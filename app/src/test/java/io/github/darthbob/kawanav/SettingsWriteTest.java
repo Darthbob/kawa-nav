@@ -139,6 +139,20 @@ public class SettingsWriteTest {
     }
 
     @Test
+    public void nameIsCutAtAWholeCharacter() {
+        assertEquals("Track", SettingsWrite.fitName("  Track  "));
+        assertEquals("", SettingsWrite.fitName(null));
+        assertEquals("abcdefghijklmnopqr", SettingsWrite.fitName("abcdefghijklmnopqrstuvwxyz"));
+        // 17 ASCII bytes and an "è" (2 bytes) do not fit in 18: the "è" goes, not half of it
+        assertEquals("abcdefghijklmnopq", SettingsWrite.fitName("abcdefghijklmnopqè"));
+        assertEquals("Pista bagnata è", SettingsWrite.fitName("Pista bagnata è"));    // 16 bytes
+        assertEquals("ああああああ", SettingsWrite.fitName("あああああああ"));        // 3 bytes each: six fit
+        byte[] f = SettingsWrite.frame(0, 0, 1, 0, 0, "abcdefghijklmnopqè");
+        assertEquals('q', f[37]);
+        assertEquals(0, f[38]);     // padding, not the first byte of the "è"
+    }
+
+    @Test
     public void results() {
         assertEquals(0, SettingsWrite.result(hx("482a004800050900" + "ffffffffffffffffffffffffffffffffffffffff")));
         assertEquals(0x10, SettingsWrite.result(hx("482a004800050910" + "ffffffffffffffffffffffffffffffffffffffff")));
@@ -175,5 +189,24 @@ public class SettingsWriteTest {
         BikeFrames.Telemetry moving = new BikeFrames.Telemetry(v, cfg);
         assertEquals(50.0, moving.speedKmh, 1e-9);
         assertEquals("the bike must stand still", SettingsWrite.blockedBecause(moving, 200, tuning));
+    }
+
+    @Test
+    public void statusKeepsTheOutcomeUntilItIsRead() {
+        String idle = SettingsWrite.readiness(null);
+        assertEquals("Ready", idle);
+        assertEquals("Not ready: the bike must stand still", SettingsWrite.readiness("the bike must stand still"));
+        // a running write wins over everything
+        assertEquals("Sending…", SettingsWrite.status("Sending…", "Not sent: x", 0, idle));
+        // a refusal survives the next refreshes instead of turning into "Ready" a second later
+        assertEquals("Not sent: the bike is not connected",
+                SettingsWrite.status("", "Not sent: the bike is not connected", 1_000, idle));
+        assertEquals("Not sent: x", SettingsWrite.status("", "Not sent: x", SettingsWrite.OUTCOME_MS - 1, idle));
+        // and goes once it is old, or when there is none
+        assertEquals(idle, SettingsWrite.status("", "Not sent: x", SettingsWrite.OUTCOME_MS, idle));
+        assertEquals(idle, SettingsWrite.status("", "", 0, idle));
+        assertEquals(idle, SettingsWrite.status(null, null, 0, idle));
+        // a clock set back must not keep an outcome for ever
+        assertEquals(idle, SettingsWrite.status("", "Not sent: x", -5, idle));
     }
 }

@@ -25,6 +25,8 @@ public class BikeActivity extends KawaActivity {
 
     /** Live values (riding log) count as current this long. */
     private static final long LIVE_MS = 10_000;
+    /** On both write cards and their confirmations, until the writes have been tried on a bike. */
+    private static final String NOT_TRIED = "Not tried on a bike yet: check the dash after sending.";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView title;
@@ -35,12 +37,14 @@ public class BikeActivity extends KawaActivity {
     private TextView fuelText;
     private TextView battery;
     private LinearLayout sections;
-    // ride settings (debug builds until this has been tried on a bike)
+    // ride settings and shift lamp (not tried on a bike yet)
     private LinearLayout settingsCard;
     private android.widget.Spinner modeSpinner, powerSpinner, ktrcSpinner, kqsSpinner;
     /** Says how many riding modes the bike announced, so "Rider 4" missing from the list makes sense. */
     private TextView modeNote;
     private TextView settingsStatus;
+    /** The profile name sent with the settings (shown on the dash? not known yet). */
+    private android.widget.EditText settingsName;
     private Button settingsSend;
     private LinearLayout lampCard;
     private android.widget.Spinner lampStatusSpinner, lampRpmSpinner;
@@ -199,19 +203,17 @@ public class BikeActivity extends KawaActivity {
     };
 
     /**
-     * Sends ride settings to the bike: riding mode, power, KTRC and KQS. Only in debug builds for now —
-     * the write has never been tried on a bike — and only while the bike is standing still, in neutral
-     * and with the throttle closed (the app itself only wants it standing still).
+     * Sends ride settings to the bike: riding mode, power, KTRC and KQS. The write has not been tried on a
+     * bike yet, so the card says so; it is only sent while the bike is standing still, in neutral and with
+     * the throttle closed (the app itself only wants it standing still).
      */
     private LinearLayout settingsCard() {
         LinearLayout section = column();
-        LinearLayout headRow = row();
-        headRow.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"), weight());
-        headRow.addView(debugPill());
-        section.addView(headRow);
+        section.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"));
         LinearLayout c = group();
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
-                + "screen. The bike must be standing still, in neutral and with the throttle closed."));
+                + "screen, and a name for them if you give one. The bike must be standing still, in neutral "
+                + "and with the throttle closed. " + NOT_TRIED));
         modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
         modeNote = secondary("");
         powerSpinner = spinner(SettingsWrite.POWER, 0);
@@ -222,6 +224,18 @@ public class BikeActivity extends KawaActivity {
         addRow(c, settingRowWith("Power", powerSpinner));
         addRow(c, settingRowWith("KTRC", ktrcSpinner));
         addRow(c, settingRowWith("KQS", kqsSpinner));
+        settingsName = new android.widget.EditText(this);
+        settingsName.setSingleLine(true);
+        settingsName.setTextSize(15);
+        settingsName.setTextColor(Ui.ink(night));
+        settingsName.setHint("Name (optional)");
+        settingsName.setText(prefs.getString(Hub.KEY_SETTINGS_NAME, ""));
+        LinearLayout nameRow = settingRow();
+        nameRow.addView(itemTitle("Name"), weight());
+        nameRow.addView(settingsName, controlWidth());
+        addRow(c, nameRow);
+        c.addView(secondary("Up to " + SettingsWrite.NAME_BYTES + " bytes, sent with the settings as Rideology "
+                + "sends the title of a setting. Whether the dash shows it anywhere is not known yet."));
         settingsStatus = secondary("");
         settingsStatus.setPadding(0, dp(Ui.SPACE2), 0, dp(10));
         c.addView(settingsStatus);
@@ -244,6 +258,8 @@ public class BikeActivity extends KawaActivity {
         BikeFrames.VehicleSettings s = Hub.bike.settings;
         String now = s == null ? "unknown" : "mode " + s.ridingMode + ", power " + s.power + ", KTRC " + s.ktrc
                 + ", KQS " + s.kqs + " (numbers as the bike reports them)";
+        String name = SettingsWrite.fitName(settingsName.getText().toString());
+        prefs.edit().putString(Hub.KEY_SETTINGS_NAME, name).apply();
         new android.app.AlertDialog.Builder(this)
                 .setTitle("Send settings to the bike?")
                 .setMessage("The bike must stand still, be in neutral and have the throttle closed. KawaNav "
@@ -251,16 +267,18 @@ public class BikeActivity extends KawaActivity {
                         + now + "\n\nSending: " + SettingsWrite.MODES[modeSpinner.getSelectedItemPosition()] + ", power "
                         + SettingsWrite.POWER[powerSpinner.getSelectedItemPosition()] + ", KTRC "
                         + SettingsWrite.KTRC[ktrcSpinner.getSelectedItemPosition()] + ", KQS "
-                        + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()] + ".")
+                        + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()]
+                        + (name.isEmpty() ? ", no name" : ", name \"" + name + "\"") + ".\n\n" + NOT_TRIED)
                 .setPositiveButton("Send", (d, w) -> {
                     // spinner positions start at 0, the bike's numbers at 1; KEBC goes back as the bike has it
                     BikeFrames.VehicleSettings now2 = Hub.bike.settings;
                     int kebc = now2 != null && now2.kebc >= 0 ? now2.kebc : 0;
                     String problem = BridgeService.writeSettings(modeSpinner.getSelectedItemPosition() + 1,
                             powerSpinner.getSelectedItemPosition() + 1, ktrcSpinner.getSelectedItemPosition(),
-                            kqsSpinner.getSelectedItemPosition() + 1, kebc, "");
+                            kqsSpinner.getSelectedItemPosition() + 1, kebc, name);
                     if (problem != null) {
-                        settingsStatus.setText("Not sent: " + problem);
+                        BridgeService.noteSettings("Not sent: " + problem);
+                        settingsStatus.setText(BridgeService.settingsOutcome);
                     }
                 })
                 .setNegativeButton("Cancel", null)
@@ -268,19 +286,16 @@ public class BikeActivity extends KawaActivity {
     }
 
     /**
-     * The dash's shift lamp: when it lights and at which engine speed. Like the ride-settings write this
-     * is a debug-build tool until the write has been tried on a bike; the meter's own limits (0x1A) decide
-     * which statuses and levels are offered.
+     * The dash's shift lamp: when it lights and at which engine speed. Like the ride-settings write it has
+     * not been tried on a bike yet; the meter's own limits (0x1A) decide which statuses and levels are
+     * offered.
      */
     private LinearLayout lampCard() {
         LinearLayout section = column();
-        LinearLayout headRow = row();
-        headRow.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"), weight());
-        headRow.addView(debugPill());
-        section.addView(headRow);
+        section.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"));
         LinearLayout c = group();
         c.addView(secondary("Writes only the shift lamp; the dash clock stays as it is. The bike must be "
-                + "connected (it does not have to be standing still)."));
+                + "connected (it does not have to be standing still). " + NOT_TRIED));
         lampStatusSpinner = spinner(new String[]{"Off"}, 0);
         lampRpmSpinner = spinner(new String[]{"3,000 rpm"}, 0);
         addRow(c, settingRowWith("Lights up", lampStatusSpinner));
@@ -328,10 +343,14 @@ public class BikeActivity extends KawaActivity {
                 .setTitle("Send the shift lamp to the dash?")
                 .setMessage("The dash will light its shift lamp at "
                         + String.format(Locale.ROOT, "%,d rpm", SettingsWrite.lampRpm(level))
-                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + "."))
+                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + ".")
+                        + "\n\n" + NOT_TRIED)
                 .setPositiveButton("Send", (d, w) -> {
                     String problem = BridgeService.writeShiftLamp(status, level);
-                    if (problem != null) lampStatusText.setText("Not sent: " + problem);
+                    if (problem != null) {
+                        BridgeService.noteLamp("Not sent: " + problem);
+                        lampStatusText.setText(BridgeService.lampOutcome);
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -462,24 +481,23 @@ public class BikeActivity extends KawaActivity {
         BikeFrames.GeneralCaps caps = b.caps;
         // "connected" or data that just arrived (a replay, or a link that dropped a moment ago)
         boolean live = Hub.bikeConnected || now - b.liveAt < 5000 || now - b.settingsAt < 5000;
-        boolean canLamp = Hub.DEBUG_TOOLS && live && caps != null && caps.shiftLampSettable;
+        boolean canLamp = live && caps != null && caps.shiftLampSettable;
         lampCard.setVisibility(canLamp ? View.VISIBLE : View.GONE);
         if (canLamp) {
             if (lampRpmSpinner.getAdapter() == null || lampRpmSpinner.getAdapter().getCount() <= 1) {
                 fillLampChoices(caps);
             }
-            String job = BridgeService.settingsJob;
-            lampStatusText.setText(job.isEmpty()
-                    ? (b.general != null && b.general.shiftLampRpm() > 0
+            String onDash = b.general != null && b.general.shiftLampRpm() > 0
                     ? String.format(Locale.ROOT, "On the dash now: %s, %,d rpm",
                     SettingsWrite.lampStatusNames(caps.shiftLampMode)[Math.max(0,
                             Math.min(b.general.shiftLampStatus, SettingsWrite.lampStatusNames(caps.shiftLampMode).length - 1))],
                     b.general.shiftLampRpm())
-                    : "Not read yet: switch the ignition on with KawaNav running")
-                    : job);
+                    : "Not read yet: switch the ignition on with KawaNav running";
+            lampStatusText.setText(SettingsWrite.status(BridgeService.settingsJob, BridgeService.lampOutcome,
+                    now - BridgeService.lampOutcomeAt, onDash));
         }
 
-        boolean canWrite = Hub.DEBUG_TOOLS && live && b.tuning != null && b.tuning.any();
+        boolean canWrite = live && b.tuning != null && b.tuning.any();
         settingsCard.setVisibility(canWrite ? View.VISIBLE : View.GONE);
         if (canWrite) {
             int modes = SettingsWrite.modeCount(b.tuning);
@@ -516,8 +534,11 @@ public class BikeActivity extends KawaActivity {
                 settingsPrefilled = true;
             }
             settingsSend.setEnabled(true);
-            String job = BridgeService.settingsJob;
-            settingsStatus.setText(job.isEmpty() ? "Ready" : job);
+            // the same checks the write makes, so "Ready" is only shown when a write would go out
+            String blocked = !Hub.bikeConnected ? "the bike is not connected"
+                    : SettingsWrite.blockedBecause(b.live, now - b.liveAt, b.tuning);
+            settingsStatus.setText(SettingsWrite.status(BridgeService.settingsJob, BridgeService.settingsOutcome,
+                    now - BridgeService.settingsOutcomeAt, SettingsWrite.readiness(blocked)));
         }
 
         BikeData.Place p = b.parked;

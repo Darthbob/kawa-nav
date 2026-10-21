@@ -9,7 +9,7 @@ import java.util.Locale;
  *
  * <p>KawaNav is stricter than the app about when a write may be sent: the app only wants the bike
  * standing still (its own threshold is "under 5 km/h"), KawaNav also requires neutral and a closed
- * throttle, and stays in debug builds until this has been tried on a real bike.
+ * throttle, because this has not been tried on a real bike yet.
  * Pure Java (no Android) so the frame and the result handling can be unit-tested.
  */
 public final class SettingsWrite {
@@ -97,11 +97,33 @@ public final class SettingsWrite {
         return b;
     }
 
-    /** The profile name as at most 18 UTF-8 bytes, zero padded (the app cuts at 18, ae/j.java:362). */
+    /** Room for the profile name in the write: 18 UTF-8 bytes (bytes 17-24, 27-34, 37-38). */
+    public static final int NAME_BYTES = 18;
+
+    /**
+     * The profile name as it fits: trimmed, and cut after the last whole character that fits in
+     * {@link #NAME_BYTES} UTF-8 bytes. Rideology cuts at 18 bytes even inside a character
+     * (ae/j.java:362); KawaNav never sends half an "è".
+     */
+    public static String fitName(String name) {
+        if (name == null) return "";
+        String s = name.trim();
+        int bytes = 0;
+        for (int i = 0; i < s.length(); ) {
+            int cp = s.codePointAt(i);
+            int n = cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+            if (bytes + n > NAME_BYTES) return s.substring(0, i).trim();
+            bytes += n;
+            i += Character.charCount(cp);
+        }
+        return s;
+    }
+
+    /** The profile name as at most 18 UTF-8 bytes, zero padded, cut at a whole character ({@link #fitName}). */
     static byte[] nameBytes(String name) {
-        byte[] text = name == null ? new byte[0] : name.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        byte[] out = new byte[18];
-        System.arraycopy(text, 0, out, 0, Math.min(18, text.length));
+        byte[] text = fitName(name).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] out = new byte[NAME_BYTES];
+        System.arraycopy(text, 0, out, 0, Math.min(NAME_BYTES, text.length));
         return out;
     }
 
@@ -171,6 +193,25 @@ public final class SettingsWrite {
         if (cfg == null) return "the bike did not say which settings it takes";
         if (!cfg.supported(BikeFrames.TuningConfig.RIDING_MODE)) return "this bike takes no ride settings";
         return null;
+    }
+
+    /** How long what came of the last write (or why it was not sent) stays on its card. */
+    public static final long OUTCOME_MS = 30_000;
+
+    /**
+     * The status line of a write card: the write that is running, else what came of the last one while it
+     * is recent ({@code outcomeAgeMs} under {@link #OUTCOME_MS}), else {@code idle}. A refused or answered
+     * write must not be overwritten by "Ready" on the next refresh before the rider has read it.
+     */
+    public static String status(String job, String outcome, long outcomeAgeMs, String idle) {
+        if (job != null && !job.isEmpty()) return job;
+        if (outcome != null && !outcome.isEmpty() && outcomeAgeMs >= 0 && outcomeAgeMs < OUTCOME_MS) return outcome;
+        return idle;
+    }
+
+    /** "Ready", or why a ride-settings write would not be sent now ({@code blocked} from {@link #blockedBecause}). */
+    public static String readiness(String blocked) {
+        return blocked == null ? "Ready" : "Not ready: " + blocked;
     }
 
     /** Debug text for a result code. */

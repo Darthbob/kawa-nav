@@ -66,14 +66,15 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   killed, and so does its sample file: a compression interrupted while the app is killed leaves the
   plain file in place instead of a half-written one, and the ride is compressed again next time.
 - 🔔 **Call and mail icons on the dash**: the dash shows an icon while a call comes in or a mail or
-  message arrives. Only the fact there is one is sent: no numbers, no names, nothing stored. An icon
+  message arrives, also from WhatsApp, Telegram, Signal, Messenger, Threema and Outlook (their calls
+  light the call icon). Only the fact there is one is sent: no numbers, no names, nothing stored. An icon
   that appeared while KawaNav was not connected is sent as soon as it connects again, so a call that
   came in with the bike off is not lost.
 - 🕐 **Dash clock from the phone**: optional, once per connection, like Rideology.
 - 🔧 **Settings on the bike**: reads the ride settings (riding mode, power, KTRC, quickshifter, and the
-  suspension settings on bikes that have them) and, in debug builds, writes riding mode/power/KTRC/KQS
-  and the dash shift lamp after a confirmation. The riding-mode list follows the bike: four modes, or
-  seven (Rider 2-4) on a bike that announces them.
+  suspension settings on bikes that have them), and writes riding mode/power/KTRC/KQS and the dash
+  shift lamp after a confirmation (not tried on a bike yet). The riding-mode list follows the bike: four
+  modes, or seven (Rider 2-4) on a bike that announces them.
 - 🌍 **Offline maps**: download regions (country, state, district) from Geofabrik, see their data date,
   update and delete them one by one.
 - 🚨 **Speed camera warnings** (optional, off by default): taken from the same offline map data, shown on
@@ -205,8 +206,8 @@ In the **Settings** tab:
 | [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | Set the dash clock from the phone | Off | Sets the dash clock once per connection |
-| Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
-| Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Messages, LINE, …) |
+| Call icon on the dash | Off | Shows an icon while a call comes in, also a WhatsApp/Telegram/Signal call (needs notification access) |
+| Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Outlook, Messages, WhatsApp, Telegram, Signal, …) |
 | [Speed camera warnings](#-speed-cameras) | Off | Cameras on the phone and on the dash |
 | [Say speed cameras](#-speed-cameras) | Off | Each camera also said in the helmet (or beeped) |
 | [Distances in feet](#distances-in-feet) | Off | Imperial distances |
@@ -268,7 +269,8 @@ sharp bends and hairpins, or all curves that count under "Which curves count". O
 - **Beeps instead of words** (off by default): the bend beeps in the ear of its side (the other ear
   hears it faintly, so a mono intercom still plays it). One beep for a slight or normal bend, two for
   a sharp one, three for a hairpin; higher and quicker when you are too fast for it. A bend named with
-  it follows after a short pause, in its own ear. A phone without text-to-speech beeps anyway.
+  it follows after a short pause, in its own ear. A speed camera, if it is said, sounds like a siren
+  instead ([Say speed cameras](#-speed-cameras)). A phone without text-to-speech beeps anyway.
 - **Hear a curve warning** → Play plays the warning for a sharp bend to the left right away ("Sharp
   bend left", or its two beeps), to set the volume in the helmet.
 
@@ -486,16 +488,23 @@ end-to-end encrypted (phone with a screen lock); offline maps and the log are le
 The bike's screen reads the ride settings (riding mode, power, KTRC, quickshifter, engine brake, and the
 suspension settings on bikes that have them) and shows them with the name and the number the bike sent.
 
-**Writing them back is in debug builds only for now** — it has not been tried on a bike yet — and the
-card is marked `DEBUG`:
+Since 1.2.1 they can be written back from the normal app too, not only from the debug build. **The
+writes have not been tried on a bike yet**: each card and each confirmation says so, so check the dash
+after sending.
 
-- **Ride settings**: riding mode, power, KTRC and quickshifter. KawaNav refuses to send unless the bike
-  is connected, standing still, in neutral and with the throttle closed (Rideology itself only asks for
-  standing still), asks for confirmation, waits for the meter's answer and reads the settings back to
-  compare.
+- **Ride settings**: riding mode, power, KTRC and quickshifter, and optionally a name for them (up to
+  18 bytes, as Rideology sends the title of a setting; whether the dash shows it is not known yet).
+  KawaNav refuses to send unless the bike is connected, standing still, in neutral and with the
+  throttle closed (Rideology itself only asks for standing still), asks for confirmation, waits for the
+  meter's answer and reads the settings back to compare.
 - **Dash shift lamp**: when the lamp lights (off / tachometer / LED / both, as the dash allows) and at
   which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
   dash clock stays as it is.
+
+Under its choices the ride-settings card says whether a press would send now: "Ready", or why not
+("Not ready: the bike must stand still"). After a press both cards show for 30 seconds what came of it:
+why it was not sent, that the bike gave no answer or refused it, or (for the ride settings) whether the
+settings it reads back are the ones sent.
 
 Rideology does not write the suspension settings (KECS) on these dashes either, so KawaNav only reads
 them.
@@ -544,7 +553,8 @@ over within 250 m, so the maneuver stays visible longer.
   OpenStreetMap knows the limit, it is shown with it.
 - **Say speed cameras** (off by default): each camera is also said in the helmet when its warning
   comes — "Speed camera ahead, limit 50", "Red-light camera ahead" — or, with "Beeps instead of
-  words", two rising tones. It follows the [spoken curve warnings](#spoken-curve-warnings)' rules
+  words", a two-tone siren: high-low, high-low without a break, in both ears, so it cannot be taken
+  for the beeps of a bend, also through a mono intercom. It follows the [spoken curve warnings](#spoken-curve-warnings)' rules
   (only through a headset unless that is switched off) and waits for a bend being said to finish.
 - Camera data in OpenStreetMap is incomplete, sometimes outdated, and can be missing where you ride:
   **this is not a radar detector and no reason to rely on it.** Speed limits and road signs always apply.
@@ -591,8 +601,8 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   camera icon on the dash (it shows the destination flag with the distance). Not tried on the bike yet.
 - The refuel diary, the battery log and the ride records never touch the bike; they are kept on the phone
   (and included in Android's backup).
-- **Writing settings and the shift lamp is debug builds only** until it has been tried on a bike, and the
-  names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
+- **Writing settings and the shift lamp has not been tried on a bike yet** (check the dash after
+  sending), and the names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
   number the bike sent, not instead of it.
 - The **scaling of the riding-log values** (speed, engine speed, throttle, lean angle) is chosen from
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with

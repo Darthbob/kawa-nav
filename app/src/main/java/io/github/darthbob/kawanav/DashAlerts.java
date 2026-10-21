@@ -8,7 +8,9 @@ import java.util.Locale;
  * or messages; KawaNav does the same, from the notification listener.
  *
  * <p>Only the fact "there is one" is sent — never text, sender or app name. Two icons exist (call,
- * mail), each with added/removed.
+ * mail), each with added/removed. The ids are Apple ANCS's (CategoryID 1 IncomingCall, 6 Email; EventID
+ * 0 Added, 2 Removed): whether a dash shows anything for the other ANCS categories is not known, so
+ * only the debug test sends them ({@link #ancsName}).
  */
 public final class DashAlerts {
     private DashAlerts() {}
@@ -42,26 +44,41 @@ public final class DashAlerts {
 
     /**
      * Which icon a notification is about, or 0 for none. Like Rideology (MyNotificationListenerService):
-     * calls from the dialer apps, mail and messages from the usual mail/messaging apps.
-     * Only the package name is looked at, never the content.
+     * calls from the dialer apps, mail and messages from the usual mail/messaging apps; KawaNav adds the
+     * messengers riders use outside Japan (WhatsApp, Telegram, Signal …), and their calls go to the call
+     * icon. An ongoing notification of a mail or messaging app ("WhatsApp Web is active", a backup, a
+     * call in progress) is not a message and lights nothing. Only the package name, the category and
+     * the ongoing flag are looked at, never the content.
      */
-    public static int categoryOf(String packageName, String category) {
+    public static int categoryOf(String packageName, String category, boolean ongoing) {
         if (packageName == null) return 0;
-        if (CALL_PACKAGES.contains(packageName)) {
-            // only while it is actually ringing/missed, not for a chat notification of the dialer
-            return android.app.Notification.CATEGORY_CALL.equals(category)
-                    || android.app.Notification.CATEGORY_MISSED_CALL.equals(category) ? CALL : 0;
+        // only while it is actually ringing/missed, not for a chat notification of the dialer
+        boolean call = android.app.Notification.CATEGORY_CALL.equals(category)
+                || android.app.Notification.CATEGORY_MISSED_CALL.equals(category);
+        if (CALL_PACKAGES.contains(packageName)) return call ? CALL : 0;
+        if (MAIL_PACKAGES.contains(packageName)) {
+            if (call && MESSENGERS.contains(packageName)) return CALL;
+            return ongoing ? 0 : MAIL;
         }
-        if (MAIL_PACKAGES.contains(packageName)) return MAIL;
         return 0;
     }
 
     private static final java.util.Set<String> CALL_PACKAGES = new java.util.HashSet<>(java.util.Arrays.asList(
             "com.google.android.dialer", "com.samsung.android.dialer", "com.sonymobile.android.dialer",
             "android.dialer"));
+    /** Messengers whose calls count as calls. */
+    private static final java.util.Set<String> MESSENGERS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "com.whatsapp", "com.whatsapp.w4b", "org.telegram.messenger", "org.telegram.messenger.web",
+            "org.thoughtcrime.securesms", "com.facebook.orca", "ch.threema.app", "jp.naver.line.android"));
     private static final java.util.Set<String> MAIL_PACKAGES = new java.util.HashSet<>(java.util.Arrays.asList(
+            // Rideology's list
             "com.google.android.gm", "jp.co.yahoo.android.ymail", "jp.naver.line.android",
-            "com.google.android.apps.messaging", "com.kddi.android.cmail"));
+            "com.google.android.apps.messaging", "com.kddi.android.cmail",
+            // KawaNav's additions: messengers, other SMS and mail apps
+            "com.whatsapp", "com.whatsapp.w4b", "org.telegram.messenger", "org.telegram.messenger.web",
+            "org.thoughtcrime.securesms", "com.facebook.orca", "ch.threema.app",
+            "com.samsung.android.messaging", "com.android.messaging",
+            "com.microsoft.office.outlook", "com.samsung.android.email.provider"));
 
     /** Which icon the rider switched on in the settings. */
     public static boolean enabled(android.content.Context c, int category) {
@@ -70,7 +87,16 @@ public final class DashAlerts {
     }
 
     public static String name(int category) {
-        return category == CALL ? "call" : "mail/message";
+        return category == CALL ? "call" : category == MAIL ? "mail/message" : "ANCS " + ancsName(category);
+    }
+
+    /** Apple ANCS's category names, for the debug test of what a dash shows for each. */
+    static final String[] ANCS = {"Other", "Incoming call", "Missed call", "Voicemail", "Social", "Schedule",
+            "Email", "News", "Health and fitness", "Business and finance", "Location", "Entertainment"};
+
+    /** The ANCS name of a category id, or its number when ANCS has none. */
+    public static String ancsName(int category) {
+        return category >= 0 && category < ANCS.length ? category + " " + ANCS[category] : String.valueOf(category);
     }
 
     /** Notification keys currently behind each icon; the icon shows while a set is not empty. */

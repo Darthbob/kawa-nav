@@ -138,6 +138,10 @@ public class SettingsActivity extends KawaActivity {
     private LinearLayout notifDebugCard;
     private TextView notifStatus;
     private TextView debugBike;
+    /** Debug: the ANCS category the dash-notification test sends. */
+    private int ancsTest = 2;
+    /** Debug: what the next capture mark says ({@link RawCapture#MARKS}). */
+    private int markSel;
     private TextView debugIconsStatus;
     private TextView debugGatt;
     private int titleTaps;
@@ -422,7 +426,8 @@ public class SettingsActivity extends KawaActivity {
         addRow(c, choiceRow("Warn about a camera", "How far before it the warning comes",
                 warn, warnSel, pos -> prefs.edit().putInt(Hub.KEY_CAMERA_WARN, CAMERA_WARNS[pos]).apply()));
         addRow(c, switchRow("Say speed cameras", "With speed camera warnings on, each camera is also said in the "
-                + "helmet when its warning comes (\"Speed camera ahead, limit 50\"), or beeped. Like the curve "
+                + "helmet when its warning comes (\"Speed camera ahead, limit 50\"), or with beeps a two-tone "
+                + "siren, nothing like a bend's beeps. Like the curve "
                 + "warnings, only through a headset unless that is switched off", Hub.KEY_CAMERA_VOICE, false));
         return c;
     }
@@ -627,6 +632,7 @@ public class SettingsActivity extends KawaActivity {
                 + "(as KawaNav 0.6 and before did; Rideology always sends it)", Hub.KEY_DEBUG_NO_EXT, false));
         c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect: "
                 + "adb pull /sdcard/Android/data/" + getPackageName() + "/files/captures/", Hub.KEY_DEBUG_CAPTURE, false));
+        c.addView(markRow());
         LinearLayout reads = row();
         reads.setPadding(0, dp(6), 0, 0);
         for (int[] r : new int[][]{{BikeFrames.VEHICLE_INFO}, {BikeFrames.VEHICLE_SETTINGS}, {BikeFrames.SERVICE_INDICATOR}}) {
@@ -641,6 +647,7 @@ public class SettingsActivity extends KawaActivity {
             reads.addView(b, lp);
         }
         c.addView(reads);
+        c.addView(ancsTestRow());
         debugBike = secondary("");
         debugBike.setTypeface(Typeface.MONOSPACE);
         debugBike.setTextIsSelectable(true);
@@ -649,6 +656,60 @@ public class SettingsActivity extends KawaActivity {
         c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
         bikeDebugCard = c;
         return c;
+    }
+
+    /**
+     * Debug: marks a moment in the frame capture ("Indicator left", "Clutch in" …), tapped as it is done at
+     * the bike, so tools/frame_bytes.py can show which bytes changed with it: the way to learn what the
+     * bytes and frames are that nobody decodes (0x30, the unused parts of 0x4A/0x4B …).
+     */
+    private View markRow() {
+        LinearLayout box = column();
+        box.addView(choiceRow("Test mark", "With the capture on and the bike connected: pick what you are about "
+                + "to do, do it, tap Mark at that moment. At least 15 s between marks", RawCapture.MARKS, markSel,
+                pos -> markSel = pos));
+        Button mark = button("Mark now", v -> {
+            String label = RawCapture.MARKS[markSel];
+            String msg;
+            if (!RawCapture.enabled(this)) {
+                msg = "Switch \"Capture frames\" on and connect the bike again";
+            } else if (!RawCapture.mark(label)) {
+                msg = "No capture open: connect the bike";
+            } else {
+                Logger.log("Capture mark: " + label);
+                msg = "Marked: " + label;
+            }
+            android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
+        });
+        mark.setTextColor(Ui.accent(night));
+        outline(mark);
+        box.addView(mark, matchWrap());
+        return box;
+    }
+
+    /**
+     * Debug: sends a dash notification (0x12) of any ANCS category, to see whether the dash shows anything
+     * for the ones Rideology never sends (missed call, social, schedule …). Display only: nothing is set.
+     */
+    private View ancsTestRow() {
+        LinearLayout box = column();
+        String[] names = new String[DashAlerts.ANCS.length];
+        for (int i = 0; i < names.length; i++) names[i] = DashAlerts.ancsName(i);
+        box.addView(choiceRow("Dash notification test", "Rideology only sends 1 (call) and 6 (mail). Show one, "
+                + "look at the dash, then clear it", names, ancsTest, pos -> ancsTest = pos));
+        LinearLayout r = row();
+        for (int event : new int[]{DashAlerts.ADDED, DashAlerts.REMOVED}) {
+            Button b = button(event == DashAlerts.ADDED ? "Show" : "Clear", v -> android.widget.Toast.makeText(this,
+                    BridgeService.sendDashAlert(ancsTest, event) ? "Sent: " + DashAlerts.describe(ancsTest, event)
+                            : "Bike not connected", android.widget.Toast.LENGTH_SHORT).show());
+            b.setTextColor(Ui.accent(night));
+            outline(b);
+            LinearLayout.LayoutParams lp = weight();
+            lp.rightMargin = dp(Ui.SPACE1);
+            r.addView(b, lp);
+        }
+        box.addView(r);
+        return box;
     }
 
     /** Debug: text the meter gets as the phone's name (Bluetooth info on the dash?). */

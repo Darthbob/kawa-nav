@@ -136,7 +136,7 @@ public class MapsListener extends NotificationListenerService {
     private void dashAlert(StatusBarNotification sbn, boolean posted) {
         if (getPackageName().equals(sbn.getPackageName())) return;
         String category = sbn.getNotification().category;
-        int icon = DashAlerts.categoryOf(sbn.getPackageName(), category);
+        int icon = DashAlerts.categoryOf(sbn.getPackageName(), category, sbn.isOngoing());
         if (icon == 0) return;
         String key = sbn.getPackageName() + "|" + sbn.getId() + "|" + sbn.getTag();
         boolean change = posted ? DashAlerts.onPosted(icon, key) : DashAlerts.onRemoved(icon, key);

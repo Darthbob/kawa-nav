@@ -330,6 +330,14 @@ GPS noise. (inferred from the rides, not from the app)
   `08 0C 00 FF FF 0A 08 01 78 03 E8 00 C8 00 64`), never on ride-log start, with four unlabelled
   parameters 120 / 1000 / 200 / 100 (probably periods; **unknown**). Whether the meter needs it before
   streaming 0x4A is **unknown** — it is in KawaNav's "full" connect level for that reason.
+  - Its block marker is `0A`, not the `05` of the vehicle frames (0x12 uses `0A` too), then block id 08
+    and byte 7 = 1. Byte 8 = 120; bytes 9-10, 11-12 and 13-14 read as big-endian 16-bit values:
+    `03 E8` = 1000, `00 C8` = 200, `00 64` = 100. (Rideology's source writes `3` and `(byte) 1000`
+    as two separate bytes; together they are 1000.)
+  - **Hypothesis**: 1000 / 200 / 100 ms are the periods of three streams (for example 0x45, 0x4A and
+    0x4B), and 120 a timeout in seconds. If so, the 0x4A/0x4B data could come faster than the once a
+    second KawaNav records. Test (debug build only, after a capture): log the arrival times of
+    0x45/0x4A/0x4B with and without 0x08, then with other periods.
 - Sample rate: nothing is hardcoded; the app uploads `frequencyRidingLog` and the meter decides
   (**unknown**). Rows carry `elapsed_msec`, so the rate is whatever arrives.
 
@@ -351,7 +359,34 @@ GPS noise. (inferred from the rides, not from the app)
 - KEBC bits are forced to 0 for models where KEBC is unavailable (`oh/b.java:239-244`). (verified)
 - Absent fields stay all-ones inside their mask (`oh/b.java:234-247`). (verified)
 - **KECS, preload, load adjustment and damping are read but never written** (bytes 10-14 stay FF;
-  `oh/b.java:200-210` populates them but they are not emitted). (verified)
+  `oh/b.java:200-210` populates them but they are not emitted). (verified) Rideology's profiles still
+  store them, so on a BLE5 bike they are read-only in practice. Where they would go is only a guess:
+  the reply (below) carries them in bytes 10-13 of the same first block, so a write would most likely
+  use those bytes with the reply's bit layout. **Untried, and no Rideology version writes them**: do not
+  send them.
+- **The profile name is the title the rider gives the setting in Rideology**: the edit screen passes it
+  along with the values (`ae/j.java:378`, `ae/j.java:407`) and the write puts it in bytes 15-38. Nothing
+  on that screen says it goes to the bike. Whether a dash shows it anywhere (the Rider mode, a settings
+  page) is **unknown**. Since 1.2.1 KawaNav sends the name the rider types in the Ride settings card
+  (optional, cut after the last whole character that fits in 18 bytes, `SettingsWrite.fitName`);
+  before, it sent an empty one.
+
+### The meter's 0x48 reply
+
+The reply is laid out differently from the write: the tuning values move to the second block
+(`qe/b.java:705-725`, KawaNav `BikeFrames.VehicleSettings`). Each field is only read when the 0x47
+config says the bike has it.
+
+| Byte | Content |
+|---|---|
+| 7 | result of the write for the meter (see below); "meter tuning capability" in Rideology's store |
+| 10 | KECS preload (bits 5-3), KECS mode (bits 2-0) |
+| 11 | KECS load adjustment (bits 3-0) |
+| 12 | front compression (bits 7-4), front rebound (bits 3-0) |
+| 13 | rear compression (bits 7-4), rear rebound (bits 3-0) |
+| 17 | result for the ECU; "FI ECU tuning capability" in Rideology's store |
+| 18 | KTRC wire value (bits 6-3), riding mode (bits 2-0) |
+| 19 | KQS (bits 6-5), KEBC (bits 3-2), power (bits 1-0) |
 
 ### Values (index into the label arrays `ph/d.java`)
 
@@ -431,11 +466,21 @@ GPS noise. (inferred from the rides, not from the app)
   - EVENT `Ble5Value.f`: 0 = added, 2 = removed.
   - CATEGORY `Ble5Value.e`: **1 = incoming call, 6 = mail/message** (only these two exist).
   - STATE: 1 on add, 0 on remove.
+- **The ids are Apple ANCS's**: CategoryID 1 = IncomingCall and 6 = Email, EventID 0 = Added and
+  2 = Removed (ANCS's 1 = Modified is not used). ANCS also has 0 Other, 2 MissedCall, 3 Voicemail,
+  4 Social, 5 Schedule, 7 News, 8 HealthAndFitness, 9 BusinessAndFinance, 10 Location and
+  11 Entertainment. Rideology never sends those, and 0x1A declares nothing about categories, so
+  **whether a dash shows anything for them is unknown**. A debug test (KawaNav debug build, card
+  "Bike data" → "Dash notification test"): show category 2 or 4 and look at the dash, then clear it.
 - Input is a `NotificationListenerService` classifying status-bar notifications by package
   (`MyNotificationListenerService`): calls from dialer packages (`com.google.android.dialer`,
   `com.samsung.android.dialer`, `com.sonymobile.android.dialer`, `android.dialer`); mail/messages from
   `com.google.android.gm`, `jp.co.yahoo.android.ymail`, `jp.naver.line.android`,
   `com.google.android.apps.messaging`, `com.kddi.android.cmail`. Only two icons, no counts. (verified)
+- KawaNav (since 1.2.1) adds the messengers and mail apps used outside Japan to the mail icon: WhatsApp
+  (and Business), Telegram, Signal, Messenger, Threema, Outlook, Samsung Messages / Email and AOSP
+  Messaging; a `call`/`missed_call` notification of a messenger lights the call icon, and an ongoing
+  notification of a mail or messaging app lights nothing (`DashAlerts.categoryOf`).
 - The app emits **both** category frames on every change (the per-category switch only decides
   add vs remove), so a category that is off still gets a REMOVED frame. (verified)
 - Clearing is app-driven, never a timer: on notification removed it re-scans the active notifications;
@@ -491,6 +536,17 @@ roundabout exit 2 400m 140800FFFF057000FFFFFFFFFF10FF05711F000190FFFFFFFFFFFFFFF
 clear / no navigation 140800FFFF057030FFFFFFFFFFF0FF0571FF000000FFFFFFFFFFFFFFFFFFFFFFFFFFFF
 ```
 
+## Pairing history reset (0x0A)
+
+- `0A 00 00` on a BLE5 dash **deletes all the pairing history the bike keeps and cancels the pairing**.
+  It is Rideology's "Initialization settings" screen ("Deletes all pairing history saved in the
+  motorcycle and cancels pairing"; `VehicleInitializeFragment`, event `DELETE_LIST_MANUAL`,
+  `ne/c.java:100-104`). It is only offered while connected, and afterwards the app tells the rider to
+  remove the bike from the phone's Bluetooth list too. (verified in the code; never sent by KawaNav)
+- On BLE4 dashes the id 0x0A is a different frame: the call/mail icons (`oh/b.java:471-487`).
+- **KawaNav never sends frame type 0x0A** (the block id 0x0A inside 0x1B is something else). Keep it
+  that way unless a "forget this phone" feature is wanted on purpose.
+
 ## Text to the meter (phone name, 0x0B)
 
 The only text Rideology sends to a BLE5 meter is the phone's model name (`Build.MODEL`), once while
@@ -536,7 +592,23 @@ KawaNav never logs this frame.)
 ## Still unknown / to verify on the bike
 
 - Semantics of the 0x08 parameters (120 / 1000 / 200 / 100) and whether the meter needs 0x08 before
-  streaming 0x45/0x4A.
+  streaming 0x45/0x4A. The hypothesis (stream periods) and a test are in the riding-log section.
+- Whether a dash shows the 0x48 profile name, and whether it shows an icon for ANCS categories other
+  than 1 and 6 in 0x12.
+- Whether 0x1E can be written. Rideology only reads it: `1E 2A 01 FF FF` and three blocks
+  `05 0C 00`, `05 0D 00`, `05 0E 00` in bytes 5, 15 and 25, the rest `FF` (`ne/c.java:191-208`). In
+  0x48 and 0x1B, byte 7 = 1 turns a read into a write, so a 1 in bytes 7/17/27 might write the service
+  reminder (a reset after a service, say). **Pure speculation, and no Rideology version does it: do not
+  send it.**
+- The bits of 0x1A that Rideology's parser skips: byte 7 bits 5-2 and byte 13 bits 3-0
+  (`qe/a.java:326-348`).
+- What 0x30 and the undecoded bytes of the other frames carry. Rideology only reads the frame types it
+  registered a handler for (`ne/j.java:83-111` passes a frame to the first handler that accepts its
+  type, else drops it), so nothing in the app explains them. The way to find out: a debug capture
+  with **test marks** (debug card "Bike data" → "Test mark" → "Mark now", written as
+  `epochMs MARK label` lines that replays skip), taken at the bike while doing one thing at a time
+  (indicators, high beam, clutch, side stand, a riding mode changed on the dash …, at least 15 s
+  apart); then for each mark, the bytes that were steady before it and changed right after it.
 - Riding-log sample rate (meter/frequency controlled).
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
 - What the two TCS pairs (0x4A byte 24, 0x4B byte 51) actually report: the rider's level, an intervention,
@@ -557,13 +629,43 @@ KawaNav never logs this frame.)
 
 | Group | Ids | What they are |
 |---|---|---|
-| BLE5, in use | 0x03 0x08 0x0B 0x1A 0x1B 0x1D 0x1E 0x13 0x14 0x12 0x40 0x41 0x45 0x47 0x48 0x4A 0x4B | model info, meter init, phone name, capabilities, general settings, maintenance config/indicator, dash icons, turn-by-turn, notifications, the vehicle frames |
-| BLE5, seen but not decoded | 0x01 0x20 0x30 | 0x01 is an empty "accepted" reply; 0x20 the ACK; 0x30 the meter's status frame |
+| BLE5, in use | 0x03 0x08 0x0A 0x0B 0x1A 0x1B 0x1D 0x1E 0x13 0x14 0x12 0x40 0x41 0x45 0x47 0x48 0x4A 0x4B | model info, meter init, pairing-history reset (never sent by KawaNav), phone name, capabilities, general settings, maintenance config/indicator, dash icons, turn-by-turn, notifications, the vehicle frames |
+| BLE5, seen but not decoded | 0x01 0x20 0x30 | 0x01 is an empty "accepted" reply; 0x20 the ACK; 0x30 the meter's status frame, which Rideology has no receive handler for and drops |
 | EV / HEV family | 0x07 0x0E 0x11 0x16 0x17 0x23 0x24 0x31 0x32 0x35 0x42 0x52 0x62 | battery pack, EV modes, walk mode, an energy histogram. Reached only on the e-1 and HEV bikes |
-| BLE4 (older dashes) | 0x0A 0x12 as settings read, 0x17, and the 0x0E histogram | a different protocol entirely (see `Ble4VehicleSettingViewModel`) |
+| BLE4 (older dashes) | 0x0A (the call/mail icons there), 0x12 as settings read, 0x17, and the 0x0E histogram | a different protocol entirely (see `Ble4VehicleSettingViewModel`) |
 
   The EV/HEV ids are the ones a 2025+ petrol bike never sends; if one appears in a capture, the
   assumption that this is a BLE5 combustion meter is wrong.
+
+## What Rideology has but does not show (2.11.9)
+
+A search of the app for values a BLE5 dash takes but the rider does not see, or does not see go to the
+bike. (verified in the code; nothing here has been tried on a bike)
+
+- **Everything Rideology writes to a BLE5 dash**: the `XX 00 00` requests (0x03, 0x1A, 0x1D, 0x40, 0x41,
+  0x45, 0x47), 0x1B read and write, 0x48 read and write, the 0x1E read, 0x08, 0x0B, 0x12, 0x13, 0x14, the
+  [pairing-history reset 0x0A](#pairing-history-reset-0x0a) and, for EV/HEV, 0x42 (`ne/c.java`, the BLE5
+  branch of `oh/b.java`, `ne/p.java:200`). KawaNav knows all of them; there is no further BLE5 write in
+  the app.
+- **A hidden debug screen, "V2 Debug"** (`SystemInspectFragment`). The navigation graph has an action
+  from the settings to it (`action_settingsFragment_to_systemInspectFragment`), but no code uses it, so
+  a release build cannot open it. It shows the BLE service UUIDs and has tests for dialogs, location,
+  battery optimisation and Crashlytics. Its only bike part is a **shift-lamp test** that offers all
+  four statuses (off / tachometer / LED / LED + tachometer) whatever mode the 0x1A frame declares, and
+  sends them through the normal general-settings write (`ce/a.java:160-185`). The normal screen only
+  offers the statuses the dash declares.
+- **KECS, preload, load adjustment and damping**: kept in the profiles, never written to a BLE5 bike
+  (see [Vehicle settings](#vehicle-settings-riding-mode-power-ktrc-kqs-kebc-profile-name) and
+  [the reply](#the-meters-0x48-reply)).
+- **The profile name**: goes to the bike with every settings write, without the rider being told
+  (see [Vehicle settings](#vehicle-settings-riding-mode-power-ktrc-kqs-kebc-profile-name)).
+- **The dash clock**: no screen at all, only the sync on every connect (0x1B above).
+- **Units and date format** (temperature, date order, distance/fuel): the units screen writes them to
+  **BLE4 dashes only** (`UnitSettingFragment.java:97-143`, sent on the BLE4 path at `oh/b.java:457`).
+  The BLE5 general-settings path takes only the shift-lamp/clock object (`oh/b.java:267-276`), so a
+  BLE5 dash's units are set on the dash itself.
+- **Notification categories**: only call and mail, although the ids are ANCS's (see
+  [Dash notifications](#dash-notifications-callmail-icons)).
 
 ## What KawaNav implements today
 
@@ -575,8 +677,8 @@ KawaNav never logs this frame.)
 | Ride recording | 0x45, 0x4A, 0x4B + GPS | records locally; the suspension/IMU values (0x4B: travel, accelerations, rotation rates, filtered wheel speeds, TCS/KQS flags) and the rest of 0x4A (torque, brake pressures, ABS target, damping, cruise) are recorded per second since 0.8; nothing on the meter drives it (no start/stop frame); like Rideology, KawaNav asks for 0x45 at connect and when a recording starts without one |
 | Dash icons | 0x13 (battery, headset, riding log), 0x12 (call, mail) | sent; the riding-log icon follows the recorder. Not yet seen on a dash |
 | Clock | 0x1B write | optional setting, off by default; preserves the shift lamp |
-| Settings write | 0x48 (block 09, byte 7 = 1) | debug builds only until tried on a bike: riding mode, power, KTRC, KQS |
-| Shift lamp write | 0x1B (block 0x4A) | debug builds only; range and modes taken from the meter's 0x1A answer |
+| Settings write | 0x48 (block 09, byte 7 = 1) | riding mode, power, KTRC, KQS; in all builds since 1.2.1 (debug only before), not yet tried on a bike |
+| Shift lamp write | 0x1B (block 0x4A) | in all builds since 1.2.1 (debug only before), not yet tried on a bike; range and modes taken from the meter's 0x1A answer |
 
 Everything else in this document is protocol knowledge KawaNav does not use yet.
 

@@ -184,14 +184,31 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     /** Progress of a settings write, "" when none is running; shown on the bike screen. */
     public static String settingsJob = "";
+    /**
+     * What came of the last ride-settings and shift-lamp write, or why it was not sent, and when: shown on
+     * its card for {@link SettingsWrite#OUTCOME_MS}, so the rider learns whether the bike took it.
+     */
+    public static String settingsOutcome = "", lampOutcome = "";
+    public static long settingsOutcomeAt, lampOutcomeAt;
+
+    /** Notes what came of a ride-settings write, or why it was not sent; a running job is left alone. */
+    public static void noteSettings(String outcome) {
+        settingsOutcome = outcome;
+        settingsOutcomeAt = System.currentTimeMillis();
+    }
+
+    /** Notes what came of a shift-lamp write, or why it was not sent; a running job is left alone. */
+    public static void noteLamp(String outcome) {
+        lampOutcome = outcome;
+        lampOutcomeAt = System.currentTimeMillis();
+    }
 
     /**
-     * Writes ride settings to the bike: riding mode, power, KTRC, KQS and the profile name. Only from
-     * debug builds for now (it has never been tried on a bike), only while standing still, in neutral and
-     * with the throttle closed. Returns null when the job started, else why it did not.
+     * Writes ride settings to the bike: riding mode, power, KTRC, KQS and the profile name. Not tried on a
+     * bike yet: only while standing still, in neutral and with the throttle closed, and the settings are
+     * read back to compare. Returns null when the job started, else why it did not.
      */
     public static String writeSettings(int mode, int power, int ktrcLevel, int kqs, int kebc, String name) {
-        if (!Hub.DEBUG_TOOLS) return "writing settings is not enabled in this build yet";
         if (instance == null || !instance.ble.isReady()) return "the bike is not connected";
         if (!instance.requests.idle()) return "the bike is still answering another request, try again";
         long age = System.currentTimeMillis() - Hub.bike.liveAt;
@@ -204,6 +221,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         byte[] frame = SettingsWrite.frame(mode, power, ktrc, kqs, kebc, name);
         Hub.settingsWritePending = new PendingSettings(mode, power, ktrcLevel, kqs, kebc, name);
         settingsJob = "Sending…";
+        settingsOutcome = "";
         Logger.log("Bike: sending settings (mode " + mode + ", power " + power + ", KTRC " + ktrcLevel
                 + ", KQS " + kqs + ")");
         instance.requests.submit(new BikeRequests.Request(frame, "vehicle settings write",
@@ -233,6 +251,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (!answered) {
             settingsJob = "";
             Hub.settingsWritePending = null;
+            noteSettings("No answer from the bike: nothing was changed as far as KawaNav knows. Check the dash.");
             Logger.log("Bike: no answer to the settings write; nothing was changed as far as we know");
             return;
         }
@@ -245,6 +264,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (result != SettingsWrite.RESULT_OK) {
             settingsJob = "";
             Hub.settingsWritePending = null;
+            noteSettings("Not taken: the bike " + SettingsWrite.describeResult(result) + ".");
             Logger.log("Bike: settings write " + SettingsWrite.describeResult(result));
             return;
         }
@@ -259,13 +279,20 @@ public class BridgeService extends Service implements KawaBle.Listener {
         PendingSettings p = Hub.settingsWritePending;
         Hub.settingsWritePending = null;
         settingsJob = "";
-        if (p == null || Hub.bike.settings == null) return;
+        if (p == null) return;
+        if (Hub.bike.settings == null) {
+            noteSettings("Sent, but the settings could not be read back: check the dash.");
+            return;
+        }
         BikeFrames.VehicleSettings s = Hub.bike.settings;
         // the bike's own numbers on both sides (1 = Sport / Full / OFF …), as written
         boolean ok = s.ridingMode == p.mode && s.power == p.power && ktrcMatches(s.ktrc, p.ktrc)
                 && s.kqs == p.kqs && SettingsWrite.ktrcFromWire(s.ktrc) >= 0;
         Logger.log("Bike: settings read back: mode " + s.ridingMode + ", power " + s.power + ", KTRC "
                 + s.ktrc + ", KQS " + s.kqs + " -> " + (ok ? "as asked" : "NOT as asked"));
+        noteSettings(ok ? "Done: the bike reads back what was sent."
+                : "Sent, but the bike reads back mode " + s.ridingMode + ", power " + s.power + ", KTRC " + s.ktrc
+                + ", KQS " + s.kqs + " (its own numbers), not what was sent. Check the dash.");
     }
 
     /** The bike reports the KTRC field; the app sends OFF as 10. */
@@ -306,10 +333,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /**
      * Sets the shift lamp on the meter: when it lights (status) and at which engine speed (level code
      * 1..61). The clock is left as it is, the way Rideology's lamp-only write does it. The meter's answer
-     * carries the result in byte 7 and is read back afterwards. Debug builds only until it has been tried.
+     * carries the result in byte 7 and is read back afterwards. Not tried on a bike yet.
      */
     public static String writeShiftLamp(int status, int level) {
-        if (!Hub.DEBUG_TOOLS) return "writing to the dash is not enabled in this build yet";
         if (instance == null || !instance.ble.isReady()) return "the bike is not connected";
         BikeFrames.GeneralCaps caps = Hub.bike.caps;
         if (caps == null || !caps.shiftLampSettable) return "this dash does not take shift-lamp settings";
@@ -320,6 +346,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         byte[] frame = KawaProtocol.shiftLampWrite(status, level);
         Logger.log("Bike: sending shift lamp (status " + status + ", " + SettingsWrite.lampRpm(level) + " rpm)");
         settingsJob = "Sending the shift lamp…";
+        lampOutcome = "";
         instance.requests.submit(new BikeRequests.Request(frame, "shift lamp write", BikeRequests.DATA_OR_ACK,
                 BikeRequests.USER, (r, ok, result) -> instance.afterShiftLamp(ok)));
         return null;
@@ -344,9 +371,12 @@ public class BridgeService extends Service implements KawaBle.Listener {
         int result = g == null ? -1 : g.result;
         settingsJob = "";
         if (!answered || result != 0) {
+            noteLamp(answered ? "Not taken: the dash refused it (result " + result + ")."
+                    : "No answer from the dash: check it.");
             Logger.log("Bike: shift lamp " + (answered ? "refused (" + result + ")" : "not answered"));
             return;
         }
+        noteLamp("Taken by the dash: check its shift lamp.");
         Logger.log("Bike: shift lamp accepted, reading back");
         requests.submit(new BikeRequests.Request(KawaProtocol.generalSettingsRead(), "general settings read",
                 BikeRequests.DATA_OR_ACK, BikeRequests.USER, null));
