@@ -181,6 +181,56 @@ public final class RideStats {
         return sb.toString();
     }
 
+    /** The bends of this many of the latest rides that have any make the rider's usual lean ... */
+    public static final int BEND_RIDES = 20;
+    /** ... once there are at least this many of them. */
+    public static final int MIN_BENDS = 30;
+
+    /** The lean the rider usually takes a bend at, and what it comes from. */
+    public static final class BendLean {
+        /** Degrees, or NaN while there are fewer than {@link #MIN_BENDS} bends. */
+        public final double degrees;
+        public final int bends, rides;
+
+        BendLean(double degrees, int bends, int rides) {
+            this.degrees = degrees;
+            this.bends = bends;
+            this.rides = rides;
+        }
+
+        public boolean known() {
+            return degrees == degrees;
+        }
+    }
+
+    /**
+     * The lean the rider usually takes a bend at: of the bends in the latest {@link #BEND_RIDES} rides
+     * that have any ({@link Ride#bendLean}), the most lean of the middle one, half of the bends taken
+     * with less and half with more. Unknown below {@link #MIN_BENDS} bends.
+     *
+     * @param rides newest first, as {@link RideStore#list} gives them
+     */
+    public static BendLean usualBendLean(List<Ride> rides) {
+        int[] all = new int[Ride.Bends.MAX_PEAK + 1];
+        int bends = 0, used = 0;
+        for (Ride r : rides) {
+            if (used >= BEND_RIDES) break;
+            if (r.bendLean == null || r.isRecording()) continue;
+            used++;
+            for (int d = 0; d < Math.min(all.length, r.bendLean.length); d++) {
+                all[d] += r.bendLean[d];
+                bends += r.bendLean[d];
+            }
+        }
+        if (bends < MIN_BENDS) return new BendLean(Double.NaN, bends, used);
+        int seen = 0;
+        for (int d = 0; d < all.length; d++) {
+            seen += all[d];
+            if (seen * 2 >= bends) return new BendLean(d, bends, used);
+        }
+        return new BendLean(Double.NaN, bends, used); // not reached: seen ends at bends
+    }
+
     /** What the app says while a ride runs without a GPS track (a background start without GPS). */
     public static final String NO_TRACK = "no GPS track";
 

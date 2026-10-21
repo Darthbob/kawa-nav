@@ -55,6 +55,49 @@ public class SettingsActivity extends KawaActivity {
             + "• Normal: 55° or more, or tighter than 60 m\n"
             + "• Sharp: 100° or more, or tighter than 30 m\n"
             + "• Hairpin (U-turn arrow): 150° or more and tighter than 35 m";
+    /** Explanation of "Spoken curve warnings"; values from CurveAlerts. */
+    private static final String CURVE_SOUND_INFO =
+            "KawaNav says the kind of bend and its direction, like \"Sharp bend left\" or \"Hairpin right\", "
+            + "about 6 seconds before the bend starts at your speed: from 50 m before it when slow up to 300 m "
+            + "when fast. Each bend once, and nothing below 10 km/h. Your speed is the bike's own while it "
+            + "is connected, which has no GPS delay; without the bike, the GPS speed.\n\n"
+            + "The kinds are those of the arrow on the bike's display (see \"Which curves count\"):\n"
+            + "• Hairpins only\n"
+            + "• Sharp and hairpins\n"
+            + "• All curves: also normal and slight bends\n\n"
+            + "\"Also when too fast\" adds the bends you come at too fast for your pace, with \"slow down\"; "
+            + "it works also with this one off.\n\n"
+            + "A bend that starts within 80 m after the end of the one said is named with it: \"Hairpin left, "
+            + "then sharp bend right\". It is not said again on its own, unless you come at it too fast.\n\n"
+            + "It works with or without navigation, whatever the display shows. During navigation, a bend "
+            + "right before Maps' next maneuver is left to Maps' own voice. Needs downloaded roads, like the "
+            + "curves on the display. The voice is the phone's text-to-speech, in English.";
+
+    /** "Also when too fast", index: the {@link CurveAlerts} pace. */
+    private static final String[] PACE_NAMES = {"Off", "Relaxed", "Normal", "Sporty", "Fast", "From my rides"};
+
+    /** Explanation of "Also when too fast", with each pace's speeds from CurveAlerts. */
+    private static String curvePaceInfo() {
+        StringBuilder s = new StringBuilder("Your pace is how far you lean through a bend. From the bend's radius "
+                + "in the map data it gives the speed you would take the bend at:\n");
+        for (int p = CurveAlerts.RELAXED; p <= CurveAlerts.FAST; p++) {
+            double lean = CurveAlerts.PACE_LEAN[p];
+            s.append(String.format(Locale.ROOT, "\n• %s (%.0f°): %.0f km/h at a radius of 30 m, %.0f km/h at 100 m",
+                    PACE_NAMES[p], lean, CurveAlerts.okSpeed(30, lean) * 3.6, CurveAlerts.okSpeed(100, lean) * 3.6));
+        }
+        s.append(String.format(Locale.ROOT, "\n• From my rides: the lean you usually reach in a bend in your "
+                + "last %d rides, once they hold %d bends; Normal until then. A bend counts from %.0f km/h and "
+                + "%d° of lean. Needs rides recorded with the bike connected, and is worked out again each time "
+                + "KawaNav starts", RideStats.BEND_RIDES, RideStats.MIN_BENDS, Ride.Bends.MIN_KMH, Ride.Bends.MIN_PEAK));
+        return s.append(String.format(Locale.ROOT, "\n\nComing at a bend more than %.0f%% faster than that, you hear "
+                + "it with \"slow down\" (\"Bend left, slow down\") when gentle braking would only just be enough: "
+                + "about 0.3 g, after %.1f s to hear it and react. If you are slowing down enough already, "
+                + "nothing is said.\n\n"
+                + "Any kind of bend, also with \"Spoken curve warnings\" off, as long as it counts under \"Which "
+                + "curves count\". The radius from the map is rough, and a wide line makes a bend wider than "
+                + "the road: the speeds err on the careful side.",
+                (CurveAlerts.TOO_FAST - 1) * 100, CurveAlerts.REACTION_S)).toString();
+    }
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private RoadStore roadStore;
@@ -72,6 +115,12 @@ public class SettingsActivity extends KawaActivity {
     private boolean helmetsHidden; // the helmet list was built without Bluetooth permission
     // on the road
     private TextView freeModeStatus;
+    /** Speaks "Hear a curve warning"; started on the first tap. */
+    private CurveSound sampleSound;
+    /** Under "Also when too fast": the lean from the rides, for "From my rides". */
+    private TextView paceStatus;
+    private RideStats.BendLean ridesLean;
+    private boolean ridesLeanAsked;
     // offline
     private LinearLayout regionsList;
     private boolean offlineWasRunning;
@@ -131,6 +180,54 @@ public class SettingsActivity extends KawaActivity {
     protected void onPause() {
         handler.removeCallbacks(refresh);
         super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (sampleSound != null) sampleSound.shutdown();
+        super.onDestroy();
+    }
+
+    /**
+     * Under "Also when too fast" with "From my rides" chosen: the lean the rides give, or why they give none
+     * yet. Worked out once per screen, in the background (it reads the rides' files).
+     */
+    private void showPaceStatus(int pace) {
+        if (pace != CurveAlerts.FROM_RIDES) {
+            paceStatus.setVisibility(View.GONE);
+            return;
+        }
+        paceStatus.setVisibility(View.VISIBLE);
+        RideStats.BendLean l = ridesLean;
+        if (l == null) {
+            paceStatus.setText("Looking at your rides…");
+            if (ridesLeanAsked) return;
+            ridesLeanAsked = true;
+            RideStore store = new RideStore(this);
+            new Thread(() -> {
+                RideStats.BendLean found = store.usualBendLean();
+                runOnUiThread(() -> {
+                    ridesLean = found;
+                    showPaceStatus(prefs.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF));
+                });
+            }, "rides-lean").start();
+        } else if (l.known()) {
+            paceStatus.setText(String.format(Locale.ROOT, "You usually lean %.0f° in a bend: %d bends in your last %d %s",
+                    Math.min(CurveAlerts.MAX_LEAN, l.degrees), l.bends, l.rides, l.rides == 1 ? "ride" : "rides"));
+        } else {
+            paceStatus.setText(String.format(Locale.ROOT, "%d of the %d bends it needs in your rides so far: "
+                    + "Normal until then", l.bends, RideStats.MIN_BENDS));
+        }
+    }
+
+    /** "Hear a curve warning": what a sharp left bend gets, through whatever the phone plays on now. */
+    private void playCurveSample() {
+        if (sampleSound == null) sampleSound = new CurveSound(this);
+        if (prefs.getBoolean(Hub.KEY_CURVE_BEEPS, false) || !sampleSound.canSpeak()) {
+            sampleSound.beep(CurveBeeps.bends(3, false, -1));
+        } else {
+            sampleSound.say(CurveAlerts.phrase(3));
+        }
     }
 
     private final Runnable refresh = new Runnable() {
@@ -268,6 +365,34 @@ public class SettingsActivity extends KawaActivity {
                     prefs.edit().putInt(Hub.KEY_NAV_CURVES, pos).apply();
                     BridgeService.settingsChanged();
                 }));
+        addRow(c, choiceRow("Spoken curve warnings", "Said in your helmet a few seconds before the curve",
+                CURVE_SOUND_INFO, new String[]{"Off", "Hairpins only", "Sharp and hairpins", "All curves"},
+                prefs.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), pos -> {
+                    prefs.edit().putInt(Hub.KEY_CURVE_SOUND, pos).apply();
+                    BridgeService.settingsChanged();
+                }));
+        paceStatus = secondary("");
+        paceStatus.setTextColor(Ui.accent(night));
+        int pace = prefs.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
+        addRow(c, choiceRow("Also when too fast", "Any bend, with \"slow down\", when you come at it faster than "
+                + "your pace takes it", curvePaceInfo(), paceStatus, PACE_NAMES, pace, pos -> {
+                    prefs.edit().putInt(Hub.KEY_CURVE_PACE, pos).apply();
+                    BridgeService.settingsChanged();
+                    showPaceStatus(pos);
+                }));
+        showPaceStatus(pace);
+        addRow(c, switchRow("Speak only through a headset", "Quiet while no Bluetooth or wired headset is "
+                + "connected, so the phone itself does not speak", Hub.KEY_CURVE_SOUND_HEADSET, true));
+        addRow(c, switchRow("Beeps instead of words", "In the ear of the bend's side: one beep for a bend, two "
+                + "for a sharp one, three for a hairpin, higher and quicker when too fast", Hub.KEY_CURVE_BEEPS, false));
+        LinearLayout sr = settingRow();
+        LinearLayout st = column();
+        st.addView(itemTitle("Hear a curve warning"));
+        st.addView(secondary("Plays the warning for a sharp bend to the left now (\"" + CurveAlerts.phrase(3)
+                + "\", or its beeps), to set the volume in the helmet"));
+        sr.addView(st, weight());
+        sr.addView(secondaryButton("Play", v -> playCurveSample()));
+        addRow(c, sr);
         addRow(c, choiceRow("Which curves count", "How much a bend must turn to be shown", CURVES_INFO,
                 new String[]{"Only tight ones", "Normal", "Also gentle ones", "All over 15°"}, prefs.getInt(Hub.KEY_SENSITIVITY, 1),
                 pos -> prefs.edit().putInt(Hub.KEY_SENSITIVITY, pos).apply()));
@@ -296,6 +421,9 @@ public class SettingsActivity extends KawaActivity {
         }
         addRow(c, choiceRow("Warn about a camera", "How far before it the warning comes",
                 warn, warnSel, pos -> prefs.edit().putInt(Hub.KEY_CAMERA_WARN, CAMERA_WARNS[pos]).apply()));
+        addRow(c, switchRow("Say speed cameras", "With speed camera warnings on, each camera is also said in the "
+                + "helmet when its warning comes (\"Speed camera ahead, limit 50\"), or beeped. Like the curve "
+                + "warnings, only through a headset unless that is switched off", Hub.KEY_CAMERA_VOICE, false));
         return c;
     }
 

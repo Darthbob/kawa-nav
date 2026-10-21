@@ -322,6 +322,11 @@ public final class RideStore {
             }
             r.shiftsUp = o.optInt("shiftsUp");
             r.shiftsDown = o.optInt("shiftsDown");
+            org.json.JSONArray bends = o.optJSONArray("bendLean");
+            if (bends != null) {
+                r.bendLean = new int[Ride.Bends.MAX_PEAK + 1];
+                for (int d = 0; d < Math.min(bends.length(), r.bendLean.length); d++) r.bendLean[d] = bends.optInt(d);
+            }
             r.kqsUp = o.has("kqsUp") ? o.optDouble("kqsUp") : Double.NaN;
             r.kqsDown = o.has("kqsDown") ? o.optDouble("kqsDown") : Double.NaN;
             org.json.JSONArray bbox = o.optJSONArray("bbox");
@@ -353,6 +358,17 @@ public final class RideStore {
         }
         if (done > 0) Logger.log("Ride: " + done + " older rides summarised");
         return done;
+    }
+
+    /**
+     * The lean the rider usually takes a bend at, from the latest rides ({@link RideStats#usualBendLean}).
+     * Those of them saved before the summary counted bends are summarised first, a few per call: reads
+     * files, so not on the main thread.
+     */
+    public RideStats.BendLean usualBendLean() {
+        List<Ride> rides = list();
+        summariseOutdated(rides.subList(0, Math.min(rides.size(), RideStats.BEND_RIDES)), RideStats.BEND_RIDES);
+        return RideStats.usualBendLean(rides);
     }
 
     /** Saves the summary (background, atomically: temporary file then rename). */
@@ -405,6 +421,11 @@ public final class RideStore {
                 o.put("gearS", g);
                 o.put("shiftsUp", r.shiftsUp);
                 o.put("shiftsDown", r.shiftsDown);
+            }
+            if (r.bendLean != null) {
+                org.json.JSONArray b = new org.json.JSONArray();
+                for (int n : r.bendLean) b.put(n);
+                o.put("bendLean", b);
             }
             if (r.kqsUp == r.kqsUp) o.put("kqsUp", round(r.kqsUp));
             if (r.kqsDown == r.kqsDown) o.put("kqsDown", round(r.kqsDown));

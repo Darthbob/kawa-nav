@@ -19,9 +19,9 @@ import java.util.concurrent.Executors;
  * Curves of the road you are on: GPS fix + heading -> match to an OpenStreetMap road -> follow it
  * ahead -> {@link CurveDetector} (and roundabouts with the exit that continues the road).
  *
- * Used for free mode (shows the next curve) and for curve warnings between Google Maps
- * instructions. Roads come from the downloaded regions ({@link RoadStore} tiles): the 3x3 tiles
- * around the rider. Nothing is fetched while riding.
+ * Used for free mode (shows the next curve), for curve warnings between Google Maps
+ * instructions and for the spoken curve warnings. Roads come from the downloaded regions
+ * ({@link RoadStore} tiles): the 3x3 tiles around the rider. Nothing is fetched while riding.
  */
 @SuppressLint("MissingPermission") // location permission is checked before start()
 public final class CurveEngine implements LocationListener {
@@ -55,6 +55,9 @@ public final class CurveEngine implements LocationListener {
     private RoadNetwork.Approach approach;
     private Hub.Output output;
     private List<CurveDetector.Curve> curves = Collections.emptyList();
+    /** The network the coordinates of {@link #curves} are in, and the speed of their fix (m/s). */
+    private RoadNetwork curvesNet;
+    private double curvesSpeed;
     private long outputAt;
 
     /** Speed cameras of the tiles around the rider, and the one ahead. */
@@ -87,6 +90,7 @@ public final class CurveEngine implements LocationListener {
         ((LocationManager) context.getSystemService(Context.LOCATION_SERVICE)).removeUpdates(this);
         output = null;
         curves = Collections.emptyList();
+        curvesNet = null;
         lastMatch = null;
         camera = null;
         cameras = Collections.emptyList();
@@ -131,6 +135,23 @@ public final class CurveEngine implements LocationListener {
             return new Hub.Output(c.turn, roundDistance(c.startDist), "Curve");
         }
         return null;
+    }
+
+    /** The curves ahead for the spoken warnings, each with where it starts; empty when the fix is old. */
+    public List<CurveAlerts.Ahead> curvesAhead() {
+        RoadNetwork net = curvesNet;
+        if (!fresh() || net == null) return Collections.emptyList();
+        List<CurveAlerts.Ahead> out = new ArrayList<>(curves.size());
+        for (CurveDetector.Curve c : curves) {
+            double[] at = net.unproject(c.startX, c.startY);
+            out.add(new CurveAlerts.Ahead(c.turn, c.startDist, c.endDist, c.minRadius, at[0], at[1]));
+        }
+        return out;
+    }
+
+    /** Speed of the fix the curves are from, m/s (0 when it had none). */
+    public double speed() {
+        return curvesSpeed;
     }
 
     @Override
@@ -199,6 +220,8 @@ public final class CurveEngine implements LocationListener {
             if (!inRoundabout) found.add(cv);
         }
         curves = found;
+        curvesNet = net;
+        curvesSpeed = loc.hasSpeed() ? loc.getSpeed() : 0;
         double ahead = pathLength(path);
         // inside a bend the rider is already handling it: show the one after
         CurveDetector.Curve next = CurveDetector.next(found);

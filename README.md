@@ -45,6 +45,10 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   are on (slight / normal / sharp / hairpin) with its distance, roundabouts with the exit that
   continues the road, and on straights the straight arrow with the distance to the next curve.
   Works from offline OpenStreetMap data, no mobile data needed while riding.
+- 🗣️ **Spoken curve warnings** (optional, off by default): "Sharp bend left", "Hairpin right" in your
+  helmet a few seconds before the bend, for the kinds of bend you choose, and "Bend left, slow down"
+  when you come at a bend too fast for your pace, a pace you pick or the one your recorded rides
+  show. With or without navigation.
 - 🔋 **Phone battery and headset on the dash**: the dash's phone battery icon shows the phone's charge
   in 4 bars, like with Rideology, and that it is charging; the headset icon shows while your helmet
   intercom is connected.
@@ -190,6 +194,10 @@ In the **Settings** tab:
 | [Google Maps directions](#google-maps-directions) | On | Off: Maps is ignored, free ride also runs during navigation |
 | [Show upcoming curves](#show-upcoming-curves) | On | Free ride when Maps is not navigating |
 | [Curve warnings during navigation](#curve-warnings-during-navigation) | Off | Off / sharp only / all curves between Maps directions |
+| [Spoken curve warnings](#spoken-curve-warnings) | Off | Off / hairpins only / sharp and hairpins / all curves, said in the helmet |
+| [Also when too fast](#too-fast-for-your-pace) | Off | Off / Relaxed / Normal / Sporty / Fast / From my rides: any bend, with "slow down" |
+| [Speak only through a headset](#spoken-curve-warnings) | On | No spoken warnings while no headset is connected |
+| [Beeps instead of words](#spoken-curve-warnings) | Off | The warnings as beeps in the ear of the bend's side |
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° (explained in the app) |
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
@@ -200,6 +208,7 @@ In the **Settings** tab:
 | Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
 | Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Messages, LINE, …) |
 | [Speed camera warnings](#-speed-cameras) | Off | Cameras on the phone and on the dash |
+| [Say speed cameras](#-speed-cameras) | Off | Each camera also said in the helmet (or beeped) |
 | [Distances in feet](#distances-in-feet) | Off | Imperial distances |
 | [Left-hand traffic](#left-hand-traffic) | Off | For countries driving on the left (UK, Ireland, …) |
 
@@ -234,6 +243,76 @@ bend is shown from 300 m before it, and only if it starts at least 50 m before M
 afterwards the dash goes back to Maps' arrow. "Sharp only" shows sharp bends and hairpins, "All"
 every bend that counts under "Which curves count". Off by default: the dash then shows only Google
 Maps. Needs downloaded roads like free ride.
+
+#### Spoken curve warnings
+
+KawaNav says the kind of bend and its direction — "Hairpin right", "Sharp bend left", "Bend left",
+"Slight bend right", the kinds of the dash's arrow — about 6 seconds before the bend starts at your
+speed: 50 m before it when slow, up to 300 m when fast. Pick which bends are said: hairpins only,
+sharp bends and hairpins, or all curves that count under "Which curves count". Off by default.
+
+- Each bend is said once, however often the curves are found again on the way to it, and nothing is
+  said below 10 km/h. A bend that comes less than 4 s after the last warning waits for its turn.
+- Your speed, for when a warning comes and for "too fast", is the bike's own while it is connected
+  (it has no delay; the GPS speed comes up to a second late), and the GPS speed without the bike.
+- A bend that starts within 80 m after the end of the one said is named with it: "Hairpin left, then
+  sharp bend right". It is not said again on its own, unless you come at it too fast (see below).
+  Only a bend of the kinds you picked is named this way (any kind when the kinds are off).
+- It works with or without navigation, whatever the dash shows. During navigation a bend within 50 m
+  of Maps' next maneuver is left to Maps' own voice, and nothing is said while Maps names no distance.
+- The voice is the phone's text-to-speech, in English (the phone's own voice reads the words if no
+  English voice is installed). It plays as navigation guidance, like Google Maps' voice: it goes to
+  the helmet intercom and turns music down while it speaks.
+- **Speak only through a headset** (on by default) keeps it quiet while no Bluetooth or wired headset
+  is connected, so the phone does not speak out of a pocket.
+- **Beeps instead of words** (off by default): the bend beeps in the ear of its side (the other ear
+  hears it faintly, so a mono intercom still plays it). One beep for a slight or normal bend, two for
+  a sharp one, three for a hairpin; higher and quicker when you are too fast for it. A bend named with
+  it follows after a short pause, in its own ear. A phone without text-to-speech beeps anyway.
+- **Hear a curve warning** → Play plays the warning for a sharp bend to the left right away ("Sharp
+  bend left", or its two beeps), to set the volume in the helmet.
+
+Needs downloaded roads like free ride.
+
+##### Too fast for your pace
+
+**Also when too fast** (off by default) says a bend of any kind, with "slow down" ("Bend left, slow
+down"), when you come at it faster than your pace takes it. It works also with "Spoken curve
+warnings" off, for the bends that count under "Which curves count". The pace is how far you lean
+through a bend; from the bend's radius in the map data it gives the speed you would take it at
+(v² = g · r · tan lean):
+
+| Pace | Lean | Radius 30 m | 60 m | 100 m | 200 m |
+|---|---|---|---|---|---|
+| Relaxed | 20° | 37 km/h | 53 km/h | 68 km/h | 96 km/h |
+| Normal | 28° | 45 km/h | 64 km/h | 82 km/h | 116 km/h |
+| Sporty | 35° | 52 km/h | 73 km/h | 94 km/h | 133 km/h |
+| Fast | 42° | 59 km/h | 83 km/h | 107 km/h | 151 km/h |
+
+**From my rides** leans as you do: the lean you usually reach in a bend in your recorded rides.
+
+- Every ride counts its bends: seconds from 30 km/h leant the same way by more than 10°, each bend
+  counted with the most lean it reached, if that is at least 15° (sweeps where nobody leans are
+  left out) and at most 60° (no lean anyone rides).
+- Your usual lean is the middle one of the bends in your last 20 rides that have any: half of them
+  taken with less lean, half with more. It is used up to 45°.
+- It needs 30 bends. Until then it leans as Normal, and the setting says how many bends it has so far.
+- It is worked out again each time KawaNav starts, so a ride finished today counts from the next start.
+  Rides recorded before this version count once they are summarised again, which happens the first
+  time this is worked out, or when they are opened.
+- The lean comes from the bike, so only rides recorded with the bike connected have bends. It is the
+  bike's own reading as recorded (its scaling is among the [known limitations](#-known-limitations)).
+
+Then:
+
+- Too fast means more than 10% over that speed.
+- It is said once gentle braking would only just be enough: 2.5 s to hear it and react, then about
+  0.3 g down to the pace's speed, at most 500 m before the bend. If you are already slowing down
+  enough, the distance you need shrinks faster than the distance left, and nothing is said.
+- A bend of a kind you chose under "Spoken curve warnings" gets "slow down" added when you are too
+  fast for it at the moment it is said.
+- The radius from the map is rough, and a wide line makes a bend wider than the road: the speeds err
+  on the careful side.
 
 #### Fuel economy
 
@@ -463,6 +542,10 @@ over within 250 m, so the maneuver stays visible longer.
   the rider or behind is not warned again, so passing one does not repeat.
 - Fixed cameras, red-light cameras and average-speed sections are told apart by the data; where
   OpenStreetMap knows the limit, it is shown with it.
+- **Say speed cameras** (off by default): each camera is also said in the helmet when its warning
+  comes — "Speed camera ahead, limit 50", "Red-light camera ahead" — or, with "Beeps instead of
+  words", two rising tones. It follows the [spoken curve warnings](#spoken-curve-warnings)' rules
+  (only through a headset unless that is switched off) and waits for a bend being said to finish.
 - Camera data in OpenStreetMap is incomplete, sometimes outdated, and can be missing where you ride:
   **this is not a radar detector and no reason to rely on it.** Speed limits and road signs always apply.
 
@@ -500,6 +583,10 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   outside.
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
+- **Spoken curve warnings are not tried on the bike yet.** They come from the same map data as the
+  arrows, so a bend drawn wrongly in OpenStreetMap is said wrongly, and the GPS is about a second
+  behind. An intercom connected only as a phone headset (no music profile) may leave the voice on the
+  phone's speaker.
 - The camera warning is what OpenStreetMap has, nothing else: no mobile or temporary checks, and no
   camera icon on the dash (it shows the destination flag with the distance). Not tried on the bike yet.
 - The refuel diary, the battery log and the ride records never touch the bike; they are kept on the phone

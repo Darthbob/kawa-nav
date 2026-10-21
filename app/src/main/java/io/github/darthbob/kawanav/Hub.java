@@ -184,6 +184,19 @@ public final class Hub {
     public static String rideId;
     /** Curve warnings between Google Maps instructions: 0 off, 1 sharp curves only, 2 all curves. */
     public static final String KEY_NAV_CURVES = "nav_curves";
+    /** Curves said by voice: {@link CurveAlerts#OFF} (default), HAIRPINS, SHARP or ALL. */
+    public static final String KEY_CURVE_SOUND = "curve_sound";
+    /**
+     * Bends also said, with "slow down", when the rider comes at them too fast for this pace:
+     * {@link CurveAlerts#PACE_OFF} (default), RELAXED, NORMAL, SPORTY, FAST or FROM_RIDES.
+     */
+    public static final String KEY_CURVE_PACE = "curve_pace";
+    /** The curve warnings (and the spoken cameras) as beeps instead of words (off unless turned on). */
+    public static final String KEY_CURVE_BEEPS = "curve_beeps";
+    /** With the speed camera warnings on: each camera also said in the helmet (off unless turned on). */
+    public static final String KEY_CAMERA_VOICE = "camera_voice";
+    /** Spoken curve warnings only while a headset is connected (on unless turned off). */
+    public static final String KEY_CURVE_SOUND_HEADSET = "curve_sound_headset";
 
     /** Free mode (show upcoming curves) is on unless turned off; Google Maps navigation takes priority. */
     /** Speed camera warnings are on. */

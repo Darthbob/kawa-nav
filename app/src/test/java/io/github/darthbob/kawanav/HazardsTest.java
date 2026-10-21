@@ -82,6 +82,14 @@ public class HazardsTest {
     }
 
     @Test
+    public void whatTheVoiceSays() {
+        Hazards.Camera fixed = at(300, 0);
+        assertEquals("Speed camera ahead, limit 50", Hazards.spoken(fixed));
+        assertEquals("Red-light camera ahead",
+                Hazards.spoken(new Hazards.Camera(2, fixed.lat7, fixed.lon7, "red_light", 0)));
+    }
+
+    @Test
     public void maxspeedFromTagValues() {
         assertEquals(50, PbfImporter.maxspeedKmh("50"));
         assertEquals(50, PbfImporter.maxspeedKmh("50 km/h"));

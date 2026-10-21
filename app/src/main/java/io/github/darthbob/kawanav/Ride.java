@@ -84,8 +84,9 @@ public final class Ride {
      * 3: the torque, the fuel use, the suspension speeds and the raw brake values.
      * 4: the IMU accelerations, wheel and GPS speeds, lean, instant fuel economy, rotation rates, rear
      * wheel slip, the time in each gear and the gear changes.
+     * 5: the bends by their most lean ({@link #bendLean}).
      */
-    public static final int SUMMARY_VERSION = 4;
+    public static final int SUMMARY_VERSION = 5;
     /** Which summary the file holds, 0 for a ride saved by a version that did not know about metrics. */
     public int summaryVersion;
 
@@ -266,6 +267,52 @@ public final class Ride {
      * clutch, not for every shift (PROTOCOL.md, 0x4B byte 51). NaN when the ride has no such column.
      */
     public double kqsUp = Double.NaN, kqsDown = Double.NaN;
+    /**
+     * The ride's bends by the most lean reached in each, in whole degrees: {@code bendLean[27]} bends
+     * were leant over 27° at most. Null when the ride has no bend (or no lean at all). The lean a rider
+     * usually takes a bend at comes from it ({@link RideStats#usualBendLean}).
+     */
+    public int[] bendLean;
+
+    /**
+     * Counts the bends of a ride, one recorded second after the other. A bend is a run of seconds leant
+     * the same way by more than {@link #LEAN_IN} while riding (from {@link #MIN_KMH}); its most lean says
+     * how hard it was taken. A bend that never reaches {@link #MIN_PEAK} is a sweep where nobody leans,
+     * and a reading beyond {@link #MAX_PEAK} is not a lean anyone rides (a fall, a bad frame).
+     */
+    static final class Bends {
+        static final double LEAN_IN = 10, MIN_KMH = 30;
+        static final int MIN_PEAK = 15, MAX_PEAK = 60;
+        private final int[] byPeak = new int[MAX_PEAK + 1];
+        private boolean any;
+        private int side;
+        private double peak;
+
+        void add(RideTsv.Sample s) {
+            double kmh = s.kmh == s.kmh ? s.kmh : s.gpsKmh;
+            int now = !(kmh >= MIN_KMH) || !(Math.abs(s.lean) > LEAN_IN) ? 0 : s.lean > 0 ? 1 : -1;
+            if (now != side) {
+                close();
+                side = now;
+            }
+            if (now != 0) peak = Math.max(peak, Math.abs(s.lean));
+        }
+
+        private void close() {
+            if (side != 0 && peak >= MIN_PEAK && peak <= MAX_PEAK) {
+                byPeak[(int) Math.round(peak)]++;
+                any = true;
+            }
+            peak = 0;
+        }
+
+        /** The bends by their most lean, or null without any. */
+        int[] result() {
+            close();
+            side = 0;
+            return any ? byPeak.clone() : null;
+        }
+    }
 
     /** Recomputes the summary from the recorded samples (after a crash, or to check the file). */
     public void summarize(List<RideTsv.Sample> samples) {
@@ -295,8 +342,10 @@ public final class Ride {
         double kqsU = 0, kqsD = 0, prevKqsU = Double.NaN, prevKqsD = Double.NaN;
         boolean kqsSeen = false;
         Distance dist = new Distance();
+        Bends bends = new Bends();
         for (RideTsv.Sample s : samples) {
             if ((s.flags & RideTsv.FLAG_BIKE) != 0) hasBike = true;
+            bends.add(s);
             if (s.hasGps()) {
                 hasGps = true;
                 addPoint(s.lat, s.lon);
@@ -357,6 +406,7 @@ public final class Ride {
             prevKqsD = s.kqs_down;
         }
         gearS = gearSeen ? gears : null;
+        bendLean = bends.result();
         kqsUp = kqsSeen ? kqsU : Double.NaN;
         kqsDown = kqsSeen ? kqsD : Double.NaN;
         // seen but never on is 0 seconds ("never cut in"); a column the ride does not have stays unknown

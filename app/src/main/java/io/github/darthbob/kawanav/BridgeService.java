@@ -68,6 +68,12 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private KawaBle ble;
     private CurveEngine curve;
+    /** Says the curves while the spoken curve warnings are on, else null. */
+    private CurveSound curveSound;
+    private final CurveAlerts curveAlerts = new CurveAlerts();
+    /** The rider's usual lean for the "From my rides" pace, worked out once per start; null until then. */
+    private RideStats.BendLean ridesLean;
+    private boolean ridesLeanAsked;
     private RideRecorder recorder;
     /** Decodes the meter's frames; new per connection (it remembers the bike's config frames). */
     private BikeFrames.Decoder decoder = new BikeFrames.Decoder();
@@ -501,6 +507,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             BikeStore.save(this);
         }
         curve.stop();
+        if (curveSound != null) curveSound.shutdown();
         closeAudioProfiles();
         KawaBle b = ble;
         if (b.isReady()) {
@@ -715,10 +722,33 @@ public class BridgeService extends Service implements KawaBle.Listener {
         boolean free = Hub.freeMode(this);
         boolean navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, 0) > 0;
         boolean cameras = Hub.camerasEnabled(this);
-        if ((free || navCurves || cameras) && locationAllowed) {
+        int pace = Hub.prefs(this).getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
+        boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF
+                || pace > CurveAlerts.PACE_OFF || (cameras && Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false));
+        if (pace == CurveAlerts.FROM_RIDES && !ridesLeanAsked) {
+            ridesLeanAsked = true;
+            RideStore store = recorder.store();
+            new Thread(() -> {
+                RideStats.BendLean l = store.usualBendLean(); // reads the rides' files
+                handler.post(() -> {
+                    ridesLean = l;
+                    Logger.log(l.known()
+                            ? String.format(Locale.ROOT, "Curve pace from rides: %.0f° (%d bends, %d rides)", l.degrees, l.bends, l.rides)
+                            : "Curve pace from rides: " + l.bends + " bends so far, leaning as Normal");
+                });
+            }, "rides-lean").start();
+        }
+        if ((free || navCurves || cameras || spoken) && locationAllowed) {
             curve.start();
         } else {
             curve.stop();
+        }
+        // the speech engine starts with the setting, so the first curve is not said late
+        if (spoken && curveSound == null) {
+            curveSound = new CurveSound(this);
+        } else if (!spoken && curveSound != null) {
+            curveSound.shutdown();
+            curveSound = null;
         }
         tick();
     }
@@ -758,6 +788,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.output = out;
         if (out != null && out.cameraId >= 0) cameraAlert(out);
         else cameraGone();
+        sayCurve(now);
         bikeAlerts(now);
         refuelCheck(now);
         batteryCheck(now);
@@ -1056,6 +1087,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         lastCameraId = out.cameraId;
         lastCameraAt = now;
         Logger.log("Camera: " + out.alert);
+        sayCamera(out.cameraId);
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -1067,6 +1099,62 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 .setAutoCancel(true)
                 .build();
         getSystemService(NotificationManager.class).notify(CAMERA_NOTIFICATION_ID, n);
+    }
+
+    /**
+     * Spoken curve warnings: the next curve of the chosen kinds a few seconds before it, or one the rider
+     * comes at too fast for the chosen pace, once each (see {@link CurveAlerts}). Whatever the dash shows:
+     * during navigation too, except at Maps' maneuver.
+     */
+    private void sayCurve(long now) {
+        if (!soundAllowed()) return;
+        SharedPreferences p = Hub.prefs(this);
+        Hub.MapsTurn m = Hub.mapsEnabled(this) ? Hub.maps : null;
+        double maneuver = m == null ? Double.POSITIVE_INFINITY : m.distanceM;
+        BikeFrames.Telemetry live = Hub.bike.live;
+        double speed = CurveAlerts.speed(live == null ? Double.NaN : live.speedKmh, now - Hub.bike.liveAt, curve.speed());
+        CurveAlerts.Warning w = curveAlerts.next(curve.curvesAhead(), speed,
+                p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), paceLean(p.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF)),
+                maneuver, now);
+        if (w == null) return;
+        String text = w.text();
+        Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h (GPS %.0f, radius %.0f m%s)",
+                text, w.curve.startDist, speed * 3.6, curve.speed() * 3.6, w.curve.minRadius,
+                Double.isInfinite(w.okSpeed) ? "" : String.format(Locale.ROOT, ", pace %.0f km/h", w.okSpeed * 3.6)));
+        if (beeps()) curveSound.beep(CurveBeeps.of(w));
+        else curveSound.say(text);
+    }
+
+    /** A warning may be played: the sound is on, and a headset is connected unless that is not asked for. */
+    private boolean soundAllowed() {
+        if (curveSound == null || !locationAllowed) return false;
+        return !Hub.prefs(this).getBoolean(Hub.KEY_CURVE_SOUND_HEADSET, true) || CurveSound.headsetConnected(this);
+    }
+
+    /** Beeps instead of words: asked for, or the phone cannot speak. */
+    private boolean beeps() {
+        return Hub.prefs(this).getBoolean(Hub.KEY_CURVE_BEEPS, false) || !curveSound.canSpeak();
+    }
+
+    /** The camera just announced, said too when "Say speed cameras" is on; after a bend being said, not over it. */
+    private void sayCamera(long cameraId) {
+        if (!Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false) || !soundAllowed()) return;
+        Hazards.Ahead a = curve.cameraAhead();
+        if (a == null || a.camera.id != cameraId) return;
+        if (beeps()) {
+            curveSound.beep(CurveBeeps.camera());
+        } else {
+            curveSound.sayAfter(Hazards.spoken(a.camera));
+        }
+    }
+
+    /** The lean of the chosen pace, degrees, 0 for none. "From my rides" leans as Normal until the rides say more. */
+    private double paceLean(int pace) {
+        if (pace == CurveAlerts.FROM_RIDES) {
+            RideStats.BendLean l = ridesLean;
+            return l != null && l.known() ? l.degrees : CurveAlerts.PACE_LEAN[CurveAlerts.NORMAL];
+        }
+        return pace > CurveAlerts.PACE_OFF && pace < CurveAlerts.PACE_LEAN.length ? CurveAlerts.PACE_LEAN[pace] : 0;
     }
 
     /** Tyre, ABS and battery warnings: shown on Home while they last, announced once each. */
