@@ -22,4 +22,17 @@ public class FrameReplayTest {
         assertNull(FrameReplay.parse("garbage"));
         assertNull(FrameReplay.parse("x RX 3aabbb34 41"));
     }
+
+    @Test
+    public void marksAreOneWordAndReplaysSkipThem() {
+        assertEquals("1760371200123 MARK Indicator_left\n", RawCapture.markLine(1760371200123L, "Indicator left"));
+        assertEquals("1 MARK Riding_mode_changed_on_the_dash\n",
+                RawCapture.markLine(1, " Riding  mode changed on the dash "));
+        assertEquals("1 MARK mark\n", RawCapture.markLine(1, "  "));
+        assertEquals("1 MARK mark\n", RawCapture.markLine(1, null));
+        // a capture with marks still replays: the mark lines are not frames
+        assertNull(FrameReplay.parse(RawCapture.markLine(1760371200123L, "Clutch in").trim()));
+        assertNull(FrameReplay.parse("1760371200123 MARK a b"));
+        for (String m : RawCapture.MARKS) assertNull(FrameReplay.parse(RawCapture.markLine(5, m).trim()));
+    }
 }

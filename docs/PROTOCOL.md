@@ -602,6 +602,13 @@ KawaNav never logs this frame.)
   send it.**
 - The bits of 0x1A that Rideology's parser skips: byte 7 bits 5-2 and byte 13 bits 3-0
   (`qe/a.java:326-348`).
+- What 0x30 and the undecoded bytes of the other frames carry. Rideology only reads the frame types it
+  registered a handler for (`ne/j.java:83-111` passes a frame to the first handler that accepts its
+  type, else drops it), so nothing in the app explains them. The way to find out: a debug capture
+  with **test marks** (debug card "Bike data" → "Test mark" → "Mark now", written as
+  `epochMs MARK label` lines that replays skip), taken at the bike while doing one thing at a time
+  (indicators, high beam, clutch, side stand, a riding mode changed on the dash …, at least 15 s
+  apart); then for each mark, the bytes that were steady before it and changed right after it.
 - Riding-log sample rate (meter/frequency controlled).
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
 - What the two TCS pairs (0x4A byte 24, 0x4B byte 51) actually report: the rider's level, an intervention,
@@ -623,7 +630,7 @@ KawaNav never logs this frame.)
 | Group | Ids | What they are |
 |---|---|---|
 | BLE5, in use | 0x03 0x08 0x0A 0x0B 0x1A 0x1B 0x1D 0x1E 0x13 0x14 0x12 0x40 0x41 0x45 0x47 0x48 0x4A 0x4B | model info, meter init, pairing-history reset (never sent by KawaNav), phone name, capabilities, general settings, maintenance config/indicator, dash icons, turn-by-turn, notifications, the vehicle frames |
-| BLE5, seen but not decoded | 0x01 0x20 0x30 | 0x01 is an empty "accepted" reply; 0x20 the ACK; 0x30 the meter's status frame |
+| BLE5, seen but not decoded | 0x01 0x20 0x30 | 0x01 is an empty "accepted" reply; 0x20 the ACK; 0x30 the meter's status frame, which Rideology has no receive handler for and drops |
 | EV / HEV family | 0x07 0x0E 0x11 0x16 0x17 0x23 0x24 0x31 0x32 0x35 0x42 0x52 0x62 | battery pack, EV modes, walk mode, an energy histogram. Reached only on the e-1 and HEV bikes |
 | BLE4 (older dashes) | 0x0A (the call/mail icons there), 0x12 as settings read, 0x17, and the 0x0E histogram | a different protocol entirely (see `Ble4VehicleSettingViewModel`) |
 

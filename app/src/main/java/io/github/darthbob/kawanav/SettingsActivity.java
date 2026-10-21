@@ -140,6 +140,8 @@ public class SettingsActivity extends KawaActivity {
     private TextView debugBike;
     /** Debug: the ANCS category the dash-notification test sends. */
     private int ancsTest = 2;
+    /** Debug: what the next capture mark says ({@link RawCapture#MARKS}). */
+    private int markSel;
     private TextView debugIconsStatus;
     private TextView debugGatt;
     private int titleTaps;
@@ -630,6 +632,7 @@ public class SettingsActivity extends KawaActivity {
                 + "(as KawaNav 0.6 and before did; Rideology always sends it)", Hub.KEY_DEBUG_NO_EXT, false));
         c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect: "
                 + "adb pull /sdcard/Android/data/" + getPackageName() + "/files/captures/", Hub.KEY_DEBUG_CAPTURE, false));
+        c.addView(markRow());
         LinearLayout reads = row();
         reads.setPadding(0, dp(6), 0, 0);
         for (int[] r : new int[][]{{BikeFrames.VEHICLE_INFO}, {BikeFrames.VEHICLE_SETTINGS}, {BikeFrames.SERVICE_INDICATOR}}) {
@@ -653,6 +656,35 @@ public class SettingsActivity extends KawaActivity {
         c.setVisibility(prefs.getBoolean(Hub.KEY_DEBUG_ICONS, false) ? View.VISIBLE : View.GONE);
         bikeDebugCard = c;
         return c;
+    }
+
+    /**
+     * Debug: marks a moment in the frame capture ("Indicator left", "Clutch in" …), tapped as it is done at
+     * the bike, so tools/frame_bytes.py can show which bytes changed with it: the way to learn what the
+     * bytes and frames are that nobody decodes (0x30, the unused parts of 0x4A/0x4B …).
+     */
+    private View markRow() {
+        LinearLayout box = column();
+        box.addView(choiceRow("Test mark", "With the capture on and the bike connected: pick what you are about "
+                + "to do, do it, tap Mark at that moment. At least 15 s between marks", RawCapture.MARKS, markSel,
+                pos -> markSel = pos));
+        Button mark = button("Mark now", v -> {
+            String label = RawCapture.MARKS[markSel];
+            String msg;
+            if (!RawCapture.enabled(this)) {
+                msg = "Switch \"Capture frames\" on and connect the bike again";
+            } else if (!RawCapture.mark(label)) {
+                msg = "No capture open: connect the bike";
+            } else {
+                Logger.log("Capture mark: " + label);
+                msg = "Marked: " + label;
+            }
+            android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
+        });
+        mark.setTextColor(Ui.accent(night));
+        outline(mark);
+        box.addView(mark, matchWrap());
+        return box;
     }
 
     /**
