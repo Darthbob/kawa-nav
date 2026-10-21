@@ -724,7 +724,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         boolean cameras = Hub.camerasEnabled(this);
         int pace = Hub.prefs(this).getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
         boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF
-                || pace > CurveAlerts.PACE_OFF;
+                || pace > CurveAlerts.PACE_OFF || (cameras && Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false));
         if (pace == CurveAlerts.FROM_RIDES && !ridesLeanAsked) {
             ridesLeanAsked = true;
             RideStore store = recorder.store();
@@ -1087,6 +1087,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         lastCameraId = out.cameraId;
         lastCameraAt = now;
         Logger.log("Camera: " + out.alert);
+        sayCamera(out.cameraId);
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -1106,9 +1107,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
      * during navigation too, except at Maps' maneuver.
      */
     private void sayCurve(long now) {
-        if (curveSound == null || !locationAllowed) return;
+        if (!soundAllowed()) return;
         SharedPreferences p = Hub.prefs(this);
-        if (p.getBoolean(Hub.KEY_CURVE_SOUND_HEADSET, true) && !CurveSound.headsetConnected(this)) return;
         Hub.MapsTurn m = Hub.mapsEnabled(this) ? Hub.maps : null;
         double maneuver = m == null ? Double.POSITIVE_INFINITY : m.distanceM;
         double speed = curve.speed();
@@ -1120,7 +1120,31 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h (radius %.0f m%s)", text,
                 w.curve.startDist, speed * 3.6, w.curve.minRadius,
                 Double.isInfinite(w.okSpeed) ? "" : String.format(Locale.ROOT, ", pace %.0f km/h", w.okSpeed * 3.6)));
-        curveSound.say(text);
+        if (beeps()) curveSound.beep(CurveBeeps.of(w));
+        else curveSound.say(text);
+    }
+
+    /** A warning may be played: the sound is on, and a headset is connected unless that is not asked for. */
+    private boolean soundAllowed() {
+        if (curveSound == null || !locationAllowed) return false;
+        return !Hub.prefs(this).getBoolean(Hub.KEY_CURVE_SOUND_HEADSET, true) || CurveSound.headsetConnected(this);
+    }
+
+    /** Beeps instead of words: asked for, or the phone cannot speak. */
+    private boolean beeps() {
+        return Hub.prefs(this).getBoolean(Hub.KEY_CURVE_BEEPS, false) || !curveSound.canSpeak();
+    }
+
+    /** The camera just announced, said too when "Say speed cameras" is on; after a bend being said, not over it. */
+    private void sayCamera(long cameraId) {
+        if (!Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false) || !soundAllowed()) return;
+        Hazards.Ahead a = curve.cameraAhead();
+        if (a == null || a.camera.id != cameraId) return;
+        if (beeps()) {
+            curveSound.beep(CurveBeeps.camera());
+        } else {
+            curveSound.sayAfter(Hazards.spoken(a.camera));
+        }
     }
 
     /** The lean of the chosen pace, degrees, 0 for none. "From my rides" leans as Normal until the rides say more. */

@@ -5,7 +5,10 @@
       "changes": [
         "Spoken curve warnings: KawaNav can say the coming bend in your helmet, like \"Sharp bend left\" or \"Hairpin right\", about 6 seconds before it at your speed and once per bend, with or without navigation. Settings → \"Spoken curve warnings\" picks hairpins only, sharp bends and hairpins, or all curves; \"Hear a curve warning\" plays one to set the volume",
         "\"Also when too fast\" says any bend with \"slow down\" when you come at it faster than your pace takes it: Relaxed, Normal, Sporty or Fast. If you are already slowing down enough, it stays quiet",
-        "\"From my rides\" takes the pace from your recorded rides: the lean you usually reach in a bend, from your last 20 rides once they hold 30 bends"
+        "\"From my rides\" takes the pace from your recorded rides: the lean you usually reach in a bend, from your last 20 rides once they hold 30 bends",
+        "A bend right after the one said is named with it: \"Hairpin left, then sharp bend right\"",
+        "\"Beeps instead of words\": the warnings beep in the ear of the bend's side, one beep for a bend, two for a sharp one, three for a hairpin, higher when you are too fast",
+        "\"Say speed cameras\": with the camera warnings on, each camera is also said in the helmet (\"Speed camera ahead, limit 50\") or beeped"
       ]
     },
     {

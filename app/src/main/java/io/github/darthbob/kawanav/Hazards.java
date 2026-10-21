@@ -94,6 +94,15 @@ public final class Hazards {
         }
     }
 
+    /**
+     * What the voice says about a camera: "Speed camera ahead", "Red-light camera ahead" or "Speed camera
+     * ahead, limit 50". No distance: it is said when the warning comes, and the dash shows the distance.
+     */
+    public static String spoken(Camera c) {
+        String s = name(c) + " ahead";
+        return c.maxspeed > 0 ? s + ", limit " + c.maxspeed : s;
+    }
+
     /** "Speed camera in 350 m" or "Speed camera in 350 m (50 km/h)". */
     public static String describe(Camera c, double distanceM) {
         String s = name(c) + " in " + (distanceM >= 1000

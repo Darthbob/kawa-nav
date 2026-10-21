@@ -66,6 +66,8 @@ public class SettingsActivity extends KawaActivity {
             + "• All curves: also normal and slight bends\n\n"
             + "\"Also when too fast\" adds the bends you come at too fast for your pace, with \"slow down\"; "
             + "it works also with this one off.\n\n"
+            + "A bend that starts within 80 m after the end of the one said is named with it: \"Hairpin left, "
+            + "then sharp bend right\". It is not said again on its own, unless you come at it too fast.\n\n"
             + "It works with or without navigation, whatever the display shows. During navigation, a bend "
             + "right before Maps' next maneuver is left to Maps' own voice. Needs downloaded roads, like the "
             + "curves on the display. The voice is the phone's text-to-speech, in English.";
@@ -217,10 +219,14 @@ public class SettingsActivity extends KawaActivity {
         }
     }
 
-    /** "Hear a curve warning": the phrase a sharp bend gets, through whatever the phone plays on now. */
+    /** "Hear a curve warning": what a sharp left bend gets, through whatever the phone plays on now. */
     private void playCurveSample() {
         if (sampleSound == null) sampleSound = new CurveSound(this);
-        sampleSound.say(CurveAlerts.phrase(3));
+        if (prefs.getBoolean(Hub.KEY_CURVE_BEEPS, false) || !sampleSound.canSpeak()) {
+            sampleSound.beep(CurveBeeps.bends(3, false, -1));
+        } else {
+            sampleSound.say(CurveAlerts.phrase(3));
+        }
     }
 
     private final Runnable refresh = new Runnable() {
@@ -376,10 +382,13 @@ public class SettingsActivity extends KawaActivity {
         showPaceStatus(pace);
         addRow(c, switchRow("Speak only through a headset", "Quiet while no Bluetooth or wired headset is "
                 + "connected, so the phone itself does not speak", Hub.KEY_CURVE_SOUND_HEADSET, true));
+        addRow(c, switchRow("Beeps instead of words", "In the ear of the bend's side: one beep for a bend, two "
+                + "for a sharp one, three for a hairpin, higher and quicker when too fast", Hub.KEY_CURVE_BEEPS, false));
         LinearLayout sr = settingRow();
         LinearLayout st = column();
         st.addView(itemTitle("Hear a curve warning"));
-        st.addView(secondary("Says \"" + CurveAlerts.phrase(3) + "\" now, to set the volume in the helmet"));
+        st.addView(secondary("Plays the warning for a sharp bend to the left now (\"" + CurveAlerts.phrase(3)
+                + "\", or its beeps), to set the volume in the helmet"));
         sr.addView(st, weight());
         sr.addView(secondaryButton("Play", v -> playCurveSample()));
         addRow(c, sr);
@@ -411,6 +420,9 @@ public class SettingsActivity extends KawaActivity {
         }
         addRow(c, choiceRow("Warn about a camera", "How far before it the warning comes",
                 warn, warnSel, pos -> prefs.edit().putInt(Hub.KEY_CAMERA_WARN, CAMERA_WARNS[pos]).apply()));
+        addRow(c, switchRow("Say speed cameras", "With speed camera warnings on, each camera is also said in the "
+                + "helmet when its warning comes (\"Speed camera ahead, limit 50\"), or beeped. Like the curve "
+                + "warnings, only through a headset unless that is switched off", Hub.KEY_CAMERA_VOICE, false));
         return c;
     }
 

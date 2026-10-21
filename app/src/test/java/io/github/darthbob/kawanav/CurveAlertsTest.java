@@ -28,8 +28,9 @@ public class CurveAlertsTest {
         return curve(turn, dist, northM, WIDE);
     }
 
+    /** ... 30 m long. */
     private static CurveAlerts.Ahead curve(int turn, double dist, double northM, double radius) {
-        return new CurveAlerts.Ahead(turn, dist, radius, LAT + northM / 111_132.0, LON);
+        return new CurveAlerts.Ahead(turn, dist, dist + 30, radius, LAT + northM / 111_132.0, LON);
     }
 
     private static List<CurveAlerts.Ahead> list(CurveAlerts.Ahead... curves) {
@@ -116,12 +117,69 @@ public class CurveAlertsTest {
     @Test
     public void aCurveRightAfterAnotherWaitsForTheGap() {
         CurveAlerts a = new CurveAlerts();
+        // 90 m between the end of the first and the start of the second: too far to be named with it
         CurveAlerts.Ahead first = curve(SHARP_LEFT, 60, 60);
-        CurveAlerts.Ahead second = curve(SHARP_RIGHT, 140, 140);
+        CurveAlerts.Ahead second = curve(SHARP_RIGHT, 180, 180);
         assertSame(first, say(a, list(first, second), KMH_90, CurveAlerts.SHARP, NONE, 0));
-        assertNull(say(a, list(curve(SHARP_RIGHT, 115, 140)), KMH_90, CurveAlerts.SHARP, NONE, 1_000));
-        CurveAlerts.Ahead later = curve(SHARP_RIGHT, 40, 140);
+        assertNull(say(a, list(curve(SHARP_RIGHT, 155, 180)), KMH_90, CurveAlerts.SHARP, NONE, 1_000));
+        CurveAlerts.Ahead later = curve(SHARP_RIGHT, 80, 180);
         assertSame(later, say(a, list(later), KMH_90, CurveAlerts.SHARP, NONE, CurveAlerts.MIN_GAP_MS));
+    }
+
+    // ------------------------------------------------------------------ the bend right after
+
+    @Test
+    public void aBendRightAfterIsNamedWithItAndNotSaidAgain() {
+        CurveAlerts a = new CurveAlerts();
+        // the left one ends at 130 m, the right one starts 40 m later
+        CurveAlerts.Warning w = a.next(list(curve(SHARP_LEFT, 100, 0), curve(SHARP_RIGHT, 170, 170)), KMH_90,
+                CurveAlerts.SHARP, 0, NONE, 0);
+        assertNotNull(w);
+        assertEquals("Sharp bend left, then sharp bend right", w.text());
+        assertNull(a.next(list(curve(SHARP_RIGHT, 60, 172)), KMH_90, CurveAlerts.SHARP, 0, NONE, 5_000));
+    }
+
+    @Test
+    public void aBendFurtherOnIsNotNamed() {
+        CurveAlerts.Warning w = new CurveAlerts().next(list(curve(SHARP_LEFT, 100, 0), curve(SHARP_RIGHT, 220, 220)),
+                KMH_90, CurveAlerts.SHARP, 0, NONE, 0);
+        assertNotNull(w);
+        assertNull(w.then);
+        assertEquals("Sharp bend left", w.text());
+    }
+
+    @Test
+    public void onlyTheChosenKindsAreNamed() {
+        List<CurveAlerts.Ahead> c = list(curve(SHARP_LEFT, 100, 0), curve(6, 160, 160)); // then a slight right
+        assertNull(new CurveAlerts().next(c, KMH_90, CurveAlerts.SHARP, 0, NONE, 0).then);
+        assertEquals("Sharp bend left, then slight bend right",
+                new CurveAlerts().next(c, KMH_90, CurveAlerts.ALL, 0, NONE, 0).text());
+        // without kinds (too fast only), any bend right after is named
+        List<CurveAlerts.Ahead> fast = list(curve(SHARP_LEFT, 100, 0, 25), curve(6, 160, 160));
+        assertEquals("Sharp bend left, slow down, then slight bend right",
+                new CurveAlerts().next(fast, KMH_90, CurveAlerts.OFF, lean(CurveAlerts.NORMAL), NONE, 0).text());
+    }
+
+    @Test
+    public void aNamedBendIsStillToldToSlowDown() {
+        CurveAlerts a = new CurveAlerts();
+        // named after a wide left bend; it is tight (25 m: 41 km/h at Normal), and the rider keeps 90 km/h
+        CurveAlerts.Warning first = a.next(list(curve(SHARP_LEFT, 140, 0, 200), curve(SHARP_RIGHT, 180, 180, 25)),
+                KMH_90, CurveAlerts.SHARP, lean(CurveAlerts.NORMAL), NONE, 0);
+        assertNotNull(first.then);
+        assertFalse(first.slowDown);
+        CurveAlerts.Warning w = a.next(list(curve(SHARP_RIGHT, 100, 181, 25)), KMH_90, CurveAlerts.SHARP,
+                lean(CurveAlerts.NORMAL), NONE, 5_000);
+        assertNotNull(w);
+        assertEquals("Sharp bend right, slow down", w.text());
+    }
+
+    @Test
+    public void aBendAtTheManeuverIsNotNamed() {
+        CurveAlerts.Warning w = new CurveAlerts().next(list(curve(SHARP_LEFT, 100, 0), curve(SHARP_RIGHT, 170, 170)),
+                KMH_90, CurveAlerts.SHARP, 0, 200, 0);
+        assertNotNull(w);
+        assertNull(w.then);
     }
 
     @Test

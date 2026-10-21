@@ -197,6 +197,7 @@ In the **Settings** tab:
 | [Spoken curve warnings](#spoken-curve-warnings) | Off | Off / hairpins only / sharp and hairpins / all curves, said in the helmet |
 | [Also when too fast](#too-fast-for-your-pace) | Off | Off / Relaxed / Normal / Sporty / Fast / From my rides: any bend, with "slow down" |
 | [Speak only through a headset](#spoken-curve-warnings) | On | No spoken warnings while no headset is connected |
+| [Beeps instead of words](#spoken-curve-warnings) | Off | The warnings as beeps in the ear of the bend's side |
 | Which curves count | Normal | Only tight ones / Normal / Also gentle ones / All over 15° (explained in the app) |
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
@@ -207,6 +208,7 @@ In the **Settings** tab:
 | Call icon on the dash | Off | Shows an icon while a call comes in (needs notification access) |
 | Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Messages, LINE, …) |
 | [Speed camera warnings](#-speed-cameras) | Off | Cameras on the phone and on the dash |
+| [Say speed cameras](#-speed-cameras) | Off | Each camera also said in the helmet (or beeped) |
 | [Distances in feet](#distances-in-feet) | Off | Imperial distances |
 | [Left-hand traffic](#left-hand-traffic) | Off | For countries driving on the left (UK, Ireland, …) |
 
@@ -251,6 +253,9 @@ sharp bends and hairpins, or all curves that count under "Which curves count". O
 
 - Each bend is said once, however often the curves are found again on the way to it, and nothing is
   said below 10 km/h. A bend that comes less than 4 s after the last warning waits for its turn.
+- A bend that starts within 80 m after the end of the one said is named with it: "Hairpin left, then
+  sharp bend right". It is not said again on its own, unless you come at it too fast (see below).
+  Only a bend of the kinds you picked is named this way (any kind when the kinds are off).
 - It works with or without navigation, whatever the dash shows. During navigation a bend within 50 m
   of Maps' next maneuver is left to Maps' own voice, and nothing is said while Maps names no distance.
 - The voice is the phone's text-to-speech, in English (the phone's own voice reads the words if no
@@ -258,7 +263,12 @@ sharp bends and hairpins, or all curves that count under "Which curves count". O
   the helmet intercom and turns music down while it speaks.
 - **Speak only through a headset** (on by default) keeps it quiet while no Bluetooth or wired headset
   is connected, so the phone does not speak out of a pocket.
-- **Hear a curve warning** → Play says "Sharp bend left" right away, to set the volume in the helmet.
+- **Beeps instead of words** (off by default): the bend beeps in the ear of its side (the other ear
+  hears it faintly, so a mono intercom still plays it). One beep for a slight or normal bend, two for
+  a sharp one, three for a hairpin; higher and quicker when you are too fast for it. A bend named with
+  it follows after a short pause, in its own ear. A phone without text-to-speech beeps anyway.
+- **Hear a curve warning** → Play plays the warning for a sharp bend to the left right away ("Sharp
+  bend left", or its two beeps), to set the volume in the helmet.
 
 Needs downloaded roads like free ride.
 
@@ -530,6 +540,10 @@ over within 250 m, so the maneuver stays visible longer.
   the rider or behind is not warned again, so passing one does not repeat.
 - Fixed cameras, red-light cameras and average-speed sections are told apart by the data; where
   OpenStreetMap knows the limit, it is shown with it.
+- **Say speed cameras** (off by default): each camera is also said in the helmet when its warning
+  comes — "Speed camera ahead, limit 50", "Red-light camera ahead" — or, with "Beeps instead of
+  words", two rising tones. It follows the [spoken curve warnings](#spoken-curve-warnings)' rules
+  (only through a headset unless that is switched off) and waits for a bend being said to finish.
 - Camera data in OpenStreetMap is incomplete, sometimes outdated, and can be missing where you ride:
   **this is not a radar detector and no reason to rely on it.** Speed limits and road signs always apply.
 

@@ -191,6 +191,10 @@ public final class Hub {
      * {@link CurveAlerts#PACE_OFF} (default), RELAXED, NORMAL, SPORTY, FAST or FROM_RIDES.
      */
     public static final String KEY_CURVE_PACE = "curve_pace";
+    /** The curve warnings (and the spoken cameras) as beeps instead of words (off unless turned on). */
+    public static final String KEY_CURVE_BEEPS = "curve_beeps";
+    /** With the speed camera warnings on: each camera also said in the helmet (off unless turned on). */
+    public static final String KEY_CAMERA_VOICE = "camera_voice";
     /** Spoken curve warnings only while a headset is connected (on unless turned off). */
     public static final String KEY_CURVE_SOUND_HEADSET = "curve_sound_headset";
 
