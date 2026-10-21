@@ -8,7 +8,8 @@
         "\"From my rides\" takes the pace from your recorded rides: the lean you usually reach in a bend, from your last 20 rides once they hold 30 bends",
         "A bend right after the one said is named with it: \"Hairpin left, then sharp bend right\"",
         "\"Beeps instead of words\": the warnings beep in the ear of the bend's side, one beep for a bend, two for a sharp one, three for a hairpin, higher when you are too fast",
-        "\"Say speed cameras\": with the camera warnings on, each camera is also said in the helmet (\"Speed camera ahead, limit 50\") or beeped"
+        "\"Say speed cameras\": with the camera warnings on, each camera is also said in the helmet (\"Speed camera ahead, limit 50\") or beeped",
+        "The warnings go by the bike's own speed while it is connected, which has none of the GPS delay"
       ]
     },
     {

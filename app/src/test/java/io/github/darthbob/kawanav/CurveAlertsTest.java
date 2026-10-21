@@ -209,6 +209,16 @@ public class CurveAlertsTest {
     }
 
     @Test
+    public void theBikesSpeedGoesBeforeTheGps() {
+        assertEquals(25, CurveAlerts.speed(90, 500, 20), 1e-9);
+        // the bike standing still is standing still, whatever the GPS drifts to
+        assertEquals(0, CurveAlerts.speed(0, 500, 4), 1e-9);
+        // too old, or not sent: the GPS
+        assertEquals(20, CurveAlerts.speed(90, CurveAlerts.BIKE_FRESH_MS + 1, 20), 1e-9);
+        assertEquals(20, CurveAlerts.speed(Double.NaN, 0, 20), 1e-9);
+    }
+
+    @Test
     public void nothingAheadSaysNothing() {
         assertNull(new CurveAlerts().next(Collections.emptyList(), KMH_90, CurveAlerts.ALL, lean(CurveAlerts.FAST), NONE, 0));
     }

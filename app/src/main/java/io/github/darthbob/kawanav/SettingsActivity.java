@@ -59,7 +59,8 @@ public class SettingsActivity extends KawaActivity {
     private static final String CURVE_SOUND_INFO =
             "KawaNav says the kind of bend and its direction, like \"Sharp bend left\" or \"Hairpin right\", "
             + "about 6 seconds before the bend starts at your speed: from 50 m before it when slow up to 300 m "
-            + "when fast. Each bend once, and nothing below 10 km/h.\n\n"
+            + "when fast. Each bend once, and nothing below 10 km/h. Your speed is the bike's own while it "
+            + "is connected, which has no GPS delay; without the bike, the GPS speed.\n\n"
             + "The kinds are those of the arrow on the bike's display (see \"Which curves count\"):\n"
             + "• Hairpins only\n"
             + "• Sharp and hairpins\n"

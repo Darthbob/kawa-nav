@@ -1111,14 +1111,15 @@ public class BridgeService extends Service implements KawaBle.Listener {
         SharedPreferences p = Hub.prefs(this);
         Hub.MapsTurn m = Hub.mapsEnabled(this) ? Hub.maps : null;
         double maneuver = m == null ? Double.POSITIVE_INFINITY : m.distanceM;
-        double speed = curve.speed();
+        BikeFrames.Telemetry live = Hub.bike.live;
+        double speed = CurveAlerts.speed(live == null ? Double.NaN : live.speedKmh, now - Hub.bike.liveAt, curve.speed());
         CurveAlerts.Warning w = curveAlerts.next(curve.curvesAhead(), speed,
                 p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), paceLean(p.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF)),
                 maneuver, now);
         if (w == null) return;
         String text = w.text();
-        Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h (radius %.0f m%s)", text,
-                w.curve.startDist, speed * 3.6, w.curve.minRadius,
+        Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h (GPS %.0f, radius %.0f m%s)",
+                text, w.curve.startDist, speed * 3.6, curve.speed() * 3.6, w.curve.minRadius,
                 Double.isInfinite(w.okSpeed) ? "" : String.format(Locale.ROOT, ", pace %.0f km/h", w.okSpeed * 3.6)));
         if (beeps()) curveSound.beep(CurveBeeps.of(w));
         else curveSound.say(text);

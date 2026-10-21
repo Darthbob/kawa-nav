@@ -253,6 +253,8 @@ sharp bends and hairpins, or all curves that count under "Which curves count". O
 
 - Each bend is said once, however often the curves are found again on the way to it, and nothing is
   said below 10 km/h. A bend that comes less than 4 s after the last warning waits for its turn.
+- Your speed, for when a warning comes and for "too fast", is the bike's own while it is connected
+  (it has no delay; the GPS speed comes up to a second late), and the GPS speed without the bike.
 - A bend that starts within 80 m after the end of the one said is named with it: "Hairpin left, then
   sharp bend right". It is not said again on its own, unless you come at it too fast (see below).
   Only a bend of the kinds you picked is named this way (any kind when the kinds are off).

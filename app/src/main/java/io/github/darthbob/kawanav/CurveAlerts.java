@@ -38,6 +38,8 @@ final class CurveAlerts {
     static final double MAX_SLOW_M = 500;
     /** Below this speed (m/s, ~10 km/h) nothing is said: waiting at a light, pushing the bike. */
     static final double MIN_SPEED = 2.8;
+    /** The bike's own speed is used while its live values are at most this old, ms. */
+    static final long BIKE_FRESH_MS = 2_000;
     /** Two starts closer than this that turn the same way are the same curve, seen on another fix. */
     static final double SAME_CURVE_M = 30;
     /** At least this long between two warnings; a curve that comes sooner waits for the gap. */
@@ -161,6 +163,17 @@ final class CurveAlerts {
     private void remember(Ahead c, long now, boolean mentioned) {
         if (said.size() >= REMEMBERED) said.removeFirst();
         said.addLast(new Said(c, now, mentioned));
+    }
+
+    /**
+     * The speed the warnings go by, m/s: the bike's own while it sends it (it is there at once, the GPS
+     * speed comes up to a second late), else the GPS fix's.
+     *
+     * @param bikeKmh   the bike's live speed, NaN when it sends none
+     * @param bikeAgeMs how old that value is
+     */
+    static double speed(double bikeKmh, long bikeAgeMs, double gpsSpeed) {
+        return bikeKmh >= 0 && bikeAgeMs >= 0 && bikeAgeMs <= BIKE_FRESH_MS ? bikeKmh / 3.6 : gpsSpeed;
     }
 
     /** The speed (m/s) at which a pace leaning this far (degrees) takes a bend of this radius: v² = g · r · tan(lean). */
