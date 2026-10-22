@@ -165,6 +165,42 @@ def test_metrics(tmp):
     check("imu with no value stays absent", rr.imu_forward(None, -0.5) is None)
 
 
+def test_fuel(tmp):
+    print("fuel")
+
+    # 10 s coasting at 50 km/h (the dash's 99.9 top), 10 s at 100 km/h doing 10 km/L, a fine odometer
+    samples = [{"t_ms": i * 1000, "kmh": 50 if i < 10 else 100, "fuel_inst": 99.9 if i < 10 else 10,
+                "odo_km": 100 + i * 0.02} for i in range(20)]
+    ride = ride_with(tmp, samples, "economy.csv")
+    economy = {m.key: m for m in rr.metrics_of(ride)}["fuel_inst"]
+    per_economy = 500 / 99.9 + 100
+    check("the economy's average is the distance over the litres, not the seconds' 55",
+          near(economy.mean, 1500 / per_economy, 1e-9) and economy.min == 10 and economy.max == 99.9,
+          (economy.min, economy.mean, economy.max))
+    check("the litres follow the ride's distance", near(ride.fuel_estimate_l(0.38), 0.38 * per_economy / 1500, 1e-9))
+    check("without a distance, the speed's own kilometres", near(ride.fuel_estimate_l(0), per_economy / 3600, 1e-9))
+
+    out = rr.html_report(ride, rr.parse_args(["x", "--no-map"]))
+    check("the estimate is in the tiles, marked", "≈ 0.0 L" in out, [l for l in out.splitlines() if "Fuel" in l])
+    check("the L/100 km says where it comes from",
+          "%.1f L/100 km over 0.4 km, estimated from the instant fuel economy" % (100 * per_economy / 1500) in out)
+
+    # a second without an economy burns nothing (engine braking); one without the bike's speed is unknown
+    gaps = ride_with(tmp, [{"t_ms": i * 1000, "kmh": 60 if i < 20 else None,
+                            "fuel_inst": 20 if i < 10 else None} for i in range(30)], "gaps.csv")
+    check("engine braking burns nothing, a stretch without the bike is left out",
+          near(gaps.fuel_estimate_l(0), 10 * 60 / 20 / 3600, 1e-12) and near(gaps.fuel_km_per_l(), 20, 1e-9))
+
+    # the bike's own counter wins
+    counter = ride_with(tmp, [dict(s, fuel_total_l=10 + i * 0.01) for i, s in enumerate(samples)], "counter.csv")
+    out = rr.html_report(counter, rr.parse_args(["x", "--no-map"]))
+    check("the bike's counter, unmarked", "<b>0.2 L</b>" in out and "≈" not in out and "estimated from" not in out)
+
+    nothing = ride_with(tmp, seconds(5, kmh=50), "nothing.csv")
+    check("no economy, no fuel", nothing.fuel_estimate_l(1) == 0 and nothing.fuel_km_per_l() is None
+          and "Fuel used" not in rr.html_report(nothing, rr.parse_args(["x", "--no-map"])))
+
+
 def test_facts(tmp):
     print("times")
 
@@ -423,6 +459,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         test_reading(tmp)
         test_metrics(tmp)
+        test_fuel(tmp)
         test_facts(tmp)
         test_events(tmp)
         test_report(tmp)

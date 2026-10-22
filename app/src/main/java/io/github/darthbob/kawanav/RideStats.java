@@ -48,11 +48,16 @@ public final class RideStats {
     public final Best hottest, hardestBraking, mostSuspension;
     /** Fuel the log burned, and the seconds its electronics spent working. */
     public final double fuelL, tcsSeconds, absSeconds, wheelieSeconds;
+    /** The km of the rides that know their fuel: the consumption is {@link #fuelL} over these, not over all. */
+    public final double fuelKm;
+    /** True when some of {@link #fuelL} is worked out from the instant fuel economy ({@link Ride#fuelEstimated}). */
+    public final boolean fuelEstimated;
 
     private RideStats(int rides, double totalKm, double totalHours,
                       Best fastest, Best maxLeanLeft, Best maxLeanRight, Best longest,
                       Best hottest, Best hardestBraking, Best mostSuspension,
-                      double fuelL, double tcsSeconds, double absSeconds, double wheelieSeconds) {
+                      double fuelL, double fuelKm, boolean fuelEstimated,
+                      double tcsSeconds, double absSeconds, double wheelieSeconds) {
         this.rides = rides;
         this.totalKm = totalKm;
         this.totalHours = totalHours;
@@ -64,6 +69,8 @@ public final class RideStats {
         this.hardestBraking = hardestBraking;
         this.mostSuspension = mostSuspension;
         this.fuelL = fuelL;
+        this.fuelKm = fuelKm;
+        this.fuelEstimated = fuelEstimated;
         this.tcsSeconds = tcsSeconds;
         this.absSeconds = absSeconds;
         this.wheelieSeconds = wheelieSeconds;
@@ -84,7 +91,8 @@ public final class RideStats {
         Ride fastest = null, left = null, right = null, longest = null;
         Ride hot = null, brake = null, susp = null;
         double fastestKmh = 0, leanL = 0, leanR = 0, longestKm = 0, km = 0, ms = 0;
-        double hotC = 0, brakeG = 0, suspMm = 0, fuel = 0, tcsS = 0, absS = 0, wheelieS = 0;
+        double hotC = 0, brakeG = 0, suspMm = 0, fuel = 0, fuelKm = 0, tcsS = 0, absS = 0, wheelieS = 0;
+        boolean fuelEstimated = false;
         for (Ride r : rides) {
             double d = km(r);
             km += d;
@@ -124,7 +132,12 @@ public final class RideStats {
                 suspMm = travel;
                 susp = r;
             }
-            if (r.fuelUsedL > 0) fuel += r.fuelUsedL;
+            // a ride recorded without the bike burned fuel too, but nobody knows how much
+            if (r.fuelL() > 0) {
+                fuel += r.fuelL();
+                fuelKm += d;
+                fuelEstimated |= r.fuelEstimated();
+            }
             if (r.tcsOnS > 0) tcsS += r.tcsOnS;
             if (r.absOnS > 0) absS += r.absOnS;
             if (r.wheelieS > 0) wheelieS += r.wheelieS;
@@ -132,7 +145,7 @@ public final class RideStats {
         return new RideStats(rides.size(), km, ms / 3_600_000.0,
                 new Best(fastest, fastestKmh), new Best(left, leanL), new Best(right, leanR),
                 new Best(longest, longestKm), new Best(hot, hotC), new Best(brake, brakeG),
-                new Best(susp, suspMm), fuel, tcsS, absS, wheelieS);
+                new Best(susp, suspMm), fuel, fuelKm, fuelEstimated, tcsS, absS, wheelieS);
     }
 
     /** The rides per year, newest first. */
@@ -165,9 +178,10 @@ public final class RideStats {
             if (sb.length() > 0) sb.append(" · ");
             sb.append(min >= 60 ? String.format(java.util.Locale.ROOT, "%d h %02d", min / 60, min % 60) : min + " min");
         }
-        if (r.fuelUsedL > 0 && km > 0) {
+        if (r.fuelL() > 0 && km > 0) {
             if (sb.length() > 0) sb.append(" · ");
-            sb.append(String.format(java.util.Locale.ROOT, "%.1f L/100 km", r.fuelUsedL / km * 100));
+            sb.append(String.format(java.util.Locale.ROOT, r.fuelEstimated() ? "≈ %.1f L/100 km" : "%.1f L/100 km",
+                    r.fuelL() / km * 100));
         }
         double lean = Math.max(Math.abs(r.maxLeanL), r.maxLeanR);
         if (lean > 1) {

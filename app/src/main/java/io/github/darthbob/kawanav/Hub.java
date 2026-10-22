@@ -174,6 +174,8 @@ public final class Hub {
     public static final String KEY_SETTINGS_PROFILES = "settings_profiles";
     /** Start recording by itself when the bike is moving (off by default). */
     public static final String KEY_RIDE_AUTO = "ride_auto";
+    /** When a ride ends after the bike is switched off: an index into {@link RideEnd#LABELS}. */
+    public static final String KEY_RIDE_END = "ride_end";
     /**
      * OpenStreetMap's map under a recorded ride's track (on unless turned off). The map pictures come from
      * openstreetmap.org, which then sees the area looked at: the one thing about a ride that leaves the phone.

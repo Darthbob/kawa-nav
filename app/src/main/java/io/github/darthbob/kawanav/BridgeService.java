@@ -317,7 +317,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     /** Pause or continue the ride. */
     public static void toggleRidePause() {
-        if (instance == null) return;
+        if (instance == null) {
+            clearRideState();   // no service, no ride: the screens were showing a state left behind
+            return;
+        }
         if (instance.recorder.state() == RideRecorder.PAUSED) instance.recorder.resume();
         else instance.recorder.pause();
         instance.updateNotification();
@@ -325,9 +328,19 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     /** Ends the ride and saves it. */
     public static void stopRide() {
-        if (instance == null) return;
+        if (instance == null) {
+            clearRideState();
+            return;
+        }
         instance.recorder.finish("stopped by hand");
         instance.updateNotification();
+    }
+
+    /** No ride is being recorded: what the record button, Home and the ride list read from {@link Hub}. */
+    private static void clearRideState() {
+        Hub.rideState = RideRecorder.IDLE;
+        Hub.rideText = "";
+        Hub.rideId = null;
     }
 
     /**
@@ -532,6 +545,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
         requests.clear();
         RawCapture.stop();
         recorder.finish("bridge stopped");
+        // only the tick writes the ride state the screens read, and there is no tick any more: a red or
+        // amber record button left behind would offer a pause and a stop that have no service to reach
+        clearRideState();
         if (wasReady) {
             rememberParked();
             BikeStore.save(this);
@@ -799,7 +815,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (autoStarted) {
             if (ble.isReady()) {
                 bikeAbsentSince = now;
-            } else if (now - bikeAbsentSince > AUTO_STOP_MS) {
+            } else if (now - bikeAbsentSince > AUTO_STOP_MS && !recorder.waitingForBike()) {
+                // a ride waiting for the bike ends by the rider's choice first (RideEnd), then the bridge
                 Logger.log("Bike not connected for " + AUTO_STOP_MS / 60_000 + " min after autostart: stopping the bridge");
                 stopSelf();
                 return;

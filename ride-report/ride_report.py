@@ -293,6 +293,35 @@ class Ride:
             prev = v
         return total
 
+    def fuel_sums(self):
+        """The instant fuel economy summed as the app sums it (Ride.Fuel): the bike's speed over its
+        seconds, the same over the seconds with an economy, and each of those seconds' speed over its
+        economy (its litres times 3600). A second without the bike's speed had no bike connected."""
+        speed = speed_with = per_economy = 0.0
+        for kmh, economy in zip(self.col("kmh"), self.col("fuel_inst")):
+            if kmh is None or kmh < 0:
+                continue
+            speed += kmh
+            if economy is not None and economy > 0:
+                speed_with += kmh
+                per_economy += kmh / economy
+        return speed, speed_with, per_economy
+
+    def fuel_km_per_l(self):
+        """The economy over the distance: the kilometres over the litres, not the average of the seconds
+        (that weighs a second at 5 km/h like one at 120, and the 99.9 of a closed throttle lifts it)."""
+        _, speed_with, per_economy = self.fuel_sums()
+        return speed_with / per_economy if per_economy > 0 else None
+
+    def fuel_estimate_l(self, km):
+        """The litres from the instant economy for a ride km long, for a bike without a fuel counter. A
+        second without an economy burns nothing (the engine braking, a standstill); the speed only
+        shares the distance out among the seconds. Without a distance, the speed's own kilometres."""
+        speed, _, per_economy = self.fuel_sums()
+        if per_economy <= 0 or speed <= 0:
+            return 0.0
+        return km * per_economy / speed if km > 0 else per_economy / 3600.0
+
 
 def haversine_m(lat1, lon1, lat2, lon2):
     r = 6371000.0
@@ -432,6 +461,13 @@ def metrics_of(ride):
         elif key == "imu_side":
             for v in ride.col("imu_az_g"):
                 m.add(v)
+        elif key == "fuel_inst":
+            for v in ride.col(key):
+                m.add(v)
+            # its average is the distance over the litres, as the app's
+            km_per_l = ride.fuel_km_per_l()
+            if m.known and km_per_l is not None:
+                m.mean = km_per_l
         else:
             for v in ride.col(key):
                 m.add(v)
@@ -1027,6 +1063,10 @@ def html_report(ride, opts, events=None):
     dist_m, dist_src = ride.distance_m()
     km = dist_m / 1000.0
     fuel = ride.fuel_l()
+    # without the bike's fuel counter, the litres from the instant economy
+    estimated = fuel <= 0
+    if estimated:
+        fuel = ride.fuel_estimate_l(km)
 
     tiles = []
     tiles.append(("Time", hhmmss(ride.duration_ms())))
@@ -1043,7 +1083,9 @@ def html_report(ride, opts, events=None):
     if rpms:
         tiles.append(("Max engine speed", "{:,.0f} rpm".format(max(rpms))))
     if fuel > 0:
-        tiles.append(("Fuel used", "%.1f L" % fuel))
+        tiles.append(("Fuel used", ("≈ %.1f L" if estimated else "%.1f L") % fuel))
+    economy_note = (", estimated from the instant fuel economy: this bike sends no fuel counter"
+                    if estimated else "")
 
     # --- the table, one section at a time
     table = []
@@ -1109,7 +1151,7 @@ distance {km:,.2f} km ({dist_src}) · {hhmmss(ride.duration_ms())}{(' · ' + '; 
 <div class="tiles">
 {''.join('<div class="tile"><b>%s</b>%s</div>' % (html.escape(v), html.escape(k)) for k, v in tiles)}
 </div>
-{f'<p>{fuel / km * 100:.1f} L/100 km over {km:,.1f} km</p>' if fuel > 0 and km > 0 else ''}
+{f'<p>{fuel / km * 100:.1f} L/100 km over {km:,.1f} km{economy_note}</p>' if fuel > 0 and km > 0 else ''}
 
 {('<h2>Map</h2>' + map_panel) if opts.map else ''}
 

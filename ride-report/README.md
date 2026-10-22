@@ -74,6 +74,11 @@ values its layout has are used). A file that is not a ride is refused with a mes
   speed, throttle, suspension travel, acceleration, wheelie angle, tyre pressures, front brake, battery,
   the four temperatures, GPS accuracy and altitude — plus the three **IMU axes turned into the bike's
   directions** (forward, up, sideways), which the app does too because the sensor is mounted at 45°.
+  The instant fuel economy's average is the distance over the litres it burned, as in the app, not the
+  average of its seconds.
+- **The fuel used** and the L/100 km: from the bike's fuel counter, or, on a bike without one (the
+  Z900), estimated from the instant fuel economy (each second burns its distance over its km/L) and
+  marked "≈".
 - **The four times**: seconds the traction-control reading moved, ABS worked, the front wheel was up,
   and cruise control was on. A channel the bike does not send is reported as **not checked**, never as
   zero, and a channel that is there but never fired says **never**.

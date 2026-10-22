@@ -130,9 +130,26 @@ public class RideStatsTest {
         b.wheelieS = 5;
         RideStats s = RideStats.of(java.util.Arrays.asList(a, b));
         assertEquals(5, s.fuelL, 1e-9);
+        assertFalse(s.fuelEstimated);
         assertEquals(12, s.tcsSeconds, 1e-9);
         assertEquals(3, s.absSeconds, 1e-9);
         assertEquals(5, s.wheelieSeconds, 1e-9);
+    }
+
+    @Test
+    public void theConsumptionCountsOnlyTheRidesThatKnowTheirFuel() {
+        Ride counted = ride(at(2026, 1, 1), 100, 60, 100, 0, 0, 5);
+        Ride estimated = ride(at(2026, 2, 1), 100, 60, 100, 0, 0, 0);
+        estimated.fuelEstL = 6;                              // a Z900: from the instant fuel economy
+        Ride phoneOnly = ride(at(2026, 3, 1), 200, 120, 100, 0, 0, 0);
+        RideStats s = RideStats.of(java.util.Arrays.asList(counted, estimated, phoneOnly));
+        assertEquals(400, s.totalKm, 1e-9);
+        assertEquals(11, s.fuelL, 1e-9);
+        assertEquals(200, s.fuelKm, 1e-9);                  // 5.5 L/100 km, not 2.75 over all 400 km
+        assertTrue(s.fuelEstimated);
+        assertTrue(RideStats.summaryLine(estimated), RideStats.summaryLine(estimated).contains("≈ 6.0 L/100 km"));
+        assertTrue(RideStats.summaryLine(counted).contains(" 5.0 L/100 km"));
+        assertFalse(RideStats.summaryLine(counted).contains("≈"));
     }
 
     @Test
