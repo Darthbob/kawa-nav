@@ -53,6 +53,13 @@ public class BikeActivity extends KawaActivity {
     private int lampMinLevel = 1;
     /** The ride-settings pickers were filled from the bike once. */
     private boolean settingsPrefilled;
+    /** "changed" next to a ride-settings picker that is not what the bike has. */
+    private TextView modeChanged, powerChanged, ktrcChanged, kqsChanged;
+    /**
+     * The riding-mode position KawaNav set itself (the bike's, or the list's first one): its selection
+     * callback must not put a preset over the bike's power and KTRC. -1 once the rider picked one.
+     */
+    private int modeSetByApp = 0;
     private LinearLayout parkedCard;
     private TextView parkedText;
     private Button parkedNavigate;
@@ -212,18 +219,28 @@ public class BikeActivity extends KawaActivity {
         section.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"));
         LinearLayout c = group();
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
-                + "screen, and a name for them if you give one. The bike must be standing still, in neutral "
-                + "and with the throttle closed. " + NOT_TRIED));
+                + "screen, and a name for them if you give one. They always go together in one write: the "
+                + "ones you leave as they are go as the bike has them. Sport, Road and Rain set power and "
+                + "KTRC to their own values, as in Rideology; Rider keeps yours. The bike must be standing "
+                + "still, in neutral and with the throttle closed. " + NOT_TRIED));
         modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
         modeNote = secondary("");
         powerSpinner = spinner(SettingsWrite.POWER, 0);
         ktrcSpinner = spinner(SettingsWrite.KTRC, 0);
         kqsSpinner = spinner(SettingsWrite.ON_OFF, 0);
+        modeChanged = changedPill();
+        powerChanged = changedPill();
+        ktrcChanged = changedPill();
+        kqsChanged = changedPill();
+        watchMode();
+        powerSpinner.setOnItemSelectedListener(onSelect(pos -> refreshSettingMarks()));
+        ktrcSpinner.setOnItemSelectedListener(onSelect(pos -> refreshSettingMarks()));
+        kqsSpinner.setOnItemSelectedListener(onSelect(pos -> refreshSettingMarks()));
         c.addView(modeNote);
-        addRow(c, settingRowWith("Riding mode", modeSpinner));
-        addRow(c, settingRowWith("Power", powerSpinner));
-        addRow(c, settingRowWith("KTRC", ktrcSpinner));
-        addRow(c, settingRowWith("KQS", kqsSpinner));
+        addRow(c, settingRowWith("Riding mode", modeChanged, modeSpinner));
+        addRow(c, settingRowWith("Power", powerChanged, powerSpinner));
+        addRow(c, settingRowWith("KTRC", ktrcChanged, ktrcSpinner));
+        addRow(c, settingRowWith("KQS", kqsChanged, kqsSpinner));
         settingsName = new android.widget.EditText(this);
         settingsName.setSingleLine(true);
         settingsName.setTextSize(15);
@@ -239,6 +256,7 @@ public class BikeActivity extends KawaActivity {
         settingsStatus = secondary("");
         settingsStatus.setPadding(0, dp(Ui.SPACE2), 0, dp(10));
         c.addView(settingsStatus);
+        c.addView(secondaryButton("Back to the bike's values", v -> fillFromBike(Hub.bike.settings)), matchWrap());
         settingsSend = primaryButton("Send to the bike", v -> confirmSend());
         c.addView(settingsSend, matchWrap());
         section.addView(c);
@@ -248,28 +266,105 @@ public class BikeActivity extends KawaActivity {
     }
 
     private LinearLayout settingRowWith(String label, android.widget.Spinner s) {
+        return settingRowWith(label, null, s);
+    }
+
+    /** @param mark shown between the label and the picker (the "changed" pill), or null */
+    private LinearLayout settingRowWith(String label, TextView mark, android.widget.Spinner s) {
         LinearLayout r = settingRow();
         r.addView(itemTitle(label), weight());
+        if (mark != null) {
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.rightMargin = dp(Ui.SPACE2);
+            r.addView(mark, lp);
+        }
         r.addView(s, controlWidth());
         return r;
     }
 
+    private TextView changedPill() {
+        TextView t = pill("changed", (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accent(night));
+        t.setVisibility(View.GONE);
+        return t;
+    }
+
+    /**
+     * Picking Sport, Road or Rain sets power and KTRC to that mode's own values, as Rideology's preset
+     * buttons do; a Rider mode leaves them. A position KawaNav set itself does not.
+     */
+    private void watchMode() {
+        modeSpinner.setOnItemSelectedListener(onSelect(pos -> {
+            if (pos == modeSetByApp) {
+                modeSetByApp = -1;
+            } else {
+                modeSetByApp = -1;
+                int[] preset = SettingsWrite.preset(pos + 1);
+                if (preset != null) {
+                    powerSpinner.setSelection(preset[0] - 1);
+                    ktrcSpinner.setSelection(preset[1]);
+                }
+            }
+            refreshSettingMarks();
+        }));
+    }
+
+    /** The pickers set to what the bike reported (first fill, and "Back to the bike's values"). */
+    private void fillFromBike(BikeFrames.VehicleSettings s) {
+        if (s == null) return;
+        if (s.ridingMode >= 1 && s.ridingMode <= modeSpinner.getCount()) {
+            if (modeSpinner.getSelectedItemPosition() != s.ridingMode - 1) modeSetByApp = s.ridingMode - 1;
+            modeSpinner.setSelection(s.ridingMode - 1);
+        }
+        if (s.power >= 1 && s.power <= SettingsWrite.POWER.length) powerSpinner.setSelection(s.power - 1);
+        int k = SettingsWrite.ktrcFromWire(s.ktrc);
+        if (k >= 0) ktrcSpinner.setSelection(k);
+        if (s.kqs >= 1 && s.kqs <= SettingsWrite.ON_OFF.length) kqsSpinner.setSelection(s.kqs - 1);
+        settingsPrefilled = true;
+        refreshSettingMarks();
+    }
+
+    /** What the pickers say, in the numbers of a write. */
+    private SettingsWrite.Choice picked() {
+        return new SettingsWrite.Choice(modeSpinner.getSelectedItemPosition() + 1,
+                powerSpinner.getSelectedItemPosition() + 1, ktrcSpinner.getSelectedItemPosition(),
+                kqsSpinner.getSelectedItemPosition() + 1);
+    }
+
+    /**
+     * The "changed" pills next to the pickers that are not what the bike has, and Send only while
+     * something would change (a value, or the name since the last write). Before the bike said what it
+     * has, nothing is marked and Send stays open.
+     */
+    private void refreshSettingMarks() {
+        if (modeChanged == null || settingsSend == null) return;
+        SettingsWrite.Choice bike = SettingsWrite.Choice.of(Hub.bike.settings);
+        SettingsWrite.Choice now = picked();
+        modeChanged.setVisibility(bike != null && bike.mode != now.mode ? View.VISIBLE : View.GONE);
+        powerChanged.setVisibility(bike != null && bike.power != now.power ? View.VISIBLE : View.GONE);
+        ktrcChanged.setVisibility(bike != null && bike.ktrcLevel != now.ktrcLevel ? View.VISIBLE : View.GONE);
+        kqsChanged.setVisibility(bike != null && bike.kqs != now.kqs ? View.VISIBLE : View.GONE);
+        boolean nameChanged = !SettingsWrite.fitName(settingsName.getText().toString())
+                .equals(prefs.getString(Hub.KEY_SETTINGS_NAME, ""));
+        settingsSend.setEnabled(bike == null || now.differsFrom(bike) || nameChanged);
+    }
+
+    /**
+     * Asks before writing, with every value next to what the bike has: they all go in the one write, so
+     * the ones that stay are listed too ("Power: Full"), the changes with an arrow ("KTRC: 2 → 1").
+     */
     private void confirmSend() {
         BikeFrames.VehicleSettings s = Hub.bike.settings;
-        String now = s == null ? "unknown" : "mode " + s.ridingMode + ", power " + s.power + ", KTRC " + s.ktrc
-                + ", KQS " + s.kqs + " (numbers as the bike reports them)";
         String name = SettingsWrite.fitName(settingsName.getText().toString());
-        prefs.edit().putString(Hub.KEY_SETTINGS_NAME, name).apply();
+        int kebcNow = s != null && s.kebc >= 0 ? s.kebc : 0;
+        String lines = String.join("\n", SettingsWrite.summary(SettingsWrite.Choice.of(s), picked(), kebcNow, name));
         new android.app.AlertDialog.Builder(this)
                 .setTitle("Send settings to the bike?")
-                .setMessage("The bike must stand still, be in neutral and have the throttle closed. KawaNav "
-                        + "re-checks this before sending and reads the settings back afterwards.\n\nOn the bike now: "
-                        + now + "\n\nSending: " + SettingsWrite.MODES[modeSpinner.getSelectedItemPosition()] + ", power "
-                        + SettingsWrite.POWER[powerSpinner.getSelectedItemPosition()] + ", KTRC "
-                        + SettingsWrite.KTRC[ktrcSpinner.getSelectedItemPosition()] + ", KQS "
-                        + SettingsWrite.ON_OFF[kqsSpinner.getSelectedItemPosition()]
-                        + (name.isEmpty() ? ", no name" : ", name \"" + name + "\"") + ".\n\n" + NOT_TRIED)
+                .setMessage("All of these go to the bike in one write:\n\n" + lines + "\n\nThe bike must stand "
+                        + "still, be in neutral and have the throttle closed. KawaNav re-checks this before "
+                        + "sending and reads the settings back afterwards.\n\n" + NOT_TRIED)
                 .setPositiveButton("Send", (d, w) -> {
+                    prefs.edit().putString(Hub.KEY_SETTINGS_NAME, name).apply();
                     // spinner positions start at 0, the bike's numbers at 1; KEBC goes back as the bike has it
                     BikeFrames.VehicleSettings now2 = Hub.bike.settings;
                     int kebc = now2 != null && now2.kebc >= 0 ? now2.kebc : 0;
@@ -519,21 +614,15 @@ public class BikeActivity extends KawaActivity {
                     rowParent.removeViewAt(at);
                     rowParent.addView(fresh, at, modeSpinner.getLayoutParams());
                     modeSpinner = fresh;
-                    // the rider's pick is kept by the clamp above; only a first fill comes from the bike
+                    // the rider's pick is kept by the clamp above; only a first fill comes from the bike,
+                    // and the new list's own first selection must not set a preset
+                    modeSetByApp = fresh.getSelectedItemPosition();
+                    watchMode();
                 }
             }
             BikeFrames.VehicleSettings s = b.settings;
-            if (s != null && !settingsPrefilled) { // prefill once, from what the bike reported
-                if (s.ridingMode >= 1 && s.ridingMode <= SettingsWrite.modeCount(b.tuning)) {
-                    modeSpinner.setSelection(s.ridingMode - 1);
-                }
-                if (s.power >= 1 && s.power <= SettingsWrite.POWER.length) powerSpinner.setSelection(s.power - 1);
-                int k = SettingsWrite.ktrcFromWire(s.ktrc);
-                if (k >= 0) ktrcSpinner.setSelection(k);
-                if (s.kqs >= 1 && s.kqs <= SettingsWrite.ON_OFF.length) kqsSpinner.setSelection(s.kqs - 1);
-                settingsPrefilled = true;
-            }
-            settingsSend.setEnabled(true);
+            if (s != null && !settingsPrefilled) fillFromBike(s); // once, from what the bike reported
+            refreshSettingMarks();
             // the same checks the write makes, so "Ready" is only shown when a write would go out
             String blocked = !Hub.bikeConnected ? "the bike is not connected"
                     : SettingsWrite.blockedBecause(b.live, now - b.liveAt, b.tuning);

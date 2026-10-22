@@ -1,5 +1,6 @@
 package io.github.darthbob.kawanav;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -208,5 +209,51 @@ public class SettingsWriteTest {
         assertEquals(idle, SettingsWrite.status(null, null, 0, idle));
         // a clock set back must not keep an outcome for ever
         assertEquals(idle, SettingsWrite.status("", "Not sent: x", -5, idle));
+    }
+
+    // ------------------------------------------------------------------ presets and what a write sends
+
+    @Test
+    public void presetsAreRideologys() {
+        assertArrayEquals(new int[]{1, 1}, SettingsWrite.preset(1)); // Sport: Full, KTRC 1
+        assertArrayEquals(new int[]{1, 2}, SettingsWrite.preset(2)); // Road: Full, KTRC 2
+        assertArrayEquals(new int[]{3, 3}, SettingsWrite.preset(3)); // Rain: Low, KTRC 3
+        for (int rider = 4; rider <= 7; rider++) assertNull(SettingsWrite.preset(rider));
+    }
+
+    @Test
+    public void theSummaryListsEveryValueAndMarksTheChanges() {
+        SettingsWrite.Choice bike = new SettingsWrite.Choice(2, 1, 2, 2);   // Road, Full, KTRC 2, KQS ON
+        SettingsWrite.Choice picked = new SettingsWrite.Choice(1, 1, 1, 2); // Sport, Full, KTRC 1, KQS ON
+        assertEquals(java.util.Arrays.asList(
+                "Riding mode: Road → Sport",
+                "Power: Full",
+                "KTRC: 2 → 1",
+                "KQS: ON",
+                "Engine brake: ON (as the bike has it)",
+                "Name: \"Passo\""), SettingsWrite.summary(bike, picked, 2, "Passo"));
+    }
+
+    @Test
+    public void unknownValuesShowAsAQuestionMark() {
+        SettingsWrite.Choice picked = new SettingsWrite.Choice(4, 3, 0, 1); // Rider, Low, KTRC OFF, KQS OFF
+        java.util.List<String> lines = SettingsWrite.summary(null, picked, 0, "");
+        assertEquals("Riding mode: ? → Rider", lines.get(0));
+        assertEquals("KTRC: ? → OFF", lines.get(2));
+        // no KEBC on this bike: no line for it
+        assertEquals(5, lines.size());
+        assertEquals("Name: none", lines.get(4));
+        // a bike value the write cannot set (KTRC 7) is not known as a level either
+        SettingsWrite.Choice bike = new SettingsWrite.Choice(4, 3, SettingsWrite.ktrcFromWire(7), 1);
+        assertEquals("KTRC: ? → OFF", SettingsWrite.summary(bike, picked, 0, "").get(2));
+    }
+
+    @Test
+    public void aChoiceDiffersWhenAnyValueDoes() {
+        SettingsWrite.Choice bike = new SettingsWrite.Choice(2, 1, 2, 2);
+        assertFalse(new SettingsWrite.Choice(2, 1, 2, 2).differsFrom(bike));
+        assertTrue(new SettingsWrite.Choice(2, 2, 2, 2).differsFrom(bike));
+        assertTrue(new SettingsWrite.Choice(2, 1, 2, 1).differsFrom(bike));
+        assertTrue(new SettingsWrite.Choice(2, 1, 2, 2).differsFrom(null)); // nothing known from the bike
     }
 }
