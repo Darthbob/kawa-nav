@@ -5,7 +5,8 @@
       "changes": [
         "Ride settings: before sending, the confirmation lists every value next to what the bike has (\"Power: Full\", \"KTRC: 2 → 1\"), since they all go to the bike in one write",
         "A ride setting you changed is marked \"changed\", \"Send to the bike\" waits until something would change, and \"Back to the bike's values\" puts the pickers back",
-        "Picking Sport, Road or Rain sets power and KTRC to that mode's own values, as in Rideology (Sport Full / KTRC 1, Road Full / KTRC 2, Rain Low / KTRC 3); a Rider mode keeps yours"
+        "Picking Sport, Road or Rain sets power and KTRC to that mode's own values, as in Rideology (Sport Full / KTRC 1, Road Full / KTRC 2, Rain Low / KTRC 3); a Rider mode keeps yours",
+        "Changing power or KTRC away from Sport, Road or Rain turns the riding mode into Rider, with a note saying why, so your own values always go as Rider"
       ]
     },
     {

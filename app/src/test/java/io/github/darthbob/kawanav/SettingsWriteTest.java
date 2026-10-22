@@ -222,6 +222,24 @@ public class SettingsWriteTest {
     }
 
     @Test
+    public void aPresetWithOtherValuesIsRider() {
+        assertFalse(SettingsWrite.leavesPreset(1, 1, 1));  // Sport as it comes
+        assertTrue(SettingsWrite.leavesPreset(1, 1, 3));   // Sport with KTRC 3
+        assertTrue(SettingsWrite.leavesPreset(2, 3, 2));   // Road with Low power
+        assertFalse(SettingsWrite.leavesPreset(3, 3, 3));  // Rain as it comes
+        // Rider modes have no preset to leave
+        for (int rider = SettingsWrite.RIDER; rider <= 7; rider++) assertFalse(SettingsWrite.leavesPreset(rider, 3, 0));
+        assertEquals("Rider", SettingsWrite.MODES[SettingsWrite.RIDER - 1]);
+    }
+
+    @Test
+    public void theNoteSaysWhatThePresetHad() {
+        assertEquals("Rain comes with Low power and KTRC 3, so with other values the riding mode is now Rider, "
+                + "which keeps your own.", SettingsWrite.riderNote(3));
+        assertEquals("", SettingsWrite.riderNote(SettingsWrite.RIDER));
+    }
+
+    @Test
     public void theSummaryListsEveryValueAndMarksTheChanges() {
         SettingsWrite.Choice bike = new SettingsWrite.Choice(2, 1, 2, 2);   // Road, Full, KTRC 2, KQS ON
         SettingsWrite.Choice picked = new SettingsWrite.Choice(1, 1, 1, 2); // Sport, Full, KTRC 1, KQS ON

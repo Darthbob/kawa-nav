@@ -504,8 +504,11 @@ after sending.
     until something would change (a value, or the name since the last write), and **Back to the
     bike's values** puts the pickers back.
   - **Sport, Road and Rain come with their own power and KTRC**, as Rideology's mode buttons set
-    them: Sport Full / KTRC 1, Road Full / KTRC 2, Rain Low / KTRC 3. Picking one of them sets both
-    (you can still change them before sending); a Rider mode keeps yours.
+    them: Sport Full / KTRC 1, Road Full / KTRC 2, Rain Low / KTRC 3. Picking one of them sets both;
+    a Rider mode keeps yours. **Change power or KTRC away from a preset and the riding mode becomes
+    Rider**, with a note under it saying why ("Rain comes with Low power and KTRC 3, so with other
+    values the riding mode is now Rider…"): your own values always go as Rider, the mode made for them.
+    Values filled in from the bike never do this, and KQS is no part of a preset.
 - **Dash shift lamp**: when the lamp lights (off / tachometer / LED / both, as the dash allows) and at
   which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
   dash clock stays as it is.

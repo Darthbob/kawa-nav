@@ -60,6 +60,10 @@ public class BikeActivity extends KawaActivity {
      * callback must not put a preset over the bike's power and KTRC. -1 once the rider picked one.
      */
     private int modeSetByApp = 0;
+    /** The same for power and KTRC: a value filled in from the bike does not turn a preset into Rider. */
+    private int powerSetByApp = 0, ktrcSetByApp = 0;
+    /** Under the riding mode: why it became Rider (a preset's power or KTRC was changed). */
+    private TextView presetNote;
     private LinearLayout parkedCard;
     private TextView parkedText;
     private Button parkedNavigate;
@@ -221,8 +225,9 @@ public class BikeActivity extends KawaActivity {
         c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
                 + "screen, and a name for them if you give one. They always go together in one write: the "
                 + "ones you leave as they are go as the bike has them. Sport, Road and Rain set power and "
-                + "KTRC to their own values, as in Rideology; Rider keeps yours. The bike must be standing "
-                + "still, in neutral and with the throttle closed. " + NOT_TRIED));
+                + "KTRC to their own values, as in Rideology; change either and the mode becomes Rider, which "
+                + "keeps yours. The bike must be standing still, in neutral and with the throttle closed. "
+                + NOT_TRIED));
         modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
         modeNote = secondary("");
         powerSpinner = spinner(SettingsWrite.POWER, 0);
@@ -232,12 +237,26 @@ public class BikeActivity extends KawaActivity {
         powerChanged = changedPill();
         ktrcChanged = changedPill();
         kqsChanged = changedPill();
+        presetNote = secondary("");
+        presetNote.setTextColor(Ui.accent(night));
+        presetNote.setVisibility(View.GONE);
         watchMode();
-        powerSpinner.setOnItemSelectedListener(onSelect(pos -> refreshSettingMarks()));
-        ktrcSpinner.setOnItemSelectedListener(onSelect(pos -> refreshSettingMarks()));
+        powerSpinner.setOnItemSelectedListener(onSelect(pos -> {
+            boolean byRider = pos != powerSetByApp;
+            powerSetByApp = -1;
+            if (byRider) leavePreset();
+            refreshSettingMarks();
+        }));
+        ktrcSpinner.setOnItemSelectedListener(onSelect(pos -> {
+            boolean byRider = pos != ktrcSetByApp;
+            ktrcSetByApp = -1;
+            if (byRider) leavePreset();
+            refreshSettingMarks();
+        }));
         kqsSpinner.setOnItemSelectedListener(onSelect(pos -> refreshSettingMarks()));
         c.addView(modeNote);
         addRow(c, settingRowWith("Riding mode", modeChanged, modeSpinner));
+        c.addView(presetNote);
         addRow(c, settingRowWith("Power", powerChanged, powerSpinner));
         addRow(c, settingRowWith("KTRC", ktrcChanged, ktrcSpinner));
         addRow(c, settingRowWith("KQS", kqsChanged, kqsSpinner));
@@ -299,6 +318,7 @@ public class BikeActivity extends KawaActivity {
                 modeSetByApp = -1;
             } else {
                 modeSetByApp = -1;
+                presetNote.setVisibility(View.GONE); // the rider picked the mode: nothing to explain
                 int[] preset = SettingsWrite.preset(pos + 1);
                 if (preset != null) {
                     powerSpinner.setSelection(preset[0] - 1);
@@ -309,16 +329,41 @@ public class BikeActivity extends KawaActivity {
         }));
     }
 
+    /**
+     * Power or KTRC changed by the rider while Sport, Road or Rain is picked, away from that mode's own:
+     * the riding mode becomes Rider, and the note under it says why.
+     */
+    private void leavePreset() {
+        int mode = modeSpinner.getSelectedItemPosition() + 1;
+        if (!SettingsWrite.leavesPreset(mode, powerSpinner.getSelectedItemPosition() + 1,
+                ktrcSpinner.getSelectedItemPosition())) {
+            return;
+        }
+        int rider = SettingsWrite.RIDER - 1;
+        if (modeSpinner.getSelectedItemPosition() != rider) modeSetByApp = rider;
+        modeSpinner.setSelection(rider);
+        presetNote.setText(SettingsWrite.riderNote(mode));
+        presetNote.setVisibility(View.VISIBLE);
+    }
+
     /** The pickers set to what the bike reported (first fill, and "Back to the bike's values"). */
     private void fillFromBike(BikeFrames.VehicleSettings s) {
         if (s == null) return;
+        presetNote.setVisibility(View.GONE);
         if (s.ridingMode >= 1 && s.ridingMode <= modeSpinner.getCount()) {
             if (modeSpinner.getSelectedItemPosition() != s.ridingMode - 1) modeSetByApp = s.ridingMode - 1;
             modeSpinner.setSelection(s.ridingMode - 1);
         }
-        if (s.power >= 1 && s.power <= SettingsWrite.POWER.length) powerSpinner.setSelection(s.power - 1);
+        // what the bike has is not the rider's change: it must not turn a preset into Rider
+        if (s.power >= 1 && s.power <= SettingsWrite.POWER.length) {
+            if (powerSpinner.getSelectedItemPosition() != s.power - 1) powerSetByApp = s.power - 1;
+            powerSpinner.setSelection(s.power - 1);
+        }
         int k = SettingsWrite.ktrcFromWire(s.ktrc);
-        if (k >= 0) ktrcSpinner.setSelection(k);
+        if (k >= 0) {
+            if (ktrcSpinner.getSelectedItemPosition() != k) ktrcSetByApp = k;
+            ktrcSpinner.setSelection(k);
+        }
         if (s.kqs >= 1 && s.kqs <= SettingsWrite.ON_OFF.length) kqsSpinner.setSelection(s.kqs - 1);
         settingsPrefilled = true;
         refreshSettingMarks();

@@ -174,6 +174,27 @@ public final class SettingsWrite {
         }
     }
 
+    /** The riding mode that takes the rider's own power and KTRC. */
+    public static final int RIDER = 4;
+
+    /**
+     * Sport, Road or Rain with a power or KTRC level other than its own ({@link #preset}): that is not the
+     * mode any more but the rider's own setting, so KawaNav sends it as {@link #RIDER}. KQS is no part of
+     * a preset.
+     */
+    public static boolean leavesPreset(int mode, int power, int ktrcLevel) {
+        int[] p = preset(mode);
+        return p != null && (power != p[0] || ktrcLevel != p[1]);
+    }
+
+    /** Why the riding mode became Rider, after {@code fromMode}'s power or KTRC was changed. */
+    public static String riderNote(int fromMode) {
+        int[] p = preset(fromMode);
+        if (p == null) return "";
+        return MODES[fromMode - 1] + " comes with " + POWER[p[0] - 1] + " power and KTRC " + KTRC[p[1]]
+                + ", so with other values the riding mode is now Rider, which keeps your own.";
+    }
+
     /**
      * Riding mode, power, KTRC level and KQS in the numbers of a write (mode 1.., power 1..3, KTRC level
      * 0 OFF .. 5, KQS 1 OFF / 2 ON); -1 where it is not known. What the bike has, or what is picked.
