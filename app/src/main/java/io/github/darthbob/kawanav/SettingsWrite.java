@@ -159,6 +159,107 @@ public final class SettingsWrite {
         return null;
     }
 
+    /**
+     * The power and KTRC level Sport, Road and Rain come with, as {power, KTRC level}, or null for the
+     * Rider modes, which keep the rider's own. Rideology's preset buttons set them (Sport: power 1, KTRC 2;
+     * Road: 1, 3; Rain: 3, 4 in its stored KTRC numbers, that is levels 1, 2 and 3;
+     * Ble5VehicleSettingViewModel.java:123-183). It sets KECS too, but never writes KECS.
+     */
+    public static int[] preset(int mode) {
+        switch (mode) {
+            case 1: return new int[]{1, 1}; // Sport: Full, KTRC 1
+            case 2: return new int[]{1, 2}; // Road: Full, KTRC 2
+            case 3: return new int[]{3, 3}; // Rain: Low, KTRC 3
+            default: return null;
+        }
+    }
+
+    /** The riding mode that takes the rider's own power and KTRC. */
+    public static final int RIDER = 4;
+
+    /**
+     * Sport, Road or Rain with a power or KTRC level other than its own ({@link #preset}): that is not the
+     * mode any more but the rider's own setting, so KawaNav sends it as {@link #RIDER}. KQS is no part of
+     * a preset.
+     */
+    public static boolean leavesPreset(int mode, int power, int ktrcLevel) {
+        int[] p = preset(mode);
+        return p != null && (power != p[0] || ktrcLevel != p[1]);
+    }
+
+    /**
+     * Where power and KTRC come from, on the line above them: "Sport: Full power, KTRC 1" for a preset,
+     * "Your own: Rider" for a Rider mode. A preset whose values are not its own (only the bike's can be:
+     * a change by the rider turns it into Rider) says so.
+     */
+    public static String presetLine(int mode, int power, int ktrcLevel) {
+        if (mode < 1 || mode > MODES.length) return "";
+        int[] p = preset(mode);
+        if (p == null) return "Your own: " + MODES[mode - 1];
+        String own = MODES[mode - 1] + ": " + POWER[p[0] - 1] + " power, KTRC " + KTRC[p[1]];
+        return leavesPreset(mode, power, ktrcLevel) ? own + " (the bike has other values)" : own;
+    }
+
+    /** Why the riding mode became Rider, after {@code fromMode}'s power or KTRC was changed. */
+    public static String riderNote(int fromMode) {
+        int[] p = preset(fromMode);
+        if (p == null) return "";
+        return MODES[fromMode - 1] + " comes with " + POWER[p[0] - 1] + " power and KTRC " + KTRC[p[1]]
+                + ", so with other values the riding mode is now Rider, which keeps your own.";
+    }
+
+    /**
+     * Riding mode, power, KTRC level and KQS in the numbers of a write (mode 1.., power 1..3, KTRC level
+     * 0 OFF .. 5, KQS 1 OFF / 2 ON); -1 where it is not known. What the bike has, or what is picked.
+     */
+    public static final class Choice {
+        public final int mode, power, ktrcLevel, kqs;
+
+        public Choice(int mode, int power, int ktrcLevel, int kqs) {
+            this.mode = mode;
+            this.power = power;
+            this.ktrcLevel = ktrcLevel;
+            this.kqs = kqs;
+        }
+
+        /** What the bike reported, or null before it did. */
+        public static Choice of(BikeFrames.VehicleSettings s) {
+            return s == null ? null : new Choice(s.ridingMode, s.power, ktrcFromWire(s.ktrc), s.kqs);
+        }
+
+        /** Something here is not what the bike has (or the bike's value is not known). */
+        public boolean differsFrom(Choice bike) {
+            return bike == null || mode != bike.mode || power != bike.power || ktrcLevel != bike.ktrcLevel
+                    || kqs != bike.kqs;
+        }
+    }
+
+    /**
+     * What a write sends, one line per value next to what the bike has: "Power: Full → Low" for a change,
+     * "KQS: ON" for one that stays, "?" where the bike did not say. All of them go in the one write (the
+     * frame has no way to send a single value), so the ones that stay are listed too. KEBC goes back as
+     * the bike has it (0: the bike has none, no line); the name is sent as given.
+     */
+    public static java.util.List<String> summary(Choice bike, Choice picked, int kebc, String name) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        out.add(line("Riding mode", MODES, bike == null ? -1 : bike.mode - 1, picked.mode - 1));
+        out.add(line("Power", POWER, bike == null ? -1 : bike.power - 1, picked.power - 1));
+        out.add(line("KTRC", KTRC, bike == null ? -1 : bike.ktrcLevel, picked.ktrcLevel));
+        out.add(line("KQS", ON_OFF, bike == null ? -1 : bike.kqs - 1, picked.kqs - 1));
+        if (kebc > 0) out.add("Engine brake: " + nameAt(KEBC, kebc - 1) + " (as the bike has it)");
+        out.add(name == null || name.isEmpty() ? "Name: none" : "Name: \"" + name + "\"");
+        return out;
+    }
+
+    private static String line(String label, String[] names, int onBike, int sent) {
+        String to = nameAt(names, sent);
+        return onBike == sent ? label + ": " + to : label + ": " + nameAt(names, onBike) + " → " + to;
+    }
+
+    private static String nameAt(String[] names, int i) {
+        return i >= 0 && i < names.length ? names[i] : "?";
+    }
+
     /** Shift-lamp levels the meter takes: code 1..61, each step a 250 rpm step from 3000 rpm up. */
     public static final int LAMP_MIN_RPM = 3000, LAMP_RPM_STEP = 250, LAMP_LEVELS = 61;
 

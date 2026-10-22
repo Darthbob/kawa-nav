@@ -497,6 +497,28 @@ after sending.
   KawaNav refuses to send unless the bike is connected, standing still, in neutral and with the
   throttle closed (Rideology itself only asks for standing still), asks for confirmation, waits for the
   meter's answer and reads the settings back to compare.
+  - **All four go together**, as in Rideology: the write has no way to send one value alone, so the
+    ones you leave go as the bike has them, and the engine brake goes back unchanged. The
+    confirmation lists every value next to what the bike has ("Power: Full", "KTRC: 2 → 1").
+  - A picker that is not what the bike has is marked **changed**. "Send to the bike" stays grey
+    until something would change (a value, or the name since the last write), and **Back to the
+    bike's values** puts the pickers back.
+  - **Sport, Road and Rain come with their own power and KTRC**, as Rideology's mode buttons set
+    them: Sport Full / KTRC 1, Road Full / KTRC 2, Rain Low / KTRC 3. Picking one of them sets both;
+    a Rider mode keeps yours. **Change power or KTRC away from a preset and the riding mode becomes
+    Rider**, with a note under it saying why ("Rain comes with Low power and KTRC 3, so with other
+    values the riding mode is now Rider…"): your own values always go as Rider, the mode made for them.
+    Values filled in from the bike never do this, and KQS is no part of a preset.
+  - **Profiles**, as in Rideology: **Save as profile** keeps riding mode, power, KTRC and KQS on the
+    phone under the name in the Name field (saving a name again replaces that profile, after asking).
+    The **Profile** picker at the top fills a profile's values and name into the pickers, ready to be
+    checked and sent; **Delete profile** removes it from the phone only. Up to 20; the engine brake is
+    not kept, it goes back as the bike has it. A profile with Rider 2-4 on a bike with four modes
+    leaves the riding mode as it is, and says so. Profiles are part of the settings Android backs up.
+  - On the card, **power and KTRC sit indented under the riding mode**, with a line in the accent
+    colour beside them and a line above them saying where they come from: "Sport: Full power, KTRC 1"
+    for a preset, "Your own: Rider" for a Rider mode. KQS and the name come after, under **Not part of
+    the riding mode**.
 - **Dash shift lamp**: when the lamp lights (off / tachometer / LED / both, as the dash allows) and at
   which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
   dash clock stays as it is.

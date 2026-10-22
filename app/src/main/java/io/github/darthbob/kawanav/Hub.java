@@ -170,6 +170,8 @@ public final class Hub {
     public static final String KEY_FUEL_UNIT = "fuel_unit";
     /** The profile name sent with the ride settings ("" = none), kept for the next write. */
     public static final String KEY_SETTINGS_NAME = "settings_name";
+    /** Ride settings kept under a name on the phone, see {@link SettingsProfiles}. */
+    public static final String KEY_SETTINGS_PROFILES = "settings_profiles";
     /** Start recording by itself when the bike is moving (off by default). */
     public static final String KEY_RIDE_AUTO = "ride_auto";
     /**
