@@ -187,6 +187,19 @@ public final class SettingsWrite {
         return p != null && (power != p[0] || ktrcLevel != p[1]);
     }
 
+    /**
+     * Where power and KTRC come from, on the line above them: "Sport: Full power, KTRC 1" for a preset,
+     * "Your own: Rider" for a Rider mode. A preset whose values are not its own (only the bike's can be:
+     * a change by the rider turns it into Rider) says so.
+     */
+    public static String presetLine(int mode, int power, int ktrcLevel) {
+        if (mode < 1 || mode > MODES.length) return "";
+        int[] p = preset(mode);
+        if (p == null) return "Your own: " + MODES[mode - 1];
+        String own = MODES[mode - 1] + ": " + POWER[p[0] - 1] + " power, KTRC " + KTRC[p[1]];
+        return leavesPreset(mode, power, ktrcLevel) ? own + " (the bike has other values)" : own;
+    }
+
     /** Why the riding mode became Rider, after {@code fromMode}'s power or KTRC was changed. */
     public static String riderNote(int fromMode) {
         int[] p = preset(fromMode);

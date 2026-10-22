@@ -509,6 +509,10 @@ after sending.
     Rider**, with a note under it saying why ("Rain comes with Low power and KTRC 3, so with other
     values the riding mode is now Rider…"): your own values always go as Rider, the mode made for them.
     Values filled in from the bike never do this, and KQS is no part of a preset.
+  - On the card, **power and KTRC sit indented under the riding mode**, with a line in the accent
+    colour beside them and a line above them saying where they come from: "Sport: Full power, KTRC 1"
+    for a preset, "Your own: Rider" for a Rider mode. KQS and the name come after, under **Not part of
+    the riding mode**.
 - **Dash shift lamp**: when the lamp lights (off / tachometer / LED / both, as the dash allows) and at
   which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
   dash clock stays as it is.

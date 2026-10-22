@@ -64,6 +64,8 @@ public class BikeActivity extends KawaActivity {
     private int powerSetByApp = 0, ktrcSetByApp = 0;
     /** Under the riding mode: why it became Rider (a preset's power or KTRC was changed). */
     private TextView presetNote;
+    /** Above power and KTRC: where they come from ("Sport: Full power, KTRC 1", "Your own: Rider"). */
+    private TextView presetLine;
     private LinearLayout parkedCard;
     private TextView parkedText;
     private Button parkedNavigate;
@@ -257,9 +259,18 @@ public class BikeActivity extends KawaActivity {
         c.addView(modeNote);
         addRow(c, settingRowWith("Riding mode", modeChanged, modeSpinner));
         c.addView(presetNote);
-        addRow(c, settingRowWith("Power", powerChanged, powerSpinner));
-        addRow(c, settingRowWith("KTRC", ktrcChanged, ktrcSpinner));
-        addRow(c, settingRowWith("KQS", kqsChanged, kqsSpinner));
+        // power and KTRC belong to the riding mode: indented under it, with where they come from
+        presetLine = secondary("");
+        presetLine.setPadding(0, dp(Ui.SPACE1), 0, 0);
+        LinearLayout byMode = column();
+        byMode.addView(presetLine);
+        byMode.addView(settingRowWith("Power", powerChanged, powerSpinner));
+        addRow(byMode, settingRowWith("KTRC", ktrcChanged, ktrcSpinner));
+        c.addView(indented(byMode));
+        TextView apart = secondary("Not part of the riding mode");
+        apart.setPadding(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE1));
+        addRow(c, apart);
+        c.addView(settingRowWith("KQS", kqsChanged, kqsSpinner));
         settingsName = new android.widget.EditText(this);
         settingsName.setSingleLine(true);
         settingsName.setTextSize(15);
@@ -299,6 +310,19 @@ public class BikeActivity extends KawaActivity {
             r.addView(mark, lp);
         }
         r.addView(s, controlWidth());
+        return r;
+    }
+
+    /** Rows that belong to the row above: indented, with a line in the accent colour down their left side. */
+    private LinearLayout indented(View content) {
+        LinearLayout r = row();
+        View bar = new View(this);
+        bar.setBackgroundColor((Ui.accent(night) & 0x00FFFFFF) | 0x66000000);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(2), LinearLayout.LayoutParams.MATCH_PARENT);
+        lp.leftMargin = dp(Ui.SPACE2);
+        lp.rightMargin = dp(Ui.SPACE3);
+        r.addView(bar, lp);
+        r.addView(content, weight());
         return r;
     }
 
@@ -385,6 +409,7 @@ public class BikeActivity extends KawaActivity {
         if (modeChanged == null || settingsSend == null) return;
         SettingsWrite.Choice bike = SettingsWrite.Choice.of(Hub.bike.settings);
         SettingsWrite.Choice now = picked();
+        presetLine.setText(SettingsWrite.presetLine(now.mode, now.power, now.ktrcLevel));
         modeChanged.setVisibility(bike != null && bike.mode != now.mode ? View.VISIBLE : View.GONE);
         powerChanged.setVisibility(bike != null && bike.power != now.power ? View.VISIBLE : View.GONE);
         ktrcChanged.setVisibility(bike != null && bike.ktrcLevel != now.ktrcLevel ? View.VISIBLE : View.GONE);

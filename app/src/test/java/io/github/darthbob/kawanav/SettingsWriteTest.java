@@ -233,6 +233,17 @@ public class SettingsWriteTest {
     }
 
     @Test
+    public void theLineAbovePowerAndKtrcSaysWhereTheyComeFrom() {
+        assertEquals("Sport: Full power, KTRC 1", SettingsWrite.presetLine(1, 1, 1));
+        assertEquals("Rain: Low power, KTRC 3", SettingsWrite.presetLine(3, 3, 3));
+        assertEquals("Your own: Rider", SettingsWrite.presetLine(4, 2, 4));
+        assertEquals("Your own: Rider 3", SettingsWrite.presetLine(6, 1, 0));
+        // a bike that reports Road with other values
+        assertEquals("Road: Full power, KTRC 2 (the bike has other values)", SettingsWrite.presetLine(2, 1, 4));
+        assertEquals("", SettingsWrite.presetLine(0, 1, 1));
+    }
+
+    @Test
     public void theNoteSaysWhatThePresetHad() {
         assertEquals("Rain comes with Low power and KTRC 3, so with other values the riding mode is now Rider, "
                 + "which keeps your own.", SettingsWrite.riderNote(3));
