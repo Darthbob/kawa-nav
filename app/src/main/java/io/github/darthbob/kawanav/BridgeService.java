@@ -799,7 +799,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (autoStarted) {
             if (ble.isReady()) {
                 bikeAbsentSince = now;
-            } else if (now - bikeAbsentSince > AUTO_STOP_MS) {
+            } else if (now - bikeAbsentSince > AUTO_STOP_MS && !recorder.waitingForBike()) {
+                // a ride waiting for the bike ends by the rider's choice first (RideEnd), then the bridge
                 Logger.log("Bike not connected for " + AUTO_STOP_MS / 60_000 + " min after autostart: stopping the bridge");
                 stopSelf();
                 return;

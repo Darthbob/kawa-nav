@@ -457,6 +457,10 @@ public class SettingsActivity extends KawaActivity {
         LinearLayout c = group();
         addRow(c, switchRow("Start recording by itself", "As soon as the bike is connected and moving",
                 Hub.KEY_RIDE_AUTO, false));
+        addRow(c, choiceRow("End a ride", "When the bike is switched off: at once, or a few minutes later so "
+                        + "that a fuel stop stays in the same ride",
+                RideEnd.LABELS, prefs.getInt(Hub.KEY_RIDE_END, RideEnd.DEFAULT),
+                pos -> prefs.edit().putInt(Hub.KEY_RIDE_END, pos).apply()));
         addRow(c, switchRow("Map under the track", "OpenStreetMap's map behind a ride's track. The map is "
                 + "fetched from openstreetmap.org for the area you look at, and kept on the phone for a while",
                 Hub.KEY_RIDE_MAP, true));

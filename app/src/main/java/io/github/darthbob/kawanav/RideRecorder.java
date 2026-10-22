@@ -49,6 +49,9 @@ public final class RideRecorder implements android.location.LocationListener {
     private boolean gpsRequested, partialGps;
     private Location fix;
     private double autoSince = -1;
+    /** When the link was lost and paused the ride (-1: not paused by the link), and the speed then. */
+    private long linkLostAt = -1;
+    private double kmhAtLoss = Double.NaN;
 
     public RideRecorder(Context context) {
         this.context = context.getApplicationContext();
@@ -100,6 +103,7 @@ public final class RideRecorder implements android.location.LocationListener {
         maxRpm = 0;
         samples = 0;
         partialGps = false;
+        linkLostAt = -1;
         requestGps();
         // Rideology asks for the riding log extension (temperatures, fuel, tyres) when a recording starts;
         // do the same when none has come in for a while
@@ -139,6 +143,7 @@ public final class RideRecorder implements android.location.LocationListener {
         maxLeanR = r.maxLeanR;
         samples = r.samples;
         partialGps = !r.hasGps;
+        linkLostAt = -1;
         requestGps();
         main.post(tick);
         Logger.log("Ride: continuing " + r.id + " after a restart (" + r.samples + " samples so far)");
@@ -148,6 +153,7 @@ public final class RideRecorder implements android.location.LocationListener {
     public void pause() {
         if (state != RECORDING) return;
         clock.stop(System.currentTimeMillis());
+        linkLostAt = -1;   // paused by hand: the rider's to end (linkLost sets it again)
         state = PAUSED;
         ride.state = "paused";
         saveSummary();
@@ -157,6 +163,7 @@ public final class RideRecorder implements android.location.LocationListener {
     public void resume() {
         if (state != PAUSED) return;
         clock.start(System.currentTimeMillis());
+        linkLostAt = -1;
         state = RECORDING;
         ride.state = "recording";
         Logger.log("Ride: resumed");
@@ -190,9 +197,41 @@ public final class RideRecorder implements android.location.LocationListener {
         }
     }
 
-    /** Called when the link to the bike was lost: a ride with bike data pauses until it is back. */
+    /**
+     * Called when the link to the bike was lost: a ride with bike data pauses until it is back, or ends
+     * when the bike has been gone as long as the rider chose ({@link RideEnd}).
+     */
     public void linkLost() {
-        if (state == RECORDING && samples > 0) pause();
+        if (state != RECORDING || samples == 0) return;
+        long now = System.currentTimeMillis();
+        double kmh = speedNow(now);
+        pause();
+        linkLostAt = now;
+        kmhAtLoss = kmh;
+        Logger.log("Ride: link lost " + (RideEnd.moving(kmh) ? "while moving" : "standing (switched off?)")
+                + ", paused");
+    }
+
+    /** True while a ride paused by the lost link waits for the bike to come back, or to end. */
+    public boolean waitingForBike() {
+        return state == PAUSED && linkLostAt >= 0;
+    }
+
+    /** Ends a ride paused by the lost link once the bike has been gone long enough ({@link RideEnd}). */
+    private void endWhenGone(long now) {
+        if (!waitingForBike()) return;
+        int choice = Hub.prefs(context).getInt(Hub.KEY_RIDE_END, RideEnd.DEFAULT);
+        if (now - linkLostAt < RideEnd.afterMs(choice, kmhAtLoss)) return;
+        finish(RideEnd.moving(kmhAtLoss) ? "bike gone" : "bike switched off");
+    }
+
+    /** The bike's speed a moment ago, else the phone's; NaN without either. */
+    private double speedNow(long now) {
+        BikeData b = Hub.bike;
+        BikeFrames.Telemetry t = b.live;
+        if (now - b.liveAt <= BIKE_MS && t != null && t.speedKmh == t.speedKmh) return t.speedKmh;
+        Location l = freshFix();
+        return l != null && l.hasSpeed() ? l.getSpeed() * 3.6 : Double.NaN;
     }
 
     /** Called when the bike is connected again. */
@@ -211,6 +250,7 @@ public final class RideRecorder implements android.location.LocationListener {
         @Override
         public void run() {
             if (state == RECORDING) sample();
+            else if (state == PAUSED) endWhenGone(System.currentTimeMillis());
             if (state != IDLE) main.postDelayed(this, 1000);
         }
     };

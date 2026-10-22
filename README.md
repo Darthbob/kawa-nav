@@ -53,7 +53,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   in 4 bars, like with Rideology, and that it is charging; the headset icon shows while your helmet
   intercom is connected.
 - 🔑 **Starts by itself** when the bike is switched on (or the helmet intercom connects), also with the
-  phone locked in a pocket, and stops 5 minutes after the bike is switched off.
+  phone locked in a pocket, and stops 5 minutes after the bike is switched off (once a ride being
+  recorded has ended, see [Recording rides](#recording-rides)).
 - 📊 **The bike's own data**: odometer, trip A/B, fuel and range, battery voltage, outside and engine
   temperatures, maintenance reminders, VIN, and live values while riding (speed, engine speed, gear,
   throttle, lean angle). The last values are kept, so they are there with the ignition off, and the
@@ -205,6 +206,7 @@ In the **Settings** tab:
 | [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
 | [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
+| [End a ride](#recording-rides) | At once | At once / After 5 min / After 15 min: when a ride ends after the bike is switched off |
 | Set the dash clock from the phone | Off | Sets the dash clock once per connection |
 | Call icon on the dash | Off | Shows an icon while a call comes in, also a WhatsApp/Telegram/Signal call (needs notification access) |
 | Mail and message icon on the dash | Off | Same for mail and messages (Gmail, Outlook, Messages, WhatsApp, Telegram, Signal, …) |
@@ -414,6 +416,15 @@ back at all is marked "track lost" instead and keeps the numbers of its last sum
 like a ride that recorded nothing. In the list the ride being recorded is marked "· recording now" and
 cannot be deleted until it is stopped: deleting it would unlink the file the recorder is writing into,
 and the ride would come back as a finished ride with no track.
+
+Switching the bike off ends the ride. The link to the bike goes, the ride pauses, and once the bike has
+been gone 20 seconds it ends, with its summary in a notification. **End a ride** in Settings can wait
+5 or 15 minutes instead: switched on again before then, the bike continues the same ride, so a fuel stop
+does not split it. KawaNav tells a switched-off bike from one that drops out of reach by the speed it
+had when the link went: a link lost while moving (5 km/h or more) is waited for at least 5 minutes
+whatever the setting. A ride you paused yourself is left alone until KawaNav itself stops. All this
+holds however KawaNav was started; after an autostart, KawaNav stops once the ride has ended and the
+bike has been gone 5 minutes.
 
 While a ride runs, Home shows its distance, its time and, when the phone has no fix, "no GPS track" —
 the case of a background autostart in an area where KawaNav could not ask for GPS yet. It asks again as
