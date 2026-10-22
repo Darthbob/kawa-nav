@@ -293,6 +293,7 @@ public final class RideStore {
             r.maxLeanL = o.optDouble("maxLeanL", 0);
             r.maxLeanR = o.optDouble("maxLeanR", 0);
             r.fuelUsedL = o.optDouble("fuelUsedL", 0);
+            r.fuelEstL = o.optDouble("fuelEstL", 0);
             r.odoStartKm = o.has("odoStartKm") ? o.optDouble("odoStartKm") : Double.NaN;
             r.odoEndKm = o.has("odoEndKm") ? o.optDouble("odoEndKm") : Double.NaN;
             r.hasGps = o.optBoolean("hasGps");
@@ -390,6 +391,7 @@ public final class RideStore {
             o.put("maxLeanL", round(r.maxLeanL));
             o.put("maxLeanR", round(r.maxLeanR));
             o.put("fuelUsedL", round(r.fuelUsedL));
+            if (r.fuelEstL > 0) o.put("fuelEstL", round(r.fuelEstL));
             if (r.odoStartKm == r.odoStartKm) o.put("odoStartKm", round(r.odoStartKm));
             if (r.odoEndKm == r.odoEndKm) o.put("odoEndKm", round(r.odoEndKm));
             o.put("hasGps", r.hasGps);

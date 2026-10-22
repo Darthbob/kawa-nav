@@ -22,7 +22,13 @@ public final class Ride {
     public double maxKmh, avgKmh;
     public int maxRpm;
     public double maxLeanL, maxLeanR;
+    /** The fuel the bike's own counter (0x41 total fuel) says the ride burned; 0 on a bike without one. */
     public double fuelUsedL;
+    /**
+     * The fuel worked out from the instant fuel economy ({@link Fuel}), for a bike that sends no counter
+     * (the Z900); 0 without an economy. {@link #fuelL()} picks the one to show.
+     */
+    public double fuelEstL;
     public double odoStartKm = Double.NaN, odoEndKm = Double.NaN;
     public boolean hasGps, hasBike;
     public int samples;
@@ -40,6 +46,16 @@ public final class Ride {
      */
     public double km() {
         return (distM == distM ? distM : distBikeM > 0 ? distBikeM : distGpsM) / 1000;
+    }
+
+    /** The fuel the ride burned: the bike's counter when it has one, else the estimate; 0 for neither. */
+    public double fuelL() {
+        return fuelUsedL > 0 ? fuelUsedL : fuelEstL;
+    }
+
+    /** True when {@link #fuelL()} is worked out from the instant fuel economy, not counted by the bike. */
+    public boolean fuelEstimated() {
+        return !(fuelUsedL > 0) && fuelEstL > 0;
     }
 
     public String distance() {
@@ -85,8 +101,10 @@ public final class Ride {
      * 4: the IMU accelerations, wheel and GPS speeds, lean, instant fuel economy, rotation rates, rear
      * wheel slip, the time in each gear and the gear changes.
      * 5: the bends by their most lean ({@link #bendLean}).
+     * 6: the fuel from the instant fuel economy ({@link #fuelEstL}), and that economy's average over the
+     * distance instead of over the seconds.
      */
-    public static final int SUMMARY_VERSION = 5;
+    public static final int SUMMARY_VERSION = 6;
     /** Which summary the file holds, 0 for a ride saved by a version that did not know about metrics. */
     public int summaryVersion;
 
@@ -165,7 +183,8 @@ public final class Ride {
             new Metric("torque_req", "Torque the engine control asks for", ENGINE, "bike units", 0, s -> s.torque_req),
             new Metric("torque_actual", "Torque from the engine", ENGINE, "bike units", 0, s -> s.torque_actual),
             new Metric("fuel_rate", "Fuel use", ENGINE, "dash units", 2, s -> s.fuelRate),
-            // km/L whatever the dash is set to (PROTOCOL.md, 0x45)
+            // km/L whatever the dash is set to (PROTOCOL.md, 0x45); its average is the distance over the
+            // litres (Fuel), not the average of its seconds
             new Metric("fuel_inst", "Fuel economy, instant", ENGINE, "km/L", 1, s -> s.fuelInst),
             new Metric("susp_f", "Front suspension", CHASSIS, "mm", 1, s -> s.susp_f_stroke_mm),
             new Metric("susp_r", "Rear suspension", CHASSIS, "mm", 1, s -> s.susp_r_stroke_mm),
@@ -343,9 +362,11 @@ public final class Ride {
         boolean kqsSeen = false;
         Distance dist = new Distance();
         Bends bends = new Bends();
+        Fuel fuel = new Fuel();
         for (RideTsv.Sample s : samples) {
             if ((s.flags & RideTsv.FLAG_BIKE) != 0) hasBike = true;
             bends.add(s);
+            fuel.add(s);
             if (s.hasGps()) {
                 hasGps = true;
                 addPoint(s.lat, s.lon);
@@ -417,6 +438,10 @@ public final class Ride {
         distGpsM = dist.gpsM;
         distBikeM = dist.bikeM;
         distM = dist.m();
+        fuelEstL = fuel.litres(distM / 1000);
+        Metric economy = metric("fuel_inst");
+        double kmPerL = fuel.kmPerL();
+        if (economy.known() && kmPerL == kmPerL) economy.mean = kmPerL;
         // average as the recorder counts it while riding: distance over recorded time (pauses left out),
         // so the list and the ride agree; the mean of the speed samples is only a fallback without a distance
         double hours = activeMs / 3_600_000.0;
@@ -486,6 +511,47 @@ public final class Ride {
             if (offsetM != offsetM) return gpsM;
             if (fine) return bikeM;
             return bikeM + offsetM + Math.min(gpsM - stepGpsM, 1000);
+        }
+    }
+
+    /**
+     * The fuel a ride burned, from the instant fuel economy the dash sends (km/L, PROTOCOL.md 0x45), for
+     * a bike without a fuel counter. Each second burns the distance it covered over its economy. The
+     * average of the economies would weigh a second crawling at 5 km/h like one at 120, and the 99.9 km/L
+     * of a closed throttle would lift it: on the Z900 rides of 2026-10-17 it read 23.4 km/L where the
+     * litres give 16.9. A second without an economy burns nothing: the dash leaves it out while the engine
+     * brakes (no injection) and at a standstill, whose idling is a few centilitres a ride. A second
+     * without the bike's speed had no bike connected: its fuel is not known, so it is left out.
+     */
+    static final class Fuel {
+        /** The bike's speed summed over its seconds (km/h, a second each), and over those with an economy. */
+        private double speed, speedWithEconomy;
+        /** Each second's speed over its economy, summed: its litres times 3600. */
+        private double perEconomy;
+
+        void add(RideTsv.Sample s) {
+            if (!(s.kmh >= 0)) return;
+            speed += s.kmh;
+            if (s.fuelInst > 0) {
+                speedWithEconomy += s.kmh;
+                perEconomy += s.kmh / s.fuelInst;
+            }
+        }
+
+        /** The economy over the distance, in km/L: the kilometres over the litres. NaN without one. */
+        double kmPerL() {
+            return perEconomy > 0 ? speedWithEconomy / perEconomy : Double.NaN;
+        }
+
+        /**
+         * The litres of a ride {@code km} long. The speed only shares the distance out among the seconds,
+         * so a speedometer that reads high and the seconds missing from the file change nothing, and a
+         * stretch without the bike burns what the rest of the ride burned per km; without a distance, the
+         * speed's own kilometres. 0 without an economy.
+         */
+        double litres(double km) {
+            if (perEconomy <= 0 || speed <= 0) return 0;
+            return km > 0 ? km * perEconomy / speed : perEconomy / 3600;
         }
     }
 

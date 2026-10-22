@@ -445,6 +445,101 @@ public class RideTest {
         assertEquals(0.99, r.fuelUsedL, 1e-6);
     }
 
+    /** A second of riding at {@code kmh} with this instant economy (NaN: the dash sent none). */
+    private static RideTsv.Sample economy(int second, double kmh, double kmPerL) {
+        RideTsv.Sample s = bare(second);
+        s.flags = RideTsv.FLAG_BIKE;
+        s.kmh = kmh;
+        s.fuelInst = kmPerL;
+        return s;
+    }
+
+    @Test
+    public void theFuelEconomysAverageIsTheDistanceOverTheLitres() {
+        // 10 s coasting at 50 km/h (the dash's 99.9 top) and 10 s at 100 km/h doing 10 km/L: the average
+        // of the seconds says 55 km/L; the 0.42 km took 0.029 L, 14.3 km/L
+        List<RideTsv.Sample> in = new ArrayList<>();
+        for (int i = 0; i < 20; i++) in.add(i < 10 ? economy(i, 50, 99.9) : economy(i, 100, 10));
+        Ride r = new Ride();
+        r.summarize(in);
+        Ride.Metric m = r.metric("fuel_inst");
+        assertEquals(10, m.min, 1e-9);
+        assertEquals(99.9, m.max, 1e-9);
+        assertEquals(1500 / (500 / 99.9 + 100), m.mean, 1e-9);
+        assertEquals(20, m.n);
+        // no odometer and no track: the litres over the speed's own kilometres
+        assertEquals((500 / 99.9 + 100) / 3600, r.fuelEstL, 1e-9);
+        assertEquals(r.fuelEstL, r.fuelL(), 1e-12);
+        assertTrue(r.fuelEstimated());
+    }
+
+    @Test
+    public void theEstimatedLitresFollowTheRidesDistance() {
+        // the speedometer says 60 km/h, the odometer (one with a fraction) 66: 10 % more road, 10 % more fuel
+        List<RideTsv.Sample> in = new ArrayList<>();
+        for (int i = 0; i < 3600; i++) {
+            RideTsv.Sample s = economy(i, 60, 20);
+            s.odoKm = 1000 + i * 0.0183;
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(3599 * 0.0183, r.km(), 1e-6);
+        assertEquals(r.km() / 20, r.fuelEstL, 1e-9);
+        assertEquals(5.0, r.fuelL() / r.km() * 100, 1e-9);
+    }
+
+    @Test
+    public void aSecondWithoutAnEconomyBurnsNothingButOneWithoutTheBikeIsUnknown() {
+        // 100 s at 20 km/L, then 100 s of engine braking with no economy: half the road for nothing
+        List<RideTsv.Sample> braking = new ArrayList<>();
+        for (int i = 0; i < 200; i++) braking.add(economy(i, 60, i < 100 ? 20 : Double.NaN));
+        Ride a = new Ride();
+        a.summarize(braking);
+        assertEquals(20, a.metric("fuel_inst").mean, 1e-9);
+        assertEquals(100 * 60 / 20.0 / 3600, a.fuelEstL, 1e-9);
+        // 100 s at 20 km/L, then 100 s on the GPS alone (bike gone): that stretch burned as the rest did
+        List<RideTsv.Sample> gone = new ArrayList<>();
+        double step = 60 / 3.6 / 111_194.93;        // degrees of latitude per second at 60 km/h
+        for (int i = 0; i < 200; i++) {
+            RideTsv.Sample s = i < 100 ? economy(i, 60, 20) : bare(i);
+            s.flags |= RideTsv.FLAG_GPS;
+            s.lat = 45 + i * step;
+            s.lon = 7;
+            s.gpsKmh = 60;
+            s.gpsAccM = 5;
+            gone.add(s);
+        }
+        Ride b = new Ride();
+        b.summarize(gone);
+        assertEquals(5.0, b.fuelL() / b.km() * 100, 1e-6);
+    }
+
+    @Test
+    public void theBikesFuelCounterWinsOverTheEstimate() {
+        List<RideTsv.Sample> in = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            RideTsv.Sample s = economy(i, 60, 20);
+            s.fuelTotalL = 100 + i * 0.01;
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertTrue(r.fuelEstL > 0);
+        assertEquals(0.99, r.fuelL(), 1e-6);
+        assertFalse(r.fuelEstimated());
+    }
+
+    @Test
+    public void aRideWithoutAnyEconomyHasNoFuel() {
+        Ride r = new Ride();
+        r.summarize(ride100());
+        assertEquals(0, r.fuelEstL, 1e-12);
+        assertEquals(0, r.fuelL(), 1e-12);
+        assertFalse(r.fuelEstimated());
+        assertFalse(r.metric("fuel_inst").known());
+    }
+
     @Test
     public void newColumnsRoundTrip() {
         // one value per group, so a swapped column name or order shows up

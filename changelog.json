@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "1.2.3",
+      "changes": [
+        "A ride's average fuel economy is now the distance over the fuel burned. It used to average the seconds, so a second at walking pace counted like one at 120 km/h and the figure came out a third or more too high (23 km/L where the fuel says 17)",
+        "On a bike that sends no fuel counter, like the Z900, a ride now shows the fuel used and the L/100 km, estimated from the instant fuel economy and marked ≈. Idling is not in it",
+        "The riding log's total consumption counts only the rides that know their fuel, no longer all the kilometres"
+      ]
+    },
+    {
       "version": "1.2.2",
       "changes": [
         "Ride settings: before sending, the confirmation lists every value next to what the bike has (\"Power: Full\", \"KTRC: 2 → 1\"), since they all go to the bike in one write",

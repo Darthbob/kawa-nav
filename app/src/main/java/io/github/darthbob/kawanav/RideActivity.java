@@ -312,7 +312,8 @@ public class RideActivity extends KawaActivity {
                         ? statTile("Max lean", String.format(Locale.ROOT, "%.0f° / %.0f°", Math.abs(r.maxLeanL), r.maxLeanR))
                         : null,
                 r.maxRpm > 0 ? statTile("Max engine speed", String.format(Locale.ROOT, "%,d rpm", r.maxRpm)) : null,
-                r.fuelUsedL > 0 ? statTile("Fuel used", String.format(Locale.ROOT, "%.1f L", r.fuelUsedL)) : null);
+                r.fuelL() > 0 ? statTile("Fuel used", String.format(Locale.ROOT,
+                        r.fuelEstimated() ? "≈ %.1f L" : "%.1f L", r.fuelL())) : null);
         LinearLayout tileSurface = group();
         tileSurface.setPadding(dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2));
         tileSurface.addView(tiles);
@@ -321,9 +322,10 @@ public class RideActivity extends KawaActivity {
         section.addView(tileSurface, lp);
 
         double km = r.km();
-        if (r.fuelUsedL > 0 && km > 0) {
+        if (r.fuelL() > 0 && km > 0) {
             TextView economy = secondary(String.format(Locale.ROOT, "%.1f L/100 km over %,.1f km",
-                    r.fuelUsedL / km * 100, km));
+                    r.fuelL() / km * 100, km) + (r.fuelEstimated()
+                    ? ", estimated from the instant fuel economy: this bike sends no fuel counter" : ""));
             economy.setPadding(dp(Ui.SPACE1), 0, dp(Ui.SPACE1), dp(Ui.SPACE2));
             section.addView(economy);
         }
@@ -357,9 +359,12 @@ public class RideActivity extends KawaActivity {
         if (Ride.ENGINE.equals(name)) any |= addGears(g, r);
         if (!any) return null;
         if (hasRanges(r, name)) {
+            Ride.Metric economy = r.metric("fuel_inst");
             TextView legend = note("Lowest, average and highest of the seconds the bike sent this"
                     + (hasExtremes(r, name) ? "; where an average says nothing (rotation rates, slip), the lowest "
-                    + "to the highest." : "."));
+                    + "to the highest." : ".")
+                    + (economy.known() && name.equals(economy.section)
+                    ? " The fuel economy's average is the distance over the litres it burned." : ""));
             legend.setPadding(0, dp(Ui.SPACE2), 0, 0);
             g.addView(legend);
         }

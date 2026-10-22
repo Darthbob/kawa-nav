@@ -187,9 +187,9 @@ public class RidesActivity extends KawaActivity {
         // the same wording the totals use: "48 min", not "0 h", when the log is young
         StringBuilder total = new StringBuilder(String.format(Locale.ROOT, "Altogether %,.0f km in %s",
                 stats.totalKm, minutes((long) (stats.totalHours * 3_600_000))));
-        if (stats.fuelL > 0 && stats.totalKm > 0) {
-            total.append(String.format(Locale.ROOT, " · %,.1f L · %.1f L/100 km",
-                    stats.fuelL, stats.fuelL / stats.totalKm * 100));
+        if (stats.fuelL > 0 && stats.fuelKm > 0) {
+            total.append(String.format(Locale.ROOT, stats.fuelEstimated ? " · ≈ %,.1f L · %.1f L/100 km"
+                    : " · %,.1f L · %.1f L/100 km", stats.fuelL, stats.fuelL / stats.fuelKm * 100));
         }
         c.addView(secondary(total.toString()));
         // how much the electronics worked over the whole log

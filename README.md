@@ -421,18 +421,24 @@ soon as the app is opened or the ride is continued, and the track then starts fr
 
 The **Rides** tab ("Riding log") lists them with totals for this week, this month and this year. The
 **Records** card keeps the best of the log — fastest ride, most lean each way, longest ride, hottest engine,
-hardest braking, most suspension travel — and the totals add up the fuel used, the consumption and the time
-the electronics spent working (traction control, ABS, front wheel up). A ride saved by an older version has
+hardest braking, most suspension travel — and the totals add up the fuel used, the consumption (over the
+rides that know their fuel) and the time the electronics spent working (traction control, ABS, front wheel
+up). A ride saved by an older version has
 its numbers worked out when the list is shown, a few at a time. A ride
 has:
 
-- a summary: six tiles (time, average, top speed, max lean, highest engine speed, fuel used) and then
-  folding sections — engine, chassis and suspension, brakes and electronics, temperatures, data quality
-  — each with the lowest, average and highest of every value that ride recorded (the body's
-  accelerations, the lean either side, the wheel and GPS speeds and the instant fuel economy among
-  them; the rotation rates and the rear wheel slip from lowest to highest, as their average says
-  nothing), how long traction control, ABS, cruise control and the front wheel coming up were at work,
-  the time in each gear, and the gear changes with those the quick shifter made;
+- a summary: six tiles (time, average, top speed, max lean, highest engine speed, fuel used) and the
+  consumption in L/100 km, then folding sections — engine, chassis and suspension, brakes and
+  electronics, temperatures, data quality — each with the lowest, average and highest of every value
+  that ride recorded (the body's accelerations, the lean either side, the wheel and GPS speeds and the
+  instant fuel economy among them; the rotation rates and the rear wheel slip from lowest to highest, as
+  their average says nothing), how long traction control, ABS, cruise control and the front wheel coming
+  up were at work, the time in each gear, and the gear changes with those the quick shifter made. The
+  fuel used comes from the bike's fuel counter; a bike that sends none (the Z900) gets an estimate from
+  the instant fuel economy, marked "≈": each second burns the distance it covered over its km/L, and a
+  second without an economy (engine braking, standing still) burns nothing, so idling is left out. The
+  instant fuel economy's average is likewise the distance over the litres, not the average of its
+  seconds, which would count a second at 5 km/h like one at 120 and read a third or more too high;
 - the track, with a dot where the ride started, over an OpenStreetMap map, coloured by the value picked
   for the chart below — blue where it was lowest, then green, orange, red where it was highest (the
   speed until another value is picked); the note under the map gives the values the colours stand for.
