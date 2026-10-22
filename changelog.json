@@ -5,6 +5,7 @@
       "changes": [
         "A recorded ride now ends about 20 seconds after the bike is switched off. It used to wait 5 minutes, or for ever when KawaNav had been opened by hand. Settings → \"End a ride\" can keep it going 5 or 15 minutes instead, so that a fuel stop stays in the same ride",
         "When the bike drops out while riding, the ride waits at least 5 minutes for it before ending",
+        "After KawaNav was stopped during a ride (Stop in the notification, or by itself after the bike was switched off), the record button stayed red and \"Stop ride\" did nothing. It now goes back to green when KawaNav stops, and the ride is saved as before",
         "A ride's average fuel economy is now the distance over the fuel burned. It used to average the seconds, so a second at walking pace counted like one at 120 km/h and the figure came out a third or more too high (23 km/L where the fuel says 17)",
         "On a bike that sends no fuel counter, like the Z900, a ride now shows the fuel used and the L/100 km, estimated from the instant fuel economy and marked ≈. Idling is not in it",
         "The riding log's total consumption counts only the rides that know their fuel, no longer all the kilometres"
