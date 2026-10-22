@@ -66,6 +66,10 @@ public class BikeActivity extends KawaActivity {
     private TextView presetNote;
     /** Above power and KTRC: where they come from ("Sport: Full power, KTRC 1", "Your own: Rider"). */
     private TextView presetLine;
+    /** Ride settings kept on the phone under a name, the picker that fills them in, and its delete button. */
+    private List<SettingsProfiles.Profile> profiles = new ArrayList<>();
+    private android.widget.Spinner profileSpinner;
+    private Button profileDelete;
     private LinearLayout parkedCard;
     private TextView parkedText;
     private Button parkedNavigate;
@@ -228,8 +232,12 @@ public class BikeActivity extends KawaActivity {
                 + "screen, and a name for them if you give one. They always go together in one write: the "
                 + "ones you leave as they are go as the bike has them. Sport, Road and Rain set power and "
                 + "KTRC to their own values, as in Rideology; change either and the mode becomes Rider, which "
-                + "keeps yours. The bike must be standing still, in neutral and with the throttle closed. "
-                + NOT_TRIED));
+                + "keeps yours. Saved as a profile, they are on the phone to be picked and sent again. The "
+                + "bike must be standing still, in neutral and with the throttle closed. " + NOT_TRIED));
+        profiles = SettingsProfiles.parse(prefs.getString(Hub.KEY_SETTINGS_PROFILES, ""));
+        profileSpinner = spinner(profileNames(), 0);
+        watchProfiles();
+        addRow(c, settingRowWith("Profile", profileSpinner));
         modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
         modeNote = secondary("");
         powerSpinner = spinner(SettingsWrite.POWER, 0);
@@ -282,7 +290,17 @@ public class BikeActivity extends KawaActivity {
         nameRow.addView(settingsName, controlWidth());
         addRow(c, nameRow);
         c.addView(secondary("Up to " + SettingsWrite.NAME_BYTES + " bytes, sent with the settings as Rideology "
-                + "sends the title of a setting. Whether the dash shows it anywhere is not known yet."));
+                + "sends the title of a setting, and the name a profile is saved under. Whether the dash shows "
+                + "it anywhere is not known yet."));
+        LinearLayout profileButtons = row();
+        profileButtons.setPadding(0, dp(Ui.SPACE2), 0, 0);
+        LinearLayout.LayoutParams first = weight();
+        first.rightMargin = dp(Ui.SPACE2);
+        profileButtons.addView(secondaryButton("Save as profile", v -> saveProfile()), first);
+        profileDelete = secondaryButton("Delete profile", v -> deleteProfile());
+        profileDelete.setEnabled(false);
+        profileButtons.addView(profileDelete, weight());
+        c.addView(profileButtons);
         settingsStatus = secondary("");
         settingsStatus.setPadding(0, dp(Ui.SPACE2), 0, dp(10));
         c.addView(settingsStatus);
@@ -373,24 +391,138 @@ public class BikeActivity extends KawaActivity {
     /** The pickers set to what the bike reported (first fill, and "Back to the bike's values"). */
     private void fillFromBike(BikeFrames.VehicleSettings s) {
         if (s == null) return;
-        presetNote.setVisibility(View.GONE);
-        if (s.ridingMode >= 1 && s.ridingMode <= modeSpinner.getCount()) {
-            if (modeSpinner.getSelectedItemPosition() != s.ridingMode - 1) modeSetByApp = s.ridingMode - 1;
-            modeSpinner.setSelection(s.ridingMode - 1);
-        }
-        // what the bike has is not the rider's change: it must not turn a preset into Rider
-        if (s.power >= 1 && s.power <= SettingsWrite.POWER.length) {
-            if (powerSpinner.getSelectedItemPosition() != s.power - 1) powerSetByApp = s.power - 1;
-            powerSpinner.setSelection(s.power - 1);
-        }
-        int k = SettingsWrite.ktrcFromWire(s.ktrc);
-        if (k >= 0) {
-            if (ktrcSpinner.getSelectedItemPosition() != k) ktrcSetByApp = k;
-            ktrcSpinner.setSelection(k);
-        }
-        if (s.kqs >= 1 && s.kqs <= SettingsWrite.ON_OFF.length) kqsSpinner.setSelection(s.kqs - 1);
+        fillPickers(SettingsWrite.Choice.of(s));
         settingsPrefilled = true;
         refreshSettingMarks();
+    }
+
+    /**
+     * The pickers set by KawaNav, not the rider: to the bike's values or a profile's. That applies no
+     * preset and turns no preset into Rider. A value the pickers do not offer (not known, or a Rider 3 on
+     * a bike with four modes) is left as it is.
+     *
+     * @return false when a value was left as it was
+     */
+    private boolean fillPickers(SettingsWrite.Choice v) {
+        presetNote.setVisibility(View.GONE);
+        boolean all = true;
+        if (v.mode >= 1 && v.mode <= modeSpinner.getCount()) {
+            if (modeSpinner.getSelectedItemPosition() != v.mode - 1) modeSetByApp = v.mode - 1;
+            modeSpinner.setSelection(v.mode - 1);
+        } else {
+            all = false;
+        }
+        if (v.power >= 1 && v.power <= SettingsWrite.POWER.length) {
+            if (powerSpinner.getSelectedItemPosition() != v.power - 1) powerSetByApp = v.power - 1;
+            powerSpinner.setSelection(v.power - 1);
+        } else {
+            all = false;
+        }
+        if (v.ktrcLevel >= 0 && v.ktrcLevel < SettingsWrite.KTRC.length) {
+            if (ktrcSpinner.getSelectedItemPosition() != v.ktrcLevel) ktrcSetByApp = v.ktrcLevel;
+            ktrcSpinner.setSelection(v.ktrcLevel);
+        } else {
+            all = false;
+        }
+        if (v.kqs >= 1 && v.kqs <= SettingsWrite.ON_OFF.length) {
+            kqsSpinner.setSelection(v.kqs - 1);
+        } else {
+            all = false;
+        }
+        return all;
+    }
+
+    // ------------------------------------------------------------------ profiles
+
+    /** "None", then the profiles' names: the picker's choices. */
+    private String[] profileNames() {
+        String[] names = new String[profiles.size() + 1];
+        names[0] = "None";
+        for (int i = 0; i < profiles.size(); i++) names[i + 1] = profiles.get(i).name;
+        return names;
+    }
+
+    /** Picking a profile fills its values and its name into the pickers, ready to be sent. */
+    private void watchProfiles() {
+        profileSpinner.setOnItemSelectedListener(onSelect(pos -> {
+            if (profileDelete != null) profileDelete.setEnabled(pos > 0);
+            if (pos <= 0 || pos > profiles.size()) return;
+            SettingsProfiles.Profile p = profiles.get(pos - 1);
+            settingsPrefilled = true; // the bike's values, coming in later, must not overwrite the profile
+            if (!fillPickers(p.choice())) {
+                toast("This bike has no " + SettingsWrite.MODES[p.mode - 1] + ": the riding mode was left as it was");
+            }
+            settingsName.setText(p.name);
+            refreshSettingMarks();
+        }));
+    }
+
+    /** Keeps the pickers on the phone under the name in the Name field, over a profile of that name. */
+    private void saveProfile() {
+        String name = SettingsProfiles.clean(settingsName.getText().toString());
+        if (name.isEmpty()) {
+            toast("Give the profile a name first, in the Name field");
+            return;
+        }
+        SettingsWrite.Choice now = picked();
+        SettingsProfiles.Profile p = new SettingsProfiles.Profile(name, now.mode, now.power, now.ktrcLevel, now.kqs);
+        if (SettingsProfiles.indexOf(profiles, name) < 0) {
+            storeProfile(p);
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Replace the profile \"" + name + "\"?")
+                .setMessage("It is saved on the phone with the values the pickers show now.")
+                .setPositiveButton("Replace", (d, w) -> storeProfile(p))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void storeProfile(SettingsProfiles.Profile p) {
+        List<SettingsProfiles.Profile> next = SettingsProfiles.put(profiles, p);
+        if (next == null) {
+            toast("Up to " + SettingsProfiles.MAX + " profiles: delete one first");
+            return;
+        }
+        setProfiles(next, p.name);
+        toast("Saved \"" + p.name + "\" on the phone");
+    }
+
+    private void deleteProfile() {
+        int pos = profileSpinner.getSelectedItemPosition();
+        if (pos <= 0 || pos > profiles.size()) return;
+        String name = profiles.get(pos - 1).name;
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Delete the profile \"" + name + "\"?")
+                .setMessage("It is only removed from the phone: the bike keeps the settings it has.")
+                .setPositiveButton("Delete", (d, w) -> setProfiles(SettingsProfiles.remove(profiles, name), null))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    /** Stores the profiles and builds the picker again, on {@code select} (null: "None"). */
+    private void setProfiles(List<SettingsProfiles.Profile> next, String select) {
+        profiles = next;
+        prefs.edit().putString(Hub.KEY_SETTINGS_PROFILES, SettingsProfiles.format(next)).apply();
+        int at = select == null ? 0 : SettingsProfiles.indexOf(next, select) + 1;
+        profileSpinner = swapSpinner(profileSpinner, profileNames(), at);
+        watchProfiles();
+        profileDelete.setEnabled(at > 0);
+    }
+
+    /** A picker with other choices in the place of {@code old}, its row keeping its place. */
+    private android.widget.Spinner swapSpinner(android.widget.Spinner old, String[] items, int selected) {
+        android.widget.Spinner fresh = spinner(items, selected);
+        android.view.ViewGroup parent = (android.view.ViewGroup) old.getParent();
+        if (parent == null) return fresh;
+        int at = parent.indexOfChild(old);
+        parent.removeViewAt(at);
+        parent.addView(fresh, at, old.getLayoutParams());
+        return fresh;
+    }
+
+    private void toast(String text) {
+        android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_SHORT).show();
     }
 
     /** What the pickers say, in the numbers of a write. */
@@ -674,21 +806,12 @@ public class BikeActivity extends KawaActivity {
                     : "This bike reports 4 riding modes, so the list stops at Rider.");
             if (modeSpinner.getAdapter() == null || modeSpinner.getAdapter().getCount() != modes) {
                 int was = modeSpinner.getSelectedItemPosition();
-                android.widget.Spinner fresh = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, modes),
+                // the rider's pick is kept by the clamp; only a first fill comes from the bike, and the new
+                // list's own first selection must not set a preset
+                modeSpinner = swapSpinner(modeSpinner, java.util.Arrays.copyOf(SettingsWrite.MODES, modes),
                         Math.max(0, Math.min(was, modes - 1)));
-                android.view.ViewGroup parent = (android.view.ViewGroup) modeSpinner.getParent();
-                android.widget.LinearLayout rowParent = parent instanceof android.widget.LinearLayout
-                        ? (android.widget.LinearLayout) parent : null;
-                if (rowParent != null) {
-                    int at = rowParent.indexOfChild(modeSpinner);
-                    rowParent.removeViewAt(at);
-                    rowParent.addView(fresh, at, modeSpinner.getLayoutParams());
-                    modeSpinner = fresh;
-                    // the rider's pick is kept by the clamp above; only a first fill comes from the bike,
-                    // and the new list's own first selection must not set a preset
-                    modeSetByApp = fresh.getSelectedItemPosition();
-                    watchMode();
-                }
+                modeSetByApp = modeSpinner.getSelectedItemPosition();
+                watchMode();
             }
             BikeFrames.VehicleSettings s = b.settings;
             if (s != null && !settingsPrefilled) fillFromBike(s); // once, from what the bike reported

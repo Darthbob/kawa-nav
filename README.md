@@ -509,6 +509,12 @@ after sending.
     Rider**, with a note under it saying why ("Rain comes with Low power and KTRC 3, so with other
     values the riding mode is now Rider…"): your own values always go as Rider, the mode made for them.
     Values filled in from the bike never do this, and KQS is no part of a preset.
+  - **Profiles**, as in Rideology: **Save as profile** keeps riding mode, power, KTRC and KQS on the
+    phone under the name in the Name field (saving a name again replaces that profile, after asking).
+    The **Profile** picker at the top fills a profile's values and name into the pickers, ready to be
+    checked and sent; **Delete profile** removes it from the phone only. Up to 20; the engine brake is
+    not kept, it goes back as the bike has it. A profile with Rider 2-4 on a bike with four modes
+    leaves the riding mode as it is, and says so. Profiles are part of the settings Android backs up.
   - On the card, **power and KTRC sit indented under the riding mode**, with a line in the accent
     colour beside them and a line above them saying where they come from: "Sport: Full power, KTRC 1"
     for a preset, "Your own: Rider" for a Rider mode. KQS and the name come after, under **Not part of
