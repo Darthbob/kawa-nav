@@ -591,6 +591,10 @@ KawaNav never logs this frame.)
 
 ## Still unknown / to verify on the bike
 
+The debug build lists the tests below that can be done at the bike, with their steps and a "done" mark,
+in Settings → (tap the title 7 times) → "Bike data" → "Field tests" (`FieldTests.java`). Add a test there
+when one is added here.
+
 - Semantics of the 0x08 parameters (120 / 1000 / 200 / 100) and whether the meter needs 0x08 before
   streaming 0x45/0x4A. The hypothesis (stream periods) and a test are in the riding-log section.
 - Whether a dash shows the 0x48 profile name, and whether it shows an icon for ANCS categories other

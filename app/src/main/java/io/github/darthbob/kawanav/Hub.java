@@ -139,6 +139,8 @@ public final class Hub {
     public static final String KEY_DEBUG_NO_EXT = "debug_no_ext_request";
     /** Debug: every frame to and from the meter is written to a capture file, see {@link RawCapture}. */
     public static final String KEY_DEBUG_CAPTURE = "debug_capture";
+    /** Debug: when a field test was marked done ({@link FieldTests}), this prefix + its id; 0 = still to do. */
+    public static final String KEY_DEBUG_FIELD_TEST = "debug_field_test_";
     /**
      * Send the status-icon and navigation frames even when the dash's capability answer says it has no such
      * feature. Off by default (the dash is believed, as Rideology believes it); a rider whose dash answers
