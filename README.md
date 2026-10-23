@@ -73,9 +73,9 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   came in with the bike off is not lost.
 - 🕐 **Dash clock from the phone**: optional, once per connection, like Rideology.
 - 🔧 **Settings on the bike**: reads the ride settings (riding mode, power, KTRC, quickshifter, and the
-  suspension settings on bikes that have them), and writes riding mode/power/KTRC/KQS and the dash
-  shift lamp after a confirmation (not tried on a bike yet). The riding-mode list follows the bike: four
-  modes, or seven (Rider 2-4) on a bike that announces them.
+  suspension settings on bikes that have them), and writes riding mode/power/KTRC/KQS (not tried on a
+  bike yet) and the dash shift lamp (tried on a Z900) after a confirmation. The riding-mode list
+  follows the bike: four modes, or seven (Rider 2-4) on a bike that announces them.
 - 🌍 **Offline maps**: download regions (country, state, district) from Geofabrik, see their data date,
   update and delete them one by one.
 - 🚨 **Speed camera warnings** (optional, off by default): taken from the same offline map data, shown on
@@ -514,8 +514,8 @@ The bike's screen reads the ride settings (riding mode, power, KTRC, quickshifte
 suspension settings on bikes that have them) and shows them with the name and the number the bike sent.
 
 Since 1.2.1 they can be written back from the normal app too, not only from the debug build. **The
-writes have not been tried on a bike yet**: each card and each confirmation says so, so check the dash
-after sending.
+ride-settings write has not been tried on a bike yet**: its card and its confirmation say so, so check
+the dash after sending. The shift lamp write has been tried on a Z900.
 
 - **Ride settings**: riding mode, power, KTRC and quickshifter, and optionally a name for them (up to
   18 bytes, as Rideology sends the title of a setting; whether the dash shows it is not known yet).
@@ -546,7 +546,7 @@ after sending.
     the riding mode**.
 - **Dash shift lamp**: when the lamp lights (off / tachometer / LED / both, as the dash allows) and at
   which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
-  dash clock stays as it is.
+  dash clock stays as it is. Tried on a Z900: the dash takes the new setting.
 
 Under its choices the ride-settings card says whether a press would send now: "Ready", or why not
 ("Not ready: the bike must stand still"). After a press both cards show for 30 seconds what came of it:
@@ -648,8 +648,8 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   camera icon on the dash (it shows the destination flag with the distance). Not tried on the bike yet.
 - The refuel diary, the battery log and the ride records never touch the bike; they are kept on the phone
   (and included in Android's backup).
-- **Writing settings and the shift lamp has not been tried on a bike yet** (check the dash after
-  sending), and the names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
+- **Writing the ride settings has not been tried on a bike yet** (check the dash after sending; the
+  shift lamp write has been, on a Z900), and the names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
   number the bike sent, not instead of it.
 - The **scaling of the riding-log values** (speed, engine speed, throttle, lean angle) is chosen from
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with

@@ -346,7 +346,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /**
      * Sets the shift lamp on the meter: when it lights (status) and at which engine speed (level code
      * 1..61). The clock is left as it is, the way Rideology's lamp-only write does it. The meter's answer
-     * carries the result in byte 7 and is read back afterwards. Not tried on a bike yet.
+     * carries the result in byte 7 and is read back afterwards. Tried on a Z900 (2026).
      */
     public static String writeShiftLamp(int status, int level) {
         if (instance == null || !instance.ble.isReady()) return "the bike is not connected";

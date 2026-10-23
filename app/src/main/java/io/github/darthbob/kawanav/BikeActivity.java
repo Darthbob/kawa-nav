@@ -25,7 +25,7 @@ public class BikeActivity extends KawaActivity {
 
     /** Live values (riding log) count as current this long. */
     private static final long LIVE_MS = 10_000;
-    /** On both write cards and their confirmations, until the writes have been tried on a bike. */
+    /** On the ride-settings card and its confirmation, until that write has been tried on a bike. */
     private static final String NOT_TRIED = "Not tried on a bike yet: check the dash after sending.";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -37,7 +37,7 @@ public class BikeActivity extends KawaActivity {
     private TextView fuelText;
     private TextView battery;
     private LinearLayout sections;
-    // ride settings and shift lamp (not tried on a bike yet)
+    // ride settings (not tried on a bike yet) and shift lamp
     private LinearLayout settingsCard;
     private android.widget.Spinner modeSpinner, powerSpinner, ktrcSpinner, kqsSpinner;
     /** Says how many riding modes the bike announced, so "Rider 4" missing from the list makes sense. */
@@ -583,16 +583,15 @@ public class BikeActivity extends KawaActivity {
     }
 
     /**
-     * The dash's shift lamp: when it lights and at which engine speed. Like the ride-settings write it has
-     * not been tried on a bike yet; the meter's own limits (0x1A) decide which statuses and levels are
-     * offered.
+     * The dash's shift lamp: when it lights and at which engine speed. Tried on a Z900 (2026): the dash
+     * takes the new setting. The meter's own limits (0x1A) decide which statuses and levels are offered.
      */
     private LinearLayout lampCard() {
         LinearLayout section = column();
         section.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"));
         LinearLayout c = group();
         c.addView(secondary("Writes only the shift lamp; the dash clock stays as it is. The bike must be "
-                + "connected (it does not have to be standing still). " + NOT_TRIED));
+                + "connected (it does not have to be standing still)."));
         lampStatusSpinner = spinner(new String[]{"Off"}, 0);
         lampRpmSpinner = spinner(new String[]{"3,000 rpm"}, 0);
         addRow(c, settingRowWith("Lights up", lampStatusSpinner));
@@ -640,8 +639,7 @@ public class BikeActivity extends KawaActivity {
                 .setTitle("Send the shift lamp to the dash?")
                 .setMessage("The dash will light its shift lamp at "
                         + String.format(Locale.ROOT, "%,d rpm", SettingsWrite.lampRpm(level))
-                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + ".")
-                        + "\n\n" + NOT_TRIED)
+                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + "."))
                 .setPositiveButton("Send", (d, w) -> {
                     String problem = BridgeService.writeShiftLamp(status, level);
                     if (problem != null) {

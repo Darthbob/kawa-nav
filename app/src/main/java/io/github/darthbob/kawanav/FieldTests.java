@@ -66,18 +66,9 @@ final class FieldTests {
                             + "2. Bike tab → Ride settings: change one of them and send.\n"
                             + "3. Look at the dash.\n"
                             + "4. Send the old value back and look again.\n"
-                            + "5. Export the log (Notifications card → Export the log and the capture).",
+                            + "5. Export the log (Settings → About → Export the log).",
                     "The dash shows the new value, then the old one again: the write works. Nothing changes or the "
                             + "dash shows an error: keep the log, and a frame capture of a second try.",
-                    RESULTS_NONE),
-            new Test("shift_lamp", WRITES, "Dash shift lamp",
-                    "The shift-lamp write (0x1B) is in every build since 1.2.1 but has never been tried on a bike; "
-                            + "it must leave the dash clock as it is.",
-                    "1. Note the dash's shift lamp setting and the time on its clock.\n"
-                            + "2. Bike tab → Dash shift lamp: pick another engine speed and send.\n"
-                            + "3. Check the setting on the dash, and rev in neutral to see the lamp.\n"
-                            + "4. Send the old setting back.",
-                    "The dash shows the new speed and the clock is unchanged: the write works.",
                     RESULTS_NONE),
             new Test("profile_name", WRITES, "Profile name on the dash",
                     "Each settings write carries a profile name (bytes 15-38 of 0x48). Whether a dash shows it "
