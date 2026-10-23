@@ -4,7 +4,8 @@
       "version": "1.2.5",
       "changes": [
         "The app uses Google's Material icons",
-        "Switching tabs fades smoothly instead of the jumpy system animation"
+        "Switching tabs fades smoothly instead of the jumpy system animation",
+        "Settings → About → \"Export the log\" copies KawaNav's log to Download/KawaNav, to send with a problem report. It used to be in the debug build only"
       ]
     },
     {

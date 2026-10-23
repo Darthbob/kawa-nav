@@ -22,12 +22,29 @@ public final class LogExport {
 
     /** Copies everything of the last runs; returns how many files were written. */
     public static int export(Context c) {
+        return export(c, true);
+    }
+
+    /**
+     * Copies the log of the last runs, and with {@code capture} the notification capture too; returns
+     * how many files were written. The capture holds other apps' notification text, messages included,
+     * so it only leaves the phone from the debug card, never from the normal build's export.
+     */
+    public static int export(Context c, boolean capture) {
         String stamp = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(new java.util.Date());
         int n = 0;
         for (String name : new String[]{"kawanav.log.1", "kawanav.log"}) {
             File f = new File(c.getFilesDir(), name);
             if (f.exists() && copy(c, f, stamp + "-" + name + ".txt")) n++;
         }
+        if (capture) n += exportCapture(c, stamp);
+        Logger.log("Exported " + n + " files to Download/KawaNav");
+        return n;
+    }
+
+    /** The notification capture's text files and icons. */
+    private static int exportCapture(Context c, String stamp) {
+        int n = 0;
         File dir = NotifCapture.dir(c);
         File[] dumps = dir.listFiles((d, name) -> name.startsWith("notif-") && name.endsWith(".txt"));
         if (dumps != null) {
@@ -39,7 +56,6 @@ public final class LogExport {
             java.util.Arrays.sort(icons, (a, b) -> a.getName().compareTo(b.getName()));
             for (File f : icons) if (copy(c, f, stamp + "-icons-" + f.getName())) n++;
         }
-        Logger.log("Exported " + n + " files to Download/KawaNav");
         return n;
     }
 

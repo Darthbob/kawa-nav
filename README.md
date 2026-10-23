@@ -365,6 +365,14 @@ A roundabout whose arrow Maps drew *and* whose number the text names ("at the ro
 4th exit") keeps the direction of Maps' arrow and takes only the number from the text; the setting is
 not consulted there, because the arrow already shows which way around the roundabout goes.
 
+#### Export the log
+
+Settings → About → **Export the log** copies KawaNav's log of the last runs to `Download/KawaNav`, to
+attach to a problem report (e.g. a GitHub issue). It records what KawaNav did and sent to the dash,
+also on a ride: every change of the arrow and the status icons, with the values behind them. It also
+holds Google Maps' directions with street names, the bike's Bluetooth address and the helmet's name,
+so read it before you share it. The notification capture stays in the debug build's own export.
+
 ### 📊 Bike data
 
 Home shows the bike's last values under "My vehicle" (range, fuel bars, odometer); tapping them, or the
@@ -629,7 +637,7 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   any app on the phone (Android requires it for the launcher), so a release build ignores
   `--ez free_mode`, `--ez export_log`, `--ez bridge` and the rest; `-e offline_region <id>` likewise
   starts nothing. Debug builds act on them as before. Nothing else about the app can be driven from
-  outside.
+  outside. The log is exported from Settings instead ([Export the log](#export-the-log)).
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
 - **Spoken curve warnings are not tried on the bike yet.** They come from the same map data as the

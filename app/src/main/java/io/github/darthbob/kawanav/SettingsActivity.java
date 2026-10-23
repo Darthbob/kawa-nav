@@ -28,8 +28,8 @@ import java.util.Map;
 
 /**
  * The Settings tab: starting by itself, what goes on the dash on the road, the dash icons and clock,
- * ride recording, offline maps, the debug tools (debug builds, seven taps on the title) and the
- * legal notes. Other tabs open it at a section ({@link #EXTRA_SECTION}).
+ * ride recording, offline maps, the debug tools (debug builds, seven taps on the title), the legal
+ * notes and the log export. Other tabs open it at a section ({@link #EXTRA_SECTION}).
  */
 public class SettingsActivity extends KawaActivity {
 
@@ -519,7 +519,7 @@ public class SettingsActivity extends KawaActivity {
         return c;
     }
 
-    /** Legal notes: riding safety, affiliation, map data credit, licence (GPL-3.0 §5d), version. */
+    /** Legal notes: riding safety, affiliation, map data credit, licence (GPL-3.0 §5d), version; the log export. */
     private LinearLayout aboutGroup() {
         LinearLayout c = group();
         TextView t = note(MainActivity.RIDING_NOTICE + "\n\n" + MainActivity.AFFILIATION_NOTICE
@@ -532,7 +532,22 @@ public class SettingsActivity extends KawaActivity {
         t.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
         t.setLinkTextColor(Ui.accent(night));
         c.addView(t);
+        addRow(c, listRow(R.drawable.ic_download, "Export the log", "Copies KawaNav's log to Download/KawaNav, to "
+                + "send with a problem report. It holds Google Maps' directions with street names, the bike's "
+                + "Bluetooth address and the helmet's name: read it before you share it", null, false, v -> exportLog()));
         return c;
+    }
+
+    /**
+     * "Export the log", in every build: the log only. The notification capture holds other apps' messages
+     * and leaves the phone only from the debug card's export.
+     */
+    private void exportLog() {
+        Logger.withLogFiles(() -> {
+            int n = LogExport.export(this, false);
+            runOnUiThread(() -> android.widget.Toast.makeText(this, n == 0 ? "No log to export"
+                    : n + (n == 1 ? " file" : " files") + " in Download/KawaNav", android.widget.Toast.LENGTH_SHORT).show());
+        });
     }
 
     // ------------------------------------------------------------------ debug
