@@ -25,8 +25,6 @@ public class BikeActivity extends KawaActivity {
 
     /** Live values (riding log) count as current this long. */
     private static final long LIVE_MS = 10_000;
-    /** On the ride-settings card and its confirmation, until that write has been tried on a bike. */
-    private static final String NOT_TRIED = "Not tried on a bike yet: check the dash after sending.";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView title;
@@ -37,7 +35,7 @@ public class BikeActivity extends KawaActivity {
     private TextView fuelText;
     private TextView battery;
     private LinearLayout sections;
-    // ride settings (not tried on a bike yet) and shift lamp
+    // ride settings and shift lamp
     private LinearLayout settingsCard;
     private android.widget.Spinner modeSpinner, powerSpinner, ktrcSpinner, kqsSpinner;
     /** Says how many riding modes the bike announced, so "Rider 4" missing from the list makes sense. */
@@ -233,7 +231,7 @@ public class BikeActivity extends KawaActivity {
                 + "ones you leave as they are go as the bike has them. Sport, Road and Rain set power and "
                 + "KTRC to their own values, as in Rideology; change either and the mode becomes Rider, which "
                 + "keeps yours. Saved as a profile, they are on the phone to be picked and sent again. The "
-                + "bike must be standing still, in neutral and with the throttle closed. " + NOT_TRIED));
+                + "bike must be standing still, in neutral and with the throttle closed."));
         profiles = SettingsProfiles.parse(prefs.getString(Hub.KEY_SETTINGS_PROFILES, ""));
         profileSpinner = spinner(profileNames(), 0);
         watchProfiles();
@@ -564,7 +562,7 @@ public class BikeActivity extends KawaActivity {
                 .setTitle("Send settings to the bike?")
                 .setMessage("All of these go to the bike in one write:\n\n" + lines + "\n\nThe bike must stand "
                         + "still, be in neutral and have the throttle closed. KawaNav re-checks this before "
-                        + "sending and reads the settings back afterwards.\n\n" + NOT_TRIED)
+                        + "sending and reads the settings back afterwards.")
                 .setPositiveButton("Send", (d, w) -> {
                     prefs.edit().putString(Hub.KEY_SETTINGS_NAME, name).apply();
                     // spinner positions start at 0, the bike's numbers at 1; KEBC goes back as the bike has it

@@ -204,8 +204,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     /**
-     * Writes ride settings to the bike: riding mode, power, KTRC, KQS and the profile name. Not tried on a
-     * bike yet: only while standing still, in neutral and with the throttle closed, and the settings are
+     * Writes ride settings to the bike: riding mode, power, KTRC, KQS and the profile name. Tried on a Z900
+     * (2026). Only while standing still, in neutral and with the throttle closed, and the settings are
      * read back to compare. Returns null when the job started, else why it did not.
      */
     public static String writeSettings(int mode, int power, int ktrcLevel, int kqs, int kebc, String name) {

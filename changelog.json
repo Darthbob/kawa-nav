@@ -6,7 +6,7 @@
         "The app uses Google's Material icons",
         "Switching tabs fades smoothly instead of the jumpy system animation",
         "Settings → About → \"Export the log\" copies KawaNav's log to Download/KawaNav, to send with a problem report. It used to be in the debug build only",
-        "The dash shift lamp setting has been tried on a Z900: its card no longer says it is untested"
+        "Changing riding mode, power, KTRC, KQS and the dash shift lamp from the Bike tab has been tried on a Z900: the cards no longer say it is untested"
       ]
     },
     {

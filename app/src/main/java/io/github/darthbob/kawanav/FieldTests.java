@@ -60,16 +60,6 @@ final class FieldTests {
                             + "and the check has its baseline. Seconds more than 3% above it in more than one roll-on: "
                             + "the clutch may be slipping, or the rule needs work.",
                     RESULTS_CLUTCH),
-            new Test("settings_write", WRITES, "Riding mode, power, KTRC and KQS",
-                    "The settings write (0x48) is in every build since 1.2.1 but has never been tried on a bike.",
-                    "1. Bike standing, in neutral, engine on. Note the dash's riding mode, power, KTRC and KQS.\n"
-                            + "2. Bike tab → Ride settings: change one of them and send.\n"
-                            + "3. Look at the dash.\n"
-                            + "4. Send the old value back and look again.\n"
-                            + "5. Export the log (Settings → About → Export the log).",
-                    "The dash shows the new value, then the old one again: the write works. Nothing changes or the "
-                            + "dash shows an error: keep the log, and a frame capture of a second try.",
-                    RESULTS_NONE),
             new Test("profile_name", WRITES, "Profile name on the dash",
                     "Each settings write carries a profile name (bytes 15-38 of 0x48). Whether a dash shows it "
                             + "anywhere is not known.",
