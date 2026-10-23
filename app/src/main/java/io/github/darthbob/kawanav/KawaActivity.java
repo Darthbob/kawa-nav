@@ -255,14 +255,18 @@ public abstract class KawaActivity extends Activity {
         recordButton.postDelayed(this::updateTabBar, 300);
     }
 
-    /** Opens a tab: the screen already open is brought back as it was, without an animation. */
+    /**
+     * Opens a tab: the screen already open is brought back as it was, fading in over the one before.
+     * The animation goes with the start itself: Android plays its own one for a reorder, also with
+     * FLAG_ACTIVITY_NO_ANIMATION, and a tab's overrideActivityTransition only counts when it is created.
+     */
     protected void openTab(int tab, String section) {
         Class<?> target = tab == TAB_BIKE ? BikeActivity.class : tab == TAB_RIDES ? RidesActivity.class
                 : tab == TAB_SETTINGS ? SettingsActivity.class : MainActivity.class;
-        Intent i = new Intent(this, target).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        Intent i = new Intent(this, target).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         if (section != null) i.putExtra(EXTRA_SECTION, section);
-        startActivity(i);
+        startActivity(i, android.app.ActivityOptions.makeCustomAnimation(this,
+                R.anim.tab_enter, R.anim.tab_hold).toBundle());
     }
 
     /** Back on a tab goes to Home; on Home it leaves the app (the tabs stay as they are). */
