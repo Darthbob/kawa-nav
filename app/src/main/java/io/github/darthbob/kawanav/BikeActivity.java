@@ -76,7 +76,7 @@ public class BikeActivity extends KawaActivity {
     /** The icon of a value group: what the rows behind it are about. Unknown groups get none. */
     private static int sectionIcon(String section) {
         switch (section) {
-            case BASIC: return R.drawable.ic_gauge;
+            case BASIC: return R.drawable.ic_speed;
             case "Engine": return R.drawable.ic_thermo;
             case "Maintenance": return R.drawable.ic_sliders;
             case "Dash": return R.drawable.ic_clock;
@@ -88,7 +88,7 @@ public class BikeActivity extends KawaActivity {
     /** The icon in front of a value, by what it is. */
     private static int rowIcon(String label) {
         switch (label) {
-            case "Odometer": case "Engine speed": return R.drawable.ic_gauge;
+            case "Odometer": case "Engine speed": return R.drawable.ic_speed;
             case "Trip A": case "Trip B": return R.drawable.ic_route;
             case "Average fuel economy": case "Fuel consumption": return R.drawable.ic_fuel;
             case "Average speed": case "Speed": return R.drawable.ic_speed;

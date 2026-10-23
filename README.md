@@ -700,5 +700,8 @@ Frame layouts for the bike's data, settings and riding log were cross-checked ag
 (Apache License 2.0). Kawasaki's own app was decompiled **for interoperability only**; no Kawasaki code
 is used here, and the extracted facts are in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
+Icons: [Material Symbols](https://fonts.google.com/icons) by Google, under the
+[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
 Kawasaki, Rideology, Ninja, Versys and the model names are trademarks of Kawasaki Motors, Ltd.;
 Google Maps is a trademark of Google LLC. They are used here only to describe compatibility.

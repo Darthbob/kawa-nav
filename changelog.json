@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "version": "1.2.5",
+      "changes": [
+        "The app uses Google's Material icons"
+      ]
+    },
+    {
       "version": "1.2.4",
       "changes": [
         "Nothing changes for riding: the normal app is the same as 1.2.3. This version adds a tool for testers",
