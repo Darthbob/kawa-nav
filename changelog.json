@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "1.2.4",
+      "changes": [
+        "Nothing changes for riding: the normal app is the same as 1.2.3. This version adds a tool for testers",
+        "Debug build: Settings → Bike data → \"Field tests\" lists what is still to be tried at the bike (the ride settings and shift lamp on a real dash, what the traction control and ABS values mean …), with the steps for each and a mark for the ones done",
+        "Debug build: the same screen works out from your latest rides how much slower the rear wheel turns than the front, and whether the engine runs ahead of the rear wheel under full throttle, the first step towards a slow-puncture and a clutch-slip warning"
+      ]
+    },
+    {
       "version": "1.2.3",
       "changes": [
         "A recorded ride now ends about 20 seconds after the bike is switched off. It used to wait 5 minutes, or for ever when KawaNav had been opened by hand. Settings → \"End a ride\" can keep it going 5 or 15 minutes instead, so that a fuel stop stays in the same ride",
