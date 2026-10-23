@@ -330,6 +330,14 @@ public final class RideStore {
             }
             r.kqsUp = o.has("kqsUp") ? o.optDouble("kqsUp") : Double.NaN;
             r.kqsDown = o.has("kqsDown") ? o.optDouble("kqsDown") : Double.NaN;
+            JSONObject clutch = o.optJSONObject("clutch");
+            if (clutch != null) {
+                r.clutchLoadS = clutch.optDouble("loadS");
+                r.clutchMedianPct = clutch.optDouble("medianPct");
+                r.clutchMaxPct = clutch.optDouble("maxPct");
+                r.clutchSlipS = clutch.optInt("slipS");
+                r.clutchSlipRuns = clutch.optInt("slipRuns");
+            }
             org.json.JSONArray bbox = o.optJSONArray("bbox");
             if (bbox != null && bbox.length() == 4) {
                 r.bbox = new double[]{bbox.getDouble(0), bbox.getDouble(1), bbox.getDouble(2), bbox.getDouble(3)};
@@ -431,6 +439,16 @@ public final class RideStore {
             }
             if (r.kqsUp == r.kqsUp) o.put("kqsUp", round(r.kqsUp));
             if (r.kqsDown == r.kqsDown) o.put("kqsDown", round(r.kqsDown));
+            // only with loaded seconds: their median and highest exist then, and org.json throws on NaN
+            if (r.clutchLoadS == r.clutchLoadS) {
+                JSONObject clutch = new JSONObject();
+                clutch.put("loadS", round(r.clutchLoadS));
+                clutch.put("medianPct", round(r.clutchMedianPct));
+                clutch.put("maxPct", round(r.clutchMaxPct));
+                clutch.put("slipS", r.clutchSlipS);
+                clutch.put("slipRuns", r.clutchSlipRuns);
+                o.put("clutch", clutch);
+            }
             if (r.bbox != null) {
                 org.json.JSONArray b = new org.json.JSONArray();
                 for (double d : r.bbox) b.put(d);

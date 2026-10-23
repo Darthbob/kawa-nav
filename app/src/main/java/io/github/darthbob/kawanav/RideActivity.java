@@ -356,7 +356,10 @@ public class RideActivity extends KawaActivity {
             any |= addSeconds(g, "Cruise control", r.cruiseOnS);
         }
         if (Ride.CHASSIS.equals(name)) any |= addSeconds(g, "Front wheel up", r.wheelieS);
-        if (Ride.ENGINE.equals(name)) any |= addGears(g, r);
+        if (Ride.ENGINE.equals(name)) {
+            any |= addGears(g, r);
+            any |= addClutch(g, r);
+        }
         if (!any) return null;
         if (hasRanges(r, name)) {
             Ride.Metric economy = r.metric("fuel_inst");
@@ -437,6 +440,23 @@ public class RideActivity extends KawaActivity {
         if (r.kqsUp == r.kqsUp) {
             add(group, "With the quick shifter", String.format(Locale.ROOT, "%.0f up, %.0f down", r.kqsUp, r.kqsDown));
         }
+        return true;
+    }
+
+    /**
+     * The clutch under load: the engine against the rear wheel at half throttle or more in 3rd gear and up,
+     * compared with the same gear at light throttle ({@link WheelChecks#clutch}). Nothing without such
+     * seconds.
+     */
+    private boolean addClutch(LinearLayout group, Ride r) {
+        if (r.clutchLoadS != r.clutchLoadS) return false;
+        String verdict = r.clutchSlipping()
+                ? String.format(Locale.ROOT, "may be slipping: %d s in %d roll-ons", r.clutchSlipS, r.clutchSlipRuns)
+                : r.clutchSlipS > 0 ? String.format(Locale.ROOT, "holds (%d s high in one roll-on)", r.clutchSlipS)
+                : "holds";
+        add(group, "Clutch under load", verdict);
+        add(group, "Engine against the gear", String.format(Locale.ROOT, "%+.1f %% typical, %+.1f %% at most, over %s",
+                r.clutchMedianPct, r.clutchMaxPct, seconds(r.clutchLoadS)));
         return true;
     }
 

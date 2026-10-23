@@ -195,6 +195,9 @@ public final class RideRecorder implements android.location.LocationListener {
             BridgeService.announceRide(context, name.isEmpty() ? Ride.defaultName(finished.start) : name,
                     line, finished.id);
         }
+        if (finished.clutchSlipping() && Hub.prefs(context).getBoolean(Hub.KEY_CLUTCH_WARNINGS, true)) {
+            BridgeService.warnClutch(context, finished);
+        }
     }
 
     /**

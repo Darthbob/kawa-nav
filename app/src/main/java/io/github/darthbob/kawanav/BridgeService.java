@@ -1358,6 +1358,32 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private static final int RIDE_NOTIFICATION_ID = 9_002;
 
     /**
+     * A finished ride whose clutch slipped under load ({@link Ride#clutchSlipping}): a warning of its own
+     * on the warnings channel, which opens the ride. Called by the recorder, like {@link #announceRide}.
+     */
+    public static void warnClutch(Context c, Ride r) {
+        Logger.log(String.format(java.util.Locale.ROOT, "Ride: clutch may be slipping, %d s in %d roll-ons, "
+                + "up to %+.1f %%", r.clutchSlipS, r.clutchSlipRuns, r.clutchMaxPct));
+        if (c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
+        Intent open = new Intent(c, RideActivity.class).putExtra(RideActivity.EXTRA_ID, r.id);
+        PendingIntent tap = PendingIntent.getActivity(c, ("clutch" + r.id).hashCode(), open,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        String text = String.format(java.util.Locale.ROOT, "In %d hard accelerations on this ride the engine "
+                + "revved up to %.1f%% higher than the gear and the speed give: the clutch may be slipping. "
+                + "Have it checked.", r.clutchSlipRuns, r.clutchMaxPct);
+        Notification n = new Notification.Builder(c, CHANNEL_ALERTS)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle("Clutch may be slipping")
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setContentIntent(tap)
+                .setAutoCancel(true)
+                .build();
+        // an id of its own on the warnings channel: neither the ride's summary nor a battery warning replaces it
+        c.getSystemService(NotificationManager.class).notify(BIKE_ALERT_NOTIFICATION_BASE + 2, n);
+    }
+
+    /**
      * A short note about something that happened. Opening it goes to the screen it is about, since that
      * is where the rider has to do something about it.
      */

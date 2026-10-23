@@ -15,30 +15,28 @@ import java.util.Locale;
 
 /**
  * Debug builds: the tests still to be done at the bike ({@link FieldTests}), one card each with what it
- * settles, the steps and what counts as an answer, and a mark for the ones done. The tyre and clutch tests
- * also get their numbers, worked out from the latest recorded rides ({@link WheelChecks}). Opened from the
- * "Bike data" debug card in the settings.
+ * settles, the steps and what counts as an answer, and a mark for the ones done. The tyre test also gets
+ * its numbers, worked out from the latest recorded rides ({@link WheelChecks}). Opened from the "Bike
+ * data" debug card in the settings.
  */
 public class FieldTestsActivity extends KawaActivity {
 
-    /** How many of the latest rides with bike data the tyre and clutch numbers are worked out for. */
+    /** How many of the latest rides with bike data the tyre numbers are worked out for. */
     private static final int RIDES = 12;
 
     private RideStore store;
     private TextView summary;
-    private LinearLayout tyreBox, clutchBox;
+    private LinearLayout tyreBox;
     private boolean loading;
 
     /** One ride and what its wheel speeds say. */
     private static final class Checked {
         final Ride ride;
         final WheelChecks.Tyres tyres;
-        final WheelChecks.Clutch clutch;
 
-        Checked(Ride ride, WheelChecks.Tyres tyres, WheelChecks.Clutch clutch) {
+        Checked(Ride ride, WheelChecks.Tyres tyres) {
             this.ride = ride;
             this.tyres = tyres;
-            this.clutch = clutch;
         }
     }
 
@@ -108,11 +106,6 @@ public class FieldTestsActivity extends KawaActivity {
             tyreBox = column();
             tyreBox.addView(secondary("Reading the latest rides…"));
             body.addView(tyreBox);
-        } else if (t.results == FieldTests.RESULTS_CLUTCH) {
-            body.addView(label("Recorded rides"));
-            clutchBox = column();
-            clutchBox.addView(secondary("Reading the latest rides…"));
-            body.addView(clutchBox);
         }
         Button done = secondaryButton("", null);
         LinearLayout.LayoutParams lp = matchWrap();
@@ -171,7 +164,7 @@ public class FieldTestsActivity extends KawaActivity {
                 if (!r.hasBike || r.isRecording()) continue;
                 List<RideTsv.Sample> s = store.samples(r.id);
                 if (s.isEmpty()) continue;
-                rides.add(new Checked(r, WheelChecks.tyres(s), WheelChecks.clutch(s)));
+                rides.add(new Checked(r, WheelChecks.tyres(s)));
             }
             runOnUiThread(() -> show(rides));
         }, "field-tests").start();
@@ -181,7 +174,6 @@ public class FieldTestsActivity extends KawaActivity {
         loading = false;
         if (isFinishing()) return;
         showTyres(rides);
-        showClutch(rides);
     }
 
     private void showTyres(List<Checked> rides) {
@@ -220,38 +212,6 @@ public class FieldTestsActivity extends KawaActivity {
         }
     }
 
-    private void showClutch(List<Checked> rides) {
-        clutchBox.removeAllViews();
-        if (rides.isEmpty()) {
-            clutchBox.addView(secondary("No recorded ride with bike data yet."));
-            return;
-        }
-        StringBuilder gearing = new StringBuilder();
-        for (int g = 1; g <= Ride.MAX_GEAR; g++) {
-            List<Double> values = new ArrayList<>();
-            for (Checked c : rides) values.add(c.clutch.rpmPerKmh[g]);
-            double usual = WheelChecks.usual(values);
-            if (usual != usual) continue;
-            gearing.append(gearing.length() == 0 ? "" : " · ").append(ordinal(g))
-                    .append(String.format(Locale.ROOT, " %.1f", usual));
-        }
-        clutchBox.addView(secondary(gearing.length() == 0 ? "Not enough riding in gear yet for the gearing."
-                : "Usual rpm per km/h of the rear wheel at light throttle: " + gearing + "."));
-        for (Checked c : rides) {
-            WheelChecks.Clutch k = c.clutch;
-            String line = k.loadN == 0
-                    ? String.format(Locale.ROOT, "No second at %.0f%% throttle or more in 3rd gear or higher",
-                    WheelChecks.LOAD_THR)
-                    : String.format(Locale.ROOT, "Under load %d s: median %+.1f%%, highest %+.1f%% against the gear's "
-                    + "light-throttle value", k.loadN, k.loadMedianPct, k.loadMaxPct);
-            String verdict = k.loadN == 0 ? null
-                    : k.slipN > 0 ? String.format(Locale.ROOT, "%d s more than %.0f%% above: look at this ride",
-                    k.slipN, WheelChecks.SLIP_PCT)
-                    : "No sign of slip";
-            clutchBox.addView(rideRow(c.ride, line, verdict));
-        }
-    }
-
     /** A ride in a test's results: its name and when, then what was found; tapping it opens the ride. */
     private View rideRow(Ride r, String line, String verdict) {
         String when = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(new Date(r.start));
@@ -270,9 +230,5 @@ public class FieldTestsActivity extends KawaActivity {
 
     private static String ratio(double v) {
         return v == v ? String.format(Locale.ROOT, "%.4f", v) : "–";
-    }
-
-    private static String ordinal(int g) {
-        return g + (g == 1 ? "st" : g == 2 ? "nd" : g == 3 ? "rd" : "th");
     }
 }

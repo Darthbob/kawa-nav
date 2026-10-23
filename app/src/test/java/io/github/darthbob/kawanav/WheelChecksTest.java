@@ -1,6 +1,7 @@
 package io.github.darthbob.kawanav;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -9,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** The tyre and clutch numbers of the field tests: which seconds count, and what they come to. */
+/** The tyre numbers of the field tests and a ride's clutch check: which seconds count, and what they come to. */
 public class WheelChecksTest {
 
     /** One steady second: upright, light throttle, rear wheel at {@code ratio} of the front. */
@@ -92,6 +93,26 @@ public class WheelChecksTest {
         assertEquals(5, c.loadN);
         assertEquals(5, c.slipN);
         assertEquals(5, c.loadMaxPct, 1e-6);
+        // one roll-on: worth showing on the ride, not yet a slipping clutch
+        assertEquals(1, c.slipRuns);
+        assertFalse(c.slipping());
+    }
+
+    @Test
+    public void slipInTwoRollOnsIsASlippingClutch() {
+        List<RideTsv.Sample> ride = cruise(120, 60, 0.988);
+        for (int[] run : new int[][]{{30, 35}, {70, 76}}) {
+            for (int i = run[0]; i < run[1]; i++) {
+                RideTsv.Sample s = ride.get(i);
+                s.thrPct = 100;
+                s.rpm = s.wheel_r_kmh * 57.5 * (i == run[0] ? 1.01 : 1.05);  // it starts gripping, then slips
+            }
+        }
+        WheelChecks.Clutch c = WheelChecks.clutch(ride);
+        assertEquals(11, c.loadN);
+        assertEquals(4 + 5, c.slipN);
+        assertEquals("each roll-on counts once, however many of its seconds slip", 2, c.slipRuns);
+        assertTrue(c.slipping());
     }
 
     @Test

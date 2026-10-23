@@ -168,6 +168,8 @@ public final class Hub {
     public static final int CAMERA_WARN_DEFAULT = 500;
     /** Warnings about the bike's 12 V battery (low with the engine off, not charging with it running). */
     public static final String KEY_BATTERY_WARNINGS = "battery_warnings";
+    /** A warning after a ride whose clutch slipped under load ({@link Ride#clutchSlipping}). */
+    public static final String KEY_CLUTCH_WARNINGS = "clutch_warnings";
     /** The unit fuel economy is shown in: an index into {@link FuelEconomy#LABELS}. */
     public static final String KEY_FUEL_UNIT = "fuel_unit";
     /** The profile name sent with the ride settings ("" = none), kept for the next write. */

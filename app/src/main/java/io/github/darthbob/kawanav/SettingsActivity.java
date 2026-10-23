@@ -415,6 +415,8 @@ public class SettingsActivity extends KawaActivity {
         addRow(c, switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
         addRow(c, switchRow("Battery warnings", "When the bike's 12 V battery reads low, or the engine is "
                 + "running and it is not being charged", Hub.KEY_BATTERY_WARNINGS, true));
+        addRow(c, switchRow("Clutch warning", "After a recorded ride, when the engine ran ahead of the rear "
+                + "wheel in more than one hard acceleration: the clutch may be slipping", Hub.KEY_CLUTCH_WARNINGS, true));
         addRow(c, switchRow("Speed camera warnings", CAMERAS_INFO, Hub.KEY_CAMERAS, false,
                 on -> BridgeService.settingsChanged()));
         String[] warn = new String[CAMERA_WARNS.length];
@@ -644,7 +646,7 @@ public class SettingsActivity extends KawaActivity {
         c.addView(secondary("Decoded values next to the last raw frame of each type. Compare them with the dash "
                 + "to check the scaling (PROTOCOL.md)."));
         c.addView(listRow(R.drawable.ic_list, "Field tests", "What is still to be tried at the bike, with the "
-                + "tyre and clutch numbers of the latest rides", null, true,
+                + "tyre numbers of the latest rides", null, true,
                 v -> startActivity(new Intent(this, FieldTestsActivity.class))));
         c.addView(choiceRow("Requests after connecting", "Applies on the next connect. Full is Rideology's sequence: "
                         + "it adds the phone name and the 0x08 init",

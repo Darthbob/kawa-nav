@@ -204,6 +204,7 @@ In the **Settings** tab:
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
 | [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
+| [Clutch warning](#clutch-warning) | On | A warning after a recorded ride whose clutch slipped under load |
 | [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | [End a ride](#recording-rides) | At once | At once / After 5 min / After 15 min: when a ride ends after the bike is switched off |
@@ -333,6 +334,18 @@ the threshold, and the meter's next answer 20 s later must say the same: the fue
 a start, or the voltage just after one, is not a battery problem. Switched off, battery warnings are
 not shown; tyre and ABS warnings stay.
 
+#### Clutch warning
+
+While the clutch holds, the engine speed per km/h of the rear wheel is fixed in each gear. Every
+recorded ride with bike data compares its seconds at half throttle or more, in 3rd gear and up, with
+the same gear at light throttle on that ride: a slipping clutch lets the engine rev higher than the gear
+and the speed give. The ride shows it under Engine ("Clutch under load"). When the engine ran more than
+3 % high in two hard accelerations or more, a notification says the clutch may be slipping and opens
+the ride. One acceleration alone is not enough: a single odd second is not a worn clutch. On the Z900
+the engine reads 1–4 % *below* the light-throttle value at full throttle, so a healthy clutch stays well
+clear of it. Shifts, quick-shifter cuts and 1st/2nd gear are left out. Switched off, the ride still
+shows the check, only the notification is not sent.
+
 #### Phone battery
 
 While connected, KawaNav sends the phone's battery level to the dash every 5 s, as Rideology does.
@@ -452,7 +465,8 @@ has:
   that ride recorded (the body's accelerations, the lean either side, the wheel and GPS speeds and the
   instant fuel economy among them; the rotation rates and the rear wheel slip from lowest to highest, as
   their average says nothing), how long traction control, ABS, cruise control and the front wheel coming
-  up were at work, the time in each gear, and the gear changes with those the quick shifter made. The
+  up were at work, the time in each gear, the gear changes with those the quick shifter made, and
+  whether the clutch held under load ([Clutch warning](#clutch-warning)). The
   fuel used comes from the bike's fuel counter; a bike that sends none (the Z900) gets an estimate from
   the instant fuel economy, marked "≈": each second burns the distance it covered over its km/L, and a
   second without an economy (engine braking, standing still) burns nothing, so idling is left out. The
