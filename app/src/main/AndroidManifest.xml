@@ -97,6 +97,13 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="stateHidden" />
 
+        <!-- debug builds only: opened from the hidden "Bike data" card, closes itself in a release -->
+        <activity
+            android:name=".FieldTestsActivity"
+            android:exported="false"
+            android:label="Field tests"
+            android:screenOrientation="portrait" />
+
         <activity
             android:name=".SettingsActivity"
             android:exported="false"

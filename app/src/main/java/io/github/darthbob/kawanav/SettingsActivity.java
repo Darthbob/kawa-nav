@@ -628,6 +628,9 @@ public class SettingsActivity extends KawaActivity {
         c.addView(dbgHead);
         c.addView(secondary("Decoded values next to the last raw frame of each type. Compare them with the dash "
                 + "to check the scaling (PROTOCOL.md)."));
+        c.addView(listRow(R.drawable.ic_list, "Field tests", "What is still to be tried at the bike, with the "
+                + "tyre and clutch numbers of the latest rides", null, true,
+                v -> startActivity(new Intent(this, FieldTestsActivity.class))));
         c.addView(choiceRow("Requests after connecting", "Applies on the next connect. Full is Rideology's sequence: "
                         + "it adds the phone name and the 0x08 init",
                 new String[]{"Capabilities only (v0.3)", "Read-only", "Full (like Rideology)"}, Hub.initLevel(this),
