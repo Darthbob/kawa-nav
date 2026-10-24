@@ -157,7 +157,7 @@ public class RidesActivity extends KawaActivity {
     private View records(List<Ride> rides) {
         RideStats stats = RideStats.of(rides);
         LinearLayout c = card();
-        c.addView(iconTitle(R.drawable.ic_gauge, cardTitle("Records")));
+        c.addView(iconTitle(R.drawable.ic_speed, cardTitle("Records")));
         if (stats.fastest.known()) {
             c.addView(secondary("Fastest: " + String.format(Locale.ROOT, "%.0f km/h", stats.fastest.value)
                     + " on " + when(stats.fastest.ride)));

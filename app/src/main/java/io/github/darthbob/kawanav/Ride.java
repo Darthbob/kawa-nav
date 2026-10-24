@@ -103,8 +103,9 @@ public final class Ride {
      * 5: the bends by their most lean ({@link #bendLean}).
      * 6: the fuel from the instant fuel economy ({@link #fuelEstL}), and that economy's average over the
      * distance instead of over the seconds.
+     * 7: the clutch under load ({@link #clutchLoadS}).
      */
-    public static final int SUMMARY_VERSION = 6;
+    public static final int SUMMARY_VERSION = 7;
     /** Which summary the file holds, 0 for a ride saved by a version that did not know about metrics. */
     public int summaryVersion;
 
@@ -287,6 +288,19 @@ public final class Ride {
      */
     public double kqsUp = Double.NaN, kqsDown = Double.NaN;
     /**
+     * The clutch under load ({@link WheelChecks#clutch}): the seconds at half throttle or more in 3rd gear
+     * and up that had the same gear at light throttle to compare with, NaN when the ride had none; how far
+     * the engine ran above that in % (the median and the highest of those seconds).
+     */
+    public double clutchLoadS = Double.NaN, clutchMedianPct = Double.NaN, clutchMaxPct = Double.NaN;
+    /** Of those, the seconds more than {@link WheelChecks#SLIP_PCT} above, and the roll-ons they were in. */
+    public int clutchSlipS, clutchSlipRuns;
+
+    /** The clutch slipped in enough roll-ons to warn about ({@link WheelChecks#MIN_SLIP_RUNS}). */
+    public boolean clutchSlipping() {
+        return clutchSlipRuns >= WheelChecks.MIN_SLIP_RUNS;
+    }
+    /**
      * The ride's bends by the most lean reached in each, in whole degrees: {@code bendLean[27]} bends
      * were leant over 27° at most. Null when the ride has no bend (or no lean at all). The lean a rider
      * usually takes a bend at comes from it ({@link RideStats#usualBendLean}).
@@ -428,6 +442,12 @@ public final class Ride {
         }
         gearS = gearSeen ? gears : null;
         bendLean = bends.result();
+        WheelChecks.Clutch clutch = WheelChecks.clutch(samples);
+        clutchLoadS = clutch.loadN > 0 ? clutch.loadN : Double.NaN;
+        clutchMedianPct = clutch.loadMedianPct;
+        clutchMaxPct = clutch.loadMaxPct;
+        clutchSlipS = clutch.slipN;
+        clutchSlipRuns = clutch.slipRuns;
         kqsUp = kqsSeen ? kqsU : Double.NaN;
         kqsDown = kqsSeen ? kqsD : Double.NaN;
         // seen but never on is 0 seconds ("never cut in"); a column the ride does not have stays unknown

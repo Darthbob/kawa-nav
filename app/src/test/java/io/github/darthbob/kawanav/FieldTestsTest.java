@@ -37,13 +37,11 @@ public class FieldTestsTest {
     }
 
     @Test
-    public void oneTestEachForTheTyreAndClutchNumbers() {
-        int tyres = 0, clutch = 0;
+    public void oneTestForTheTyreNumbers() {
+        int tyres = 0;
         for (FieldTests.Test t : FieldTests.ALL) {
             if (t.results == FieldTests.RESULTS_TYRES) tyres++;
-            if (t.results == FieldTests.RESULTS_CLUTCH) clutch++;
         }
         assertEquals(1, tyres);
-        assertEquals(1, clutch);
     }
 }

@@ -25,8 +25,6 @@ public class BikeActivity extends KawaActivity {
 
     /** Live values (riding log) count as current this long. */
     private static final long LIVE_MS = 10_000;
-    /** On both write cards and their confirmations, until the writes have been tried on a bike. */
-    private static final String NOT_TRIED = "Not tried on a bike yet: check the dash after sending.";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView title;
@@ -37,7 +35,7 @@ public class BikeActivity extends KawaActivity {
     private TextView fuelText;
     private TextView battery;
     private LinearLayout sections;
-    // ride settings and shift lamp (not tried on a bike yet)
+    // ride settings and shift lamp
     private LinearLayout settingsCard;
     private android.widget.Spinner modeSpinner, powerSpinner, ktrcSpinner, kqsSpinner;
     /** Says how many riding modes the bike announced, so "Rider 4" missing from the list makes sense. */
@@ -76,7 +74,7 @@ public class BikeActivity extends KawaActivity {
     /** The icon of a value group: what the rows behind it are about. Unknown groups get none. */
     private static int sectionIcon(String section) {
         switch (section) {
-            case BASIC: return R.drawable.ic_gauge;
+            case BASIC: return R.drawable.ic_speed;
             case "Engine": return R.drawable.ic_thermo;
             case "Maintenance": return R.drawable.ic_sliders;
             case "Dash": return R.drawable.ic_clock;
@@ -88,7 +86,7 @@ public class BikeActivity extends KawaActivity {
     /** The icon in front of a value, by what it is. */
     private static int rowIcon(String label) {
         switch (label) {
-            case "Odometer": case "Engine speed": return R.drawable.ic_gauge;
+            case "Odometer": case "Engine speed": return R.drawable.ic_speed;
             case "Trip A": case "Trip B": return R.drawable.ic_route;
             case "Average fuel economy": case "Fuel consumption": return R.drawable.ic_fuel;
             case "Average speed": case "Speed": return R.drawable.ic_speed;
@@ -233,7 +231,7 @@ public class BikeActivity extends KawaActivity {
                 + "ones you leave as they are go as the bike has them. Sport, Road and Rain set power and "
                 + "KTRC to their own values, as in Rideology; change either and the mode becomes Rider, which "
                 + "keeps yours. Saved as a profile, they are on the phone to be picked and sent again. The "
-                + "bike must be standing still, in neutral and with the throttle closed. " + NOT_TRIED));
+                + "bike must be standing still, in neutral and with the throttle closed."));
         profiles = SettingsProfiles.parse(prefs.getString(Hub.KEY_SETTINGS_PROFILES, ""));
         profileSpinner = spinner(profileNames(), 0);
         watchProfiles();
@@ -564,7 +562,7 @@ public class BikeActivity extends KawaActivity {
                 .setTitle("Send settings to the bike?")
                 .setMessage("All of these go to the bike in one write:\n\n" + lines + "\n\nThe bike must stand "
                         + "still, be in neutral and have the throttle closed. KawaNav re-checks this before "
-                        + "sending and reads the settings back afterwards.\n\n" + NOT_TRIED)
+                        + "sending and reads the settings back afterwards.")
                 .setPositiveButton("Send", (d, w) -> {
                     prefs.edit().putString(Hub.KEY_SETTINGS_NAME, name).apply();
                     // spinner positions start at 0, the bike's numbers at 1; KEBC goes back as the bike has it
@@ -583,16 +581,15 @@ public class BikeActivity extends KawaActivity {
     }
 
     /**
-     * The dash's shift lamp: when it lights and at which engine speed. Like the ride-settings write it has
-     * not been tried on a bike yet; the meter's own limits (0x1A) decide which statuses and levels are
-     * offered.
+     * The dash's shift lamp: when it lights and at which engine speed. Tried on a Z900 (2026): the dash
+     * takes the new setting. The meter's own limits (0x1A) decide which statuses and levels are offered.
      */
     private LinearLayout lampCard() {
         LinearLayout section = column();
         section.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"));
         LinearLayout c = group();
         c.addView(secondary("Writes only the shift lamp; the dash clock stays as it is. The bike must be "
-                + "connected (it does not have to be standing still). " + NOT_TRIED));
+                + "connected (it does not have to be standing still)."));
         lampStatusSpinner = spinner(new String[]{"Off"}, 0);
         lampRpmSpinner = spinner(new String[]{"3,000 rpm"}, 0);
         addRow(c, settingRowWith("Lights up", lampStatusSpinner));
@@ -640,8 +637,7 @@ public class BikeActivity extends KawaActivity {
                 .setTitle("Send the shift lamp to the dash?")
                 .setMessage("The dash will light its shift lamp at "
                         + String.format(Locale.ROOT, "%,d rpm", SettingsWrite.lampRpm(level))
-                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + ".")
-                        + "\n\n" + NOT_TRIED)
+                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + "."))
                 .setPositiveButton("Send", (d, w) -> {
                     String problem = BridgeService.writeShiftLamp(status, level);
                     if (problem != null) {

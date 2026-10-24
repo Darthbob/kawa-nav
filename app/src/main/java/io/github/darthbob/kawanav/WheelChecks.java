@@ -5,8 +5,9 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * What a ride's wheel speeds say about the tyres and the clutch, for the debug field tests
- * ({@link FieldTests}). Pure Java, so the rules can be unit-tested; nothing here warns the rider yet.
+ * What a ride's wheel speeds say about the tyres and the clutch. The tyres are a debug field test
+ * ({@link FieldTests}); the clutch is part of every ride's summary ({@link Ride#clutchSlipping}), which
+ * warns after a ride. Pure Java, so the rules can be unit-tested.
  *
  * <ul>
  * <li><b>Tyres:</b> on steady, upright riding the rear wheel turns a fixed amount slower than the front
@@ -16,7 +17,9 @@ import java.util.List;
  * <li><b>Clutch:</b> in a gear, rpm per km/h of the rear wheel is fixed by the gearing while the clutch
  * holds (spread about 1%). A slipping clutch lets the engine run ahead under load, so the ratio rises
  * above the same gear's light-throttle value. On the Z900 it reads 1–4% <i>below</i> it at full throttle
- * (the two values come from different frames in the once-a-second file), so only a rise counts.</li>
+ * (the two values come from different frames in the once-a-second file), so only a rise counts; a ride
+ * with roll-ons in 3rd to 6th showed no slip (2026-10). One noisy second is no slipping clutch: it takes
+ * {@link #MIN_SLIP_RUNS} roll-ons that each rise above {@link #SLIP_PCT}.</li>
  * </ul>
  */
 final class WheelChecks {
@@ -38,6 +41,8 @@ final class WheelChecks {
     static final double STEADY_RPM = 150;
     /** Clutch: a loaded second this far above its gear's reference counts as slipping. */
     static final double SLIP_PCT = 3;
+    /** Clutch: this many roll-ons with a slipping second make a slipping clutch. */
+    static final int MIN_SLIP_RUNS = 2;
     /** Two samples further apart than this are not neighbours (a gap in the recording). */
     static final long NEIGHBOUR_MS = 1500;
 
@@ -61,9 +66,16 @@ final class WheelChecks {
         double loadMedianPct = Double.NaN, loadMaxPct = Double.NaN;
         /** Loaded seconds more than {@link #SLIP_PCT} above the reference. */
         int slipN;
+        /** Roll-ons (loaded seconds one after the other) with at least one of those seconds. */
+        int slipRuns;
 
         Clutch() {
             java.util.Arrays.fill(rpmPerKmh, Double.NaN);
+        }
+
+        /** Slipped in enough roll-ons to warn about. */
+        boolean slipping() {
+            return slipRuns >= MIN_SLIP_RUNS;
         }
     }
 
@@ -109,13 +121,23 @@ final class WheelChecks {
             if (light.get(g).size() >= MIN_SAMPLES) c.rpmPerKmh[g] = median(light.get(g));
         }
         List<Double> load = new ArrayList<>();
+        int lastLoaded = -2;
+        boolean runSlipped = false;
         for (int i = 1; i < samples.size() - 1; i++) {
             RideTsv.Sample s = samples.get(i);
             int g = gearHeld(samples, i);
             if (g < 3 || !(s.thrPct >= LOAD_THR) || !(c.rpmPerKmh[g] > 0)) continue;
             double pct = (s.rpm / s.wheel_r_kmh / c.rpmPerKmh[g] - 1) * 100;
             load.add(pct);
-            if (pct > SLIP_PCT) c.slipN++;
+            // a roll-on is a run of loaded seconds one after the other (gearHeld already wants both
+            // neighbours recorded); a second that is not right after the last loaded one starts a new one
+            if (lastLoaded != i - 1) runSlipped = false;
+            lastLoaded = i;
+            if (pct > SLIP_PCT) {
+                c.slipN++;
+                if (!runSlipped) c.slipRuns++;
+                runSlipped = true;
+            }
         }
         c.loadN = load.size();
         if (!load.isEmpty()) {

@@ -28,8 +28,8 @@ import java.util.Map;
 
 /**
  * The Settings tab: starting by itself, what goes on the dash on the road, the dash icons and clock,
- * ride recording, offline maps, the debug tools (debug builds, seven taps on the title) and the
- * legal notes. Other tabs open it at a section ({@link #EXTRA_SECTION}).
+ * ride recording, offline maps, the debug tools (debug builds, seven taps on the title), the legal
+ * notes and the log export. Other tabs open it at a section ({@link #EXTRA_SECTION}).
  */
 public class SettingsActivity extends KawaActivity {
 
@@ -415,6 +415,8 @@ public class SettingsActivity extends KawaActivity {
         addRow(c, switchRow("Left-hand traffic", "UK, Ireland…: roundabouts turn clockwise", Hub.KEY_LEFT_HAND, false));
         addRow(c, switchRow("Battery warnings", "When the bike's 12 V battery reads low, or the engine is "
                 + "running and it is not being charged", Hub.KEY_BATTERY_WARNINGS, true));
+        addRow(c, switchRow("Clutch warning", "After a recorded ride, when the engine ran ahead of the rear "
+                + "wheel in more than one hard acceleration: the clutch may be slipping", Hub.KEY_CLUTCH_WARNINGS, true));
         addRow(c, switchRow("Speed camera warnings", CAMERAS_INFO, Hub.KEY_CAMERAS, false,
                 on -> BridgeService.settingsChanged()));
         String[] warn = new String[CAMERA_WARNS.length];
@@ -519,7 +521,7 @@ public class SettingsActivity extends KawaActivity {
         return c;
     }
 
-    /** Legal notes: riding safety, affiliation, map data credit, licence (GPL-3.0 §5d), version. */
+    /** Legal notes: riding safety, affiliation, map data credit, licence (GPL-3.0 §5d), version; the log export. */
     private LinearLayout aboutGroup() {
         LinearLayout c = group();
         TextView t = note(MainActivity.RIDING_NOTICE + "\n\n" + MainActivity.AFFILIATION_NOTICE
@@ -532,7 +534,22 @@ public class SettingsActivity extends KawaActivity {
         t.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
         t.setLinkTextColor(Ui.accent(night));
         c.addView(t);
+        addRow(c, listRow(R.drawable.ic_download, "Export the log", "Copies KawaNav's log to Download/KawaNav, to "
+                + "send with a problem report. It holds Google Maps' directions with street names, the bike's "
+                + "Bluetooth address and the helmet's name: read it before you share it", null, false, v -> exportLog()));
         return c;
+    }
+
+    /**
+     * "Export the log", in every build: the log only. The notification capture holds other apps' messages
+     * and leaves the phone only from the debug card's export.
+     */
+    private void exportLog() {
+        Logger.withLogFiles(() -> {
+            int n = LogExport.export(this, false);
+            runOnUiThread(() -> android.widget.Toast.makeText(this, n == 0 ? "No log to export"
+                    : n + (n == 1 ? " file" : " files") + " in Download/KawaNav", android.widget.Toast.LENGTH_SHORT).show());
+        });
     }
 
     // ------------------------------------------------------------------ debug
@@ -629,7 +646,7 @@ public class SettingsActivity extends KawaActivity {
         c.addView(secondary("Decoded values next to the last raw frame of each type. Compare them with the dash "
                 + "to check the scaling (PROTOCOL.md)."));
         c.addView(listRow(R.drawable.ic_list, "Field tests", "What is still to be tried at the bike, with the "
-                + "tyre and clutch numbers of the latest rides", null, true,
+                + "tyre numbers of the latest rides", null, true,
                 v -> startActivity(new Intent(this, FieldTestsActivity.class))));
         c.addView(choiceRow("Requests after connecting", "Applies on the next connect. Full is Rideology's sequence: "
                         + "it adds the phone name and the 0x08 init",

@@ -411,6 +411,7 @@ config says the bike has it.
   - anything else → rejected (`ERR_REJECT_SETTING`).
 - There is **no post-write re-read**: the reply carries the meter's new values. There is no 0x20/0x30
   handshake for settings. (verified)
+- On a Z900 (2026) the dash takes KawaNav's write: riding mode, power, KTRC and KQS change as sent.
 - Write timeout: 4000 ms (`oh/b.java:218`; general settings `ne/f.java:32`), startup reads 3000 ms.
 
 ### Preconditions
@@ -439,6 +440,7 @@ config says the bike has it.
 - Shift-lamp-only write: keeps the lamp byte and sets the six time fields to "leave unchanged" — five
   become `FF`, but the **year byte becomes `0x2F`** because it is sent as `(byte)(x − 2000)` and x = −1
   (`ne/f.java:34-43`). The frame is `1B 0C 00 FF FF 05 4A 01 <byte8> FF FF 2F FF FF FF`. (verified)
+  On a Z900 (2026) the dash takes the new lamp setting from this frame (issue #7, 2026-10-23).
 
 ## Capabilities (0x1A, `Ble5Value.b`)
 
@@ -625,7 +627,8 @@ when one is added here.
 - R.Score formula (server side).
 - Whether the meter shows an "Apply on the cluster" step: the `0x10` result suggests a two-stage apply,
   but no code or string proves a rider action on the dash.
-- Behaviour of the shift-lamp-only write's `0x2F` year byte.
+- Behaviour of the shift-lamp-only write's `0x2F` year byte: the Z900 dash takes the lamp setting with
+  it; whether its clock stays exactly as it was is not confirmed.
 - Which byte of a *short* ACK (KawaNav reads byte 4) is the general accept/reject — Rideology only
   parses the settings result (byte 7 of a 0x48 reply) and its generic ACK wrapper is raw.
 - Frame ids, by what they belong to. KawaNav targets the BLE5 combustion bikes, so only the first group
@@ -681,8 +684,8 @@ bike. (verified in the code; nothing here has been tried on a bike)
 | Ride recording | 0x45, 0x4A, 0x4B + GPS | records locally; the suspension/IMU values (0x4B: travel, accelerations, rotation rates, filtered wheel speeds, TCS/KQS flags) and the rest of 0x4A (torque, brake pressures, ABS target, damping, cruise) are recorded per second since 0.8; nothing on the meter drives it (no start/stop frame); like Rideology, KawaNav asks for 0x45 at connect and when a recording starts without one |
 | Dash icons | 0x13 (battery, headset, riding log), 0x12 (call, mail) | sent; the riding-log icon follows the recorder. Not yet seen on a dash |
 | Clock | 0x1B write | optional setting, off by default; preserves the shift lamp |
-| Settings write | 0x48 (block 09, byte 7 = 1) | riding mode, power, KTRC, KQS; in all builds since 1.2.1 (debug only before), not yet tried on a bike |
-| Shift lamp write | 0x1B (block 0x4A) | in all builds since 1.2.1 (debug only before), not yet tried on a bike; range and modes taken from the meter's 0x1A answer |
+| Settings write | 0x48 (block 09, byte 7 = 1) | riding mode, power, KTRC, KQS; in all builds since 1.2.1 (debug only before), tried on a Z900 |
+| Shift lamp write | 0x1B (block 0x4A) | in all builds since 1.2.1 (debug only before), tried on a Z900 (2026-10-23); range and modes taken from the meter's 0x1A answer |
 
 Everything else in this document is protocol knowledge KawaNav does not use yet.
 

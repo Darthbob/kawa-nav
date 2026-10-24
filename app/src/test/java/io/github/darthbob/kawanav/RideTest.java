@@ -67,6 +67,31 @@ public class RideTest {
     }
 
     @Test
+    public void theClutchUnderLoadIsInTheSummary() {
+        Ride none = new Ride();
+        none.summarize(ride100());              // gears but no wheel speeds: nothing to judge the clutch by
+        assertTrue(Double.isNaN(none.clutchLoadS));
+        assertFalse(none.clutchSlipping());
+
+        List<RideTsv.Sample> in = new ArrayList<>();
+        for (int i = 0; i < 120; i++) {
+            RideTsv.Sample s = sample(i, 60, Double.NaN, 4, 0, Double.NaN, Double.NaN);
+            s.wheel_r_kmh = 60;
+            boolean rollOn = (i >= 30 && i < 35) || (i >= 70 && i < 75);
+            s.thrPct = rollOn ? 100 : 10;
+            s.rpm = 60 * 57.5 * (rollOn ? 1.05 : 1);
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(10, r.clutchLoadS, 1e-9);
+        assertEquals(10, r.clutchSlipS);
+        assertEquals(2, r.clutchSlipRuns);
+        assertEquals(5, r.clutchMaxPct, 1e-6);
+        assertTrue(r.clutchSlipping());
+    }
+
+    @Test
     public void summaryFromSamples() {
         Ride r = new Ride();
         r.summarize(ride100());

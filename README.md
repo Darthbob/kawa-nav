@@ -11,11 +11,11 @@ replaces Rideology's link to the bike.
 <p align="center">
   <img src="docs/screenshots/home-dark.png" width="200" alt="Home in dark mode: link status, what the dash shows, the bike's range, fuel and odometer, and the menu">
   <img src="docs/screenshots/bike-dark.png" width="200" alt="The bike's screen in dark mode: remaining range, fuel gauge, battery and the dash's values">
-  <img src="docs/screenshots/rides-light.png" width="200" alt="Riding log in light mode: totals for the week, month and year and the recorded rides">
-  <img src="docs/screenshots/ride-light.png" width="200" alt="A ride in light mode: the track coloured by speed and the speed chart">
+  <img src="docs/screenshots/rides-light.png" width="200" alt="Riding log in light mode: totals for the week, month and year, records and the recorded rides">
+  <img src="docs/screenshots/ride-light.png" width="200" alt="A ride in light mode: the track on an OpenStreetMap map, coloured by speed, and the speed chart">
 </p>
 <p align="center"><sub>Home and the bike in dark mode, the riding log and a ride in light mode. Android emulator with
-sample data.</sub></p>
+sample data: made-up rides on real Alpine roads.</sub></p>
 
 Independent project, not affiliated with or endorsed by Kawasaki or Google. Tested on a Kawasaki
 Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
@@ -74,7 +74,7 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - 🕐 **Dash clock from the phone**: optional, once per connection, like Rideology.
 - 🔧 **Settings on the bike**: reads the ride settings (riding mode, power, KTRC, quickshifter, and the
   suspension settings on bikes that have them), and writes riding mode/power/KTRC/KQS and the dash
-  shift lamp after a confirmation (not tried on a bike yet). The riding-mode list follows the bike: four
+  shift lamp after a confirmation (both tried on a Z900). The riding-mode list follows the bike: four
   modes, or seven (Rider 2-4) on a bike that announces them.
 - 🌍 **Offline maps**: download regions (country, state, district) from Geofabrik, see their data date,
   update and delete them one by one.
@@ -204,6 +204,7 @@ In the **Settings** tab:
 | [Look ahead](#look-ahead) | 1000 m | 500 / 1000 / 1500 / 2000 m |
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
 | [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
+| [Clutch warning](#clutch-warning) | On | A warning after a recorded ride whose clutch slipped under load |
 | [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | [End a ride](#recording-rides) | At once | At once / After 5 min / After 15 min: when a ride ends after the bike is switched off |
@@ -333,6 +334,18 @@ the threshold, and the meter's next answer 20 s later must say the same: the fue
 a start, or the voltage just after one, is not a battery problem. Switched off, battery warnings are
 not shown; tyre and ABS warnings stay.
 
+#### Clutch warning
+
+While the clutch holds, the engine speed per km/h of the rear wheel is fixed in each gear. Every
+recorded ride with bike data compares its seconds at half throttle or more, in 3rd gear and up, with
+the same gear at light throttle on that ride: a slipping clutch lets the engine rev higher than the gear
+and the speed give. The ride shows it under Engine ("Clutch under load"). When the engine ran more than
+3 % high in two hard accelerations or more, a notification says the clutch may be slipping and opens
+the ride. One acceleration alone is not enough: a single odd second is not a worn clutch. On the Z900
+the engine reads 1–4 % *below* the light-throttle value at full throttle, so a healthy clutch stays well
+clear of it. Shifts, quick-shifter cuts and 1st/2nd gear are left out. Switched off, the ride still
+shows the check, only the notification is not sent.
+
 #### Phone battery
 
 While connected, KawaNav sends the phone's battery level to the dash every 5 s, as Rideology does.
@@ -364,6 +377,14 @@ reads the direction of a roundabout from the road itself and needs no setting.
 A roundabout whose arrow Maps drew *and* whose number the text names ("at the roundabout, take the
 4th exit") keeps the direction of Maps' arrow and takes only the number from the text; the setting is
 not consulted there, because the arrow already shows which way around the roundabout goes.
+
+#### Export the log
+
+Settings → About → **Export the log** copies KawaNav's log of the last runs to `Download/KawaNav`, to
+attach to a problem report (e.g. a GitHub issue). It records what KawaNav did and sent to the dash,
+also on a ride: every change of the arrow and the status icons, with the values behind them. It also
+holds Google Maps' directions with street names, the bike's Bluetooth address and the helmet's name,
+so read it before you share it. The notification capture stays in the debug build's own export.
 
 ### 📊 Bike data
 
@@ -444,7 +465,8 @@ has:
   that ride recorded (the body's accelerations, the lean either side, the wheel and GPS speeds and the
   instant fuel economy among them; the rotation rates and the rear wheel slip from lowest to highest, as
   their average says nothing), how long traction control, ABS, cruise control and the front wheel coming
-  up were at work, the time in each gear, and the gear changes with those the quick shifter made. The
+  up were at work, the time in each gear, the gear changes with those the quick shifter made, and
+  whether the clutch held under load ([Clutch warning](#clutch-warning)). The
   fuel used comes from the bike's fuel counter; a bike that sends none (the Z900) gets an estimate from
   the instant fuel economy, marked "≈": each second burns the distance it covered over its km/L, and a
   second without an economy (engine braking, standing still) burns nothing, so idling is left out. The
@@ -505,9 +527,8 @@ end-to-end encrypted (phone with a screen lock); offline maps and the log are le
 The bike's screen reads the ride settings (riding mode, power, KTRC, quickshifter, engine brake, and the
 suspension settings on bikes that have them) and shows them with the name and the number the bike sent.
 
-Since 1.2.1 they can be written back from the normal app too, not only from the debug build. **The
-writes have not been tried on a bike yet**: each card and each confirmation says so, so check the dash
-after sending.
+Since 1.2.1 they can be written back from the normal app too, not only from the debug build. Both
+writes, the ride settings and the shift lamp, have been tried on a Z900.
 
 - **Ride settings**: riding mode, power, KTRC and quickshifter, and optionally a name for them (up to
   18 bytes, as Rideology sends the title of a setting; whether the dash shows it is not known yet).
@@ -538,7 +559,7 @@ after sending.
     the riding mode**.
 - **Dash shift lamp**: when the lamp lights (off / tachometer / LED / both, as the dash allows) and at
   which engine speed (250 rpm steps, inside the range the dash reports). Only the lamp is changed; the
-  dash clock stays as it is.
+  dash clock stays as it is. Tried on a Z900: the dash takes the new setting.
 
 Under its choices the ride-settings card says whether a press would send now: "Ready", or why not
 ("Not ready: the bike must stand still"). After a press both cards show for 30 seconds what came of it:
@@ -629,7 +650,7 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   any app on the phone (Android requires it for the launcher), so a release build ignores
   `--ez free_mode`, `--ez export_log`, `--ez bridge` and the rest; `-e offline_region <id>` likewise
   starts nothing. Debug builds act on them as before. Nothing else about the app can be driven from
-  outside.
+  outside. The log is exported from Settings instead ([Export the log](#export-the-log)).
 - Rerouting / arrived flags and waypoint icons have no visible effect on the Z900 dash.
 - Free ride needs downloaded regions; it follows the road you are on and does not know your route.
 - **Spoken curve warnings are not tried on the bike yet.** They come from the same map data as the
@@ -640,9 +661,9 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   camera icon on the dash (it shows the destination flag with the distance). Not tried on the bike yet.
 - The refuel diary, the battery log and the ride records never touch the bike; they are kept on the phone
   (and included in Android's backup).
-- **Writing settings and the shift lamp has not been tried on a bike yet** (check the dash after
-  sending), and the names of the values (which riding mode, which KTRC level) come from Rideology and are shown next to the
-  number the bike sent, not instead of it.
+- **Writing the ride settings and the shift lamp has been tried on a Z900 only.** The names of the
+  values (which riding mode, which KTRC level) come from Rideology and are shown next to the number
+  the bike sent, not instead of it.
 - The **scaling of the riding-log values** (speed, engine speed, throttle, lean angle) is chosen from
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with
   the dash for a whole ride yet. The same goes for the values added in 0.7 and recorded since 0.8
@@ -699,6 +720,9 @@ Frame layouts for the bike's data, settings and riding log were cross-checked ag
 [Zen3515's Home Assistant integration for Rideology bikes](https://github.com/Zen3515/homeassistant-kawasaki-rideology-ble)
 (Apache License 2.0). Kawasaki's own app was decompiled **for interoperability only**; no Kawasaki code
 is used here, and the extracted facts are in [docs/PROTOCOL.md](docs/PROTOCOL.md).
+
+Icons: [Material Symbols](https://fonts.google.com/icons) by Google, under the
+[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 
 Kawasaki, Rideology, Ninja, Versys and the model names are trademarks of Kawasaki Motors, Ltd.;
 Google Maps is a trademark of Google LLC. They are used here only to describe compatibility.

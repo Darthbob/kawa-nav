@@ -5,14 +5,14 @@ import java.util.List;
 /**
  * The tests still to be done at the bike, for the debug screen that lists them ({@link FieldTestsActivity}):
  * what each one settles, how to do it and what counts as an answer. Most come from the open questions of
- * docs/PROTOCOL.md ("Still unknown / to verify on the bike", "What would settle them"); the tyre and clutch
- * ones from {@link WheelChecks}. Pure Java, so the list can be checked by a unit test.
+ * docs/PROTOCOL.md ("Still unknown / to verify on the bike", "What would settle them"); the tyre one from
+ * {@link WheelChecks}. Pure Java, so the list can be checked by a unit test.
  */
 final class FieldTests {
     private FieldTests() {}
 
     /** Results the screen works out from the recorded rides for a test. */
-    static final int RESULTS_NONE = 0, RESULTS_TYRES = 1, RESULTS_CLUTCH = 2;
+    static final int RESULTS_NONE = 0, RESULTS_TYRES = 1;
 
     static final String HEALTH = "Bike health", WRITES = "Written to the bike",
             MEANING = "What the recorded values mean", PROTOCOL = "Protocol";
@@ -49,36 +49,6 @@ final class FieldTests {
                     "The low ride reads clearly below the usual ratio (more than 0.1%, the spread between normal "
                             + "rides): a slow-puncture warning is worth building. No clear shift: drop the idea.",
                     RESULTS_TYRES),
-            new Test("clutch_slip", HEALTH, "Clutch slip and the gearing",
-                    "In a gear, engine speed per km/h of the rear wheel is fixed by the gearing while the clutch "
-                            + "holds. A slipping clutch lets the engine run ahead under load, so the ratio rises above "
-                            + "the same gear's light-throttle value.",
-                    "1. Record a ride with a few full-throttle roll-ons in 3rd to 6th gear, from about 3000 rpm, "
-                            + "3–4 s each, where it is safe and legal.\n"
-                            + "2. Look at that ride's clutch line below.",
-                    "The loaded seconds stay at or below the reference (1–4% below is normal on the Z900): no slip, "
-                            + "and the check has its baseline. Seconds more than 3% above it in more than one roll-on: "
-                            + "the clutch may be slipping, or the rule needs work.",
-                    RESULTS_CLUTCH),
-            new Test("settings_write", WRITES, "Riding mode, power, KTRC and KQS",
-                    "The settings write (0x48) is in every build since 1.2.1 but has never been tried on a bike.",
-                    "1. Bike standing, in neutral, engine on. Note the dash's riding mode, power, KTRC and KQS.\n"
-                            + "2. Bike tab → Ride settings: change one of them and send.\n"
-                            + "3. Look at the dash.\n"
-                            + "4. Send the old value back and look again.\n"
-                            + "5. Export the log (Notifications card → Export the log and the capture).",
-                    "The dash shows the new value, then the old one again: the write works. Nothing changes or the "
-                            + "dash shows an error: keep the log, and a frame capture of a second try.",
-                    RESULTS_NONE),
-            new Test("shift_lamp", WRITES, "Dash shift lamp",
-                    "The shift-lamp write (0x1B) is in every build since 1.2.1 but has never been tried on a bike; "
-                            + "it must leave the dash clock as it is.",
-                    "1. Note the dash's shift lamp setting and the time on its clock.\n"
-                            + "2. Bike tab → Dash shift lamp: pick another engine speed and send.\n"
-                            + "3. Check the setting on the dash, and rev in neutral to see the lamp.\n"
-                            + "4. Send the old setting back.",
-                    "The dash shows the new speed and the clock is unchanged: the write works.",
-                    RESULTS_NONE),
             new Test("profile_name", WRITES, "Profile name on the dash",
                     "Each settings write carries a profile name (bytes 15-38 of 0x48). Whether a dash shows it "
                             + "anywhere is not known.",

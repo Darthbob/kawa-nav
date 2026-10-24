@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "version": "1.2.5",
+      "changes": [
+        "The app uses Google's Material icons",
+        "Switching tabs fades smoothly instead of the jumpy system animation",
+        "Settings → About → \"Export the log\" copies KawaNav's log to Download/KawaNav, to send with a problem report. It used to be in the debug build only",
+        "Changing riding mode, power, KTRC, KQS and the dash shift lamp from the Bike tab has been tried on a Z900: the cards no longer say it is untested",
+        "Every recorded ride checks the clutch: under Engine, whether it held in hard accelerations. When the engine revved too high for the gear in two of them or more, a notification says the clutch may be slipping (Settings → \"Clutch warning\" turns it off)"
+      ]
+    },
+    {
       "version": "1.2.4",
       "changes": [
         "Nothing changes for riding: the normal app is the same as 1.2.3. This version adds a tool for testers",
