@@ -43,7 +43,7 @@ public final class BatteryStore {
             keepAside();
             return null;
         }
-        return out;
+        return BatteryLog.restingOnly(out);
     }
 
     /** Moves a file that could not be read out of the way, so a later save cannot erase it. */

@@ -55,6 +55,10 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   (verified)
 - ACKs are type `0x20` with the request type echoed in byte 3 (byte 3 ∈ {66 for 0x42, 18 for 0x12,
   19 for 0x13, 20 for 0x14, 8 for 0x08, 69 for 0x45}; the 0x0B ACK is not checked). (verified)
+- In the **data frames** byte 3 is not the request answered: on the Z900 it is the type of the last
+  frame the phone sent. A 0x41 answer read `41 52 29 14 00` after a 0x14 turn frame went out, the 0x48
+  answer `48 16 1A 45 00` after the 0x45 request, the 0x1E answer `1E 2A 17 08 00` after the 0x08. A
+  request is answered by the frame's type, byte 0. (observed, 2026-10-17 to 25)
 - 0x42 (`42 00 01`) is for EV/HEV bikes; KawaNav leaves it out. What an engine bike does with it is
   unknown.
 - KawaNav's `KawaProtocol.startup(level, …)` mirrors this order; **release builds use the read-only
@@ -749,6 +753,23 @@ the speed below 2 km/h that read 1808 / 1894 / 2859 / 2699 rpm, each back to 107
 second, plus 2 s of 0 rpm at 1 km/h in gear 2 followed by 1347 rpm. None is a plausible throttle blip;
 whether the meter or the decoder produces them is not established. Filter isolated rpm outliers before
 reading anything into them. (observed)
+
+**Maintenance (0x1E).** The read's ACK says result `01` (`20 2A 15 1E 01 …`), which reads as "not
+supported", and 0.1–0.2 s later the meter sends the 0x1E frame all the same: 11 times out of 11 from
+2026-10-17 to 25. KawaNav took the 01 for a refusal until 1.2.6; it now counts a type as supported once
+its frame arrives. With the 0x1D config, the three reminders decode as:
+
+| Reminder | Date | Distance | Notify bits |
+|---|---|---|---|
+| Kawasaki service | 2024-01-01 | 0 km | 0 |
+| Rider setting | none | 12,000 km | 0 |
+| Oil change | 2027-09-29 | 11,338 → 11,045 km | 1 |
+
+The oil change's distance **counts down with the odometer**: 11,338 km at 5,259 km, 11,045 km at
+5,552 km, both due at 16,597 km, and the same sum at all ten reads in between. So the distance is what
+is left, not the odometer it is due at. Whether notify bits 0 mean a reminder that is off (the Kawasaki
+service's 2024-01-01 and 0 km look like an unset one), and what the rider's 12,000 km is, needs the
+dash's own maintenance page: the debug build's Field tests list it. (observed)
 
 ### Which exported values are still doubtful
 

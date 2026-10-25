@@ -103,6 +103,16 @@ public class BikeRequestsTest {
     }
 
     @Test
+    public void aFrameThatArrivesAfterA01IsSupported() {
+        // the Z900's maintenance read: ACK result 01, then the 0x1E frame all the same
+        q.submit(req(0x1E, BikeRequests.DATA_OR_ACK, BikeRequests.STARTUP));
+        q.onFrame(hx("202A151E01050C00FFFFFFFFFFFFFF"));
+        assertTrue(q.unsupported(0x1E));
+        q.onFrame(hx("1E2A170800054C0001011800000000"));
+        assertFalse(q.unsupported(0x1E));
+    }
+
+    @Test
     public void ackOnlyIgnoresDataFrame() {
         q.submit(req(0x45, BikeRequests.ACK_ONLY, BikeRequests.STARTUP));
         q.onFrame(hx("4534a4ffff"));

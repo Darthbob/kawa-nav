@@ -54,6 +54,8 @@ public final class CurveEngine implements LocationListener {
     /** Last road before a roundabout; decides which exit continues it. */
     private RoadNetwork.Approach approach;
     private Hub.Output output;
+    /** Keeps {@link #output} from flipping between two curves from one fix to the next. */
+    private final CurveSmoother smoother = new CurveSmoother();
     private List<CurveDetector.Curve> curves = Collections.emptyList();
     /** The network the coordinates of {@link #curves} are in, and the speed of their fix (m/s). */
     private RoadNetwork curvesNet;
@@ -89,6 +91,7 @@ public final class CurveEngine implements LocationListener {
         running = false;
         ((LocationManager) context.getSystemService(Context.LOCATION_SERVICE)).removeUpdates(this);
         output = null;
+        smoother.clear();
         curves = Collections.emptyList();
         curvesNet = null;
         lastMatch = null;
@@ -191,12 +194,12 @@ public final class CurveEngine implements LocationListener {
         RoadNetwork net = network;
         if (net == null) {
             Hub.curveStatus = busy ? "Loading roads…" : "No offline roads here: download this region under Offline maps";
-            output = null;
+            output = smoother.next(null, 0, 0);
             return;
         }
         if (Double.isNaN(heading)) {
             Hub.curveStatus = "Waiting for movement to know the heading";
-            output = null;
+            output = smoother.next(null, 0, 0);
             return;
         }
         double[] p = net.project(loc.getLatitude(), loc.getLongitude());
@@ -205,7 +208,7 @@ public final class CurveEngine implements LocationListener {
         if (m != null && !net.onRoundabout(m)) approach = net.approach(m, heading);
         if (m == null) {
             Hub.curveStatus = "Not on a known road";
-            output = null;
+            output = smoother.next(null, 0, 0);
             return;
         }
         List<RoadNetwork.RoundaboutPass> passes = new ArrayList<>();
@@ -234,17 +237,19 @@ public final class CurveEngine implements LocationListener {
         }
         double nextDist = Math.min(next != null ? next.startDist : Double.MAX_VALUE,
                 nextRb != null ? nextRb.entryDist : Double.MAX_VALUE);
+        Hub.Output raw;
         if (nextDist > lookahead) {
             // straight until the next curve beyond the look-ahead, or to the end of the known road
-            output = new Hub.Output(0, roundDistance(Math.min(nextDist, ahead)), "Curve");
+            raw = new Hub.Output(0, roundDistance(Math.min(nextDist, ahead)), "Curve");
         } else if (nextRb != null && (next == null || nextRb.entryDist <= next.startDist)) {
             int exit = Math.max(1, Math.min(12, nextRb.exitNumber));
             int turn = nextRb.ccw ? 29 + exit : 17 + exit; // RUNABOUT_CCWn / RUNABOUT_CWn
-            output = new Hub.Output(turn, roundDistance(nextRb.entryDist), "Curve");
+            raw = new Hub.Output(turn, roundDistance(nextRb.entryDist), "Curve");
         } else {
-            output = new Hub.Output(next.turn, roundDistance(next.startDist), "Curve");
+            raw = new Hub.Output(next.turn, roundDistance(next.startDist), "Curve");
         }
         outputAt = System.currentTimeMillis();
+        output = smoother.next(raw, outputAt, curvesSpeed);
         String road = net.roads.get(m.road).name;
         Hub.curveStatus = String.format(Locale.ROOT, "%s · %d curves, %d roundabouts in %.0f m · next %s",
                 road.isEmpty() ? "unnamed road" : road, found.size(), passes.size(), ahead, output.describe());

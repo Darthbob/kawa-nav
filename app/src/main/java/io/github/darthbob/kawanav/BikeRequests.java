@@ -125,6 +125,12 @@ public final class BikeRequests {
 
     /** A frame from the meter: completes the running request if it answers it. */
     public void onFrame(byte[] v) {
+        // the Z900 answers the 0x1E read with an ACK result 01 and then sends the frame all the same,
+        // 0.1-0.2 s later: a type whose frame arrives is not unsupported, whatever its ACK said
+        int type = v.length > 0 ? v[0] & 0xFF : -1;
+        if (type != BikeFrames.ACK && unsupported.remove(type)) {
+            io.log("Bike: " + BikeFrames.name(type) + " answered after its ACK said 01");
+        }
         Request r = pending;
         if (r == null || !r.answeredBy(v)) return;
         int result = (v[0] & 0xFF) == BikeFrames.ACK && v.length > 4 ? v[4] & 0xFF : 0;

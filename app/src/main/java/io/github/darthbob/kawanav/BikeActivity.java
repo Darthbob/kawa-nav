@@ -1031,18 +1031,10 @@ public class BikeActivity extends KawaActivity {
         }
         if (b.service != null) {
             java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
+            double odo = b.info != null && b.info.odometerKm >= 0 ? b.info.odometerKm : Double.NaN;
             for (int k = 0; k < 3; k++) {
-                BikeFrames.ServiceIndicator.Reminder m = b.service.reminders[k];
-                if (!m.supported || (!m.hasDate() && m.distanceKm < 0)) continue;
-                List<String> due = new ArrayList<>();
-                if (m.hasDate()) {
-                    java.util.Calendar cal = java.util.Calendar.getInstance();
-                    cal.clear();
-                    cal.set(m.year, m.month - 1, m.day);
-                    due.add(df.format(cal.getTime()));
-                }
-                if (m.distanceKm >= 0) due.add(String.format(Locale.ROOT, "%,d km", m.distanceKm));
-                r.add(new String[]{"Maintenance", BikeFrames.ServiceIndicator.NAMES[k], String.join(" or ", due)});
+                String due = MaintenanceLog.due(b.service.reminders[k], odo, df);
+                if (due != null) r.add(new String[]{"Maintenance", BikeFrames.ServiceIndicator.NAMES[k], due});
             }
         }
         BikeFrames.VehicleSettings v = b.settings;

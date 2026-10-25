@@ -99,6 +99,9 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - The bike paired with the phone once (Android-level bonding): with KawaNav's "Pair your bike" or in
   Rideology (both tested). If Rideology is installed, it must be closed (**force-stopped**) while
   KawaNav is used: the bike talks to one app at a time.
+- More than one Kawasaki paired (an old bike, a demo ride): KawaNav connects to the one "Start
+  automatically" is set up with, else the one paired in KawaNav. With neither, it takes the first
+  Kawasaki and says so on Home; setting up "Start automatically" with your bike picks it.
 
 ### 🏍️ Supported motorcycles
 
@@ -232,6 +235,10 @@ with the same name or number, else the straightest one) and shows what comes nex
 - on a straight, the straight arrow with the distance to the next curve (searched up to 3 km ahead,
   or to the end of the downloaded roads).
 
+What the dash shows does not flip back and forth from one second to the next. A bend that comes up is
+shown at once; what replaces a bend (another kind for the same bend, the straight arrow, a further bend
+just after a roundabout) has to be found twice in a row first.
+
 Needs [offline maps](#-offline-maps) for the area.
 
 #### Look ahead
@@ -331,8 +338,9 @@ L/100 km.
 KawaNav warns when the bike's 12 V battery reads low with the engine off, or is not being charged
 with the engine running. A warning needs both readings the bike gives (the ECU's and the dash's) below
 the threshold, and the meter's next answer 20 s later must say the same: the fuel pump priming before
-a start, or the voltage just after one, is not a battery problem. Switched off, battery warnings are
-not shown; tyre and ABS warnings stay.
+a start, or the voltage just after one, is not a battery problem. A reading is only judged against the
+engine state it was taken in: the voltage read just before a start is not a charging voltage. Switched
+off, battery warnings are not shown; tyre and ABS warnings stay.
 
 #### Clutch warning
 
@@ -405,7 +413,8 @@ gauge and the battery voltage, then groups everything the dash reported when it 
 - **Suspension** (bikes with the electronic suspension): travel, the three rotation rates and the body's
   acceleration, and where the damping stands.
 - **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
-  their date and distance.
+  their date and the kilometres left, and the odometer they fall at ("in 11,045 km (at 16,597 km)").
+  A reminder the meter keeps switched off is marked "reminder off".
 - **Dash**: the clock the dash has (and the shift lamp setting), as last read.
 - **Parked**: after the link is lost, the phone's position at that moment, with a "Walk to the bike"
   button that opens Maps in walking mode. It appears only if the phone had a recent position (curves or
@@ -423,7 +432,8 @@ Under the bike's values, three cards keep what the dash cannot: **Refuels** (a f
 bike stands at the pump — the gauge and the range jumping up — with the litres estimated from the tank
 size you set and the fuel used between fills; correct anything by tapping it, add a fill by hand, or
 long-press to delete), **12 V battery** (tapping the battery figure on the bike screen opens the
-readings taken at rest with the engine off, charted, with a warning once they have slid for a while) and
+readings taken at rest with the engine off, charted, with a warning once they have slid for a while; a
+reading needs the engine not to have run for half an hour, and none is taken while the starter turns) and
 **Maintenance** (what you had done, when and at what odometer, next to the reminders the dash keeps).
 They are kept on the phone and included in Android's backup.
 

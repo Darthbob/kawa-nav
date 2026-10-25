@@ -20,6 +20,12 @@ public final class BikeData {
     public BikeFrames.VehicleSettings settings;
     public BikeFrames.ServiceIndicator service;
     public long infoAt, extAt, liveAt, imuAt, settingsAt, serviceAt, generalAt;
+    /**
+     * When the live frames last saw the engine start or stop (its speed crossing
+     * {@link BikeAlerts#RUNNING_RPM}), and when they last saw it running; 0 = not seen. A 0x41 battery
+     * reading belongs to the engine state it was taken in, which {@link BikeAlerts} checks with these.
+     */
+    public long engineChangedAt, engineRunningAt;
     /** Where the phone was when the link to the bike was lost (≈ where the bike was parked), or null. */
     public Place parked;
 
@@ -68,7 +74,14 @@ public final class BikeData {
             ext = (BikeFrames.LogExt) f;
             extAt = now;
         } else if (f instanceof BikeFrames.Telemetry) {
-            live = (BikeFrames.Telemetry) f;
+            BikeFrames.Telemetry t = (BikeFrames.Telemetry) f;
+            boolean running = BikeAlerts.running(t);
+            // the first frame after a gap is no start or stop: the state it finds was there before it
+            if (live != null && now - liveAt <= BikeAlerts.FRESH_MS && running != BikeAlerts.running(live)) {
+                engineChangedAt = now;
+            }
+            if (running) engineRunningAt = now;
+            live = t;
             liveAt = now;
         } else if (f instanceof BikeFrames.ImuSusp) {
             imu = (BikeFrames.ImuSusp) f;

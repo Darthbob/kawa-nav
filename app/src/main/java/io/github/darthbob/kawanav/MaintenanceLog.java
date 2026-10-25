@@ -61,33 +61,39 @@ public final class MaintenanceLog {
 
     /**
      * What the dash says is due for its own reminders: a line per reminder, empty when it says nothing.
-     * The date the meter holds is when the service is due, the distance is the odometer it wants.
      */
     public static List<String> dueFromDash(BikeFrames.ServiceIndicator service, double odoKm) {
         List<String> out = new ArrayList<>();
         if (service == null) return out;
         java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
         for (int k = 0; k < service.reminders.length; k++) {
-            BikeFrames.ServiceIndicator.Reminder m = service.reminders[k];
-            if (!m.supported) continue;
-            List<String> due = new ArrayList<>();
-            if (m.hasDate()) {
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.clear();
-                cal.set(m.year, m.month - 1, m.day);
-                due.add(df.format(cal.getTime()));
-            }
-            if (m.distanceKm >= 0) {
-                String km = String.format(java.util.Locale.ROOT, "%,d km", m.distanceKm);
-                if (odoKm == odoKm && m.distanceKm > odoKm) {
-                    km += String.format(java.util.Locale.ROOT, " (in %,.0f km)", m.distanceKm - odoKm);
-                } else if (odoKm == odoKm) {
-                    km += " (passed)";
-                }
-                due.add(km);
-            }
-            if (!due.isEmpty()) out.add(BikeFrames.ServiceIndicator.NAMES[k] + ": " + String.join(" or ", due));
+            String due = due(service.reminders[k], odoKm, df);
+            if (due != null) out.add(BikeFrames.ServiceIndicator.NAMES[k] + ": " + due);
         }
         return out;
+    }
+
+    /**
+     * When one of the dash's reminders is due, null when it says nothing. The date is the day it is due;
+     * the distance is what is left, counting down with the odometer (a Z900's oil change read 11,338 km
+     * at 5,259 km and 11,045 km at 5,552 km: due at 16,597 km both times), so with the odometer known it
+     * also says where it falls. A reminder whose notify bits are 0 is marked off.
+     */
+    static String due(BikeFrames.ServiceIndicator.Reminder m, double odoKm, java.text.DateFormat df) {
+        if (!m.supported) return null;
+        List<String> due = new ArrayList<>();
+        if (m.hasDate()) {
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.clear();
+            cal.set(m.year, m.month - 1, m.day);
+            due.add(df.format(cal.getTime()));
+        }
+        if (m.distanceKm >= 0) {
+            String km = String.format(java.util.Locale.ROOT, "in %,d km", m.distanceKm);
+            if (odoKm >= 0) km += String.format(java.util.Locale.ROOT, " (at %,.0f km)", odoKm + m.distanceKm);
+            due.add(km);
+        }
+        if (due.isEmpty()) return null;
+        return String.join(" or ", due) + (m.notify == 0 ? " · reminder off" : "");
     }
 }

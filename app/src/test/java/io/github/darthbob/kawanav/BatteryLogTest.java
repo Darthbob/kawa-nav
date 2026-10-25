@@ -28,6 +28,16 @@ public class BatteryLogTest {
     }
 
     @Test
+    public void aChargingVoltageIsNoRestingOne() {
+        assertTrue(BatteryLog.record(new ArrayList<>(), 1000, 13.9, false).isEmpty());
+        // the ones an older version kept are left out when the log is read
+        List<BatteryLog.Reading> old = readings(11.4, 13.9, 11.6, 14.3, 12.7);
+        List<BatteryLog.Reading> kept = BatteryLog.restingOnly(old);
+        assertEquals(3, kept.size());
+        assertEquals(12.7, kept.get(2).volts, 1e-9);
+    }
+
+    @Test
     public void oneReadingPerStop() {
         List<BatteryLog.Reading> out = BatteryLog.record(new ArrayList<>(), 1000, 12.6, false);
         out = BatteryLog.record(out, 1000 + 60_000, 12.5, false);          // same stop: the idle voltage
