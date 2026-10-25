@@ -62,10 +62,11 @@ public final class RawCapture {
     /**
      * What the rider can mark in a capture while testing at the bike: tapped the moment it is done, so
      * tools/frame_bytes.py can show which bytes changed with it. These are the things the frames might
-     * carry that neither Rideology nor KawaNav decodes yet.
+     * carry that neither Rideology nor KawaNav decodes yet. Switching the ignition on or off is not one:
+     * the link comes up after the dash does and goes with it, so no capture is open at that moment.
      */
     public static final String[] MARKS = {
-            "Ignition on", "Engine start", "Engine stop", "Indicator left", "Indicator right", "Indicators off",
+            "Engine start", "Engine stop", "Indicator left", "Indicator right", "Indicators off",
             "Hazard lights", "High beam on", "High beam off", "Horn", "Clutch in", "Clutch out", "Neutral",
             "Gear 1", "Side stand down", "Side stand up", "Front brake", "Rear brake",
             "Riding mode changed on the dash", "KTRC changed on the dash", "Trip reset on the dash",
