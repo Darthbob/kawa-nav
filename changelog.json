@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "1.2.6",
+      "changes": [
+        "No more \"Battery is not being charged\" right after starting the engine: the voltage read a moment before the start, with the engine still off, was taken for the charging voltage",
+        "The 12 V battery log takes a reading only once the engine has been off for half an hour, and none while the starter turns. It used to keep the 13-14 V of a bike just switched off, and the dip of a start",
+        "Readings above 13.6 V already in the battery log are left out: no battery rests that high, they were charging voltages"
+      ]
+    },
+    {
       "version": "1.2.5",
       "changes": [
         "The app uses Google's Material icons",

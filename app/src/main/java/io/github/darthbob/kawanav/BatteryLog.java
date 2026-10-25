@@ -13,6 +13,11 @@ public final class BatteryLog {
     public static final int MAX = 500;
     /** Two readings closer than this are the same stop, not a new one. */
     static final long SAME_STOP_MS = 60 * 60_000;
+    /**
+     * No 12 V battery rests this high (lead-acid 12.7-12.9 V full, lithium 13.3-13.4 V): a reading above
+     * it is a charging voltage. Before 1.2.6 the log took some just after the engine stopped.
+     */
+    static final double MAX_REST_V = 13.6;
     /** A battery has to lose this much to count as declining. */
     static final double DECLINE_V = 0.4;
     /** Over at least this long, and with this many readings, before that means anything. */
@@ -38,10 +43,17 @@ public final class BatteryLog {
      */
     public static List<Reading> record(List<Reading> readings, long now, double volts, boolean engineRunning) {
         List<Reading> out = new ArrayList<>(readings);
-        if (volts != volts || volts <= 0 || engineRunning) return out;
+        if (volts != volts || volts <= 0 || volts >= MAX_REST_V || engineRunning) return out;
         if (!out.isEmpty() && now - out.get(out.size() - 1).at < SAME_STOP_MS) return out;
         out.add(new Reading(now, volts));
         while (out.size() > MAX) out.remove(0);
+        return out;
+    }
+
+    /** The readings without the charging voltages an older version took for resting ones. */
+    public static List<Reading> restingOnly(List<Reading> readings) {
+        List<Reading> out = new ArrayList<>();
+        for (Reading r : readings) if (!(r.volts >= MAX_REST_V)) out.add(r);
         return out;
     }
 

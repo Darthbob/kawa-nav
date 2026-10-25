@@ -1304,20 +1304,14 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     /**
-     * Keeps the 12 V readings: one per stop, taken while the engine is off, since a running engine's
-     * 13-14 V says nothing about the battery's health. Warns once a day at most.
+     * Keeps the 12 V readings: one per stop, taken while the engine is off and has been for a while,
+     * since a running engine's 13-14 V says nothing about the battery's health
+     * ({@link BikeAlerts#restingVoltage}). Warns once a day at most.
      */
     private void batteryCheck(long now) {
-        BikeFrames.VehicleInfo info = Hub.bike.info;
-        BikeFrames.Telemetry live = Hub.bike.live;
-        if (info == null || now - Hub.bike.infoAt > BikeAlerts.FRESH_MS) return;
-        // a reading only means something with the engine known to be off: without a live frame the
-        // voltage may be the charging voltage, which says nothing about the battery's health
-        if (live == null || now - Hub.bike.liveAt > BikeAlerts.FRESH_MS) return;
-        if (live.rpm != live.rpm) return;
-        boolean running = live.rpm > BikeAlerts.RUNNING_RPM;
-        double v = BikeAlerts.battery(info);
-        List<BatteryLog.Reading> readings = BatteryLog.record(Hub.batteryReadings, now, v, running);
+        double v = BikeAlerts.restingVoltage(Hub.bike, now);
+        if (v != v) return;
+        List<BatteryLog.Reading> readings = BatteryLog.record(Hub.batteryReadings, now, v, false);
         if (readings.size() == Hub.batteryReadings.size()) return;
         Hub.batteryReadings = readings;
         new BatteryStore(this).save(readings);

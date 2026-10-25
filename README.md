@@ -331,8 +331,9 @@ L/100 km.
 KawaNav warns when the bike's 12 V battery reads low with the engine off, or is not being charged
 with the engine running. A warning needs both readings the bike gives (the ECU's and the dash's) below
 the threshold, and the meter's next answer 20 s later must say the same: the fuel pump priming before
-a start, or the voltage just after one, is not a battery problem. Switched off, battery warnings are
-not shown; tyre and ABS warnings stay.
+a start, or the voltage just after one, is not a battery problem. A reading is only judged against the
+engine state it was taken in: the voltage read just before a start is not a charging voltage. Switched
+off, battery warnings are not shown; tyre and ABS warnings stay.
 
 #### Clutch warning
 
@@ -423,7 +424,8 @@ Under the bike's values, three cards keep what the dash cannot: **Refuels** (a f
 bike stands at the pump — the gauge and the range jumping up — with the litres estimated from the tank
 size you set and the fuel used between fills; correct anything by tapping it, add a fill by hand, or
 long-press to delete), **12 V battery** (tapping the battery figure on the bike screen opens the
-readings taken at rest with the engine off, charted, with a warning once they have slid for a while) and
+readings taken at rest with the engine off, charted, with a warning once they have slid for a while; a
+reading needs the engine not to have run for half an hour, and none is taken while the starter turns) and
 **Maintenance** (what you had done, when and at what odometer, next to the reminders the dash keeps).
 They are kept on the phone and included in Android's backup.
 
