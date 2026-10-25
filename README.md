@@ -99,6 +99,9 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - The bike paired with the phone once (Android-level bonding): with KawaNav's "Pair your bike" or in
   Rideology (both tested). If Rideology is installed, it must be closed (**force-stopped**) while
   KawaNav is used: the bike talks to one app at a time.
+- More than one Kawasaki paired (an old bike, a demo ride): KawaNav connects to the one "Start
+  automatically" is set up with, else the one paired in KawaNav. With neither, it takes the first
+  Kawasaki and says so on Home; setting up "Start automatically" with your bike picks it.
 
 ### 🏍️ Supported motorcycles
 

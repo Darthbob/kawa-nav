@@ -8,7 +8,8 @@
         "Readings above 13.6 V already in the battery log are left out: no battery rests that high, they were charging voltages",
         "Maintenance: the dash's reminders now show the kilometres left and where they fall (\"in 11,045 km (at 16,597 km)\"). The distance the dash keeps counts down, and KawaNav took it for the odometer the service is due at",
         "A maintenance reminder the dash keeps switched off is marked \"reminder off\"",
-        "The curve on the dash no longer flips back and forth from one second to the next (Sharp right, Right, Sharp right; a bend and the straight arrow in turn; two bends just after a roundabout). A bend that comes up is still shown at once"
+        "The curve on the dash no longer flips back and forth from one second to the next (Sharp right, Right, Sharp right; a bend and the straight arrow in turn; two bends just after a roundabout). A bend that comes up is still shown at once",
+        "With two Kawasakis paired with the phone, KawaNav connects to the one \"Start automatically\" is set up with, no longer to the first one it finds. It waited for the other bike for ever"
       ]
     },
     {

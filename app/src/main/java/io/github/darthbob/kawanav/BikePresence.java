@@ -256,6 +256,12 @@ public class BikePresence extends CompanionDeviceService {
             @Override
             public void onAssociationCreated(AssociationInfo info) {
                 Logger.log("Autostart: linked to " + info.getDisplayName() + " (" + info.getDeviceMacAddress() + ")");
+                // the bike picked in the dialog is the one to connect to, also with autostart off later
+                // (issue #22: an older Kawasaki that is still paired must not be taken instead)
+                if (info.getDeviceMacAddress() != null) {
+                    Hub.prefs(a).edit().putString(Hub.KEY_DEVICE,
+                            info.getDeviceMacAddress().toString().toUpperCase(java.util.Locale.ROOT)).apply();
+                }
                 invalidate();
                 observe(a, info);
                 if (thenPair) bond(a, info);

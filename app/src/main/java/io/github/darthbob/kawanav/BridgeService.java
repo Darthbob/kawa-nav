@@ -23,6 +23,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -620,7 +621,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
             return;
         }
         Hub.bikeStatus = "Looking for " + d.getName() + "…";
-        Hub.bikeHint = "Switch on the ignition. Rideology must be closed: the bike talks to one app at a time.";
+        Hub.bikeHint = bikeGuessed
+                ? "Several Kawasakis are paired with this phone. Set up \"Start automatically\" with yours, next "
+                        + "to it with the ignition on, so KawaNav knows which one; or remove the other in Bluetooth settings."
+                : "Switch on the ignition. Rideology must be closed: the bike talks to one app at a time.";
+        if (bikeGuessed) Logger.log("Bridge: several Kawasakis paired and none picked: trying " + d.getAddress());
         ble.setDumpServices(Hub.DEBUG_TOOLS && Hub.prefs(this).getBoolean(Hub.KEY_DEBUG_ICONS, false));
         ble.connect(d, true);
     }
@@ -631,25 +636,60 @@ public class BridgeService extends Service implements KawaBle.Listener {
         return pairedBike(this);
     }
 
-    /** The saved bike, else the first paired device named "Kawasaki…"; null if none / Bluetooth off. */
+    /**
+     * Set when {@link #pairedBike} had to guess: several Kawasakis are paired and none was picked in
+     * KawaNav (autostart or pairing). The bike status then says how to pick one.
+     */
+    static volatile boolean bikeGuessed;
+
+    /** The bike among the paired devices ({@link #pickBike}); null if none / Bluetooth off. */
     public static BluetoothDevice pairedBike(Context c) {
         try {
             BluetoothAdapter a = ((BluetoothManager) c.getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
             if (a == null || !a.isEnabled()) return null;
+            android.companion.AssociationInfo info = BikePresence.association(c);
+            String linked = info != null && info.getDeviceMacAddress() != null ? info.getDeviceMacAddress().toString() : null;
             String saved = Hub.prefs(c).getString(Hub.KEY_DEVICE, null);
-            BluetoothDevice kawasaki = null;
-            for (BluetoothDevice d : a.getBondedDevices()) {
-                if (d.getAddress().equals(saved)) return d;
-                String n = d.getName();
-                if (kawasaki == null && n != null && n.toLowerCase(Locale.ROOT).contains("kawasaki")) kawasaki = d;
+            List<BluetoothDevice> bonded = new ArrayList<>(a.getBondedDevices());
+            List<String> addresses = new ArrayList<>(), names = new ArrayList<>();
+            for (BluetoothDevice d : bonded) {
+                addresses.add(d.getAddress());
+                names.add(d.getName());
             }
-            return kawasaki;
+            int i = pickBike(linked, saved, addresses, names);
+            bikeGuessed = i >= 0 && !addresses.get(i).equalsIgnoreCase(linked == null ? "" : linked)
+                    && !addresses.get(i).equalsIgnoreCase(saved == null ? "" : saved) && kawasakis(names) > 1;
+            return i < 0 ? null : bonded.get(i);
         } catch (SecurityException e) {
             // the permission can be revoked between the check and here (or while scanning): the caller
             // is told "no bike", the app says why, and nothing crashes on the main thread
             Logger.log("Bluetooth not allowed: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Which paired device is the bike, as an index into {@code addresses} and {@code names}, -1 for none:
+     * the one autostart is linked to, else the one KawaNav paired or was last linked to, else a device
+     * named "Kawasaki…". Issue #22: with an old demo bike and the rider's own both paired, both called
+     * "Kawasaki-ZR900S", the first Kawasaki was taken while autostart was linked to the other, and the
+     * bridge waited for a bike that was not there.
+     */
+    static int pickBike(String linked, String saved, List<String> addresses, List<String> names) {
+        for (int i = 0; i < addresses.size(); i++) if (addresses.get(i).equalsIgnoreCase(linked == null ? "" : linked)) return i;
+        for (int i = 0; i < addresses.size(); i++) if (addresses.get(i).equalsIgnoreCase(saved == null ? "" : saved)) return i;
+        for (int i = 0; i < names.size(); i++) if (isKawasaki(names.get(i))) return i;
+        return -1;
+    }
+
+    static int kawasakis(List<String> names) {
+        int n = 0;
+        for (String name : names) if (isKawasaki(name)) n++;
+        return n;
+    }
+
+    private static boolean isKawasaki(String name) {
+        return name != null && name.toLowerCase(Locale.ROOT).contains("kawasaki");
     }
 
     @Override
