@@ -149,6 +149,20 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (instance != null) instance.applySettings();
     }
 
+    /**
+     * Debug: "Capture frames" was switched. Switched on with the bike connected, a capture starts now
+     * rather than at the next connect (without the connect sequence, then); switched off, it ends.
+     */
+    public static void captureChanged(boolean on) {
+        if (!on) {
+            RawCapture.stop();
+            return;
+        }
+        if (instance == null || !instance.ble.isReady() || RawCapture.writing()) return;
+        Logger.log("Capture started on a link already up");
+        RawCapture.start(instance);
+    }
+
     /** Debug: sends the phone name from the settings now; false if the bike is not connected. */
     public static boolean sendPhoneName() {
         if (instance == null || !instance.ble.isReady()) return false;

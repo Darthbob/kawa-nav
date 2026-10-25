@@ -654,8 +654,9 @@ public class SettingsActivity extends KawaActivity {
                 pos -> prefs.edit().putInt(Hub.KEY_DEBUG_INIT_LEVEL, pos).apply()));
         c.addView(switchRow("Skip the riding log request", "Read-only connect and ride start leave out 45 00 00 "
                 + "(as KawaNav 0.6 and before did; Rideology always sends it)", Hub.KEY_DEBUG_NO_EXT, false));
-        c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect: "
-                + "adb pull /sdcard/Android/data/" + getPackageName() + "/files/captures/", Hub.KEY_DEBUG_CAPTURE, false));
+        c.addView(switchRow("Capture frames", "Every frame to and from the bike, one file per connect, from "
+                + "now on if the bike is connected: adb pull /sdcard/Android/data/" + getPackageName()
+                + "/files/captures/", Hub.KEY_DEBUG_CAPTURE, false, BridgeService::captureChanged));
         c.addView(markRow());
         LinearLayout reads = row();
         reads.setPadding(0, dp(6), 0, 0);
@@ -696,9 +697,9 @@ public class SettingsActivity extends KawaActivity {
             String label = RawCapture.MARKS[markSel];
             String msg;
             if (!RawCapture.enabled(this)) {
-                msg = "Switch \"Capture frames\" on and connect the bike again";
+                msg = "Switch \"Capture frames\" on first";
             } else if (!RawCapture.mark(label)) {
-                msg = "No capture open: connect the bike";
+                msg = "Bike not connected: the capture starts when it connects";
             } else {
                 Logger.log("Capture mark: " + label);
                 msg = "Marked: " + label;
