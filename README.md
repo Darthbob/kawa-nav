@@ -232,6 +232,10 @@ with the same name or number, else the straightest one) and shows what comes nex
 - on a straight, the straight arrow with the distance to the next curve (searched up to 3 km ahead,
   or to the end of the downloaded roads).
 
+What the dash shows does not flip back and forth from one second to the next. A bend that comes up is
+shown at once; what replaces a bend (another kind for the same bend, the straight arrow, a further bend
+just after a roundabout) has to be found twice in a row first.
+
 Needs [offline maps](#-offline-maps) for the area.
 
 #### Look ahead
@@ -406,7 +410,8 @@ gauge and the battery voltage, then groups everything the dash reported when it 
 - **Suspension** (bikes with the electronic suspension): travel, the three rotation rates and the body's
   acceleration, and where the damping stands.
 - **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
-  their date and distance.
+  their date and the kilometres left, and the odometer they fall at ("in 11,045 km (at 16,597 km)").
+  A reminder the meter keeps switched off is marked "reminder off".
 - **Dash**: the clock the dash has (and the shift lamp setting), as last read.
 - **Parked**: after the link is lost, the phone's position at that moment, with a "Walk to the bike"
   button that opens Maps in walking mode. It appears only if the phone had a recent position (curves or

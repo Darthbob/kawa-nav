@@ -101,6 +101,16 @@ final class FieldTests {
                             + "temperatures, battery) and the app's Bike tab at the same moment.",
                     "Every value matches the dash at every stop (whole units, the dash's own rounding).",
                     RESULTS_NONE),
+            new Test("maintenance_menu", MEANING, "The dash's maintenance reminders",
+                    "The Z900 answers the 0x1E read (after an ACK that says 01): oil change 29 Sept 2027 or "
+                            + "11,045 km left, the rider's reminder 12,000 km, the Kawasaki service 1 Jan 2024 and "
+                            + "0 km. The oil change's kilometres count down with the odometer; what the other two "
+                            + "mean, and whether notify bits 0 mean a reminder that is off, is not known.",
+                    "1. Bike tab → Maintenance: note the three reminders.\n"
+                            + "2. Open the dash's maintenance (or oil change) page and note what it shows for each.",
+                    "Each reminder on the dash matches one in the app, and the ones the dash does not show are the "
+                            + "ones marked \"reminder off\".",
+                    RESULTS_NONE),
             new Test("unknown_bytes", PROTOCOL, "Bytes nobody decodes",
                     "0x30 and the unused bytes of the other frames may carry indicators, high beam, clutch, side "
                             + "stand and the like. Rideology reads none of them.",

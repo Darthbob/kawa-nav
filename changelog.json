@@ -5,7 +5,10 @@
       "changes": [
         "No more \"Battery is not being charged\" right after starting the engine: the voltage read a moment before the start, with the engine still off, was taken for the charging voltage",
         "The 12 V battery log takes a reading only once the engine has been off for half an hour, and none while the starter turns. It used to keep the 13-14 V of a bike just switched off, and the dip of a start",
-        "Readings above 13.6 V already in the battery log are left out: no battery rests that high, they were charging voltages"
+        "Readings above 13.6 V already in the battery log are left out: no battery rests that high, they were charging voltages",
+        "Maintenance: the dash's reminders now show the kilometres left and where they fall (\"in 11,045 km (at 16,597 km)\"). The distance the dash keeps counts down, and KawaNav took it for the odometer the service is due at",
+        "A maintenance reminder the dash keeps switched off is marked \"reminder off\"",
+        "The curve on the dash no longer flips back and forth from one second to the next (Sharp right, Right, Sharp right; a bend and the straight arrow in turn; two bends just after a roundabout). A bend that comes up is still shown at once"
       ]
     },
     {

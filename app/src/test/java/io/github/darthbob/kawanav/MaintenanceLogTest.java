@@ -48,6 +48,34 @@ public class MaintenanceLogTest {
         assertTrue(Double.isNaN(MaintenanceLog.kmSince(entries, "Tyres", 12000)));
     }
 
+    /** The Z900's maintenance config and answer of 25 Oct 2026, as the log has them. */
+    private static BikeFrames.ServiceIndicator z900Service() {
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(KawaProtocol.parseHex("1D0C0C140005414300C3FC00CFFFFF"));
+        return (BikeFrames.ServiceIndicator) d.decode(KawaProtocol.parseHex(("1E 2A 17 08 00"
+                + " 05 4C 00 01 01 18 00 00 00 00 05 4D 00 0F FF FF FF 00 2E E0 05 4E 00 19 1D 1B 00 00 2B 25"
+                + " FF FF FF FF FF FF FF FF FF FF").replace(" ", "")));
+    }
+
+    @Test
+    public void theDashCountsTheKilometresDown() {
+        java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, java.util.Locale.UK);
+        BikeFrames.ServiceIndicator s = z900Service();
+        // 11,045 km left at 5,552 km: due at 16,597 km
+        java.util.Calendar due = java.util.Calendar.getInstance();
+        due.clear();
+        due.set(2027, java.util.Calendar.SEPTEMBER, 29);
+        assertEquals(df.format(due.getTime()) + " or in 11,045 km (at 16,597 km)",
+                MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.OIL], 5552, df));
+        assertEquals("in 11,045 km", MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.OIL], Double.NaN,
+                java.text.DateFormat.getDateInstance()).replaceFirst("^.* or ", ""));
+        // the two reminders whose notify bits are 0
+        assertTrue(MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.KAWASAKI], 5552, df).endsWith("reminder off"));
+        assertEquals("in 12,000 km (at 17,552 km) · reminder off",
+                MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.RIDER], 5552, df));
+        assertEquals(3, MaintenanceLog.dueFromDash(s, 5552).size());
+    }
+
     @Test
     public void sortedOldestFirst() {
         List<MaintenanceLog.Entry> entries = new ArrayList<>();
