@@ -514,7 +514,8 @@ config says the bike has it.
 - Shift-lamp-only write: keeps the lamp byte and sets the six time fields to "leave unchanged" — five
   become `FF`, but the **year byte becomes `0x2F`** because it is sent as `(byte)(x − 2000)` and x = −1
   (`ne/f.java:34-43`). The frame is `1B 0C 00 FF FF 05 4A 01 <byte8> FF FF 2F FF FF FF`. (verified)
-  On a Z900 (2026) the dash takes the new lamp setting from this frame (issue #7, 2026-10-23).
+  On a Z900 (2026) the dash takes the new lamp setting from this frame (issue #7, 2026-10-23) and its
+  clock stays as it was (confirmed 2026-10-26).
 
 ## Capabilities (0x1A, `Ble5Value.b`)
 
@@ -703,8 +704,6 @@ when one is added here.
 - R.Score formula (server side).
 - Whether the meter shows an "Apply on the cluster" step: the `0x10` result suggests a two-stage apply,
   but no code or string proves a rider action on the dash.
-- Behaviour of the shift-lamp-only write's `0x2F` year byte: the Z900 dash takes the lamp setting with
-  it; whether its clock stays exactly as it was is not confirmed.
 - Which byte of a *short* ACK (KawaNav reads byte 4) is the general accept/reject — Rideology only
   parses the settings result (byte 7 of a 0x48 reply) and its generic ACK wrapper is raw.
 - Frame ids, by what they belong to. KawaNav targets the BLE5 combustion bikes, so only the first group
@@ -761,7 +760,7 @@ bike. (verified in the code; nothing here has been tried on a bike)
 | Dash icons | 0x13 (battery, headset, riding log), 0x12 (call, mail) | sent; the riding-log icon follows the recorder. Not yet seen on a dash |
 | Clock | 0x1B write | optional setting, off by default; preserves the shift lamp |
 | Settings write | 0x48 (block 09, byte 7 = 1) | riding mode, power, KTRC, KQS; in all builds since 1.2.1 (debug only before), tried on a Z900 |
-| Shift lamp write | 0x1B (block 0x4A) | in all builds since 1.2.1 (debug only before), tried on a Z900 (2026-10-23); range and modes taken from the meter's 0x1A answer |
+| Shift lamp write | 0x1B (block 0x4A) | in all builds since 1.2.1 (debug only before), tried on a Z900 (2026-10-23), the dash clock stays as it was; range and modes taken from the meter's 0x1A answer |
 
 Everything else in this document is protocol knowledge KawaNav does not use yet.
 
