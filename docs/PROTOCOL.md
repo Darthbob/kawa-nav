@@ -284,6 +284,46 @@ forward and 0.99 g up.
   change, speed, speed changes, braking or the yaw rate. The app labels 17-18 "IMU rate 1
   (unverified)" and the other two by their axis.
 
+**Blocks 15, 25 and 35 are the IMU's own CAN messages, passed through.** Their headers `01 74`, `01 78`
+and `01 7C` are not a marker and an id like the `05 xx` of other blocks: they are the CAN ids 0x174,
+0x178 and 0x17C, and the eight bytes after each are that message's data. The text the IMU sends about
+itself (below) names it, a **Bosch MM7.10**, and the rate and acceleration scalings above (±163.84,
+±4.1768) are that sensor's. Block 45 (`03 E0`, id 0x3E0) has the same shape but no counter or CRC. Besides
+the rate and the acceleration, each IMU block carries (verified on the captures of 2026-10-25 and 27,
+13,502 frames):
+
+| Bytes | Value |
+|---|---|
+| 19-20, 39-40 | always `00 00` and `01 00` on the Z900, engine off, idling and riding: status bytes, most likely |
+| 29-30 | the IMU's identification text, one character per message (below) |
+| 23, 33, 43 | bits 3-0 a rolling message counter; bits 7-4 always 0 |
+| 24, 34, 44 | CRC-8 SAE J1850 (polynomial 0x1D, init 0xFF, final xor 0xFF) over the 7 data bytes before it; the CAN id is not part of it |
+
+- **Counter.** The IMU sends each message every 10 ms and the meter forwards one in ten, so the counter
+  steps by 10 (mod 16) from one 0x4B to the next: in 99 % of the frames. The other steps (mostly 8–12)
+  are the meter's timing; the two steps of 0 came with the block repeated byte for byte, a stale message.
+  The counters of blocks 25 and 35 equal block 15's or are one behind (about 5 % of the frames): the
+  three messages are not always taken from the same 10 ms cycle.
+- **CRC.** 40,504 of 40,506 blocks check. The two that do not hold ordinary-looking values, so they are
+  more likely put together from two cycles than corrupted in a visible way. A reader can drop a block whose
+  CRC fails, and a frame whose counter did not move.
+- **Identification text (bytes 29-30).** Byte 29 (bits 3-0) is a character position, byte 30 the
+  character. The strings follow one another in a fixed cycle of 89 messages (0.89 s); with one message
+  in ten forwarded, the whole cycle is seen in about 9 s, since 89 and 10 have no common factor. Each
+  string starts with a byte at position 0 (`00`, once `0D`) and puts its characters at positions 1, 2, …,
+  counting on from 15 to 0 for the long one. The Z900 sends the same twelve strings in both captures,
+  three of them empty:
+
+| Text | Probably |
+|---|---|
+| `Robert Bosch GmbH` | the maker |
+| `7.10` | the model: Bosch MM7.10 |
+| `0265011515` | a Bosch part number (Bosch's start with 0 265) |
+| `21176-1126` | a Kawasaki part number (5 + 4 digits); the string with `0D` at position 0 |
+| `20240929` | a date: production, 29 September 2024 |
+| `SC20027_071` | a software or calibration version |
+| `6031146-0335`, `0577`, `0` | unknown (a serial number, a hardware index?) |
+
 Block 45 counts as absent only when **both** bytes 45 and 46 are FF (the other blocks: either one). No
 config nibble gates byte 51.
 
@@ -622,7 +662,8 @@ when one is added here.
   (indicators, high beam, clutch, side stand, a riding mode changed on the dash …, at least 15 s
   apart); then for each mark, the bytes that were steady before it and changed right after it. The
   first such capture is under [Test marks](#test-marks-2026-10-27): the left indicator is in none of
-  the frames.
+  the frames. On the Z900 the undecoded bytes of 0x45 and 0x4A are always `FF` or `00`, and those of
+  0x4B are the IMU's counter, CRC, status and identification text (see the 0x4B section).
 - Riding-log sample rate (meter/frequency controlled).
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
 - What the two TCS pairs (0x4A byte 24, 0x4B byte 51) actually report: the rider's level, an intervention,
