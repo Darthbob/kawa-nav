@@ -4,7 +4,7 @@
       "version": "1.2.8",
       "changes": [
         "Google Maps directions in Italian are checked on real rides now. Two of Maps' Italian wordings are read from the text too, not only from Maps' arrow: a roundabout called \"rotatoria\" and a sharp turn (\"Svolta tutto a sinistra\")",
-        "A cold engine warning (Settings, off by default): \"Engine still cold\" in the helmet when you rev the engine above the limit you pick before the coolant reaches 60 °C",
+        "A cold engine warning (Settings, off by default): \"Engine still cold\" in the helmet when you rev the engine while the coolant is still cold, above 4,500 rpm and below 70 °C unless you set other limits",
         "Maintenance reminders of your own: every so many kilometres or months from the last time a job is logged, whichever comes first, with a notification when it is due",
         "A ride's bends: lean, apex speed, radius and speeds in and out of each, the bends braked at the apex or with the throttle snapped open while leant over, and a diagram of the grip the ride used"
       ]

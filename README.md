@@ -212,7 +212,9 @@ In the **Settings** tab:
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
 | [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
 | [Clutch warning](#clutch-warning) | On | A warning after a recorded ride whose clutch slipped under load |
-| [Cold engine warning](#cold-engine-warning) | Off | Off / above 5,000 / 6,000 / 7,000 rpm: said in the helmet while the coolant is below 60 °C |
+| [Cold engine warning](#cold-engine-warning) | Off | Said in the helmet when the engine revs above a limit while the coolant is cold |
+| [Cold engine: revs](#cold-engine-warning) | 4,500 rpm | 3,000 to 7,000 rpm: the engine speed the warning comes above |
+| [Cold engine: warm from](#cold-engine-warning) | 70 °C | 50 / 60 / 70 / 80 °C: the coolant temperature from which the engine counts as warm |
 | [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | [End a ride](#recording-rides) | At once | At once / After 5 min / After 15 min: when a ride ends after the bike is switched off |
@@ -361,10 +363,11 @@ shows the check, only the notification is not sent.
 
 #### Cold engine warning
 
-With a limit picked, KawaNav says "Engine still cold" in the helmet when the engine goes above it while
-the coolant is below 60 °C, or plays two long low tones with "Beeps instead of words". Once each time
-the engine goes over the limit, at most once a minute. Once the coolant has reached 60 °C it stays
-quiet until the next connection, so a long descent that cools the engine again does not set it off.
+Switched on, KawaNav says "Engine still cold" in the helmet when the engine goes above **Cold engine:
+revs** (4,500 rpm unless changed) while the coolant is below **Cold engine: warm from** (70 °C unless
+changed), or plays two long low tones with "Beeps instead of words". Once each time the engine goes over
+the limit, at most once a minute. Once the coolant has reached that temperature it stays quiet until the
+next connection, so a long descent that cools the engine again does not set it off.
 The coolant comes from the bike's riding log frame (0x45), which a Z900 sends. Like the curve warnings,
 it is said only through a headset unless "Speak only through a headset" is off. Not yet tried on the
 bike.

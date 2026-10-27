@@ -174,8 +174,10 @@ public final class Hub {
     public static final String KEY_MAINT_REMINDERS = "maintenance_reminders";
     /** The due reminders already announced ({@link MaintenanceLog#toldKey}). */
     public static final String KEY_MAINT_TOLD = "maintenance_told";
-    /** The cold engine warning: an index into {@link ColdEngine#LIMITS}, 0 (off) by default. */
-    public static final String KEY_COLD_ENGINE = "cold_engine";
+    /** The cold engine warning (off unless turned on), above this engine speed, below this coolant temperature. */
+    public static final String KEY_COLD_ENGINE = "cold_engine_on";
+    public static final String KEY_COLD_ENGINE_RPM = "cold_engine_rpm";
+    public static final String KEY_COLD_ENGINE_C = "cold_engine_c";
     /** The unit fuel economy is shown in: an index into {@link FuelEconomy#LABELS}. */
     public static final String KEY_FUEL_UNIT = "fuel_unit";
     /** The profile name sent with the ride settings ("" = none), kept for the next write. */
