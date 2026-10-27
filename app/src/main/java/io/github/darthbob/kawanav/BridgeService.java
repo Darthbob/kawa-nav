@@ -800,6 +800,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     public void onLinkLost() {
         if (destroyed) return;
         recorder.linkLost();
+        coldEngine.reset();
         requests.clear();
         handler.removeCallbacks(startup);
         RawCapture.stop();
@@ -824,7 +825,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         boolean cameras = Hub.camerasEnabled(this);
         int pace = Hub.prefs(this).getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
         boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF
-                || pace > CurveAlerts.PACE_OFF || (cameras && Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false));
+                || pace > CurveAlerts.PACE_OFF || (cameras && Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false))
+                || ColdEngine.limit(Hub.prefs(this).getInt(Hub.KEY_COLD_ENGINE, 0)) > 0;
         if (pace == CurveAlerts.FROM_RIDES && !ridesLeanAsked) {
             ridesLeanAsked = true;
             RideStore store = recorder.store();
@@ -890,6 +892,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (out != null && out.cameraId >= 0) cameraAlert(out);
         else cameraGone();
         sayCurve(now);
+        coldEngineCheck(now);
         bikeAlerts(now);
         refuelCheck(now);
         batteryCheck(now);
@@ -1228,8 +1231,31 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     /** A warning may be played: the sound is on, and a headset is connected unless that is not asked for. */
     private boolean soundAllowed() {
-        if (curveSound == null || !locationAllowed) return false;
+        return locationAllowed && voiceAllowed();
+    }
+
+    /** Like {@link #soundAllowed}, for a warning about the bike: it needs no position. */
+    private boolean voiceAllowed() {
+        if (curveSound == null) return false;
         return !Hub.prefs(this).getBoolean(Hub.KEY_CURVE_SOUND_HEADSET, true) || CurveSound.headsetConnected(this);
+    }
+
+    /**
+     * The cold engine warning ({@link ColdEngine}): the coolant from the riding log extension (0x45), the
+     * engine speed from the live frame (0x4A), each only while it is fresh. Said after a bend being said,
+     * not over it.
+     */
+    private void coldEngineCheck(long now) {
+        int limit = ColdEngine.limit(Hub.prefs(this).getInt(Hub.KEY_COLD_ENGINE, 0));
+        BikeFrames.LogExt ext = Hub.bike.ext;
+        BikeFrames.Telemetry live = Hub.bike.live;
+        double coolant = ext != null && now - Hub.bike.extAt <= BikeAlerts.FRESH_MS ? ext.waterC : Double.NaN;
+        int rpm = live != null && now - Hub.bike.liveAt <= ColdEngine.FRESH_MS ? live.rpm : -1;
+        if (!coldEngine.check(coolant, rpm, limit, now)) return;
+        Logger.log(String.format(Locale.ROOT, "Cold engine: %d rpm with the coolant at %.0f °C", rpm, coolant));
+        if (!voiceAllowed()) return;
+        if (beeps()) curveSound.beep(CurveBeeps.coldEngine());
+        else curveSound.sayAfter(ColdEngine.PHRASE);
     }
 
     /** Beeps instead of words: asked for, or the phone cannot speak. */
@@ -1452,6 +1478,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private static final int REFUEL_NOTIFICATION_ID = 9_001;
     private final BikeAlerts.Tracker alertTracker = new BikeAlerts.Tracker();
+    private final ColdEngine coldEngine = new ColdEngine();
     private final BikeAlerts.Monitor bikeAlertMonitor = new BikeAlerts.Monitor();
     private static final int BIKE_ALERT_NOTIFICATION_BASE = 10_000;
 
