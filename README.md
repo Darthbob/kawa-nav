@@ -367,7 +367,8 @@ Switched on, KawaNav says "Engine still cold" in the helmet when the engine goes
 revs** (4,500 rpm unless changed) while the coolant is below **Cold engine: warm from** (70 °C unless
 changed), or plays two long low tones with "Beeps instead of words". Once each time the engine goes over
 the limit, at most once a minute. Once the coolant has reached that temperature it stays quiet until the
-next connection, so a long descent that cools the engine again does not set it off.
+bike connects again after 10 minutes or more away, so a long descent that cools the engine again, or a
+Bluetooth link that drops for a moment, does not set it off.
 The coolant comes from the bike's riding log frame (0x45), which a Z900 sends. Like the curve warnings,
 it is said only through a headset unless "Speak only through a headset" is off. Not yet tried on the
 bike.

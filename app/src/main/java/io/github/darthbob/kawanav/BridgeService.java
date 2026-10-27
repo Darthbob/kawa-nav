@@ -720,6 +720,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             configRetries.clear();
             clockSynced = false;
             recorder.linkBack();
+            coldEngine.linkBack(System.currentTimeMillis());
             if (RawCapture.enabled(this)) RawCapture.start(this);
             // a new link may be a dash that was off (or another bike): it can show anything, so forget
             // what the previous connection was told and reconcile from scratch
@@ -801,7 +802,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     public void onLinkLost() {
         if (destroyed) return;
         recorder.linkLost();
-        coldEngine.reset();
+        coldEngine.linkLost(System.currentTimeMillis());
         requests.clear();
         handler.removeCallbacks(startup);
         RawCapture.stop();

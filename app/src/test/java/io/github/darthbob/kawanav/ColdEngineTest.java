@@ -44,8 +44,33 @@ public class ColdEngineTest {
         assertTrue(c.warm());
         // a long descent cools it below the limit again: it is not a cold engine
         assertFalse(c.check(56, 8000, 4500, 70, 120_000));
-        c.reset();
-        assertTrue("a new connection starts over", c.check(50, 8000, 4500, 70, 240_000));
+    }
+
+    @Test
+    public void aShortLinkDropKeepsTheEngineWarm() {
+        ColdEngine c = new ColdEngine();
+        assertFalse(c.check(75, 3000, 4500, 70, 0));
+        // the link drops on a cool descent and is back two minutes later, the coolant at 58 °C
+        c.linkLost(60_000);
+        c.linkLost(90_000);   // a failed reconnect: the first loss counts
+        c.linkBack(180_000);
+        assertFalse(c.check(58, 6000, 4500, 70, 181_000));
+        // switched off for half an hour: a new start
+        c.linkLost(300_000);
+        c.linkBack(300_000 + 30 * 60_000);
+        assertTrue(c.check(45, 6000, 4500, 70, 300_000 + 30 * 60_000 + 1000));
+    }
+
+    @Test
+    public void aLinkBackAfterTenMinutesStartsOver() {
+        ColdEngine c = new ColdEngine();
+        assertFalse(c.check(75, 3000, 4500, 70, 0));
+        c.linkLost(1000);
+        c.linkBack(1000 + ColdEngine.KEEP_WARM_MS - 1);
+        assertTrue(c.warm());
+        c.linkLost(2_000_000);
+        c.linkBack(2_000_000 + ColdEngine.KEEP_WARM_MS);
+        assertFalse(c.warm());
     }
 
     @Test
