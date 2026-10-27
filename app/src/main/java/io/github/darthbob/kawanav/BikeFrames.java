@@ -701,8 +701,9 @@ public final class BikeFrames {
         public final double rearStrokeMm, frontStrokeMm, rearStrokeSpeed, frontStrokeSpeed;
         public final double axG, ayG, azG;
         /**
-         * The three rotation rates next to the axes (Rideology's "psi p1", "p3", "p2" in this order, ±163.84; which is roll,
-         * pitch or yaw is not known yet), NaN when absent.
+         * The three rotation rates as the IMU sends them, °/s (Rideology's "psi p1", "p3", "p2"; Bosch's
+         * yaw, roll and pitch rate, about its own z, x and y), NaN when absent. Mounted as it is on a Z900
+         * they are not the bike's yaw, roll and pitch: see the turned ones below.
          */
         public final double rate1, rate2, rate3;
         /** Filtered front and rear wheel speed, km/h, NaN when absent. */
@@ -751,6 +752,9 @@ public final class BikeFrames {
             rate1 = use1 ? rate(v, 15, 16, 18, 17) : Double.NaN;
             rate2 = use2 ? rate(v, 25, 26, 28, 27) : Double.NaN;
             rate3 = use3 ? rate(v, 35, 36, 38, 37) : Double.NaN;
+            yawRate = yaw(rate2, rate3);
+            rollRate = roll(rate2, rate3);
+            pitchRate = pitch(rate1);
             // block 45: Rideology treats it as absent only when both header bytes are FF (qe/a.java)
             boolean blk5 = v.length > 46 && !(u8(v, 45) == 0xFF && u8(v, 46) == 0xFF);
             boolean wheels = blk5 && (u8(v, 47) != 0xFF || u8(v, 48) != 0xFF);
@@ -765,9 +769,7 @@ public final class BikeFrames {
             wheelieFlag = blk5 && v.length > 52 && u8(v, 52) != 0xFF ? u8(v, 52) & 0x01 : -1;
         }
 
-        /** Centered rotation rate (hi byte after lo byte), span 163.84. */
-
-
+        /** Centered rotation rate (hi byte after lo byte), 0.005 °/s a digit: ±163.84 °/s. */
         private static double rate(byte[] v, int a, int b, int hi, int lo) {
             if (!present(v, a, b, Math.max(hi, lo))) return Double.NaN;
             int x = u8(v, hi) << 8 | u8(v, lo);
@@ -816,6 +818,34 @@ public final class BikeFrames {
         /** The lateral acceleration: the third axis, unaffected by the mounting angle. */
         public static double lateral(double z) {
             return z;
+        }
+
+        /**
+         * The rotation rates turned into the bike's own axes, °/s. The IMU's z axis is the bike's lateral
+         * one and its x and y sit at 45° like the accelerations, so the rates about x and y are turned the
+         * same way (PROTOCOL.md, 0x4B): on six Z900 rides the yaw rate follows the lean angle (r = 0.97)
+         * and the roll rate the lean angle's change (r = 0.86), and the yaw rate over cos(lean) gives each
+         * curve's change of course as the GPS measures it (median 1.01 over 330 curves). NaN when absent.
+         */
+        public final double yawRate, rollRate, pitchRate;
+
+        /** The rate about the bike's vertical axis, + = turning right (the lean angle's sign). */
+        public static double yaw(double rate2, double rate3) {
+            return (rate3 - rate2) * SIN_45;
+        }
+
+        /** The rate about the direction the bike points, + = rolling to the right. */
+        public static double roll(double rate2, double rate3) {
+            return -(rate2 + rate3) * SIN_45;
+        }
+
+        /**
+         * The rate about the bike's lateral axis: the IMU's z rate, unaffected by the mounting angle. Which
+         * sign is nose up is not established. In a bend it also carries the turn, leant over: about
+         * -0.9 × the turn rate × sin(lean), the same sign both ways, so it reads negative through bends.
+         */
+        public static double pitch(double rate1) {
+            return rate1;
         }
 
         /** cos 45°: the pair is split evenly between the two directions. */

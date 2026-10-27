@@ -83,15 +83,16 @@ final class FieldTests {
                     "Byte 37 reads 02 with the lamp: it is the intervention. It stays 00: the 02 seconds are "
                             + "something else.",
                     RESULTS_NONE),
-            new Test("imu_rate1", MEANING, "The first IMU rotation rate",
-                    "Of the three 0x4B rotation rates, yaw and roll are identified; the first (imu_ay_psip1) "
-                            + "follows neither the lean, its change, speed, braking nor yaw. It could be the pitch "
-                            + "rate.",
-                    "1. Bike data card: Capture frames on, connect again, engine on, bike standing.\n"
-                            + "2. Push the front down hard 5 times, mark, wait 15 s, then the rear 5 times, mark.\n"
-                            + "3. Standing on a known slope, nose up then nose down, 30 s each.",
-                    "Rate 1 moves with the bounces and not the other two: it is pitch. Its size against the "
-                            + "slope also gives the scale none of the three rates has yet.",
+            new Test("imu_rate1", MEANING, "Which way the pitch rate counts",
+                    "The first 0x4B rotation rate (imu_ay_psip1) is the pitch rate: Bosch's layout says so, and on "
+                            + "six rides it follows neither yaw nor roll. Which sign is nose up is not known: at "
+                            + "one value a second, braking does not show.",
+                    "1. Bike data card: Capture frames on, connect again, engine on, bike upright off the stand.\n"
+                            + "2. Push the front down hard once and mark it (Test mark → Something else); wait 15 s "
+                            + "and do it 4 more times.\n"
+                            + "3. Pull the capture: the pitch rate in the half second after each mark.",
+                    "The pitch rate swings one way as the front goes down and back as it comes up: the first "
+                            + "swing's sign is nose down.",
                     RESULTS_NONE),
             new Test("dash_values", MEANING, "Values against the dash over a ride",
                     "The bike data's scaling comes from the 0x40 nibbles and has not been compared with a dash over "

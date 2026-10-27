@@ -410,8 +410,8 @@ gauge and the battery voltage, then groups everything the dash reported when it 
   cruise control, the torque the throttle asks for and the engine gives, the filtered wheel speeds and the
   suspension unit's traction control and quick shifter state, then the temperatures and tyre pressures;
   they are gone a few seconds after the bike stops sending.
-- **Suspension** (bikes with the electronic suspension): travel, the three rotation rates and the body's
-  acceleration, and where the damping stands.
+- **Suspension** (bikes with the electronic suspension): travel, the yaw, roll and pitch rates and the
+  body's acceleration, and where the damping stands.
 - **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
   their date and the kilometres left, and the odometer they fall at ("in 11,045 km (at 16,597 km)").
   A reminder the meter keeps switched off is marked "reminder off".
@@ -489,7 +489,7 @@ has:
   is fetched for the area you look at and kept on the phone for a while; without a network the track is
   drawn on its own. It can be turned off in Settings → "Map under the track";
 - charts for any value the ride recorded — speed (from the bike and from the GPS), engine speed, gear,
-  throttle, lean angle, the roll and yaw rates, temperatures, tyres, battery, fuel use, brake pressure and
+  throttle, lean angle, the yaw, roll and pitch rates, temperatures, tyres, battery, fuel use, brake pressure and
   the raw brake values, suspension travel and its speed, the body's accelerations, the filtered wheel
   speeds, the rear wheel's slip against the front, the wheelie angle and more. The **torque** is one chart
   with three lines on one scale — what the throttle asks for, what the engine control asks for, what the
@@ -677,9 +677,9 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
 - The **scaling of the riding-log values** (speed, engine speed, throttle, lean angle) is chosen from
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with
   the dash for a whole ride yet. The same goes for the values added in 0.7 and recorded since 0.8
-  (torque, brake pressures, ABS target, suspension damping, cruise control, rotation rates, wheel
-  speeds, suspension travel and the body's accelerations): decoded exactly as Rideology decodes them,
-  never yet compared with a dash.
+  (torque, brake pressures, ABS target, suspension damping, cruise control, wheel speeds, suspension
+  travel and the body's accelerations): decoded exactly as Rideology decodes them, never yet compared with
+  a dash. The rotation rates are checked against the GPS instead (below).
 - **What the dash says it can do is obeyed**: if its capability frame says it has no status icons or no
   turn-by-turn, KawaNav stops sending those frames, as Rideology does. A dash whose answer is misread
   would lose its arrows, so **Settings → "Send arrows and icons anyway"** turns the obeying off (a normal
@@ -691,9 +691,11 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   sensor is mounted at 45° on a Z900 — at rest gravity is split evenly between two channels, and turning
   them makes it read 0 g forward and 1 g down. The accelerations are specific forces: a slope reads as
   acceleration too, about 0.01 g per 1 % of grade ([docs/PROTOCOL.md](docs/PROTOCOL.md), 0x4A). The app
-  records the bike's raw value; the ride report takes the slope term out with the GPS altitude. Of the
-  three "rotation rates" two are identified — one is yaw, one roll — while the third has no name yet and
-  their unit and scale are still open, so they are shown raw.
+  records the bike's raw value; the ride report takes the slope term out with the GPS altitude. **The
+  three rotation rates are turned the same way** into yaw, roll and pitch, in °/s: the IMU is a Bosch
+  MM7.10, and its layout and six rides agree — the yaw rate gives each bend's change of course as the GPS
+  measures it, within a few per cent. Which sign of the pitch rate is nose up is still open. Ride files
+  keep the three raw values, as Rideology names them.
 - **The two "traction control" readings are not understood**: 0x4A byte 24 and 0x4B byte 51 carry two
   different pairs with the same name in Rideology (`tcs_level_hb`/`tcs_level_lb`), from different frames,
   and Kawasaki's app never interprets either of them. On a recorded ride the 0x4B pair moved exactly in the

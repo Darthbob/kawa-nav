@@ -153,11 +153,11 @@ public final class BikeData {
             sb.append(String.format(Locale.ROOT,
                     "Suspension (%s ago): stroke %.1f/%.1f mm, speed %.2f/%.2f; "
                             + "raw x %.2f y %.2f z %.2f g (long %.2f, up %.2f, side %.2f); "
-                            + "rates %.1f/%.1f/%.1f; wheels %.1f/%.1f km/h; TCS %d/%d, KQS %d/%d, wheelie %d; "
-                            + "IMU counter %d, %d blocks failed the CRC, %d repeated\n",
+                            + "rates %.1f/%.1f/%.1f (yaw %.1f, roll %.1f, pitch %.1f °/s); wheels %.1f/%.1f km/h; "
+                            + "TCS %d/%d, KQS %d/%d, wheelie %d; IMU counter %d, %d blocks failed the CRC, %d repeated\n",
                     ago(imuAt, now), m.frontStrokeMm, m.rearStrokeMm, m.frontStrokeSpeed, m.rearStrokeSpeed,
                     m.rawX, m.rawY, m.rawZ, m.longitudinalG, m.verticalG, m.lateralG,
-                    m.rate1, m.rate2, m.rate3, m.frontWheelKmh, m.rearWheelKmh,
+                    m.rate1, m.rate2, m.rate3, m.yawRate, m.rollRate, m.pitchRate, m.frontWheelKmh, m.rearWheelKmh,
                     m.tcsLevelHigh, m.tcsLevelLow, m.kqsDown, m.kqsUp, m.wheelieFlag,
                     m.imuCounter, imuDropped, imuRepeats));
         }

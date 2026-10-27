@@ -664,6 +664,31 @@ public class BikeFramesTest {
     }
 
     @Test
+    public void theImuRatesAreTurnedToTheBikesAxes() {
+        // the IMU's x and y rates sit at 45° like its accelerations; its z rate is the bike's pitch
+        double c = Math.sqrt(0.5);
+        assertEquals(2 * c, BikeFrames.ImuSusp.yaw(-1, 1), 1e-9);       // turning right
+        assertEquals(0, BikeFrames.ImuSusp.roll(-1, 1), 1e-9);
+        assertEquals(0, BikeFrames.ImuSusp.yaw(1, 1), 1e-9);
+        assertEquals(-2 * c, BikeFrames.ImuSusp.roll(1, 1), 1e-9);      // rolling left
+        assertEquals(0.5, BikeFrames.ImuSusp.pitch(0.5), 1e-9);
+        assertTrue(Double.isNaN(BikeFrames.ImuSusp.yaw(Double.NaN, 1)));
+        // from the Z900's frame: standing still, a few hundredths of a degree a second
+        BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(hx(Z900_4B));
+        assertEquals(-0.02, i.rate2, 1e-9);                                 // 0x7FFC
+        assertEquals(0.09, i.rate3, 1e-9);                                  // 0x8012
+        assertEquals(0.11 * c, i.yawRate, 1e-9);
+        assertEquals(-0.07 * c, i.rollRate, 1e-9);
+        assertEquals(i.rate1, i.pitchRate, 1e-9);
+        // a block left out takes the turned rates that need it along
+        byte[] v = hx(Z900_4B);
+        v[31] ^= 0x01;
+        BikeFrames.ImuSusp j = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(v);
+        assertTrue(Double.isNaN(j.yawRate) && Double.isNaN(j.rollRate));
+        assertEquals(0.04, j.pitchRate, 1e-9);
+    }
+
+    @Test
     public void imuBlocksThatMostlyFailTheCrcAreAllKept() {
         // two of three failing: this bike does not send the CRC (or not this one), so nothing is left out
         byte[] v = hx(Z900_4B);
