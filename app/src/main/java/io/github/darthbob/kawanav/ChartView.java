@@ -31,8 +31,7 @@ public final class ChartView extends View {
         TORQUE("Torque", "", 0, "throttle", "control", "engine"),
         GEAR("Gear", "", 0), THROTTLE("Throttle", "%", 0),
         LEAN("Lean angle", "°", 0),
-        // the rotation rates' scale is not established (PROTOCOL.md, 0x4B): numbers without a unit
-        ROLL_RATE("Roll rate", "", 1), YAW_RATE("Yaw rate", "", 1), IMU_RATE1("IMU rate 1 (unverified)", "", 1),
+        ROLL_RATE("Roll rate", "°/s", 1), YAW_RATE("Yaw rate", "°/s", 1), PITCH_RATE("Pitch rate", "°/s", 1),
         WATER("Coolant", "°C", 0), ACCEL("Acceleration", "g", 2),
         OIL("Oil temperature", "°C", 0), INTAKE("Intake air", "°C", 0), FUEL("Fuel economy", "", 1),
         FUEL_RATE("Fuel use", "", 2),
@@ -260,9 +259,11 @@ public final class ChartView extends View {
         switch (series) {
             case SPEED: return s.kmh;
             case GPS_SPEED: return s.gpsKmh;
-            case ROLL_RATE: return s.imu_ax_psip3;
-            case YAW_RATE: return s.imu_az_psip2;
-            case IMU_RATE1: return s.imu_ay_psip1;
+            // the rotation rates, turned as the accelerations below (Rideology's column names: p3 is the
+            // IMU's x rate, p2 its y, p1 its z)
+            case ROLL_RATE: return BikeFrames.ImuSusp.roll(s.imu_ax_psip3, s.imu_az_psip2);
+            case YAW_RATE: return BikeFrames.ImuSusp.yaw(s.imu_ax_psip3, s.imu_az_psip2);
+            case PITCH_RATE: return BikeFrames.ImuSusp.pitch(s.imu_ay_psip1);
             case FUEL_RATE: return s.fuelRate;
             case BRAKE_F_MASTER: return s.brake_f_master;
             case BRAKE_R_MASTER: return s.brake_r_master;

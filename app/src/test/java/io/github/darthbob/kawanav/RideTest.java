@@ -142,7 +142,7 @@ public class RideTest {
         for (String key : new String[]{"oil", "intake", "outside", "accel", "wheelie", "susp_f", "susp_r",
                 "tyre_f", "tyre_r", "brake_f", "battery", "altitude", "torque_rider", "torque_req", "torque_actual",
                 "fuel_rate", "susp_f_speed", "susp_r_speed", "brake_f_master", "brake_r_master", "brake_r_caliper",
-                "fuel_inst", "accel_fwd", "accel_side", "accel_up", "roll_rate", "yaw_rate", "imu_rate1", "wheel_f",
+                "fuel_inst", "accel_fwd", "accel_side", "accel_up", "roll_rate", "yaw_rate", "pitch_rate", "wheel_f",
                 "wheel_r", "rear_slip", "gps_speed"}) {
             assertFalse("expected " + key + " to be unknown", r.metric(key).known());
         }
@@ -183,7 +183,8 @@ public class RideTest {
         for (int i = 0; i < 3; i++) {
             RideTsv.Sample s = bare(i);
             s.lean = lean[i];
-            s.imu_ax_psip3 = roll[i];
+            // the IMU's x and y rates alike: all roll, no yaw, once turned by 45°
+            s.imu_ax_psip3 = s.imu_az_psip2 = -roll[i] / Math.sqrt(2);
             in.add(s);
         }
         Ride r = new Ride();
@@ -198,7 +199,27 @@ public class RideTest {
         assertEquals(-4, rr.min, 1e-9);
         assertEquals(6, rr.max, 1e-9);
         assertTrue(r.metric("yaw_rate").extremes);
+        assertEquals(0, r.metric("yaw_rate").max, 1e-9);
         assertTrue(r.metric("rear_slip").extremes);
+    }
+
+    @Test
+    public void theRotationRatesAreTurnedAsTheChartTurnsThem() {
+        List<RideTsv.Sample> in = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            RideTsv.Sample s = bare(i);
+            // a right-hand bend on a Z900: the IMU's x rate negative, its y rate positive (PROTOCOL.md, 0x4B)
+            s.imu_ax_psip3 = -7;
+            s.imu_az_psip2 = 9;
+            s.imu_ay_psip1 = -1.5;
+            in.add(s);
+        }
+        Ride r = new Ride();
+        r.summarize(in);
+        assertEquals(16 * Math.sqrt(0.5), r.metric("yaw_rate").max, 1e-9);     // turning right: +11.3 °/s
+        assertEquals(-2 * Math.sqrt(0.5), r.metric("roll_rate").max, 1e-9);
+        assertEquals(-1.5, r.metric("pitch_rate").max, 1e-9);
+        assertEquals("°/s", r.metric("pitch_rate").unit);
     }
 
     @Test

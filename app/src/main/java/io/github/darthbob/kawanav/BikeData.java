@@ -49,6 +49,11 @@ public final class BikeData {
     public final long[] lastAt = new long[256];
     /** Debug: when counting started, for frame rates. */
     public long since;
+    /**
+     * Debug, since connecting: IMU blocks left out for a failed CRC, and 0x4B frames whose IMU counter did
+     * not move (the same message again: harmless once, the IMU's data frozen if it lasts).
+     */
+    public int imuDropped, imuRepeats;
 
     public void apply(BikeFrames.Frame f, long now) {
         if (f == null) return;
@@ -84,7 +89,10 @@ public final class BikeData {
             live = t;
             liveAt = now;
         } else if (f instanceof BikeFrames.ImuSusp) {
-            imu = (BikeFrames.ImuSusp) f;
+            BikeFrames.ImuSusp m = (BikeFrames.ImuSusp) f;
+            imuDropped += m.imuDropped;
+            if (imu != null && m.imuCounter >= 0 && m.imuCounter == imu.imuCounter) imuRepeats++;
+            imu = m;
             imuAt = now;
         } else if (f instanceof BikeFrames.GeneralSettings) {
             BikeFrames.GeneralSettings g = (BikeFrames.GeneralSettings) f;
@@ -105,6 +113,7 @@ public final class BikeData {
     public void connected() {
         java.util.Arrays.fill(count, 0);
         since = 0;
+        imuDropped = imuRepeats = 0;
     }
 
     /** The VIN with all but the last 6 characters hidden, for logs (users share them). */
@@ -144,11 +153,13 @@ public final class BikeData {
             sb.append(String.format(Locale.ROOT,
                     "Suspension (%s ago): stroke %.1f/%.1f mm, speed %.2f/%.2f; "
                             + "raw x %.2f y %.2f z %.2f g (long %.2f, up %.2f, side %.2f); "
-                            + "rates %.1f/%.1f/%.1f; wheels %.1f/%.1f km/h; TCS %d/%d, KQS %d/%d, wheelie %d\n",
+                            + "rates %.1f/%.1f/%.1f (yaw %.1f, roll %.1f, pitch %.1f °/s); wheels %.1f/%.1f km/h; "
+                            + "TCS %d/%d, KQS %d/%d, wheelie %d; IMU counter %d, %d blocks failed the CRC, %d repeated\n",
                     ago(imuAt, now), m.frontStrokeMm, m.rearStrokeMm, m.frontStrokeSpeed, m.rearStrokeSpeed,
                     m.rawX, m.rawY, m.rawZ, m.longitudinalG, m.verticalG, m.lateralG,
-                    m.rate1, m.rate2, m.rate3, m.frontWheelKmh, m.rearWheelKmh,
-                    m.tcsLevelHigh, m.tcsLevelLow, m.kqsDown, m.kqsUp, m.wheelieFlag));
+                    m.rate1, m.rate2, m.rate3, m.yawRate, m.rollRate, m.pitchRate, m.frontWheelKmh, m.rearWheelKmh,
+                    m.tcsLevelHigh, m.tcsLevelLow, m.kqsDown, m.kqsUp, m.wheelieFlag,
+                    m.imuCounter, imuDropped, imuRepeats));
         }
         if (info != null) {
             BikeFrames.VehicleInfo i = info;

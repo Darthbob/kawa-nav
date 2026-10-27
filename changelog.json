@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "version": "1.2.7",
+      "changes": [
+        "The bike's yaw, roll and pitch rates are shown in degrees a second, turned into the bike's own directions like the accelerations: the IMU sits at 45°, so the yaw rate read about a third too low and the roll rate was half yaw. The third rate, unnamed until now, is the pitch rate. Rides already recorded show the new figures too"
+      ]
+    },
+    {
       "version": "1.2.6",
       "changes": [
         "No more \"Battery is not being charged\" right after starting the engine: the voltage read a moment before the start, with the engine still off, was taken for the charging voltage",

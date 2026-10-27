@@ -164,6 +164,28 @@ def test_metrics(tmp):
     check("imu forward braking", near(rr.imu_forward(-1.21, -0.24), -0.69))
     check("imu with no value stays absent", rr.imu_forward(None, -0.5) is None)
 
+    # the rotation rates are turned by the same 45 degrees: a right-hand bend on a Z900 has the IMU's x
+    # rate negative and its y rate positive (docs/PROTOCOL.md, 0x4B)
+    check("yaw rate turning right", near(rr.imu_yaw(-7, 9), 11.31))
+    check("roll rate of the same second", near(rr.imu_roll(-7, 9), -1.41))
+    check("x and y alike are all roll", near(rr.imu_yaw(2, 2), 0.0) and near(rr.imu_roll(2, 2), -2.83))
+    check("a rate with no value stays absent", rr.imu_yaw(None, 1) is None and rr.imu_roll(1, None) is None)
+    bend = ride_with(tmp, seconds(3, imu_ax_psip3=-7, imu_az_psip2=9, imu_ay_psip1=-1.5)
+                     + [dict(t_ms=3000, imu_ax_psip3=7, imu_az_psip2=-9, imu_ay_psip1=-1.0)], "bend.csv")
+    rates = {m.key: m for m in rr.metrics_of(bend)}
+    yaw, roll, pitch = rates["imu_yaw"], rates["imu_roll"], rates["imu_pitch"]
+    check("the yaw rate's extremes", near(yaw.min, -11.31) and near(yaw.max, 11.31), (yaw.min, yaw.max))
+    check("the roll rate's extremes", near(roll.min, -1.41) and near(roll.max, 1.41), (roll.min, roll.max))
+    check("the pitch rate as the bike sends it", (pitch.min, pitch.max) == (-1.5, -1.0), (pitch.min, pitch.max))
+    check("the rates are shown by their extremes", yaw.extremes and roll.extremes and pitch.extremes
+          and not by_key["rpm"].extremes)
+    out = rr.html_report(bend, rr.parse_args(["x"]))
+    check("no average in a rate's row",
+          "<tr><th>Yaw rate</th><td>-11.3</td><td>–</td><td>11.3</td><td>°/s</td></tr>" in out)
+    check("no average under a rate's chart", re.search(r"<b>Yaw rate  \(°/s\)</b>[^<]*<span class=\"dim\">"
+                                                         r"lowest -11.3 ·\s*highest 11.3", out) is not None)
+    check("a ride without the IMU has no rates", not by_key["imu_yaw"].known and not by_key["imu_pitch"].known)
+
 
 def test_fuel(tmp):
     print("fuel")

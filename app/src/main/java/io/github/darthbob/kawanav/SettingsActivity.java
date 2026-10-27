@@ -684,7 +684,7 @@ public class SettingsActivity extends KawaActivity {
     }
 
     /**
-     * Debug: marks a moment in the frame capture ("Indicator left", "Clutch in" …), tapped as it is done at
+     * Debug: marks a moment in the frame capture ("High beam on", "Clutch in" …), tapped as it is done at
      * the bike, so tools/frame_bytes.py can show which bytes changed with it: the way to learn what the
      * bytes and frames are that nobody decodes (0x30, the unused parts of 0x4A/0x4B …).
      */

@@ -151,8 +151,10 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   appears in seconds with the throttle nearly closed at 40–50 km/h), the value is absent at a
   standstill, and it falls as the throttle opens and as speed rises (median 22 km/L at closed
   throttle, 20–22 at 40–60 km/h, 10 above 100 km/h). (verified on 2026-10-17's rides)
-- **Long form** (the frame the Z900 does not send; longer than 58 bytes) repeats what the 0x41 carries,
-  with a second set of valid bits in byte 57 (`qe/b.java:70-82`). (verified)
+- **Long form** (longer than 58 bytes) repeats what the 0x41 carries, with a second set of valid bits in
+  byte 57 (`qe/b.java:70-82`). (verified) The Z900 sends it: 65 bytes at every connect from 2026-10-22
+  to 27, read-only and full alike, so its meter battery (byte 64) comes every second, where the 0x41's
+  comes only when asked. (verified on captures)
 
 | Bytes | Value | Read when |
 |---|---|---|
@@ -239,7 +241,7 @@ All `FF` on bikes without them (Z500, Z900?). (verified)
 |---|---|
 | 7-8, 9-10 | rear / front stroke, `u16 × 0.015625` mm (block 5) |
 | 11-12, 13-14 | rear / front stroke speed, `u16 × 0.001` |
-| 17-18, 27-28, 37-38 | rotation rates "psi p1/p3/p2", little-endian, `x × 163.84/32768 − 163.84`, 0 = absent |
+| 17-18, 27-28, 37-38 | rotation rates "psi p1/p3/p2" (Bosch: about the IMU's z, x, y), little-endian, `x × 0.005 − 163.84` °/s, 0 = absent |
 | 21-22, 31-32, 41-42 | accelerations ay / ax / az, little-endian, `x × 4.1768/32768 − 4.1768` g, 0 = absent |
 | 47-48, 49-50 | filtered front / rear wheel speed, `u16 × 400/32768` km/h |
 | 51 | `tcs_level_hb` (bits 7-5), `tcs_level_lb` (bits 4-2), `kqs_down_operation_flag` (bit 1), `kqs_up_operation_flag` (bit 0) |
@@ -268,19 +270,84 @@ which the same standstill check reveals. The four rides of 2026-10-17 (171 km) c
 standstill the two accelerations read −0.70 and −0.70 g and the third +0.05, which turns into 0.00 g
 forward and 0.99 g up.
 
-**Two of the three rotation rates (17-18, 27-28, 37-38) are now identified** from the same rides:
+**The three rotation rates are turned like the accelerations.** Bosch's layout of the MM7.10 messages
+(below) puts the rate about the IMU's z axis in 0x174 (17-18), about its x axis in 0x178 (27-28) and about
+its y axis in 0x17C (37-38), each beside the acceleration along the same axis, at 0.005 °/s a digit. The
+IMU's z axis is the bike's lateral one (its acceleration reads 0.05 g at rest) and its x and y sit at 45°,
+so, with the lean angle's sign (+ = right):
 
-- 37-38 (`imu_az_psip2`, Rideology's "p2") is the **yaw rate**: it follows the lean angle
-  (r = +0.62 … +0.79) and the course change from the GPS track (+0.67), and it is near zero on a
-  straight. The **axis** identification is sound, its **scale is not**: with R = v/ω the radius comes
-  out 1.39–1.42× the lean-based R = v²/(g·tan φ) (r = 0.72–0.80 on all four rides), and the unit and
-  scaling of the rotation rates are unresolved. Do not use it for an absolute radius without a
-  calibration. (observed)
-- 27-28 (`imu_ax_psip3`, "p3") is the **roll rate**: it follows the lean angle's change over 5 s
-  (r ≈ +0.40) and nothing else.
-- 17-18 (`imu_ay_psip1`, "p1") is still **unidentified**: no correlation with the lean angle, its
-  change, speed, speed changes, braking or the yaw rate. The app labels 17-18 "IMU rate 1
-  (unverified)" and the other two by their axis.
+- **yaw rate** = `(rate 37-38 − rate 27-28) × cos 45°`, + = turning right;
+- **roll rate** = `−(rate 27-28 + rate 37-38) × cos 45°`, + = rolling to the right;
+- **pitch rate** = rate 17-18 as it comes. Which sign is nose up is not established: at one value a
+  second braking does not show, and at 10 Hz the two captures give only a weak hint (r ≈ −0.07 against
+  the change of deceleration). The debug build's Field tests list a test at the bike.
+
+On six Z900 rides (2026-10-17 and 22, 18,275 seconds above 25 km/h) the yaw rate follows the lean-angle
+model `g·tan φ / v` with r = 0.97 (37-38 alone: 0.77) and the roll rate the lean angle's change with
+r = 0.86 (27-28 alone: 0.71). The scale needs no correction: integrated over each of 330 bends of more
+than 30°, **yaw rate / cos(lean) gives 1.01× the change of course the GPS measures** (median; quartiles
+0.93–1.07), where 37-38 alone gave 0.70 — the "radius 1.4× too large" this section reported before came
+from reading one leg of the 45° pair as the whole yaw. The yaw rate is the bike's own, about its leant
+vertical; the turn rate over the ground is yaw rate / cos(lean). The pitch rate carries the rest of the
+turn: in a bend it reads about `−0.9 × turn rate × sin(lean)`, the same sign both ways, which is why it
+averages −1.25 °/s on the move and 0.06 °/s standing, and why it never followed the lean angle linearly.
+(verified on the rides; the pitch sign is open)
+
+KawaNav shows and charts the three turned rates in °/s (`BikeFrames.ImuSusp.yaw/roll/pitch`); the ride
+files keep the three raw columns in Rideology's layout.
+
+**Blocks 15, 25 and 35 are the IMU's own CAN messages, passed through.** Their headers `01 74`, `01 78`
+and `01 7C` are not a marker and an id like the `05 xx` of other blocks: they are the CAN ids 0x174,
+0x178 and 0x17C, and the eight bytes after each are that message's data. The text the IMU sends about
+itself (below) names it, a **Bosch MM7.10**, and the rate and acceleration scalings above (±163.84,
+±4.1768) are that sensor's. Block 45 (`03 E0`, id 0x3E0) has the same shape but no counter or CRC. Besides
+the rate and the acceleration, each IMU block carries (verified on the captures of 2026-10-25 and 27,
+13,502 frames):
+
+| Bytes | Value |
+|---|---|
+| 19 | bits 7-4 yaw-rate (z) status; bits 3-0 unused, `0` |
+| 20 | Bosch's temperature of the z rate sensor (`raw − 50` °C, `FF` invalid): always `00` on the Z900, so not sent |
+| 29-30 | the IMU's identification text, one character per message (below); byte 29 bits 7-4 the roll-rate (x) status |
+| 39 | bits 7-4 pitch-rate (y) status; bits 3-0 Bosch's hardware index, `1` |
+| 23, 33, 43 | bits 3-0 a rolling message counter; bits 7-4 the status of the acceleration beside it (y, x, z) |
+| 24, 34, 44 | CRC-8 SAE J1850 (polynomial 0x1D, init 0xFF, final xor 0xFF) over the 7 data bytes before it; the CAN id is not part of it |
+
+The bit positions of the status, temperature and hardware index are the ones Bosch's own MM7.10 receiver
+decodes (`off_highway_mm7p10` in github.com/bosch-engineering/off_highway_sensor_drivers, Apache 2.0),
+whose message layout matches these blocks byte for byte; it does not check the CRC. Each 4-bit status
+reads bit 0 IMU not available, bit 1 signal failure, bit 2 initialisation, bit 3 reserved: all six were `0`
+in every frame of both captures, engine off, idling and riding. Byte 40 and byte 30 are unused in Bosch's
+layout; the Z900 puts the text in 29-30 and leaves 40 at `00`.
+
+- **Counter.** The IMU sends each message every 10 ms and the meter forwards one in ten, so the counter
+  steps by 10 (mod 16) from one 0x4B to the next: in 99 % of the frames. The other steps (mostly 8–12)
+  are the meter's timing; the two steps of 0 came with the block repeated byte for byte, a stale message.
+  The counters of blocks 25 and 35 equal block 15's or are one behind (about 5 % of the frames): the
+  three messages are not always taken from the same 10 ms cycle.
+- **CRC.** 40,504 of 40,506 blocks check. The two that do not hold ordinary-looking values, so they are
+  more likely put together from two cycles than corrupted in a visible way. KawaNav checks it
+  (`BikeFrames.ImuSusp`): when at least two of a frame's three IMU blocks check, the bike sends the CRC,
+  and a block that fails is left out (its rate and acceleration read as absent); a bike whose blocks do
+  not check keeps them all. It keeps a frame whose counter did not move: the two seen were single
+  repeats, 100 ms old, and the recording takes one value a second. The debug card counts both since
+  connecting, so a frozen IMU (the counter stuck) would show there.
+- **Identification text (bytes 29-30).** Byte 29 (bits 3-0) is a character position, byte 30 the
+  character. The strings follow one another in a fixed cycle of 89 messages (0.89 s); with one message
+  in ten forwarded, the whole cycle is seen in about 9 s, since 89 and 10 have no common factor. Each
+  string starts with a byte at position 0 (`00`, once `0D`) and puts its characters at positions 1, 2, …,
+  counting on from 15 to 0 for the long one. The Z900 sends the same twelve strings in both captures,
+  three of them empty:
+
+| Text | Probably |
+|---|---|
+| `Robert Bosch GmbH` | the maker |
+| `7.10` | the model: Bosch MM7.10 |
+| `0265011515` | a Bosch part number (Bosch's start with 0 265) |
+| `21176-1126` | a Kawasaki part number (5 + 4 digits); the string with `0D` at position 0 |
+| `20240929` | a date: production, 29 September 2024 |
+| `SC20027_071` | a software or calibration version |
+| `6031146-0335`, `0577`, `0` | unknown (a serial number, a hardware index?) |
 
 Block 45 counts as absent only when **both** bytes 45 and 46 are FF (the other blocks: either one). No
 config nibble gates byte 51.
@@ -618,14 +685,16 @@ when one is added here.
   with **test marks** (debug card "Bike data" → "Test mark" → "Mark now", written as
   `epochMs MARK label` lines that replays skip), taken at the bike while doing one thing at a time
   (indicators, high beam, clutch, side stand, a riding mode changed on the dash …, at least 15 s
-  apart); then for each mark, the bytes that were steady before it and changed right after it.
+  apart); then for each mark, the bytes that were steady before it and changed right after it. The
+  first such capture is under [Test marks](#test-marks-2026-10-27): the left indicator is in none of
+  the frames. On the Z900 the undecoded bytes of 0x45 and 0x4A are always `FF` or `00`, and those of
+  0x4B are the IMU's counter, CRC, status and identification text (see the 0x4B section).
 - Riding-log sample rate (meter/frequency controlled).
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
 - What the two TCS pairs (0x4A byte 24, 0x4B byte 51) actually report: the rider's level, an intervention,
   or something else. See the 0x4B section for the one observation there is and the two tests that settle it.
-- Unit and scale of the three 0x4B rotation rates (bytes 17-18, 27-28, 37-38): the axes are identified
-  by correlation, but R = v/ω gives a radius 1.39–1.42× the lean-based one, so no absolute value is
-  usable yet. See the 0x4B section.
+- Which sign of the 0x4B pitch rate (bytes 17-18) is nose up. The axes, unit and scale of all three
+  rates are settled (0x4B section).
 - Which *exported columns* carry a doubt of this kind, and what would settle each: the last part of the
   Z900 section below lists them by column.
 - R.Score formula (server side).
@@ -771,6 +840,36 @@ is left, not the odometer it is due at. Whether notify bits 0 mean a reminder th
 service's 2024-01-01 and 0 km look like an unset one), and what the rider's 12,000 km is, needs the
 dash's own maintenance page: the debug build's Field tests list it. (observed)
 
+### Test marks (2026-10-27)
+
+The first capture with test marks: the Z900 standing with a cold engine, two marks 36 s apart. For each
+mark, every bit of 0x45, 0x4A and 0x4B was compared over the 15 s before and after it, and the bits that
+change rarely in the whole 14-minute capture were checked against the mark times. (observed, one capture)
+
+**Engine start.** Clearly visible, but **8.6 s after the mark was tapped**: a mark is only as good as the
+rider's timing.
+
+| After the mark | Frame and bytes | What changed |
+|---|---|---|
+| +7.2 s | 0x4A byte 13 | gear `1` → `0` (neutral), 1.4 s before the starter |
+| +8.6 s | 0x45 byte 64 | meter battery 12.0 → **10.4 V**: the starter cranking |
+| +8.8 s | 0x4A bytes 11-12 | 230 rpm while cranking, 2027 rpm at the first firing 0.2 s later, about 1600 rpm cold idle within a second |
+| +9.0 s | 0x4A bytes 7-8 | fuel injection no longer 0 |
+| +9.6 s | 0x45 byte 64 | **14.5 V**: the alternator charging. The next 0x41 answer (KawaNav asks every 20 s) reads 11.5 → 13.8 V from the ECU and 12.0 → 14.6 V from the meter |
+
+All of these are values KawaNav already decodes: no new byte.
+
+**Indicator left.** **Nothing.** In the 15 s after the mark no bit of 0x45/0x4A/0x4B goes from steady to
+changing except rpm, fuel injection and coolant temperature (a cold engine warming up); none of the
+rarely changing bits moves within 2 s of it; and the meter sends no frame of its own, only the 0x13 ACK
+and the 0x41 answer KawaNav asked for. So the indicators are most likely not in the BLE stream, which
+fits Rideology showing none. One mark only, with no "Indicators off" to confirm it.
+
+Both have been taken off the Test mark list (`RawCapture.MARKS`). For the next ones: tap Mark the moment the
+thing is done, not before, and undo each thing with a mark of its own (high beam on, high beam off; clutch
+in, clutch out), at least 15 s apart. A byte that changes and changes back with them is the proof a single
+mark cannot give.
+
 ### Which exported values are still doubtful
 
 Two kinds of doubt are left, and they are different things: a value whose **meaning** is not settled (the
@@ -783,7 +882,7 @@ cell on a bike that does not send it.
 | Columns | The question | What there is to go on |
 |---|---|---|
 | `tcs`, `tcs_hi`, `tcs_hb`, `tcs_lb` | the rider's level, an intervention, or something else | two different pairs in two frames; on 2026-10-15 the 0x4A nibbles stayed `0` and the 0x4B pair moved once, in the second with the largest wheel-speed difference — where `tcs_lb` read `7`, all three bits set, which elsewhere in a 3-bit field means "no value", so even that one observation is ambiguous. All four columns were `0` in all 171 km of 2026-10-17. See the 0x4B section for the two tests that settle it |
-| `imu_ay_psip1` | what the first rotation rate is | the other two are identified (yaw and roll, 0x4B section); this one has no correlation with the lean angle, its change, speed, braking or the yaw rate |
+| `imu_ay_psip1` | which sign is nose up | it is the pitch rate (0x4B section: Bosch's layout, and in bends it carries the turn × sin(lean)); the sign needs a test at the bike |
 | `imu_ax_g`, `imu_ay_g`, `imu_az_g` | the IMU's mounting angle | 45°, measured at a standstill on one bike and confirmed on the 2026-10-17 rides; a model that mounts its IMU differently needs its own angle, which the same check reveals |
 | `wheel_speed_setting` | what the number says | Rideology's own column name points at a wheel circumference, not a speed; `0` in every second of all five rides |
 | `cruise_on`, `cruise_mode` | what the mode values mean | present but always `0` on this bike, all five rides |
@@ -817,8 +916,7 @@ suspension strokes and stroke speeds.
    the setting.
 2. **Intervention:** provoke a cut-in on a slippery surface with the dash's traction-control lamp in
    view, and see which column steps with the lamp.
-3. **IMU:** at a standstill on a known slope, and on a straight at a known lean, correlate the three
-   rotation rates with the lean angle and its rate of change, and the three axes with the bike's own
-   acceleration. Two rates are identified; what is left is rate 1 (17-18).
+3. **IMU:** with the capture on, push the front down hard a few times, each with a mark: the pitch
+   rate's first swing as the nose goes down gives its sign. The rest of the IMU is settled.
 4. **ABS:** a hard stop that makes the dash's ABS lamp flash, with the raw byte 37 in the capture, would
    say whether the 8 isolated `02` seconds are an intervention or something else.

@@ -265,7 +265,7 @@ public class BikeFramesTest {
 
     @Test
     public void logExtShortFrameHasNoLongForm() {
-        // the 55-byte form the Z900 sends: every long-form value absent, not zero
+        // the 55-byte form the Z500 sends (the Z900 sends the 65-byte one): every long-form value absent, not zero
         BikeFrames.Decoder d = new BikeFrames.Decoder();
         d.decode(hx(Z500_40));
         BikeFrames.LogExt e = (BikeFrames.LogExt) d.decode(hx(Z500_45));
@@ -619,6 +619,105 @@ public class BikeFramesTest {
         BikeFrames.ImuSusp none = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(both);
         assertTrue(Double.isNaN(none.frontWheelKmh));
         assertEquals(-1, none.tcsLevelHigh);
+    }
+
+    /** A real 0x4B from a Z900 (2026, standing, engine off): the IMU's three CAN messages and block 45. */
+    static final String Z900_4B = "4b341bffffffffffffffffffffffff017408800000336b05a40178fc7f0530126a052e017c12800100277b05b503e0000000000000ffff";
+
+    @Test
+    public void crc8IsSaeJ1850() {
+        assertEquals(0x4B, BikeFrames.ImuSusp.crc8("123456789".getBytes(), 0, 9));   // the standard check value
+        // two IMU blocks from a capture: the last byte is the CRC of the seven before it, or is not
+        byte[] good = hx("8c7e0000eb69088e"), torn = hx("44800000aa6c01a0");
+        assertEquals(0x8E, BikeFrames.ImuSusp.crc8(good, 0, 7));
+        assertTrue(BikeFrames.ImuSusp.crc8(torn, 0, 7) != 0xA0);
+    }
+
+    @Test
+    public void imuBlocksWhoseCrcChecksAreRead() {
+        BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(hx(Z900_4B));
+        assertEquals(5, i.imuCounter);
+        assertEquals(0, i.imuDropped);
+        assertEquals(0.04, i.rate1, 1e-9);                                   // 0x8008
+        assertEquals(0x6B33 * 4.1768 / 32768.0 - 4.1768, i.ayG, 1e-9);
+        assertFalse(Double.isNaN(i.axG) || Double.isNaN(i.azG) || Double.isNaN(i.rate2) || Double.isNaN(i.rate3));
+    }
+
+    @Test
+    public void anImuBlockWhoseCrcFailsIsLeftOut() {
+        byte[] v = hx(Z900_4B);
+        v[31] ^= 0x01;                                    // block 25's acceleration, one bit off
+        BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(v);
+        assertTrue(Double.isNaN(i.axG));
+        assertTrue(Double.isNaN(i.rate2));
+        assertTrue(Double.isNaN(i.longitudinalG));       // turned from the pair, so it goes too
+        assertFalse(Double.isNaN(i.ayG) || Double.isNaN(i.azG) || Double.isNaN(i.rate1) || Double.isNaN(i.rate3));
+        assertEquals(1, i.imuDropped);
+        assertEquals(5, i.imuCounter);
+        assertEquals(0.0, i.frontWheelKmh, 1e-9);        // block 45 has no CRC: read as before (standing)
+        // block 15 failing takes the counter with it
+        byte[] w = hx(Z900_4B);
+        w[17] ^= 0x01;
+        BikeFrames.ImuSusp j = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(w);
+        assertTrue(Double.isNaN(j.ayG));
+        assertEquals(-1, j.imuCounter);
+    }
+
+    @Test
+    public void theImuRatesAreTurnedToTheBikesAxes() {
+        // the IMU's x and y rates sit at 45° like its accelerations; its z rate is the bike's pitch
+        double c = Math.sqrt(0.5);
+        assertEquals(2 * c, BikeFrames.ImuSusp.yaw(-1, 1), 1e-9);       // turning right
+        assertEquals(0, BikeFrames.ImuSusp.roll(-1, 1), 1e-9);
+        assertEquals(0, BikeFrames.ImuSusp.yaw(1, 1), 1e-9);
+        assertEquals(-2 * c, BikeFrames.ImuSusp.roll(1, 1), 1e-9);      // rolling left
+        assertEquals(0.5, BikeFrames.ImuSusp.pitch(0.5), 1e-9);
+        assertTrue(Double.isNaN(BikeFrames.ImuSusp.yaw(Double.NaN, 1)));
+        // from the Z900's frame: standing still, a few hundredths of a degree a second
+        BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(hx(Z900_4B));
+        assertEquals(-0.02, i.rate2, 1e-9);                                 // 0x7FFC
+        assertEquals(0.09, i.rate3, 1e-9);                                  // 0x8012
+        assertEquals(0.11 * c, i.yawRate, 1e-9);
+        assertEquals(-0.07 * c, i.rollRate, 1e-9);
+        assertEquals(i.rate1, i.pitchRate, 1e-9);
+        // a block left out takes the turned rates that need it along
+        byte[] v = hx(Z900_4B);
+        v[31] ^= 0x01;
+        BikeFrames.ImuSusp j = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(v);
+        assertTrue(Double.isNaN(j.yawRate) && Double.isNaN(j.rollRate));
+        assertEquals(0.04, j.pitchRate, 1e-9);
+    }
+
+    @Test
+    public void imuBlocksThatMostlyFailTheCrcAreAllKept() {
+        // two of three failing: this bike does not send the CRC (or not this one), so nothing is left out
+        byte[] v = hx(Z900_4B);
+        v[31] ^= 0x01;
+        v[41] ^= 0x01;
+        BikeFrames.ImuSusp i = (BikeFrames.ImuSusp) new BikeFrames.Decoder().decode(v);
+        assertFalse(Double.isNaN(i.axG) || Double.isNaN(i.azG) || Double.isNaN(i.ayG));
+        assertEquals(0, i.imuDropped);
+        assertEquals(-1, i.imuCounter);
+    }
+
+    @Test
+    public void bikeDataCountsImuBlocksLeftOutAndRepeats() {
+        BikeData b = new BikeData();
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        byte[] next = hx(Z900_4B);
+        next[23] = 0x0F;                                  // counter 15, CRC no longer right for block 15
+        next[24] = (byte) BikeFrames.ImuSusp.crc8(next, 17, 7);
+        byte[] torn = hx(Z900_4B);
+        torn[31] ^= 0x01;
+        b.apply(d.decode(hx(Z900_4B)), 1000);            // counter 5
+        b.apply(d.decode(hx(Z900_4B)), 1100);            // 5 again: the same message
+        b.apply(d.decode(next), 1200);                   // 15: moved on
+        b.apply(d.decode(torn), 1300);                   // 5, block 25 left out
+        assertEquals(1, b.imuRepeats);
+        assertEquals(1, b.imuDropped);
+        b.connected();
+        assertEquals(0, b.imuRepeats);
+        assertEquals(0, b.imuDropped);
     }
 
     @Test

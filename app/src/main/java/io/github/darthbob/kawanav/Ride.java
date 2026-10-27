@@ -104,8 +104,9 @@ public final class Ride {
      * 6: the fuel from the instant fuel economy ({@link #fuelEstL}), and that economy's average over the
      * distance instead of over the seconds.
      * 7: the clutch under load ({@link #clutchLoadS}).
+     * 8: the rotation rates turned into the bike's axes, in °/s, the third as the pitch rate.
      */
-    public static final int SUMMARY_VERSION = 7;
+    public static final int SUMMARY_VERSION = 8;
     /** Which summary the file holds, 0 for a ride saved by a version that did not know about metrics. */
     public int summaryVersion;
 
@@ -201,10 +202,13 @@ public final class Ride {
                     s -> BikeFrames.ImuSusp.vertical(s.imu_ax_g, s.imu_ay_g)),
             // either side: how far, and how far on average, the bike was leant over (the tiles have each side)
             new Metric("lean", "Lean angle, either side", CHASSIS, "°", 1, s -> Math.abs(s.lean)),
-            // the rotation rates' scale is not established (PROTOCOL.md, 0x4B)
-            new Metric("roll_rate", "Roll rate", CHASSIS, "bike units", 1, true, s -> s.imu_ax_psip3),
-            new Metric("yaw_rate", "Yaw rate", CHASSIS, "bike units", 1, true, s -> s.imu_az_psip2),
-            new Metric("imu_rate1", "IMU rate 1 (unverified)", CHASSIS, "bike units", 1, true, s -> s.imu_ay_psip1),
+            // the rotation rates, turned as the chart turns them (BikeFrames.ImuSusp)
+            new Metric("roll_rate", "Roll rate", CHASSIS, "°/s", 1, true,
+                    s -> BikeFrames.ImuSusp.roll(s.imu_ax_psip3, s.imu_az_psip2)),
+            new Metric("yaw_rate", "Yaw rate", CHASSIS, "°/s", 1, true,
+                    s -> BikeFrames.ImuSusp.yaw(s.imu_ax_psip3, s.imu_az_psip2)),
+            new Metric("pitch_rate", "Pitch rate", CHASSIS, "°/s", 1, true,
+                    s -> BikeFrames.ImuSusp.pitch(s.imu_ay_psip1)),
             new Metric("wheel_f", "Front wheel (filtered)", CHASSIS, "km/h", 0, s -> s.wheel_f_kmh),
             new Metric("wheel_r", "Rear wheel (filtered)", CHASSIS, "km/h", 0, s -> s.wheel_r_kmh),
             new Metric("wheelie", "Wheelie angle", CHASSIS, "°", 1, s -> s.wheelie_deg),

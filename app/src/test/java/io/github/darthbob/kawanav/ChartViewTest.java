@@ -35,17 +35,11 @@ public class ChartViewTest {
     @Test
     public void oneLineSeriesReadTheirOwnColumn() {
         RideTsv.Sample s = new RideTsv.Sample();
-        s.imu_ax_psip3 = 1.5;              // roll rate (PROTOCOL.md, 0x4B)
-        s.imu_az_psip2 = -2.5;             // yaw rate
-        s.imu_ay_psip1 = 0.5;              // not identified
         s.gpsKmh = 87;
         s.susp_f_stroke_vp = 0.25;
         s.brake_r_caliper = 7;
         s.fuelRate = 1.2;
         s.wheelie_deg = 4;
-        assertEquals(1.5, ChartView.value(s, ChartView.Series.ROLL_RATE), 1e-9);
-        assertEquals(-2.5, ChartView.value(s, ChartView.Series.YAW_RATE), 1e-9);
-        assertEquals(0.5, ChartView.value(s, ChartView.Series.IMU_RATE1), 1e-9);
         assertEquals(87, ChartView.value(s, ChartView.Series.GPS_SPEED), 1e-9);
         assertEquals(0.25, ChartView.value(s, ChartView.Series.SUSP_SPEED_FRONT), 1e-9);
         assertEquals(7, ChartView.value(s, ChartView.Series.BRAKE_R_CALIPER), 1e-9);
@@ -53,6 +47,23 @@ public class ChartViewTest {
         assertEquals(4, ChartView.value(s, ChartView.Series.WHEELIE_ANGLE), 1e-9);
         assertEquals(1, ChartView.Series.YAW_RATE.lineCount());
         assertTrue(Double.isNaN(ChartView.value(s, ChartView.Series.YAW_RATE, 1)));
+    }
+
+    @Test
+    public void theRotationRatesAreTurnedLikeTheAccelerations() {
+        RideTsv.Sample s = new RideTsv.Sample();
+        s.imu_ax_psip3 = 1.5;              // the IMU's x rate (PROTOCOL.md, 0x4B)
+        s.imu_az_psip2 = -2.5;             // its y rate
+        s.imu_ay_psip1 = 0.5;              // its z rate: the bike's lateral axis
+        double c = Math.sqrt(0.5);
+        assertEquals((-2.5 - 1.5) * c, ChartView.value(s, ChartView.Series.YAW_RATE), 1e-9);
+        assertEquals(-(1.5 - 2.5) * c, ChartView.value(s, ChartView.Series.ROLL_RATE), 1e-9);
+        assertEquals(0.5, ChartView.value(s, ChartView.Series.PITCH_RATE), 1e-9);
+        // one of the pair missing: neither turned rate can be had
+        s.imu_az_psip2 = Double.NaN;
+        assertFalse(ChartView.has(s, ChartView.Series.YAW_RATE));
+        assertFalse(ChartView.has(s, ChartView.Series.ROLL_RATE));
+        assertTrue(ChartView.has(s, ChartView.Series.PITCH_RATE));
     }
 
     @Test
@@ -75,9 +86,10 @@ public class ChartViewTest {
         RideTsv.Sample s = new RideTsv.Sample();
         s.torque_rider = 40;
         s.torque_actual = 36;
-        s.imu_az_psip2 = 2;
+        s.imu_ax_psip3 = -1;
+        s.imu_az_psip2 = 1;
         assertEquals(36, ChartView.mapValue(s, ChartView.Series.TORQUE), 1e-9);   // what the engine gives
-        assertEquals(2, ChartView.mapValue(s, ChartView.Series.YAW_RATE), 1e-9);
+        assertEquals(Math.sqrt(2), ChartView.mapValue(s, ChartView.Series.YAW_RATE), 1e-9);
     }
 
     @Test
@@ -125,11 +137,12 @@ public class ChartViewTest {
         RideTsv.Sample s = new RideTsv.Sample();
         s.torque_rider = 40;
         s.torque_actual = 36;
-        s.imu_az_psip2 = 3.24;
+        s.imu_ax_psip3 = 0;
+        s.imu_az_psip2 = 4.58;             // turned: 3.24 °/s of yaw
         s.gpsKmh = 87.4;
         assertEquals("Torque 40 / - / 36", ChartView.describe(s, ChartView.Series.TORQUE));
-        assertEquals("Yaw rate 3.2", ChartView.describe(s, ChartView.Series.YAW_RATE));
+        assertEquals("Yaw rate 3.2 °/s", ChartView.describe(s, ChartView.Series.YAW_RATE));
         assertEquals("Speed (GPS) 87 km/h", ChartView.describe(s, ChartView.Series.GPS_SPEED));
-        assertEquals("Roll rate -", ChartView.describe(s, ChartView.Series.ROLL_RATE));
+        assertEquals("Pitch rate - °/s", ChartView.describe(s, ChartView.Series.PITCH_RATE));
     }
 }
