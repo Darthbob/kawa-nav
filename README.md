@@ -410,8 +410,8 @@ gauge and the battery voltage, then groups everything the dash reported when it 
   cruise control, the torque the throttle asks for and the engine gives, the filtered wheel speeds and the
   suspension unit's traction control and quick shifter state, then the temperatures and tyre pressures;
   they are gone a few seconds after the bike stops sending.
-- **Suspension** (bikes with the electronic suspension): travel, the yaw, roll and pitch rates and the
-  body's acceleration, and where the damping stands.
+- **Suspension**: the body's acceleration and the yaw, roll and pitch rates from the IMU (a Z900 sends
+  them too), and on bikes with the electronic suspension its travel and where the damping stands.
 - **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
   their date and the kilometres left, and the odometer they fall at ("in 11,045 km (at 16,597 km)").
   A reminder the meter keeps switched off is marked "reminder off".
@@ -678,8 +678,8 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with
   the dash for a whole ride yet. The same goes for the values added in 0.7 and recorded since 0.8
   (torque, brake pressures, ABS target, suspension damping, cruise control, wheel speeds, suspension
-  travel and the body's accelerations): decoded exactly as Rideology decodes them, never yet compared with
-  a dash. The rotation rates are checked against the GPS instead (below).
+  travel): decoded exactly as Rideology decodes them, never yet compared with a dash. The body's
+  accelerations and the rotation rates are checked against gravity and the GPS instead (below).
 - **What the dash says it can do is obeyed**: if its capability frame says it has no status icons or no
   turn-by-turn, KawaNav stops sending those frames, as Rideology does. A dash whose answer is misread
   would lose its arrows, so **Settings → "Send arrows and icons anyway"** turns the obeying off (a normal

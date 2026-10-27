@@ -993,7 +993,7 @@ public class BikeActivity extends KawaActivity {
                 add(r, s, "Rear tyre", b.ext.tyreRearKpa / 100, "%.2f bar");
             }
         }
-        // suspension travel and the body's acceleration, on bikes with the electronic suspension (0x4B)
+        // the IMU's accelerations and rates (0x4B; a Z900 sends them too), travel on bikes with the electronic suspension
         BikeFrames.ImuSusp m0 = b.imu;
         if (m0 != null && now - b.imuAt < LIVE_MS) {
             String s = "Suspension";
