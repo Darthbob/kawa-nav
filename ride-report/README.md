@@ -73,7 +73,9 @@ values its layout has are used). A file that is not a ride is refused with a mes
 - **The channels**, with the lowest, average and highest of every second the bike sent them: engine
   speed, throttle, suspension travel, acceleration, wheelie angle, tyre pressures, front brake, battery,
   the four temperatures, GPS accuracy and altitude — plus the three **IMU axes turned into the bike's
-  directions** (forward, up, sideways), which the app does too because the sensor is mounted at 45°.
+  directions** (forward, up, sideways), which the app does too because the sensor is mounted at 45°, and
+  the **yaw, roll and pitch rates** in °/s, turned the same way. The rates swing both ways around zero,
+  so, as in the app, they show only their lowest and highest.
   The instant fuel economy's average is the distance over the litres it burned, as in the app, not the
   average of its seconds.
 - **The fuel used** and the L/100 km: from the bike's fuel counter, or, on a bike without one (the
@@ -98,8 +100,8 @@ values its layout has are used). A file that is not a ride is refused with a mes
 
 The two traction-control readings are **not understood**: the app and this tool report "the reading moved",
 not a proven intervention — Kawasaki's own names for them say "level" and its app never interprets them.
-See [docs/PROTOCOL.md](../docs/PROTOCOL.md). The three rotation rates are not reported either: one is yaw
-and one roll, but their unit and scale are still open, so an absolute value would be a guess.
+See [docs/PROTOCOL.md](../docs/PROTOCOL.md). The pitch rate is reported as the bike sends it: which of its
+signs is nose up is not established yet (the yaw and roll rates' signs are: + is to the right).
 
 A value the bike did not send is an empty cell in the export, and it is treated as *absent* everywhere —
 never as a zero. A real zero (no throttle, upright, no braking) is a value and is reported as one.

@@ -27,8 +27,8 @@ import sys
 # ------------------------------------------------------------------ what a ride records
 
 # key, label, section, unit, decimals — the same lowest / average / highest rows and wording as the app's
-# ride summary. The app has a few more this report leaves out: the rows it shows only from lowest to
-# highest (the rotation rates, the rear wheel slip), the time in each gear and the gear changes.
+# ride summary. The app has a few more this report leaves out: the rear wheel slip, the time in each gear
+# and the gear changes.
 CHANNELS = [
     ("rpm", "Engine speed", "Engine", "rpm", 0),
     ("thr_pct", "Throttle", "Engine", "%", 0),
@@ -64,7 +64,15 @@ CHANNELS = [
     ("imu_forward", "Acceleration, forward", "Chassis and suspension", "g", 2),
     ("imu_up", "Acceleration, up", "Chassis and suspension", "g", 2),
     ("imu_side", "Acceleration, sideways", "Chassis and suspension", "g", 2),
+    # the rotation rates, turned the same way (see imu_yaw/roll below)
+    ("imu_yaw", "Yaw rate", "Chassis and suspension", "°/s", 1),
+    ("imu_roll", "Roll rate", "Chassis and suspension", "°/s", 1),
+    ("imu_pitch", "Pitch rate", "Chassis and suspension", "°/s", 1),
 ]
+
+# Values that swing both ways around zero: their average says nothing, so only the lowest and the
+# highest are shown, as in the app.
+EXTREMES = {"imu_yaw", "imu_roll", "imu_pitch"}
 
 # Some values are stored in one unit and read in another, as in the app.
 SCALE = {"tyre_f_kpa": 0.01, "tyre_r_kpa": 0.01}
@@ -111,6 +119,20 @@ def imu_forward(x, y):
 
 def imu_up(x, y):
     """The bike's upward acceleration from the same pair; it reads 1 g at a standstill."""
+    return None if x is None or y is None else -(x + y) * COS45
+
+
+# The IMU (a Bosch MM7.10) sends its rates about the same axes as its accelerations: x (the export's
+# imu_ax_psip3) and y (imu_az_psip2) sit at 45 degrees, z (imu_ay_psip1) is the bike's lateral axis and so
+# its pitch rate, kept as it comes (which sign is nose up is not established). docs/PROTOCOL.md, 0x4B.
+
+def imu_yaw(x, y):
+    """The bike's yaw rate in °/s from the IMU's x and y rates; + = turning right, as the lean angle."""
+    return None if x is None or y is None else (y - x) * COS45
+
+
+def imu_roll(x, y):
+    """The bike's roll rate in °/s from the same pair; + = rolling to the right."""
     return None if x is None or y is None else -(x + y) * COS45
 
 
@@ -421,6 +443,7 @@ def gear_value(cell):
 class Metric:
     def __init__(self, key, label, section, unit, decimals):
         self.key, self.label, self.section, self.unit, self.decimals = key, label, section, unit, decimals
+        self.extremes = key in EXTREMES
         self.min = self.mean = self.max = None
         self.n = 0
         self.sum = 0.0
@@ -460,6 +483,9 @@ def metrics_of(ride):
                 m.add(None if v is None else abs(v))
         elif key == "imu_side":
             for v in ride.col("imu_az_g"):
+                m.add(v)
+        elif key in ("imu_yaw", "imu_roll", "imu_pitch"):
+            for v in series_of(ride, key):
                 m.add(v)
         elif key == "fuel_inst":
             for v in ride.col(key):
@@ -717,9 +743,10 @@ def svg_chart(ride, metric, t_ms, limit, width=980, height=170):
     path = " ".join("%s%.1f,%.1f" % ("M" if k == 0 else "L", px, py) for k, (px, py) in enumerate(points))
     marks = tcs_abs_marks(ride, t_ms, x, top, h)
     label = "%s  (%s)" % (metric.label, metric.unit) if metric.unit else metric.label
+    average = "" if metric.extremes else "average %s · " % fmt(metric.mean, metric.decimals)
     return f'''<figure class="chart">
 <figcaption><b>{html.escape(label)}</b> <span class="dim">lowest {fmt(metric.min, metric.decimals)} ·
-average {fmt(metric.mean, metric.decimals)} · highest {fmt(metric.max, metric.decimals)}
+{average}highest {fmt(metric.max, metric.decimals)}
 {html.escape(metric.unit)}</span><span class="at"></span></figcaption>
 <svg viewBox="0 0 {width} {height}" preserveAspectRatio="none" data-key="{html.escape(metric.key)}"
  data-left="{left}" data-w="{w}" data-vw="{width}" data-decimals="{metric.decimals}" data-unit="{html.escape(metric.unit)}">
@@ -744,6 +771,11 @@ def series_of(ride, key):
         return [imu_up(a, b) for a, b in zip(x, y)]
     if key == "imu_side":
         return ride.col("imu_az_g")
+    if key in ("imu_yaw", "imu_roll"):
+        turn = imu_yaw if key == "imu_yaw" else imu_roll
+        return [turn(a, b) for a, b in zip(ride.col("imu_ax_psip3"), ride.col("imu_az_psip2"))]
+    if key == "imu_pitch":
+        return ride.col("imu_ay_psip1")
     return ride.col(key)
 
 
@@ -1095,7 +1127,7 @@ def html_report(ride, opts, events=None):
             continue
         rows_html = "\n".join(
             "<tr><th>%s</th><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-            % (html.escape(m.label), fmt(m.min, m.decimals), fmt(m.mean, m.decimals),
+            % (html.escape(m.label), fmt(m.min, m.decimals), fmt(None if m.extremes else m.mean, m.decimals),
                fmt(m.max, m.decimals), html.escape(m.unit))
             for m in mine)
         table.append("<h3>%s</h3><table class=\"data\"><tr><th>Value</th><th>Lowest</th>"
