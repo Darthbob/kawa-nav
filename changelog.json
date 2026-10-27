@@ -3,7 +3,8 @@
     {
       "version": "1.2.8",
       "changes": [
-        "Google Maps directions in Italian are checked on real rides now. Two of Maps' Italian wordings are read from the text too, not only from Maps' arrow: a roundabout called \"rotatoria\" and a sharp turn (\"Svolta tutto a sinistra\")"
+        "Google Maps directions in Italian are checked on real rides now. Two of Maps' Italian wordings are read from the text too, not only from Maps' arrow: a roundabout called \"rotatoria\" and a sharp turn (\"Svolta tutto a sinistra\")",
+        "A cold engine warning (Settings, off by default): \"Engine still cold\" in the helmet when you rev the engine above the limit you pick before the coolant reaches 60 °C"
       ]
     },
     {

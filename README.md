@@ -208,6 +208,7 @@ In the **Settings** tab:
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
 | [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
 | [Clutch warning](#clutch-warning) | On | A warning after a recorded ride whose clutch slipped under load |
+| [Cold engine warning](#cold-engine-warning) | Off | Off / above 5,000 / 6,000 / 7,000 rpm: said in the helmet while the coolant is below 60 °C |
 | [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | [End a ride](#recording-rides) | At once | At once / After 5 min / After 15 min: when a ride ends after the bike is switched off |
@@ -353,6 +354,16 @@ the ride. One acceleration alone is not enough: a single odd second is not a wor
 the engine reads 1–4 % *below* the light-throttle value at full throttle, so a healthy clutch stays well
 clear of it. Shifts, quick-shifter cuts and 1st/2nd gear are left out. Switched off, the ride still
 shows the check, only the notification is not sent.
+
+#### Cold engine warning
+
+With a limit picked, KawaNav says "Engine still cold" in the helmet when the engine goes above it while
+the coolant is below 60 °C, or plays two long low tones with "Beeps instead of words". Once each time
+the engine goes over the limit, at most once a minute. Once the coolant has reached 60 °C it stays
+quiet until the next connection, so a long descent that cools the engine again does not set it off.
+The coolant comes from the bike's riding log frame (0x45), which a Z900 sends. Like the curve warnings,
+it is said only through a headset unless "Speak only through a headset" is off. Not yet tried on the
+bike.
 
 #### Phone battery
 
