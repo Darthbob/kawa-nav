@@ -126,15 +126,18 @@ public final class MaintenanceLog {
         public final long lastAt;
         /** Kilometres until it is due, negative when it is past; NaN when not counted (no odometer). */
         public final double kmLeft;
+        /** An entry of the job has its odometer: without the bike's, the kilometres cannot be counted yet. */
+        public final boolean odoLogged;
         /** The day it is due, 0 when it is not by the date. */
         public final long dueAt;
         final long now;
 
-        Due(Reminder reminder, long lastAt, double kmLeft, long dueAt, long now) {
+        Due(Reminder reminder, long lastAt, double kmLeft, boolean odoLogged, long dueAt, long now) {
             this.reminder = reminder;
             this.never = lastAt == 0;
             this.lastAt = lastAt;
             this.kmLeft = kmLeft;
+            this.odoLogged = odoLogged;
             this.dueAt = dueAt;
             this.now = now;
         }
@@ -165,8 +168,9 @@ public final class MaintenanceLog {
             }
             if (byKm) parts.add(String.format(java.util.Locale.ROOT, "in %,.0f km", kmLeft));
             if (byDate) parts.add("by " + df.format(new java.util.Date(dueAt)));
-            if (parts.isEmpty()) return "log the odometer with the job to count the kilometres";
-            return String.join(" or ", parts);
+            if (!parts.isEmpty()) return String.join(" or ", parts);
+            return odoLogged ? "the kilometres count once the bike has sent its odometer"
+                    : "log the odometer with the job to count the kilometres";
         }
     }
 
@@ -180,8 +184,11 @@ public final class MaintenanceLog {
      */
     public static Due due(List<Entry> entries, Reminder r, double odoKm, long now) {
         long lastAt = 0;
+        boolean odoLogged = false;
         for (Entry e : entries) {
-            if (e.item.equalsIgnoreCase(r.item) && e.at > lastAt) lastAt = e.at;
+            if (!e.item.equalsIgnoreCase(r.item)) continue;
+            if (e.at > lastAt) lastAt = e.at;
+            odoLogged |= e.odoKm == e.odoKm;
         }
         double kmLeft = Double.NaN;
         if (r.km > 0) {
@@ -195,7 +202,7 @@ public final class MaintenanceLog {
             cal.add(java.util.Calendar.MONTH, r.months);
             dueAt = cal.getTimeInMillis();
         }
-        return new Due(r, lastAt, kmLeft, dueAt, now);
+        return new Due(r, lastAt, kmLeft, odoLogged, dueAt, now);
     }
 
     /** What a due reminder is announced under: once for each time the job was logged. */

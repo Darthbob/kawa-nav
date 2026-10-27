@@ -417,9 +417,8 @@ public class SettingsActivity extends KawaActivity {
                 + "running and it is not being charged", Hub.KEY_BATTERY_WARNINGS, true));
         addRow(c, switchRow("Clutch warning", "After a recorded ride, when the engine ran ahead of the rear "
                 + "wheel in more than one hard acceleration: the clutch may be slipping", Hub.KEY_CLUTCH_WARNINGS, true));
-        addRow(c, choiceRow("Cold engine warning", "Said in your helmet (\"" + ColdEngine.PHRASE + "\") when you rev "
-                + "the engine before the coolant reaches " + (int) ColdEngine.WARM_C + " °C. Like the curve warnings, "
-                + "only through a headset unless that is switched off", ColdEngine.LABELS,
+        addRow(c, choiceRow("Cold engine warning", "\"" + ColdEngine.PHRASE + "\" in your helmet when you rev the "
+                + "engine before the coolant reaches " + (int) ColdEngine.WARM_C + "\u00A0°C", ColdEngine.LABELS,
                 prefs.getInt(Hub.KEY_COLD_ENGINE, 0), pos -> {
                     prefs.edit().putInt(Hub.KEY_COLD_ENGINE, pos).apply();
                     BridgeService.settingsChanged();

@@ -496,14 +496,15 @@ public class BridgeService extends Service implements KawaBle.Listener {
             Hub.prefs(this).edit().putBoolean(Hub.KEY_RIDE_WANTED, false).apply();
             Logger.log("Ride: " + (recorder.start(true) == null ? "started" : "could not start"));
         }
+        // null means the file is there but could not be read: those screens then refuse to save over it.
+        // Read before the first tick (applySettings runs one), which checks them.
+        Hub.fuelEntries = orEmpty(new FuelStore(this).list());
+        Hub.batteryReadings = orEmpty(new BatteryStore(this).list());
+        Hub.maintenanceEntries = orEmpty(new MaintenanceStore(this).list());
         openAudioProfiles();
         applySettings();
         connectBike();
         handler.post(tickLoop);
-        // null means the file is there but could not be read: those screens then refuse to save over it
-        Hub.fuelEntries = orEmpty(new FuelStore(this).list());
-        Hub.batteryReadings = orEmpty(new BatteryStore(this).list());
-        Hub.maintenanceEntries = orEmpty(new MaintenanceStore(this).list());
         Logger.log("Bridge started");
     }
 
@@ -1433,7 +1434,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         boolean fresh = false;
         for (MaintenanceLog.Due d : MaintenanceLog.due(Hub.maintenanceEntries, reminders, odo, now)) {
             if (!d.due()) continue;
-            lines.add(d.reminder.item + ": " + d.describe(df));
+            // the title says "due": "Oil change: since 22 Sept 2026", "Chain: 57 km over"
+            lines.add(d.reminder.item + ": " + d.describe(df).replaceFirst("^due: ", ""));
             fresh |= told.add(MaintenanceLog.toldKey(d));
         }
         if (!fresh) return;
