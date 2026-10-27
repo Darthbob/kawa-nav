@@ -88,6 +88,9 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - 🔧 **Maintenance log**: what you had done, when and at what odometer, next to the reminders the dash
   keeps, and reminders of your own: every so many kilometres or months, with a notification when a job
   is due.
+- 🌀 **Bends of a recorded ride**: each bend's lean, apex speed, radius and speeds in and out, the bends
+  braked at the apex or with the throttle snapped open while leant over, and a diagram of the grip the ride
+  used.
 - 🏆 **Records**: fastest ride, most lean each way, longest ride and the distance per year in the riding
   log; a ride ends with a summary notification (distance, time, fuel, lean).
 
@@ -521,6 +524,18 @@ has:
   rest of the track on the map is faded, so the stretch is easy to find. A
   value only shows up when the bike sends it: a Z900, for one, sends no torque, no suspension speeds and
   no raw brake values;
+- **Bends**: how the ride's bends were ridden. A bend is two seconds or more leant the same way by more
+  than 10°, and its apex the second leant over the most. Tiles give how many there were and the typical
+  lean, apex speed and speed out against in; three lines count the bends braked at the apex (throttle shut,
+  slowing by more than 0.1 g), those where the throttle was snapped open while leant over (under 5 % to
+  over 20 % in one second at more than 15°) and those with a downshift in them. A diagram shows the grip
+  the ride used, a dot for every riding second: sideways from the lean (tan of the lean angle, the
+  acceleration a steady turn needs), forward and back from the change of speed over the seconds either
+  side (the IMU would read a slope as an acceleration), with rings every half g. Below, the bends by most
+  lean, fastest, best exit, most speed lost or in ride order, each with its apex speed, the radius that
+  speed and lean give, the speeds in and out and the throttle at the apex; tapping one marks it on the
+  track and the chart. At one value a second a quick bend is only a few seconds long, so the numbers
+  describe the bends, they do not measure a line;
 - rename (the pencil at the top), delete, and export: **CSV** with Rideology's column layout (so the tools
   people already use for Rideology exports can read it) or **GPX** with the values as extensions for map
   programs. Two more carry everything a ride recorded: **CSV (all values)**, one column per recorded value
