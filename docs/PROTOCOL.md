@@ -217,7 +217,10 @@ the correction a −12 % descent looks like braking. (inferred from the rides)
   is no larger than the ride's usual +0.5 km/h. If `02` is "rear acting", it is not an obvious rear
   cut-in, so what that byte's non-zero values say is still open. The ABS **indicator** (byte 47 bits
   2-0) read `1` only in the first minute of three rides — 19, 55 and 46 seconds of it with the bike
-  stationary — which reads like the dash's ABS self-test after power-on, not a riding event.
+  stationary — which reads like the dash's ABS self-test after power-on, not a riding event. A capture of
+  2026-10-27 shows what ends it: `1` for the 2 min 14 s the Z900 stood with the engine idling, `0` from
+  the frame in which the bike moved off (0x4A speed had started rising from 0 under a second earlier). So
+  it is the ABS lamp that stays lit until the wheels turn, not a timed test. (observed, one capture)
 - Block 45: byte 47 ABS target (bits 7-5) and ABS indicator (bits 2-0), byte 48 bit 0 switching info.
 - Block 75: byte 77 damping value; byte 78 bit 2 suspension calibration, bit 1 suspension status, bit 0
   suspension ECU status.
@@ -684,10 +687,10 @@ when one is added here.
   type, else drops it), so nothing in the app explains them. The way to find out: a debug capture
   with **test marks** (debug card "Bike data" → "Test mark" → "Mark now", written as
   `epochMs MARK label` lines that replays skip), taken at the bike while doing one thing at a time
-  (indicators, high beam, clutch, side stand, a riding mode changed on the dash …, at least 15 s
-  apart); then for each mark, the bytes that were steady before it and changed right after it. The
-  first such capture is under [Test marks](#test-marks-2026-10-27): the left indicator is in none of
-  the frames. On the Z900 the undecoded bytes of 0x45 and 0x4A are always `FF` or `00`, and those of
+  (high beam, horn, a riding mode changed on the dash …, at least 15 s apart); then for each mark, the
+  bytes that were steady before it and changed right after it. The first two such captures are under
+  [Test marks](#test-marks-2026-10-27): the left indicator, the side stand, both brakes and the clutch
+  are in none of the frames. On the Z900 the undecoded bytes of 0x45 and 0x4A are always `FF` or `00`, and those of
   0x4B are the IMU's counter, CRC, status and identification text (see the 0x4B section).
 - Riding-log sample rate (meter/frequency controlled).
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
@@ -865,10 +868,34 @@ rarely changing bits moves within 2 s of it; and the meter sends no frame of its
 and the 0x41 answer KawaNav asked for. So the indicators are most likely not in the BLE stream, which
 fits Rideology showing none. One mark only, with no "Indicators off" to confirm it.
 
-Both have been taken off the Test mark list (`RawCapture.MARKS`). For the next ones: tap Mark the moment the
-thing is done, not before, and undo each thing with a mark of its own (high beam on, high beam off; clutch
-in, clutch out), at least 15 s apart. A byte that changes and changes back with them is the proof a single
-mark cannot give.
+**Side stand, brakes, clutch (second capture, 14:02).** The Z900 standing in neutral with the engine
+idling (about 1,100–1,200 rpm), five marks about 22 s apart: side stand up, rear brake, front brake,
+clutch in, clutch out. **None of them is in the stream.**
+
+- From the first 0x4A of the connect until first gear went in two minutes later, **no byte of
+  0x45/0x4A/0x4B that changes rarely moved at all**, so the result does not depend on how well each
+  mark was timed. The only rarely changing bytes that moved were the 0x41 battery readings KawaNav asks
+  for every 20 s (ECU byte 14 and meter byte 34, each wandering by one step).
+- In the fast bytes (rpm, fuel injection, acceleration, lean, the IMU) the 5 s after each mark look
+  like the 5 s before: rpm stays at idle with the clutch pulled or let out, as it should in neutral.
+- The meter sends no frame of its own: besides the streams there are only the ACKs of KawaNav's 0x13
+  and the 0x41 answers.
+- The front brake block of 0x4A (bytes 38-41) is `FF` throughout and byte 37 (ABS) `00`: the Z900
+  sends no brake pressure, so pulling a lever has nowhere to show.
+- The side stand mark came about 3 s late: the lean read −6.6° in the first 0x4A (the bike on its
+  stand, leaning left, which fits lean's sign) and +2.3° a second later, three seconds before the
+  mark was tapped.
+
+What the capture adds is the ABS lamp: 0x4A byte 47 read `1` throughout and went to `0` as the bike
+moved off (0x4A section).
+
+Engine start and Indicator left were taken off the Test mark list (`RawCapture.MARKS`) after the first
+capture, these five after the second. So were Side stand down, since the stand's position is in no bit
+(nothing moved when it went up), and Neutral and Gear 1: the gear is already decoded (0x4A byte 13) and
+changed as expected in both captures. For the next ones: tap Mark the moment
+the thing is done, not before, and undo each thing with a mark of its own (high beam on, high beam
+off), at least 15 s apart. A byte that changes and changes back with them is the proof a single mark
+cannot give.
 
 ### Which exported values are still doubtful
 
