@@ -685,9 +685,20 @@ public class BikeActivity extends KawaActivity {
         startActivity(new Intent(this, BatteryActivity.class));
     }
 
-    /** The maintenance log, next to the reminders the dash keeps. */
+    /** The maintenance log, next to the reminders the dash keeps; the rider's own reminders that are due first. */
     private void updateMaintenanceLine() {
         java.util.List<MaintenanceLog.Entry> entries = Hub.maintenanceEntries;
+        BikeFrames.VehicleInfo odo = Hub.bike.info;
+        java.util.List<String> due = new java.util.ArrayList<>();
+        for (MaintenanceLog.Due d : MaintenanceLog.due(entries,
+                MaintenanceLog.reminders(prefs.getString(Hub.KEY_MAINT_REMINDERS, "")),
+                odo != null && odo.odometerKm >= 0 ? odo.odometerKm : Double.NaN, System.currentTimeMillis())) {
+            if (d.due()) due.add(d.reminder.item);
+        }
+        if (!due.isEmpty()) {
+            maintenanceLine.setText("Due: " + String.join(", ", due));
+            return;
+        }
         if (entries.isEmpty()) {
             maintenanceLine.setText("Nothing logged: keep a record of the work the dash cannot see.");
             return;

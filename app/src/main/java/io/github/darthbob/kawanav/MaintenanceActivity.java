@@ -22,6 +22,7 @@ public class MaintenanceActivity extends KawaActivity {
     private boolean unreadable;
     private LinearLayout list;
     private LinearLayout dashCard;
+    private LinearLayout remindersCard;
     private TextView summary;
 
     @Override
@@ -41,11 +42,13 @@ public class MaintenanceActivity extends KawaActivity {
         root.addView(summary);
         dashCard = column();
         root.addView(dashCard);
+        remindersCard = column();
+        root.addView(remindersCard);
         list = column();
         root.addView(list);
         root.addView(addCard());
-        TextView note = note("Kept on the phone only. The reminders on top come from the dash itself; what you "
-                + "write here is your own record of the work done.");
+        TextView note = note("Kept on the phone only. \"The dash says\" comes from the dash itself; your "
+                + "reminders and what you write here are your own record of the work done.");
         note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE4), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
         setContentView(page(root));
@@ -81,6 +84,132 @@ public class MaintenanceActivity extends KawaActivity {
             c.addView(secondary(String.format(Locale.ROOT, "Odometer now: %,.0f km", odo)));
         }
         dashCard.addView(c);
+    }
+
+    /** The rider's own reminders: where each stands, a tap to change it, and a button for another. */
+    private void updateReminders() {
+        remindersCard.removeAllViews();
+        LinearLayout c = card();
+        c.addView(iconTitle(R.drawable.ic_bell, cardTitle("Your reminders")));
+        List<MaintenanceLog.Reminder> reminders = reminders();
+        if (reminders.isEmpty()) {
+            c.addView(secondary("How often a job is due, from the last time it is logged here: the chain every "
+                    + "1,000 km, the oil every year. A notification says when one is due."));
+        }
+        DateFormat df = DateFormat.getDateInstance(DateFormat.MEDIUM);
+        for (MaintenanceLog.Due d : MaintenanceLog.due(entries, reminders, odometer(), System.currentTimeMillis())) {
+            String state = d.describe(df);
+            if (d.soon()) state = "soon: " + state;
+            c.addView(listRow(d.due() ? R.drawable.ic_alert : R.drawable.ic_bell, d.reminder.item,
+                    d.reminder.interval(), state, true, v -> editReminder(d.reminder.item, d.reminder)));
+        }
+        LinearLayout buttons = row();
+        buttons.setPadding(0, dp(Ui.SPACE2), 0, 0);
+        buttons.addView(secondaryButton("Add a reminder", v -> pickReminder()), weight());
+        c.addView(buttons);
+        remindersCard.addView(c);
+    }
+
+    private List<MaintenanceLog.Reminder> reminders() {
+        return MaintenanceLog.reminders(prefs.getString(Hub.KEY_MAINT_REMINDERS, ""));
+    }
+
+    /** The odometer the bike last sent, NaN when it never did. */
+    private static double odometer() {
+        BikeFrames.VehicleInfo info = Hub.bike.info;
+        return info != null && info.odometerKm >= 0 ? info.odometerKm : Double.NaN;
+    }
+
+    /** Which job: the list's, then the ones logged under a name of their own, then one typed now. */
+    private void pickReminder() {
+        List<String> names = new java.util.ArrayList<>();
+        for (String item : MaintenanceLog.ITEMS) if (!item.equals("Other")) names.add(item);
+        for (MaintenanceLog.Entry e : entries) {
+            boolean known = false;
+            for (String n : names) known |= n.equalsIgnoreCase(e.item);
+            if (!known) names.add(e.item);
+        }
+        names.add("Other…");
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Remind me of")
+                .setItems(names.toArray(new String[0]), (d, which) -> {
+                    if (which < names.size() - 1) {
+                        String item = names.get(which);
+                        editReminder(item, MaintenanceLog.reminderFor(reminders(), item));
+                    } else {
+                        nameReminder();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void nameReminder() {
+        EditText name = new EditText(this);
+        name.setSingleLine(true);
+        name.setHint("what is due");
+        LinearLayout box = column();
+        box.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE2), dp(Ui.SPACE4), 0);
+        box.addView(name);
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Remind me of")
+                .setView(box)
+                .setPositiveButton("Next", (d, w) -> {
+                    String item = name.getText().toString().trim();
+                    if (!item.isEmpty()) editReminder(item, MaintenanceLog.reminderFor(reminders(), item));
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    /** How often {@code item} is due; {@code current} is its reminder, null for a new one. */
+    private void editReminder(String item, MaintenanceLog.Reminder current) {
+        EditText km = new EditText(this);
+        km.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        km.setHint("every … km (empty: not by km)");
+        EditText months = new EditText(this);
+        months.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        months.setHint("every … months (empty: not by date)");
+        if (current != null) {
+            if (current.km > 0) km.setText(String.valueOf(current.km));
+            if (current.months > 0) months.setText(String.valueOf(current.months));
+        }
+        LinearLayout box = column();
+        box.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE2), dp(Ui.SPACE4), 0);
+        box.addView(secondary("Counted from the last time it is logged, whichever comes first."));
+        box.addView(km);
+        box.addView(months);
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this)
+                .setTitle(item)
+                .setView(box)
+                .setPositiveButton("Save", (d, w) -> saveReminder(item,
+                        new MaintenanceLog.Reminder(item, whole(km), whole(months))))
+                .setNegativeButton("Cancel", null);
+        if (current != null) b.setNeutralButton("Remove", (d, w) -> saveReminder(item, null));
+        b.show();
+    }
+
+    /** Puts the reminder for {@code item} in place of the old one; null, or neither km nor months, removes it. */
+    private void saveReminder(String item, MaintenanceLog.Reminder r) {
+        List<MaintenanceLog.Reminder> reminders = reminders();
+        int at = reminders.size();
+        for (int i = reminders.size() - 1; i >= 0; i--) {
+            if (reminders.get(i).item.equalsIgnoreCase(item)) {
+                reminders.remove(i);
+                at = i;
+            }
+        }
+        if (r != null && (r.km > 0 || r.months > 0)) reminders.add(Math.min(at, reminders.size()), r);
+        prefs.edit().putString(Hub.KEY_MAINT_REMINDERS, MaintenanceLog.saveReminders(reminders)).apply();
+        refresh();
+    }
+
+    private static int whole(EditText input) {
+        try {
+            return Math.max(0, Integer.parseInt(input.getText().toString().trim()));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private View addCard() {
@@ -185,6 +314,7 @@ public class MaintenanceActivity extends KawaActivity {
 
     private void refresh() {
         updateDash();
+        updateReminders();
         summary.setText(entries.isEmpty() ? "Nothing logged yet"
                 : entries.size() + (entries.size() == 1 ? " entry" : " entries"));
         list.removeAllViews();

@@ -896,6 +896,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         bikeAlerts(now);
         refuelCheck(now);
         batteryCheck(now);
+        maintenanceCheck(now);
         askRidingLogExtIfWanted();
         // log every change of what the meter shows (also without bike)
         String key = out == null ? "nothing" : out.source + ":" + out.turn;
@@ -1407,6 +1408,40 @@ public class BridgeService extends Service implements KawaBle.Listener {
                             "The 12 V battery has lost %.1f V over the time logged: have it checked before "
                                     + "it leaves you somewhere.", decline));
         }
+    }
+
+    private long maintenanceCheckedAt;
+    private static final int MAINTENANCE_NOTIFICATION_ID = 9_003;
+
+    /**
+     * The rider's own maintenance reminders ({@link MaintenanceLog.Reminder}): a notification when one is
+     * due, once for each time its job was logged. Looked at once a minute. The kilometres count from the
+     * odometer the bike last sent (kept with the ignition off), the months need no bike at all.
+     */
+    private void maintenanceCheck(long now) {
+        if (now - maintenanceCheckedAt < 60_000) return;
+        maintenanceCheckedAt = now;
+        SharedPreferences p = Hub.prefs(this);
+        List<MaintenanceLog.Reminder> reminders = MaintenanceLog.reminders(p.getString(Hub.KEY_MAINT_REMINDERS, ""));
+        if (reminders.isEmpty()) return;
+        BikeFrames.VehicleInfo info = Hub.bike.info;
+        double odo = info != null && info.odometerKm >= 0 ? info.odometerKm : Double.NaN;
+        java.util.Set<String> told = new java.util.HashSet<>(p.getStringSet(Hub.KEY_MAINT_TOLD,
+                java.util.Collections.emptySet()));
+        java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
+        List<String> lines = new java.util.ArrayList<>();
+        boolean fresh = false;
+        for (MaintenanceLog.Due d : MaintenanceLog.due(Hub.maintenanceEntries, reminders, odo, now)) {
+            if (!d.due()) continue;
+            lines.add(d.reminder.item + ": " + d.describe(df));
+            fresh |= told.add(MaintenanceLog.toldKey(d));
+        }
+        if (!fresh) return;
+        p.edit().putStringSet(Hub.KEY_MAINT_TOLD, told).apply();
+        Logger.log("Maintenance due: " + String.join("; ", lines));
+        // all that is due in one note, which the next one replaces: it is a list to work through
+        announceOn(CHANNEL_ALERTS, MAINTENANCE_NOTIFICATION_ID, lines.size() == 1 ? "Maintenance due"
+                : lines.size() + " maintenance jobs due", MaintenanceActivity.class, String.join("\n", lines));
     }
 
     /**

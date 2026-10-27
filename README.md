@@ -86,7 +86,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - 🔋 **12 V battery over time**: the voltage at rest, read once per stop, charted — with a warning when it
   has been sliding for a while. Tapping the battery figure on the bike screen opens it.
 - 🔧 **Maintenance log**: what you had done, when and at what odometer, next to the reminders the dash
-  keeps.
+  keeps, and reminders of your own: every so many kilometres or months, with a notification when a job
+  is due.
 - 🏆 **Records**: fastest ride, most lean each way, longest ride and the distance per year in the riding
   log; a ride ends with a summary notification (distance, time, fuel, lean).
 
@@ -448,6 +449,14 @@ readings taken at rest with the engine off, charted, with a warning once they ha
 reading needs the engine not to have run for half an hour, and none is taken while the starter turns) and
 **Maintenance** (what you had done, when and at what odometer, next to the reminders the dash keeps).
 They are kept on the phone and included in Android's backup.
+
+**Your reminders** on the Maintenance screen say how often a job is due: every so many kilometres,
+every so many months, or both, whichever comes first (the chain every 1,000 km, the oil every 6,000 km
+or 12 months). They count from the newest time the job is in the log, the kilometres from the odometer
+logged with it, so a job has to be logged once before its reminder counts. Each shows how far it has
+left ("in 230 km or by 3 Mar 2027"), "soon" within a tenth of its kilometres or two weeks, and "due"
+once it is past. A due reminder sends a notification once, while KawaNav is running, and the bike screen
+lists it; logging the job again starts it over. The kilometres use the odometer the bike last sent.
 
 ### 🗺️ Recording rides
 
