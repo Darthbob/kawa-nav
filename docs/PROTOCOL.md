@@ -800,9 +800,10 @@ rarely changing bits moves within 2 s of it; and the meter sends no frame of its
 and the 0x41 answer KawaNav asked for. So the indicators are most likely not in the BLE stream, which
 fits Rideology showing none. One mark only, with no "Indicators off" to confirm it.
 
-For the next ones: tap Mark the moment the thing is done, not before, and undo each thing with a mark of
-its own (indicator on, indicators off; high beam on, high beam off), at least 15 s apart. A byte that
-changes and changes back with them is the proof a single mark cannot give.
+Both have been taken off the Test mark list (`RawCapture.MARKS`). For the next ones: tap Mark the moment the
+thing is done, not before, and undo each thing with a mark of its own (high beam on, high beam off; clutch
+in, clutch out), at least 15 s apart. A byte that changes and changes back with them is the proof a single
+mark cannot give.
 
 ### Which exported values are still doubtful
 
