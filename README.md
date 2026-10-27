@@ -363,7 +363,8 @@ cannot give, or a drop that is impossible in five seconds, keeps the last level 
 from Android's sticky battery broadcast, with the battery service as a fallback; until there is a
 plausible reading no icon frame is sent at all, rather than an empty battery (the dash draws "not
 available" with its warning icon too). So the dash does not flash its low-battery icon (issue #7).
-Switched off, the icon is removed. Not yet tried on the bike.
+Switched off, the icon is removed. A dash has shown the bars; on one phone a warning icon still flashes
+in between now and then, which issue #7 is still looking into.
 
 #### Headset icon
 
