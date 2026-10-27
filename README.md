@@ -128,8 +128,8 @@ icon is not recognised.
 
 | Language | Status |
 |---|---|
-| German, English | ✅ Verified on real Maps notifications |
-| French, Spanish, Italian, Dutch, Portuguese, Polish, Czech, Swedish, Danish, Norwegian, Finnish, Greek, Russian | 🟡 Supported, wording based on Google's usual phrasing, not yet checked on real notifications |
+| German, English, Italian | ✅ Verified on real Maps notifications |
+| French, Spanish, Dutch, Portuguese, Polish, Czech, Swedish, Danish, Norwegian, Finnish, Greek, Russian | 🟡 Supported, wording based on Google's usual phrasing, not yet checked on real notifications |
 
 Distances are read in m/km, mi/ft/yd and Cyrillic/Greek units (м/км, μ/χλμ). The word lists are in
 `MapsParser.java`.
@@ -655,7 +655,7 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   does: a capture on a phone with Waze running holds only its "Waze is running" notification (channel
   `CLOSE_WAZE_CHANNEL`, no distance, no turn, no arrow), so there is nothing to read. Details and the
   evidence: [docs/WAZE.md](docs/WAZE.md).
-- Only German and English Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
+- Only German, English and Italian Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
 - **The extras KawaNav reads from its start intent are debug-only.** KawaNav's screen can be started by
   any app on the phone (Android requires it for the launcher), so a release build ignores
   `--ez free_mode`, `--ez export_log`, `--ez bridge` and the rest; `-e offline_region <id>` likewise
@@ -706,8 +706,10 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   and the range show. Correct them on the Refuels screen to get a true figure.
 - The **12 V battery** warning rule (0.4 V lost over three days of readings) is a sensible guess, not a
   manufacturer's figure, and needs a few weeks of readings before it says anything.
-- The **battery and headset icons**, the **call/mail icons** and the **dash clock** have never been seen
-  on a real dash. They follow the protocol Rideology uses.
+- The **phone battery icon** has been seen on a real dash, with its bars; a warning icon that flashes in
+  between on some phones is still open ([issue #7](https://github.com/Darthbob/kawa-nav/issues/7)). The
+  **headset icon**, the **call/mail icons** and the **dash clock** have not been seen on one yet. All of
+  them follow the protocol Rideology uses.
 - **R.Score** (Rideology's ride score) is not computed: Kawasaki's cloud does that, and the formula is
   not published. The exported CSV leaves that column empty.
 - The phone and the bike must be in range; while the bike is connected, **Rideology must stay closed**
