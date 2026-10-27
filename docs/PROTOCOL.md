@@ -151,8 +151,10 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   appears in seconds with the throttle nearly closed at 40–50 km/h), the value is absent at a
   standstill, and it falls as the throttle opens and as speed rises (median 22 km/L at closed
   throttle, 20–22 at 40–60 km/h, 10 above 100 km/h). (verified on 2026-10-17's rides)
-- **Long form** (the frame the Z900 does not send; longer than 58 bytes) repeats what the 0x41 carries,
-  with a second set of valid bits in byte 57 (`qe/b.java:70-82`). (verified)
+- **Long form** (longer than 58 bytes) repeats what the 0x41 carries, with a second set of valid bits in
+  byte 57 (`qe/b.java:70-82`). (verified) The Z900 sends it: 65 bytes at every connect from 2026-10-22
+  to 27, read-only and full alike, so its meter battery (byte 64) comes every second, where the 0x41's
+  comes only when asked. (verified on captures)
 
 | Bytes | Value | Read when |
 |---|---|---|
@@ -618,7 +620,9 @@ when one is added here.
   with **test marks** (debug card "Bike data" → "Test mark" → "Mark now", written as
   `epochMs MARK label` lines that replays skip), taken at the bike while doing one thing at a time
   (indicators, high beam, clutch, side stand, a riding mode changed on the dash …, at least 15 s
-  apart); then for each mark, the bytes that were steady before it and changed right after it.
+  apart); then for each mark, the bytes that were steady before it and changed right after it. The
+  first such capture is under [Test marks](#test-marks-2026-10-27): the left indicator is in none of
+  the frames.
 - Riding-log sample rate (meter/frequency controlled).
 - Whether the meter treats 0x14 nibble 15 or flag 3 as "navigation ended" (both work with KawaNav).
 - What the two TCS pairs (0x4A byte 24, 0x4B byte 51) actually report: the rider's level, an intervention,
@@ -770,6 +774,35 @@ The oil change's distance **counts down with the odometer**: 11,338 km at 5,259 
 is left, not the odometer it is due at. Whether notify bits 0 mean a reminder that is off (the Kawasaki
 service's 2024-01-01 and 0 km look like an unset one), and what the rider's 12,000 km is, needs the
 dash's own maintenance page: the debug build's Field tests list it. (observed)
+
+### Test marks (2026-10-27)
+
+The first capture with test marks: the Z900 standing with a cold engine, two marks 36 s apart. For each
+mark, every bit of 0x45, 0x4A and 0x4B was compared over the 15 s before and after it, and the bits that
+change rarely in the whole 14-minute capture were checked against the mark times. (observed, one capture)
+
+**Engine start.** Clearly visible, but **8.6 s after the mark was tapped**: a mark is only as good as the
+rider's timing.
+
+| After the mark | Frame and bytes | What changed |
+|---|---|---|
+| +7.2 s | 0x4A byte 13 | gear `1` → `0` (neutral), 1.4 s before the starter |
+| +8.6 s | 0x45 byte 64 | meter battery 12.0 → **10.4 V**: the starter cranking |
+| +8.8 s | 0x4A bytes 11-12 | 230 rpm while cranking, 2027 rpm at the first firing 0.2 s later, about 1600 rpm cold idle within a second |
+| +9.0 s | 0x4A bytes 7-8 | fuel injection no longer 0 |
+| +9.6 s | 0x45 byte 64 | **14.5 V**: the alternator charging. The next 0x41 answer (KawaNav asks every 20 s) reads 11.5 → 13.8 V from the ECU and 12.0 → 14.6 V from the meter |
+
+All of these are values KawaNav already decodes: no new byte.
+
+**Indicator left.** **Nothing.** In the 15 s after the mark no bit of 0x45/0x4A/0x4B goes from steady to
+changing except rpm, fuel injection and coolant temperature (a cold engine warming up); none of the
+rarely changing bits moves within 2 s of it; and the meter sends no frame of its own, only the 0x13 ACK
+and the 0x41 answer KawaNav asked for. So the indicators are most likely not in the BLE stream, which
+fits Rideology showing none. One mark only, with no "Indicators off" to confirm it.
+
+For the next ones: tap Mark the moment the thing is done, not before, and undo each thing with a mark of
+its own (indicator on, indicators off; high beam on, high beam off), at least 15 s apart. A byte that
+changes and changes back with them is the proof a single mark cannot give.
 
 ### Which exported values are still doubtful
 
