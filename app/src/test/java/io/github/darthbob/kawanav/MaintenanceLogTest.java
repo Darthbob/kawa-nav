@@ -155,6 +155,11 @@ public class MaintenanceLogTest {
         entries.add(entry("Tyres", 1000, Double.NaN));
         MaintenanceLog.Due noOdo = MaintenanceLog.due(entries, new MaintenanceLog.Reminder("Tyres", 8000, 0), 20000, 2000);
         assertEquals("log the odometer with the job to count the kilometres", noOdo.describe(df));
+        // logged with the odometer, but the bike has not sent its own yet
+        List<MaintenanceLog.Entry> withOdo = new ArrayList<>();
+        withOdo.add(entry("Tyres", 1000, 12000));
+        assertEquals("the kilometres count once the bike has sent its odometer", MaintenanceLog.due(withOdo,
+                new MaintenanceLog.Reminder("Tyres", 8000, 0), Double.NaN, 2000).describe(df));
     }
 
     @Test

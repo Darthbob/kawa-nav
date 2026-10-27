@@ -236,7 +236,7 @@ public class RideActivity extends KawaActivity {
         for (int i = 0; i < values.length; i++) values[i] = ChartView.mapValue(samples.get(i), series);
         track.colourBy(values);
         describeColours(series);
-        chart.set(samples, series, index -> {
+        onPoint = index -> {
             track.set(samples, index);
             RideTsv.Sample s = samples.get(index);
             // the values every second shows, then the one picked when it is not among them
@@ -244,8 +244,12 @@ public class RideActivity extends KawaActivity {
             cursor.setText(String.format(Locale.ROOT, "%s · %.0f km/h · %d rpm · %s · %.0f %% · %.1f°",
                     seconds(s.tMs), num(s.kmh), Math.round(num(s.rpm)), gear(s.gear), num(s.thrPct), num(s.lean))
                     + picked);
-        });
+        };
+        chart.set(samples, series, onPoint);
     }
+
+    /** What touching the chart does: the second on the track and under the chart. */
+    private ChartView.OnPoint onPoint;
 
     /** How the ride's bends were ridden and the grip it used; hidden for a ride without a bend. */
     private LinearLayout bendsCard() {
@@ -339,8 +343,8 @@ public class RideActivity extends KawaActivity {
     /** A bend on the track and the chart: its apex marked, the page scrolled up to the track. */
     private void showBend(RideAnalysis.Bend b) {
         chart.mark(b.apex);
+        if (onPoint != null) onPoint.onSample(b.apex);
         if (trackCard.getVisibility() != View.VISIBLE) return;
-        track.set(samples, b.apex);
         View v = trackCard;
         while (v.getParent() instanceof View && !(v instanceof android.widget.ScrollView)) v = (View) v.getParent();
         if (v instanceof android.widget.ScrollView) ((android.widget.ScrollView) v).smoothScrollTo(0, trackCard.getTop());

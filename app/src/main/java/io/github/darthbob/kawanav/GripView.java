@@ -66,9 +66,12 @@ public final class GripView extends View {
         text.setTextAlign(Paint.Align.CENTER);
         canvas.drawText("accelerating", cx, cy - r - density * 4, text);
         canvas.drawText("braking", cx, cy + r + label - density * 2, text);
-        text.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("left", cx - r, cy - density * 4, text);
-        text.setTextAlign(Paint.Align.RIGHT);
-        canvas.drawText("right", cx + r, cy - density * 4, text);
+        float gap = density * 6;
+        boolean beside = cx - r > text.measureText("right") + gap;
+        float y = beside ? cy + text.getTextSize() * 0.35f : cy - density * 4;
+        text.setTextAlign(beside ? Paint.Align.RIGHT : Paint.Align.LEFT);
+        canvas.drawText("left", beside ? cx - r - gap : cx - r, y, text);
+        text.setTextAlign(beside ? Paint.Align.LEFT : Paint.Align.RIGHT);
+        canvas.drawText("right", beside ? cx + r + gap : cx + r, y, text);
     }
 }
