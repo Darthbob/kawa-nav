@@ -713,6 +713,14 @@ public final class BikeFrames {
          * flag of byte 52; -1 when absent.
          */
         public final int tcsLevelHigh, tcsLevelLow, kqsDown, kqsUp, wheelieFlag;
+        /**
+         * The IMU's rolling message counter (byte 23 bits 3-0), -1 when the frame's IMU blocks carry no CRC
+         * or block 15's failed. It steps by 10 from one frame to the next: the IMU sends at 100 Hz and the
+         * meter forwards one message in ten, so a counter that stays put is the same message again.
+         */
+        public final int imuCounter;
+        /** IMU blocks of this frame left out for a CRC that did not check: 0, or 1 (see the constructor). */
+        public final int imuDropped;
 
         ImuSusp(byte[] v) {
             super(v);
@@ -721,18 +729,28 @@ public final class BikeFrames {
             frontStrokeMm = susp ? be16(v, 9) * 0.015625 : Double.NaN;
             rearStrokeSpeed = susp ? be16(v, 11) * 0.001 : Double.NaN;
             frontStrokeSpeed = susp ? be16(v, 13) * 0.001 : Double.NaN;
-            ayG = axis(v, 15, 16, 22, 21);
-            axG = axis(v, 25, 26, 32, 31);
-            azG = axis(v, 35, 36, 42, 41);
+            // blocks 15/25/35 are the IMU's own CAN messages, each ending in a CRC over the 7 bytes before it
+            // (PROTOCOL.md, 0x4B). When at least two of them check, the bike sends the CRC, and a block that
+            // fails is left out: 2 in 40,506 on a Z900, which look built from two of the IMU's cycles. A bike
+            // whose blocks do not check keeps them all, as before
+            boolean ok1 = crcOk(v, 15), ok2 = crcOk(v, 25), ok3 = crcOk(v, 35);
+            int good = (ok1 ? 1 : 0) + (ok2 ? 1 : 0) + (ok3 ? 1 : 0);
+            boolean checked = good >= 2;
+            boolean use1 = !checked || ok1, use2 = !checked || ok2, use3 = !checked || ok3;
+            imuCounter = checked && ok1 ? u8(v, 23) & 0x0F : -1;
+            imuDropped = checked ? 3 - good : 0;
+            ayG = use1 ? axis(v, 15, 16, 22, 21) : Double.NaN;
+            axG = use2 ? axis(v, 25, 26, 32, 31) : Double.NaN;
+            azG = use3 ? axis(v, 35, 36, 42, 41) : Double.NaN;
             rawX = axG;
             rawY = ayG;
             rawZ = azG;
             longitudinalG = longitudinal(axG, ayG);
             verticalG = vertical(axG, ayG);
             lateralG = lateral(azG);
-            rate1 = rate(v, 15, 16, 18, 17);
-            rate2 = rate(v, 25, 26, 28, 27);
-            rate3 = rate(v, 35, 36, 38, 37);
+            rate1 = use1 ? rate(v, 15, 16, 18, 17) : Double.NaN;
+            rate2 = use2 ? rate(v, 25, 26, 28, 27) : Double.NaN;
+            rate3 = use3 ? rate(v, 35, 36, 38, 37) : Double.NaN;
             // block 45: Rideology treats it as absent only when both header bytes are FF (qe/a.java)
             boolean blk5 = v.length > 46 && !(u8(v, 45) == 0xFF && u8(v, 46) == 0xFF);
             boolean wheels = blk5 && (u8(v, 47) != 0xFF || u8(v, 48) != 0xFF);
@@ -758,6 +776,21 @@ public final class BikeFrames {
 
         private static boolean present(byte[] v, int a, int b, int last) {
             return v.length > last && u8(v, a) != 0xFF && u8(v, b) != 0xFF;
+        }
+
+        /** The block at {@code a} is there and its last byte is the CRC of the 7 bytes before it. */
+        private static boolean crcOk(byte[] v, int a) {
+            return present(v, a, a + 1, a + 9) && crc8(v, a + 2, 7) == u8(v, a + 9);
+        }
+
+        /** CRC-8 SAE J1850: polynomial 0x1D, initial value and final xor 0xFF, not reflected. */
+        static int crc8(byte[] v, int from, int n) {
+            int c = 0xFF;
+            for (int i = from; i < from + n; i++) {
+                c ^= v[i] & 0xFF;
+                for (int k = 0; k < 8; k++) c = (c & 0x80) != 0 ? (c << 1 ^ 0x1D) & 0xFF : c << 1 & 0xFF;
+            }
+            return c ^ 0xFF;
         }
 
         /** The three axes as the bike sends them; see the derived ones below for what they mean. */

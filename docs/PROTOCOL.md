@@ -305,8 +305,12 @@ the rate and the acceleration, each IMU block carries (verified on the captures 
   The counters of blocks 25 and 35 equal block 15's or are one behind (about 5 % of the frames): the
   three messages are not always taken from the same 10 ms cycle.
 - **CRC.** 40,504 of 40,506 blocks check. The two that do not hold ordinary-looking values, so they are
-  more likely put together from two cycles than corrupted in a visible way. A reader can drop a block whose
-  CRC fails, and a frame whose counter did not move.
+  more likely put together from two cycles than corrupted in a visible way. KawaNav checks it
+  (`BikeFrames.ImuSusp`): when at least two of a frame's three IMU blocks check, the bike sends the CRC,
+  and a block that fails is left out (its rate and acceleration read as absent); a bike whose blocks do
+  not check keeps them all. It keeps a frame whose counter did not move: the two seen were single
+  repeats, 100 ms old, and the recording takes one value a second. The debug card counts both since
+  connecting, so a frozen IMU (the counter stuck) would show there.
 - **Identification text (bytes 29-30).** Byte 29 (bits 3-0) is a character position, byte 30 the
   character. The strings follow one another in a fixed cycle of 89 messages (0.89 s); with one message
   in ten forwarded, the whole cycle is seen in about 9 s, since 89 and 10 have no common factor. Each
