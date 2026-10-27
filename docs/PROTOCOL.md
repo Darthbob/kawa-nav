@@ -892,9 +892,9 @@ moved off (0x4A section).
 Engine start and Indicator left were taken off the Test mark list (`RawCapture.MARKS`) after the first
 capture, these five after the second. So were Side stand down, since the stand's position is in no bit
 (nothing moved when it went up); Neutral and Gear 1: the gear is already decoded (0x4A byte 13) and
-changed as expected in both captures; and Indicator right and Indicators off: the left indicator moved
-no bit, so the stream has no indicator state for the right one or for switching them off to show.
-Hazard lights stay on the list, not tried yet. For the next ones: tap Mark the moment
+changed as expected in both captures; and Indicator right, Indicators off and Hazard lights: the left
+indicator moved no bit, so the stream has no indicator state for the right one, the hazards or
+switching them off to show. For the next ones: tap Mark the moment
 the thing is done, not before, and undo each thing with a mark of its own (high beam on, high beam
 off), at least 15 s apart. A byte that changes and changes back with them is the proof a single mark
 cannot give.

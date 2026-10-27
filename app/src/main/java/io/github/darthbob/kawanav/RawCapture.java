@@ -68,7 +68,7 @@ public final class RawCapture {
      * decoded already (docs/PROTOCOL.md, "Test marks").
      */
     public static final String[] MARKS = {
-            "Engine stop", "Hazard lights", "High beam on", "High beam off", "Horn",
+            "Engine stop", "High beam on", "High beam off", "Horn",
             "Riding mode changed on the dash", "KTRC changed on the dash", "Trip reset on the dash",
             "Dash page changed", "Cruise control on", "Cruise control off", "Something else"};
 
