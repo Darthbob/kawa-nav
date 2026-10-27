@@ -827,7 +827,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         int pace = Hub.prefs(this).getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
         boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF
                 || pace > CurveAlerts.PACE_OFF || (cameras && Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false))
-                || ColdEngine.limit(Hub.prefs(this).getInt(Hub.KEY_COLD_ENGINE, 0)) > 0;
+                || Hub.prefs(this).getBoolean(Hub.KEY_COLD_ENGINE, false);
         if (pace == CurveAlerts.FROM_RIDES && !ridesLeanAsked) {
             ridesLeanAsked = true;
             RideStore store = recorder.store();
@@ -1248,12 +1248,14 @@ public class BridgeService extends Service implements KawaBle.Listener {
      * not over it.
      */
     private void coldEngineCheck(long now) {
-        int limit = ColdEngine.limit(Hub.prefs(this).getInt(Hub.KEY_COLD_ENGINE, 0));
+        SharedPreferences p = Hub.prefs(this);
+        int limit = p.getBoolean(Hub.KEY_COLD_ENGINE, false) ? p.getInt(Hub.KEY_COLD_ENGINE_RPM, ColdEngine.DEFAULT_RPM) : 0;
+        int warmC = p.getInt(Hub.KEY_COLD_ENGINE_C, ColdEngine.DEFAULT_WARM_C);
         BikeFrames.LogExt ext = Hub.bike.ext;
         BikeFrames.Telemetry live = Hub.bike.live;
         double coolant = ext != null && now - Hub.bike.extAt <= BikeAlerts.FRESH_MS ? ext.waterC : Double.NaN;
         int rpm = live != null && now - Hub.bike.liveAt <= ColdEngine.FRESH_MS ? live.rpm : -1;
-        if (!coldEngine.check(coolant, rpm, limit, now)) return;
+        if (!coldEngine.check(coolant, rpm, limit, warmC, now)) return;
         Logger.log(String.format(Locale.ROOT, "Cold engine: %d rpm with the coolant at %.0f °C", rpm, coolant));
         if (!voiceAllowed()) return;
         if (beeps()) curveSound.beep(CurveBeeps.coldEngine());
