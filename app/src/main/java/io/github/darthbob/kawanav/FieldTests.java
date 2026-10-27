@@ -115,7 +115,7 @@ final class FieldTests {
             new Test("unknown_bytes", PROTOCOL, "Bytes nobody decodes",
                     "0x30 and the unused bytes of the other frames may carry the high beam, the horn, a riding "
                             + "mode changed on the dash and the like. Rideology reads none of them. Side stand, "
-                            + "brakes, clutch and the left indicator are in none of them (Z900, 2026-10-27).",
+                            + "brakes, clutch and the indicators are in none of them (Z900, 2026-10-27).",
                     "1. Bike data card: Capture frames on, connect again.\n"
                             + "2. One thing at a time, 15 s or more apart: pick it under Test mark, do it, tap Mark "
                             + "now (high beam on and off, horn, a riding mode changed on the dash…).\n"

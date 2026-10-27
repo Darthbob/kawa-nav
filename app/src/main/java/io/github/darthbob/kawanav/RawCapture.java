@@ -64,12 +64,11 @@ public final class RawCapture {
      * tools/frame_bytes.py can show which bytes changed with it. These are the things the frames might
      * carry that neither Rideology nor KawaNav decodes yet. Switching the ignition on or off is not one:
      * the link comes up after the dash does and goes with it, so no capture is open at that moment.
-     * Engine start, Indicator left, the side stand, both brakes and the clutch are done, and the gear is
+     * Engine start, the indicators, the side stand, both brakes and the clutch are done, and the gear is
      * decoded already (docs/PROTOCOL.md, "Test marks").
      */
     public static final String[] MARKS = {
-            "Engine stop", "Indicator right", "Indicators off",
-            "Hazard lights", "High beam on", "High beam off", "Horn",
+            "Engine stop", "Hazard lights", "High beam on", "High beam off", "Horn",
             "Riding mode changed on the dash", "KTRC changed on the dash", "Trip reset on the dash",
             "Dash page changed", "Cruise control on", "Cruise control off", "Something else"};
 
