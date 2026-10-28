@@ -86,6 +86,35 @@ public class MapsParserTest {
         assertEquals(20, MapsParser.parseTurn("Kreisverkehr, dritte Ausfahrt", true));
     }
 
+    // ------------------------------------------------------------------ Italian, as Maps writes it
+
+    @Test
+    public void italianAsMapsWritesIt() {
+        // Maps' own wording, from its notifications on rides in October 2026 (street names changed)
+        assertEquals(1, MapsParser.parseTurn("90 m · Svolta a sinistra e prendi Via Roma", false));
+        assertEquals(2, MapsParser.parseTurn("Svolta a destra e prendi SP37", false));
+        assertEquals(6, MapsParser.parseTurn("Svolta leggermente a destra e prendi Via Roma", false));
+        assertEquals(9, MapsParser.parseTurn("Mantieni la sinistra per continuare su Via Roma", false));
+        assertEquals(7, MapsParser.parseTurn("Fai una inversione a U", false));
+        assertEquals(0, MapsParser.parseTurn("Prosegui dritto su Via Roma", false));
+        assertEquals(42, MapsParser.parseTurn("Procedi verso Via Roma", false));
+        assertEquals(43, MapsParser.parseTurn("Arrivo", false));
+        assertEquals(31, MapsParser.parseTurn("Alla rotonda, prosegui dritto su Via Roma", false));
+        assertEquals(30, MapsParser.parseTurn("Alla rotonda, prendi la 1ª uscita e prendi Via Roma", false));
+        assertEquals(3, MapsParser.roundaboutExit("Alla rotonda prendi la 3ª uscita e prendi Via Roma"));
+        assertEquals(9900, MapsParser.parseDistance("9,9 km · Svolta a destra e prendi SP37"));
+    }
+
+    @Test
+    public void italianRotatoriaAndSharpTurns() {
+        // Maps says "rotatoria" as well as "rotonda", and "Svolta tutto a" for a sharp turn: the text read
+        // both as plain turns, and only Maps' icon drew them right
+        assertTrue(MapsParser.isRoundabout("Alla rotatoria, svolta a sinistra in Via Roma"));
+        assertEquals(32, MapsParser.parseTurn("Alla rotatoria, svolta a sinistra per restare su SS 1", false));
+        assertEquals(3, MapsParser.parseTurn("Svolta tutto a sinistra e prendi Via Roma", false));
+        assertEquals(4, MapsParser.parseTurn("Svolta tutto a destra", false));
+    }
+
     // ------------------------------------------------------------------ text + icon
 
     @Test

@@ -417,6 +417,17 @@ public class SettingsActivity extends KawaActivity {
                 + "running and it is not being charged", Hub.KEY_BATTERY_WARNINGS, true));
         addRow(c, switchRow("Clutch warning", "After a recorded ride, when the engine ran ahead of the rear "
                 + "wheel in more than one hard acceleration: the clutch may be slipping", Hub.KEY_CLUTCH_WARNINGS, true));
+        addRow(c, switchRow("Cold engine warning", "\"" + ColdEngine.PHRASE + "\" in your helmet when you rev the "
+                + "engine above the speed set below before the coolant reaches the temperature set below",
+                Hub.KEY_COLD_ENGINE, false));
+        addRow(c, choiceRow("Cold engine: revs", "The warning comes above this engine speed", ColdEngine.rpmLabels(),
+                ColdEngine.indexOf(ColdEngine.RPM_CHOICES, prefs.getInt(Hub.KEY_COLD_ENGINE_RPM, ColdEngine.DEFAULT_RPM),
+                        ColdEngine.DEFAULT_RPM),
+                pos -> prefs.edit().putInt(Hub.KEY_COLD_ENGINE_RPM, ColdEngine.RPM_CHOICES[pos]).apply()));
+        addRow(c, choiceRow("Cold engine: warm from", "The coolant temperature from which the engine counts as warm",
+                ColdEngine.warmLabels(), ColdEngine.indexOf(ColdEngine.WARM_C_CHOICES,
+                        prefs.getInt(Hub.KEY_COLD_ENGINE_C, ColdEngine.DEFAULT_WARM_C), ColdEngine.DEFAULT_WARM_C),
+                pos -> prefs.edit().putInt(Hub.KEY_COLD_ENGINE_C, ColdEngine.WARM_C_CHOICES[pos]).apply()));
         addRow(c, switchRow("Speed camera warnings", CAMERAS_INFO, Hub.KEY_CAMERAS, false,
                 on -> BridgeService.settingsChanged()));
         String[] warn = new String[CAMERA_WARNS.length];
@@ -684,7 +695,7 @@ public class SettingsActivity extends KawaActivity {
     }
 
     /**
-     * Debug: marks a moment in the frame capture ("High beam on", "Clutch in" …), tapped as it is done at
+     * Debug: marks a moment in the frame capture ("High beam on", "Horn" …), tapped as it is done at
      * the bike, so tools/frame_bytes.py can show which bytes changed with it: the way to learn what the
      * bytes and frames are that nobody decodes (0x30, the unused parts of 0x4A/0x4B …).
      */

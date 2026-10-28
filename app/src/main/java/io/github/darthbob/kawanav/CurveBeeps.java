@@ -9,7 +9,8 @@ import java.util.List;
  * for a slight or normal bend, two for a sharp one, three for a hairpin, higher and quicker when the
  * rider comes at it too fast. A bend named with it ("then") follows after a pause, in its own ear. A
  * speed camera sounds like a two-tone siren, high-low twice without a break, in both ears: nothing a
- * bend sounds like, also through a mono intercom. Plain Java: 16-bit stereo PCM that
+ * bend sounds like, also through a mono intercom. A cold engine is two long low tones in both ears,
+ * slower than anything else. Plain Java: 16-bit stereo PCM that
  * {@link CurveSound} plays.
  */
 final class CurveBeeps {
@@ -21,6 +22,9 @@ final class CurveBeeps {
     /** The speed camera's siren: a high and a low tone, each this long, twice over. */
     static final double SIREN_HIGH_HZ = 988, SIREN_LOW_HZ = 659;
     static final int SIREN_TONE_MS = 160, SIREN_TONES = 4;
+    /** The cold engine: two tones this low and this long, this far apart. */
+    static final double COLD_HZ = 440;
+    static final int COLD_MS = 300, COLD_GAP_MS = 150;
     /** Loudness in the ear of the bend's side and in the other one. */
     static final double NEAR = 0.6, FAR = 0.12;
     /** A short fade at both ends of a sound, so it does not click. */
@@ -72,6 +76,15 @@ final class CurveBeeps {
             tones.add(new Tone(i % 2 == 0 ? SIREN_HIGH_HZ : SIREN_LOW_HZ, SIREN_TONE_MS, NEAR, NEAR,
                     i == 0, i == SIREN_TONES - 1));
         }
+        return render(tones);
+    }
+
+    /** The engine is still cold: two long low tones in both ears. */
+    static short[] coldEngine() {
+        List<Tone> tones = new ArrayList<>();
+        tones.add(new Tone(COLD_HZ, COLD_MS, NEAR, NEAR));
+        tones.add(new Tone(0, COLD_GAP_MS, 0, 0));
+        tones.add(new Tone(COLD_HZ, COLD_MS, NEAR, NEAR));
         return render(tones);
     }
 

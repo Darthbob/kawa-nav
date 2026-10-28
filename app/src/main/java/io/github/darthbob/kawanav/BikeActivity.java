@@ -685,9 +685,20 @@ public class BikeActivity extends KawaActivity {
         startActivity(new Intent(this, BatteryActivity.class));
     }
 
-    /** The maintenance log, next to the reminders the dash keeps. */
+    /** The maintenance log, next to the reminders the dash keeps; the rider's own reminders that are due first. */
     private void updateMaintenanceLine() {
         java.util.List<MaintenanceLog.Entry> entries = Hub.maintenanceEntries;
+        BikeFrames.VehicleInfo odo = Hub.bike.info;
+        java.util.List<String> due = new java.util.ArrayList<>();
+        for (MaintenanceLog.Due d : MaintenanceLog.due(entries,
+                MaintenanceLog.reminders(prefs.getString(Hub.KEY_MAINT_REMINDERS, "")),
+                odo != null && odo.odometerKm >= 0 ? odo.odometerKm : Double.NaN, System.currentTimeMillis())) {
+            if (d.due()) due.add(d.reminder.item);
+        }
+        if (!due.isEmpty()) {
+            maintenanceLine.setText("Due: " + String.join(", ", due));
+            return;
+        }
         if (entries.isEmpty()) {
             maintenanceLine.setText("Nothing logged: keep a record of the work the dash cannot see.");
             return;
@@ -993,7 +1004,7 @@ public class BikeActivity extends KawaActivity {
                 add(r, s, "Rear tyre", b.ext.tyreRearKpa / 100, "%.2f bar");
             }
         }
-        // suspension travel and the body's acceleration, on bikes with the electronic suspension (0x4B)
+        // the IMU's accelerations and rates (0x4B; a Z900 sends them too), travel on bikes with the electronic suspension
         BikeFrames.ImuSusp m0 = b.imu;
         if (m0 != null && now - b.imuAt < LIVE_MS) {
             String s = "Suspension";

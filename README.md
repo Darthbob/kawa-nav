@@ -86,7 +86,11 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - 🔋 **12 V battery over time**: the voltage at rest, read once per stop, charted — with a warning when it
   has been sliding for a while. Tapping the battery figure on the bike screen opens it.
 - 🔧 **Maintenance log**: what you had done, when and at what odometer, next to the reminders the dash
-  keeps.
+  keeps, and reminders of your own: every so many kilometres or months, with a notification when a job
+  is due.
+- 🌀 **Bends of a recorded ride**: each bend's lean, apex speed, radius and speeds in and out, the bends
+  braked at the apex or with the throttle snapped open while leant over, and a diagram of the grip the ride
+  used.
 - 🏆 **Records**: fastest ride, most lean each way, longest ride and the distance per year in the riding
   log; a ride ends with a summary notification (distance, time, fuel, lean).
 
@@ -128,8 +132,8 @@ icon is not recognised.
 
 | Language | Status |
 |---|---|
-| German, English | ✅ Verified on real Maps notifications |
-| French, Spanish, Italian, Dutch, Portuguese, Polish, Czech, Swedish, Danish, Norwegian, Finnish, Greek, Russian | 🟡 Supported, wording based on Google's usual phrasing, not yet checked on real notifications |
+| German, English, Italian | ✅ Verified on real Maps notifications |
+| French, Spanish, Dutch, Portuguese, Polish, Czech, Swedish, Danish, Norwegian, Finnish, Greek, Russian | 🟡 Supported, wording based on Google's usual phrasing, not yet checked on real notifications |
 
 Distances are read in m/km, mi/ft/yd and Cyrillic/Greek units (м/км, μ/χλμ). The word lists are in
 `MapsParser.java`.
@@ -208,6 +212,9 @@ In the **Settings** tab:
 | [Phone battery](#phone-battery) | On | Phone battery icon on the dash |
 | [Battery warnings](#battery-warnings) | On | Warnings when the bike's 12 V battery reads low |
 | [Clutch warning](#clutch-warning) | On | A warning after a recorded ride whose clutch slipped under load |
+| [Cold engine warning](#cold-engine-warning) | Off | Said in the helmet when the engine revs above a limit while the coolant is cold |
+| [Cold engine: revs](#cold-engine-warning) | 4,500 rpm | 3,000 to 7,000 rpm: the engine speed the warning comes above |
+| [Cold engine: warm from](#cold-engine-warning) | 70 °C | 50 / 60 / 70 / 80 °C: the coolant temperature from which the engine counts as warm |
 | [Fuel economy](#fuel-economy) | L/100 km | km/L / L/100 km / MPG US / MPG UK |
 | [Start recording by itself](#recording-rides) | Off | Begins a ride when the bike is connected and moving |
 | [End a ride](#recording-rides) | At once | At once / After 5 min / After 15 min: when a ride ends after the bike is switched off |
@@ -354,6 +361,18 @@ the engine reads 1–4 % *below* the light-throttle value at full throttle, so a
 clear of it. Shifts, quick-shifter cuts and 1st/2nd gear are left out. Switched off, the ride still
 shows the check, only the notification is not sent.
 
+#### Cold engine warning
+
+Switched on, KawaNav says "Engine still cold" in the helmet when the engine goes above **Cold engine:
+revs** (4,500 rpm unless changed) while the coolant is below **Cold engine: warm from** (70 °C unless
+changed), or plays two long low tones with "Beeps instead of words". Once each time the engine goes over
+the limit, at most once a minute. Once the coolant has reached that temperature it stays quiet until the
+bike connects again after 10 minutes or more away, so a long descent that cools the engine again, or a
+Bluetooth link that drops for a moment, does not set it off.
+The coolant comes from the bike's riding log frame (0x45), which a Z900 sends. Like the curve warnings,
+it is said only through a headset unless "Speak only through a headset" is off. Not yet tried on the
+bike.
+
 #### Phone battery
 
 While connected, KawaNav sends the phone's battery level to the dash every 5 s, as Rideology does.
@@ -363,7 +382,8 @@ cannot give, or a drop that is impossible in five seconds, keeps the last level 
 from Android's sticky battery broadcast, with the battery service as a fallback; until there is a
 plausible reading no icon frame is sent at all, rather than an empty battery (the dash draws "not
 available" with its warning icon too). So the dash does not flash its low-battery icon (issue #7).
-Switched off, the icon is removed. Not yet tried on the bike.
+Switched off, the icon is removed. A dash has shown the bars; on one phone a warning icon still flashes
+in between now and then, which issue #7 is still looking into.
 
 #### Headset icon
 
@@ -410,8 +430,8 @@ gauge and the battery voltage, then groups everything the dash reported when it 
   cruise control, the torque the throttle asks for and the engine gives, the filtered wheel speeds and the
   suspension unit's traction control and quick shifter state, then the temperatures and tyre pressures;
   they are gone a few seconds after the bike stops sending.
-- **Suspension** (bikes with the electronic suspension): travel, the yaw, roll and pitch rates and the
-  body's acceleration, and where the damping stands.
+- **Suspension**: the body's acceleration and the yaw, roll and pitch rates from the IMU (a Z900 sends
+  them too), and on bikes with the electronic suspension its travel and where the damping stands.
 - **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
   their date and the kilometres left, and the odometer they fall at ("in 11,045 km (at 16,597 km)").
   A reminder the meter keeps switched off is marked "reminder off".
@@ -436,6 +456,14 @@ readings taken at rest with the engine off, charted, with a warning once they ha
 reading needs the engine not to have run for half an hour, and none is taken while the starter turns) and
 **Maintenance** (what you had done, when and at what odometer, next to the reminders the dash keeps).
 They are kept on the phone and included in Android's backup.
+
+**Your reminders** on the Maintenance screen say how often a job is due: every so many kilometres,
+every so many months, or both, whichever comes first (the chain every 1,000 km, the oil every 6,000 km
+or 12 months). They count from the newest time the job is in the log, the kilometres from the odometer
+logged with it, so a job has to be logged once before its reminder counts. Each shows how far it has
+left ("in 230 km or by 3 Mar 2027"), "soon" within a tenth of its kilometres or two weeks, and "due"
+once it is past. A due reminder sends a notification once, while KawaNav is running, and the bike screen
+lists it; logging the job again starts it over. The kilometres use the odometer the bike last sent.
 
 ### 🗺️ Recording rides
 
@@ -500,6 +528,18 @@ has:
   rest of the track on the map is faded, so the stretch is easy to find. A
   value only shows up when the bike sends it: a Z900, for one, sends no torque, no suspension speeds and
   no raw brake values;
+- **Bends**: how the ride's bends were ridden. A bend is two seconds or more leant the same way by more
+  than 10°, and its apex the second leant over the most. Tiles give how many there were and the typical
+  lean, apex speed and speed out against in; three lines count the bends braked at the apex (throttle shut,
+  slowing by more than 0.1 g), those where the throttle was snapped open while leant over (under 5 % to
+  over 20 % in one second at more than 15°) and those with a downshift in them. A diagram shows the grip
+  the ride used, a dot for every riding second: sideways from the lean (tan of the lean angle, the
+  acceleration a steady turn needs), forward and back from the change of speed over the seconds either
+  side (the IMU would read a slope as an acceleration), with rings every half g. Below, the bends by most
+  lean, fastest, best exit, most speed lost or in ride order, each with its apex speed, the radius that
+  speed and lean give, the speeds in and out and the throttle at the apex; tapping one marks it on the
+  track and the chart. At one value a second a quick bend is only a few seconds long, so the numbers
+  describe the bends, they do not measure a line;
 - rename (the pencil at the top), delete, and export: **CSV** with Rideology's column layout (so the tools
   people already use for Rideology exports can read it) or **GPX** with the values as extensions for map
   programs. Two more carry everything a ride recorded: **CSV (all values)**, one column per recorded value
@@ -655,7 +695,7 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   does: a capture on a phone with Waze running holds only its "Waze is running" notification (channel
   `CLOSE_WAZE_CHANNEL`, no distance, no turn, no arrow), so there is nothing to read. Details and the
   evidence: [docs/WAZE.md](docs/WAZE.md).
-- Only German and English Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
+- Only German, English and Italian Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
 - **The extras KawaNav reads from its start intent are debug-only.** KawaNav's screen can be started by
   any app on the phone (Android requires it for the launcher), so a release build ignores
   `--ez free_mode`, `--ez export_log`, `--ez bridge` and the rest; `-e offline_region <id>` likewise
@@ -678,8 +718,8 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   what the bike reports about itself. It matched the frames in tests, but it has not been compared with
   the dash for a whole ride yet. The same goes for the values added in 0.7 and recorded since 0.8
   (torque, brake pressures, ABS target, suspension damping, cruise control, wheel speeds, suspension
-  travel and the body's accelerations): decoded exactly as Rideology decodes them, never yet compared with
-  a dash. The rotation rates are checked against the GPS instead (below).
+  travel): decoded exactly as Rideology decodes them, never yet compared with a dash. The body's
+  accelerations and the rotation rates are checked against gravity and the GPS instead (below).
 - **What the dash says it can do is obeyed**: if its capability frame says it has no status icons or no
   turn-by-turn, KawaNav stops sending those frames, as Rideology does. A dash whose answer is misread
   would lose its arrows, so **Settings → "Send arrows and icons anyway"** turns the obeying off (a normal
@@ -706,8 +746,10 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   and the range show. Correct them on the Refuels screen to get a true figure.
 - The **12 V battery** warning rule (0.4 V lost over three days of readings) is a sensible guess, not a
   manufacturer's figure, and needs a few weeks of readings before it says anything.
-- The **battery and headset icons**, the **call/mail icons** and the **dash clock** have never been seen
-  on a real dash. They follow the protocol Rideology uses.
+- The **phone battery icon** has been seen on a real dash, with its bars; a warning icon that flashes in
+  between on some phones is still open ([issue #7](https://github.com/Darthbob/kawa-nav/issues/7)). The
+  **headset icon**, the **call/mail icons** and the **dash clock** have not been seen on one yet. All of
+  them follow the protocol Rideology uses.
 - **R.Score** (Rideology's ride score) is not computed: Kawasaki's cloud does that, and the formula is
   not published. The exported CSV leaves that column empty.
 - The phone and the bike must be in range; while the bike is connected, **Rideology must stay closed**

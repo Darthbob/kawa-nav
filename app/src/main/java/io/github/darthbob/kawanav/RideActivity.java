@@ -15,7 +15,8 @@ import java.util.Locale;
 
 /**
  * One recorded ride: the summary, the track, the values over time (pick one, touch it to see where it
- * was) and what can be done with it — rename, delete, export as Rideology's CSV or as a GPX track.
+ * was), how its bends were ridden and the grip it used ({@link RideAnalysis}), and what can be done with
+ * it — rename, delete, export as Rideology's CSV or as a GPX track.
  */
 public class RideActivity extends KawaActivity {
 
@@ -44,6 +45,15 @@ public class RideActivity extends KawaActivity {
     private ChartView chart;
     private TextView cursor;
     private android.widget.Spinner seriesSpinner;
+    private LinearLayout bendsCard;
+    private LinearLayout bendSummary;
+    private GripView grip;
+    private TextView gripNote;
+    private android.widget.Spinner bendOrder;
+    private LinearLayout bendList;
+    private RideAnalysis analysis;
+    /** How many bends the list shows. */
+    private static final int BENDS_LISTED = 8;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +85,8 @@ public class RideActivity extends KawaActivity {
         trackCard = trackCard();
         root.addView(trackCard);
         root.addView(chartCard());
+        bendsCard = bendsCard();
+        root.addView(bendsCard);
         root.addView(actionsCard());
         setContentView(page(root));
         load(when);
@@ -91,6 +103,7 @@ public class RideActivity extends KawaActivity {
                 r.summarize(s);
                 if (!r.isRecording() && !store.isOpen(r.id)) store.save(r);
             }
+            RideAnalysis bends = s.isEmpty() ? null : RideAnalysis.of(s);
             runOnUiThread(() -> {
                 if (isFinishing()) return;
                 ride = r;
@@ -116,6 +129,7 @@ public class RideActivity extends KawaActivity {
                 boolean anySeries = refreshSeries();
                 chartCard.setVisibility(anySeries ? View.VISIBLE : View.GONE);
                 showChart(0);
+                showBends(bends);
             });
         }, "ride-load").start();
     }
@@ -222,7 +236,7 @@ public class RideActivity extends KawaActivity {
         for (int i = 0; i < values.length; i++) values[i] = ChartView.mapValue(samples.get(i), series);
         track.colourBy(values);
         describeColours(series);
-        chart.set(samples, series, index -> {
+        onPoint = index -> {
             track.set(samples, index);
             RideTsv.Sample s = samples.get(index);
             // the values every second shows, then the one picked when it is not among them
@@ -230,7 +244,110 @@ public class RideActivity extends KawaActivity {
             cursor.setText(String.format(Locale.ROOT, "%s · %.0f km/h · %d rpm · %s · %.0f %% · %.1f°",
                     seconds(s.tMs), num(s.kmh), Math.round(num(s.rpm)), gear(s.gear), num(s.thrPct), num(s.lean))
                     + picked);
-        });
+        };
+        chart.set(samples, series, onPoint);
+    }
+
+    /** What touching the chart does: the second on the track and under the chart. */
+    private ChartView.OnPoint onPoint;
+
+    /** How the ride's bends were ridden and the grip it used; hidden for a ride without a bend. */
+    private LinearLayout bendsCard() {
+        LinearLayout c = card();
+        c.setVisibility(View.GONE);
+        c.addView(iconTitle(R.drawable.ic_road, cardTitle("Bends")));
+        bendSummary = column();
+        c.addView(bendSummary);
+        grip = new GripView(this);
+        grip.setContentDescription("The grip the ride used: each second's sideways and forward acceleration");
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.height = dp(280);
+        lp.setMargins(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE2));
+        c.addView(grip, lp);
+        gripNote = note("");
+        c.addView(gripNote);
+        LinearLayout head = row();
+        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        head.setPadding(0, dp(Ui.SPACE4), 0, dp(Ui.SPACE1));
+        head.addView(itemTitle("The bends"), weight());
+        bendOrder = spinner(RideAnalysis.ORDERS, 0);
+        bendOrder.setOnItemSelectedListener(onSelect(this::showBendList));
+        head.addView(bendOrder, controlWidth());
+        c.addView(head);
+        bendList = column();
+        c.addView(bendList);
+        TextView how = note("A bend is two seconds or more leant the same way by more than 10°; its apex is the "
+                + "second leant over the most. The radius is the one that speed and lean give in a steady turn. "
+                + "Braking at the apex: the throttle shut and the bike slowing by more than 0.1 g there. Tap a "
+                + "bend to see it on the track and the chart.");
+        how.setPadding(0, dp(Ui.SPACE2), 0, 0);
+        c.addView(how);
+        return c;
+    }
+
+    private void showBends(RideAnalysis a) {
+        analysis = a;
+        boolean any = a != null && !a.bends.isEmpty();
+        bendsCard.setVisibility(any ? View.VISIBLE : View.GONE);
+        if (!any) return;
+        bendSummary.removeAllViews();
+        LinearLayout tiles = statGrid(2,
+                statTile("Bends", String.valueOf(a.bends.size())),
+                statTile("Typical lean", String.format(Locale.ROOT, "%.0f°", a.median(b -> b.lean))),
+                statTile("Typical apex speed", String.format(Locale.ROOT, "%.0f km/h", a.median(b -> b.apexKmh))),
+                statTile("Out against in", String.format(Locale.ROOT, "%+.0f km/h", a.median(RideAnalysis.Bend::gain))));
+        LinearLayout tileSurface = group();
+        tileSurface.setPadding(dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2));
+        tileSurface.addView(tiles);
+        LinearLayout.LayoutParams lp = matchWrap();
+        lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
+        bendSummary.addView(tileSurface, lp);
+        LinearLayout g = group();
+        add(g, "Left / right", a.count(-1) + " / " + a.count(1));
+        add(g, "Braking at the apex", bends(a.brakingAtApex()));
+        add(g, "Throttle snapped open leant over", bends(a.snapThrottle()));
+        add(g, "Shifting down leant over", bends(a.downshifting()));
+        bendSummary.addView(g);
+        grip.set(a);
+        gripNote.setText(String.format(Locale.ROOT, "Each dot is a second of riding: sideways from the lean, "
+                + "forward and back from the change of speed. Hardest braking %.2f g, hardest acceleration "
+                + "%.2f g, most sideways %.2f g.", a.maxBrakeG, a.maxAccelG, a.maxSideG));
+        showBendList(bendOrder.getSelectedItemPosition());
+    }
+
+    private static String bends(int n) {
+        return n == 0 ? "none" : n == 1 ? "1 bend" : n + " bends";
+    }
+
+    /** The first bends in the order picked, each a tap away from the track and the chart. */
+    private void showBendList(int order) {
+        if (analysis == null || samples == null) return;
+        bendList.removeAllViews();
+        for (RideAnalysis.Bend b : analysis.top(order, BENDS_LISTED)) {
+            String title = String.format(Locale.ROOT, "%s · %s · %.0f° at %.0f km/h", seconds(samples.get(b.apex).tMs),
+                    b.side < 0 ? "left" : "right", b.lean, num(b.apexKmh));
+            String line = String.format(Locale.ROOT, "%.0f → %.0f km/h · radius %.0f m", num(b.entryKmh),
+                    num(b.exitKmh), num(b.radiusM));
+            java.util.List<String> notes = new java.util.ArrayList<>();
+            if (b.apexThrottle == b.apexThrottle) {
+                notes.add(String.format(Locale.ROOT, "throttle %.0f %% at the apex", b.apexThrottle));
+            }
+            if (b.brakingAtApex) notes.add("braking at the apex");
+            if (b.snapThrottle) notes.add("throttle snapped open");
+            if (b.downshifts > 0) notes.add(b.downshifts == 1 ? "shifted down" : "shifted down " + b.downshifts + " gears");
+            bendList.addView(listRow(title, line, notes.isEmpty() ? null : String.join(" · ", notes), false,
+                    v -> showBend(b)));
+        }
+    }
+
+    /** A bend on the track and the chart: its apex marked, the page scrolled up to the track. */
+    private void showBend(RideAnalysis.Bend b) {
+        chart.mark(b.apex);
+        if (onPoint != null) onPoint.onSample(b.apex);
+        if (trackCard.getVisibility() != View.VISIBLE) return;
+        View v = trackCard;
+        while (v.getParent() instanceof View && !(v instanceof android.widget.ScrollView)) v = (View) v.getParent();
+        if (v instanceof android.widget.ScrollView) ((android.widget.ScrollView) v).smoothScrollTo(0, trackCard.getTop());
     }
 
     /**

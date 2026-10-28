@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
  * Danish, Norwegian, Finnish, Greek, Russian. Words are matched as lower-case substrings, so stems
  * cover inflections ("prawo" in "w prawo", "oikeal" in "oikealle"). A "|" at the start / end of a
  * word anchors it to a word boundary, so street names don't match ("|right" not in "Wright Street",
- * "|ziel|" not in "Zielstraße"). Only German and English
+ * "|ziel|" not in "Zielstraße"). Only German, English and Italian
  * wording is verified against real notifications; the others follow Google's usual phrasing.
  */
 public final class MapsParser {
@@ -28,7 +28,7 @@ public final class MapsParser {
     static final String[] RIGHT = {"rechts", "|right", "droite", "derecha", "destra", "direita", "prawo",
             "prawej", "vpravo", "pravém", "doprava", "höger", "højre", "høyre", "oikeal", "δεξι", "направо", "вправо", "справа", "правее"};
     static final String[] ROUNDABOUT = {"kreisverkehr", "kreisel", "roundabout", "traffic circle", "rotary", "rond-point",
-            "rotonda", "glorieta", "rotunda", "rotatória", "rotonde", "rondo", "rondzie", "kruhov", "rondell",
+            "rotonda", "rotatoria", "glorieta", "rotunda", "rotatória", "rotonde", "rondo", "rondzie", "kruhov", "rondell",
             "rundkørs", "rundkjøring", "liikenneympyr", "κυκλικ", "кругов"};
     static final String[] U_TURN = {"wenden", "u-turn", "kehrt", "umkehren", "demi-tour", "cambio de sentido",
             "media vuelta", "da la vuelta", "inversione", "inverti", "keer om", "omkeren", "retorno", "inversão",
@@ -39,7 +39,7 @@ public final class MapsParser {
             "docelow", "dotarłeś", "cíl", "framme", "ankommet", "destinasjon", "fremme", "määränpää",
             "perillä", "προορισμ", "назначени", "прибыл"};
     static final String[] SHARP = {"scharf", "sharp", "fortement", "franchement", "bruscamente", "pronunciad",
-            "cerrad", "nettamente", "scherp", "acentuad", "ostro", "ostře", "skarpt", "skarp", "jyrkästi",
+            "cerrad", "nettamente", "|tutto a ", "scherp", "acentuad", "ostro", "ostře", "skarpt", "skarp", "jyrkästi",
             "απότομα", "резко"};
     static final String[] SLIGHT = {"leicht", "slight", "halb", "légèrement", "ligeramente", "levemente",
             "leggermente", "flauw", "licht ", "ligeiramente", "lekko", "mírně", "svagt", "lätt ", "let ",

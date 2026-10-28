@@ -496,14 +496,15 @@ public class BridgeService extends Service implements KawaBle.Listener {
             Hub.prefs(this).edit().putBoolean(Hub.KEY_RIDE_WANTED, false).apply();
             Logger.log("Ride: " + (recorder.start(true) == null ? "started" : "could not start"));
         }
+        // null means the file is there but could not be read: those screens then refuse to save over it.
+        // Read before the first tick (applySettings runs one), which checks them.
+        Hub.fuelEntries = orEmpty(new FuelStore(this).list());
+        Hub.batteryReadings = orEmpty(new BatteryStore(this).list());
+        Hub.maintenanceEntries = orEmpty(new MaintenanceStore(this).list());
         openAudioProfiles();
         applySettings();
         connectBike();
         handler.post(tickLoop);
-        // null means the file is there but could not be read: those screens then refuse to save over it
-        Hub.fuelEntries = orEmpty(new FuelStore(this).list());
-        Hub.batteryReadings = orEmpty(new BatteryStore(this).list());
-        Hub.maintenanceEntries = orEmpty(new MaintenanceStore(this).list());
         Logger.log("Bridge started");
     }
 
@@ -719,6 +720,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             configRetries.clear();
             clockSynced = false;
             recorder.linkBack();
+            coldEngine.linkBack(System.currentTimeMillis());
             if (RawCapture.enabled(this)) RawCapture.start(this);
             // a new link may be a dash that was off (or another bike): it can show anything, so forget
             // what the previous connection was told and reconcile from scratch
@@ -800,6 +802,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     public void onLinkLost() {
         if (destroyed) return;
         recorder.linkLost();
+        coldEngine.linkLost(System.currentTimeMillis());
         requests.clear();
         handler.removeCallbacks(startup);
         RawCapture.stop();
@@ -824,7 +827,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         boolean cameras = Hub.camerasEnabled(this);
         int pace = Hub.prefs(this).getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
         boolean spoken = Hub.prefs(this).getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF) > CurveAlerts.OFF
-                || pace > CurveAlerts.PACE_OFF || (cameras && Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false));
+                || pace > CurveAlerts.PACE_OFF || (cameras && Hub.prefs(this).getBoolean(Hub.KEY_CAMERA_VOICE, false))
+                || Hub.prefs(this).getBoolean(Hub.KEY_COLD_ENGINE, false);
         if (pace == CurveAlerts.FROM_RIDES && !ridesLeanAsked) {
             ridesLeanAsked = true;
             RideStore store = recorder.store();
@@ -890,9 +894,11 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (out != null && out.cameraId >= 0) cameraAlert(out);
         else cameraGone();
         sayCurve(now);
+        coldEngineCheck(now);
         bikeAlerts(now);
         refuelCheck(now);
         batteryCheck(now);
+        maintenanceCheck(now);
         askRidingLogExtIfWanted();
         // log every change of what the meter shows (also without bike)
         String key = out == null ? "nothing" : out.source + ":" + out.turn;
@@ -1228,8 +1234,33 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     /** A warning may be played: the sound is on, and a headset is connected unless that is not asked for. */
     private boolean soundAllowed() {
-        if (curveSound == null || !locationAllowed) return false;
+        return locationAllowed && voiceAllowed();
+    }
+
+    /** Like {@link #soundAllowed}, for a warning about the bike: it needs no position. */
+    private boolean voiceAllowed() {
+        if (curveSound == null) return false;
         return !Hub.prefs(this).getBoolean(Hub.KEY_CURVE_SOUND_HEADSET, true) || CurveSound.headsetConnected(this);
+    }
+
+    /**
+     * The cold engine warning ({@link ColdEngine}): the coolant from the riding log extension (0x45), the
+     * engine speed from the live frame (0x4A), each only while it is fresh. Said after a bend being said,
+     * not over it.
+     */
+    private void coldEngineCheck(long now) {
+        SharedPreferences p = Hub.prefs(this);
+        int limit = p.getBoolean(Hub.KEY_COLD_ENGINE, false) ? p.getInt(Hub.KEY_COLD_ENGINE_RPM, ColdEngine.DEFAULT_RPM) : 0;
+        int warmC = p.getInt(Hub.KEY_COLD_ENGINE_C, ColdEngine.DEFAULT_WARM_C);
+        BikeFrames.LogExt ext = Hub.bike.ext;
+        BikeFrames.Telemetry live = Hub.bike.live;
+        double coolant = ext != null && now - Hub.bike.extAt <= BikeAlerts.FRESH_MS ? ext.waterC : Double.NaN;
+        int rpm = live != null && now - Hub.bike.liveAt <= ColdEngine.FRESH_MS ? live.rpm : -1;
+        if (!coldEngine.check(coolant, rpm, limit, warmC, now)) return;
+        Logger.log(String.format(Locale.ROOT, "Cold engine: %d rpm with the coolant at %.0f °C", rpm, coolant));
+        if (!voiceAllowed()) return;
+        if (beeps()) curveSound.beep(CurveBeeps.coldEngine());
+        else curveSound.sayAfter(ColdEngine.PHRASE);
     }
 
     /** Beeps instead of words: asked for, or the phone cannot speak. */
@@ -1383,6 +1414,41 @@ public class BridgeService extends Service implements KawaBle.Listener {
         }
     }
 
+    private long maintenanceCheckedAt;
+    private static final int MAINTENANCE_NOTIFICATION_ID = 9_003;
+
+    /**
+     * The rider's own maintenance reminders ({@link MaintenanceLog.Reminder}): a notification when one is
+     * due, once for each time its job was logged. Looked at once a minute. The kilometres count from the
+     * odometer the bike last sent (kept with the ignition off), the months need no bike at all.
+     */
+    private void maintenanceCheck(long now) {
+        if (now - maintenanceCheckedAt < 60_000) return;
+        maintenanceCheckedAt = now;
+        SharedPreferences p = Hub.prefs(this);
+        List<MaintenanceLog.Reminder> reminders = MaintenanceLog.reminders(p.getString(Hub.KEY_MAINT_REMINDERS, ""));
+        if (reminders.isEmpty()) return;
+        BikeFrames.VehicleInfo info = Hub.bike.info;
+        double odo = info != null && info.odometerKm >= 0 ? info.odometerKm : Double.NaN;
+        java.util.Set<String> told = new java.util.HashSet<>(p.getStringSet(Hub.KEY_MAINT_TOLD,
+                java.util.Collections.emptySet()));
+        java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
+        List<String> lines = new java.util.ArrayList<>();
+        boolean fresh = false;
+        for (MaintenanceLog.Due d : MaintenanceLog.due(Hub.maintenanceEntries, reminders, odo, now)) {
+            if (!d.due()) continue;
+            // the title says "due": "Oil change: since 22 Sept 2026", "Chain: 57 km over"
+            lines.add(d.reminder.item + ": " + d.describe(df).replaceFirst("^due: ", ""));
+            fresh |= told.add(MaintenanceLog.toldKey(d));
+        }
+        if (!fresh) return;
+        p.edit().putStringSet(Hub.KEY_MAINT_TOLD, told).apply();
+        Logger.log("Maintenance due: " + String.join("; ", lines));
+        // all that is due in one note, which the next one replaces: it is a list to work through
+        announceOn(CHANNEL_ALERTS, MAINTENANCE_NOTIFICATION_ID, lines.size() == 1 ? "Maintenance due"
+                : lines.size() + " maintenance jobs due", MaintenanceActivity.class, String.join("\n", lines));
+    }
+
     /**
      * Tells the rider what a finished ride came to. Called by the recorder, which is not a service: this
      * is the only part of the app that has a notification channel.
@@ -1452,6 +1518,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private static final int REFUEL_NOTIFICATION_ID = 9_001;
     private final BikeAlerts.Tracker alertTracker = new BikeAlerts.Tracker();
+    private final ColdEngine coldEngine = new ColdEngine();
     private final BikeAlerts.Monitor bikeAlertMonitor = new BikeAlerts.Monitor();
     private static final int BIKE_ALERT_NOTIFICATION_BASE = 10_000;
 

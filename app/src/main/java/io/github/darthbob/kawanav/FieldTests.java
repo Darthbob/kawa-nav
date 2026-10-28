@@ -79,7 +79,7 @@ final class FieldTests {
                             + "ABS intervention is not known.",
                     "1. Bike data card: Capture frames on, connect again.\n"
                             + "2. On an empty, safe road, a hard stop that makes the dash's ABS lamp flash.\n"
-                            + "3. Mark the moment (Test mark → Front brake).",
+                            + "3. Mark the moment (Test mark → Something else).",
                     "Byte 37 reads 02 with the lamp: it is the intervention. It stays 00: the 02 seconds are "
                             + "something else.",
                     RESULTS_NONE),
@@ -113,11 +113,12 @@ final class FieldTests {
                             + "ones marked \"reminder off\".",
                     RESULTS_NONE),
             new Test("unknown_bytes", PROTOCOL, "Bytes nobody decodes",
-                    "0x30 and the unused bytes of the other frames may carry indicators, high beam, clutch, side "
-                            + "stand and the like. Rideology reads none of them.",
+                    "0x30 and the unused bytes of the other frames may carry the high beam, the horn, a riding "
+                            + "mode changed on the dash and the like. Rideology reads none of them. Side stand, "
+                            + "brakes, clutch and the indicators are in none of them (Z900, 2026-10-27).",
                     "1. Bike data card: Capture frames on, connect again.\n"
                             + "2. One thing at a time, 15 s or more apart: pick it under Test mark, do it, tap Mark "
-                            + "now (indicators, high beam, clutch, side stand, a riding mode changed on the dash…).\n"
+                            + "now (high beam on and off, horn, a riding mode changed on the dash…).\n"
                             + "3. Pull the capture and compare the bytes before and after each mark.",
                     "A byte steady before a mark and changed right after it, every time, is that control.",
                     RESULTS_NONE),
