@@ -21,6 +21,8 @@ import java.util.UUID;
  * Android allows one outstanding GATT operation, so everything goes through a queue. Frames for the
  * dash (arrow, status icons) go in an urgent lane that is served first; a newer frame of the same
  * type replaces one still waiting there, so the dash never lags behind a backlog of requests.
+ * Like Rideology, the next frame goes out only once the meter has confirmed the last one (or after
+ * {@link #ACK_TIMEOUT_MS}): the meter drops a frame that arrives before it has.
  * All callbacks to {@link Listener} run on the main thread.
  */
 @SuppressLint("MissingPermission") // BLUETOOTH_CONNECT is checked by MainActivity before use
@@ -44,6 +46,14 @@ public final class KawaBle {
     }
 
     static final long OP_TIMEOUT_MS = 3000;
+    /**
+     * The meter confirms each frame with an ACK (0x20, byte 3 = the frame's type) 0.05-0.25 s after it
+     * and ignores a frame written before that: on two Z900s the status icons sent right before an arrow
+     * were confirmed only one time in two to three while navigating, which fits the phone-battery
+     * warning a rider saw flashing (issue #7). A frame it dropped is never confirmed, so the wait ends
+     * after this long (Rideology waits up to 3 s).
+     */
+    static final long ACK_TIMEOUT_MS = 500;
     /** Frames the meter streams on its own (riding log): logged as a count every {@link #STREAM_LOG_MS}. */
     private static final int[] STREAMED = {0x45, 0x4A, 0x4B};
     private static final long STREAM_LOG_MS = 30_000;
@@ -58,7 +68,7 @@ public final class KawaBle {
     private static final int WRITE_BUSY = 201;
 
     /** Which GATT callback the running op waits for; callbacks for anything else are late and ignored. */
-    private static final int WAIT_NONE = 0, WAIT_WRITE = 1, WAIT_DESCRIPTOR = 2, WAIT_READ = 3;
+    private static final int WAIT_NONE = 0, WAIT_WRITE = 1, WAIT_DESCRIPTOR = 2, WAIT_READ = 3, WAIT_ACK = 4;
 
     private final Context context;
     private final Listener listener;
@@ -72,6 +82,17 @@ public final class KawaBle {
         opDone();
     };
     private int waiting;
+    /** The frame being written, whose ACK the queue waits for; whether that ACK came before Android's write callback. */
+    private int ackType;
+    private String ackLabel;
+    private boolean ackedEarly;
+    /** Frame types whose last frame the meter did not confirm: logged when that starts, not for every frame. */
+    private final boolean[] unconfirmed = new boolean[256];
+    private final Runnable ackTimeout = () -> {
+        if (!unconfirmed[ackType]) log("Meter did not confirm " + ackLabel + " within " + ACK_TIMEOUT_MS + " ms");
+        unconfirmed[ackType] = true;
+        opDone();
+    };
     private int busyRetries;
     private final Runnable busyRetry = () -> {
         if (KawaBle.this.gatt == null) return;
@@ -159,6 +180,7 @@ public final class KawaBle {
 
     public void disconnect() {
         main.removeCallbacks(opTimeout);
+        main.removeCallbacks(ackTimeout);
         main.removeCallbacks(busyRetry);
         waiting = WAIT_NONE;
         queue.clear();
@@ -210,8 +232,11 @@ public final class KawaBle {
 
     private void send(byte[] data, String label, boolean urgent) {
         waiting = WAIT_WRITE;
-        int rc = gatt.writeCharacteristic(writeChar, data, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
         int type = data[0] & 0xFF;
+        ackType = type;
+        ackLabel = label;
+        ackedEarly = false;
+        int rc = gatt.writeCharacteristic(writeChar, data, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
         if (rc == WRITE_BUSY) {
             // Android still waits for an earlier write's answer (late after our timeout): keep this frame
             // first in its lane and try again shortly, instead of failing everything queued behind it
@@ -306,6 +331,7 @@ public final class KawaBle {
 
     private void opDone() {
         main.removeCallbacks(opTimeout);
+        main.removeCallbacks(ackTimeout);
         waiting = WAIT_NONE;
         busy = false;
         next();
@@ -515,8 +541,17 @@ public final class KawaBle {
         public void onCharacteristicWrite(BluetoothGatt g, BluetoothGattCharacteristic c, int status) {
             main.post(() -> {
                 if (g != gatt || waiting != WAIT_WRITE) return; // late, after a timeout
-                if (status != BluetoothGatt.GATT_SUCCESS) log("Write failed, status " + status);
-                opDone();
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    log("Write failed, status " + status);
+                    opDone();
+                } else if (ackedEarly) {
+                    opDone();
+                } else {
+                    // Android delivered the frame; the next one waits for the meter's ACK
+                    main.removeCallbacks(opTimeout);
+                    waiting = WAIT_ACK;
+                    main.postDelayed(ackTimeout, ACK_TIMEOUT_MS);
+                }
             });
         }
 
@@ -539,6 +574,14 @@ public final class KawaBle {
             main.post(() -> {
                 if (g != gatt) return;
                 logRx(id, value);
+                if ((waiting == WAIT_WRITE || waiting == WAIT_ACK) && BikeFrames.Ack.confirms(value, ackType)) {
+                    unconfirmed[ackType] = false;
+                    if (waiting == WAIT_ACK) {
+                        opDone();
+                    } else {
+                        ackedEarly = true;
+                    }
+                }
                 listener.onNotify(id, value);
             });
         }

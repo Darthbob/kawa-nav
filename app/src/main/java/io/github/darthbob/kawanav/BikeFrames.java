@@ -92,6 +92,11 @@ public final class BikeFrames {
         public boolean accepted() {
             return result == 0;
         }
+
+        /** True when {@code v} is the meter's ACK for a frame of type {@code type}, accepted or not. */
+        public static boolean confirms(byte[] v, int type) {
+            return v.length > 3 && u8(v, 0) == ACK && u8(v, 3) == type;
+        }
     }
 
     /** 0x30: result of a settings block request ({@code 30 0C seq FF FF 05 <block> <result>}), or a text echo. */

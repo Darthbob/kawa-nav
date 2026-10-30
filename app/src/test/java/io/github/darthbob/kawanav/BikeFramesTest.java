@@ -106,6 +106,19 @@ public class BikeFramesTest {
     }
 
     @Test
+    public void ackConfirmsTheFrameTypeItNames() {
+        // Z900: the status icons' ACK echoes the icon block, the arrow's the first navigation block
+        assertTrue(BikeFrames.Ack.confirms(hx("200c6c130005002010ffffffffffff"), 0x13));
+        assertTrue(BikeFrames.Ack.confirms(hx("20086d1400057000ffffff"), 0x14));
+        assertFalse(BikeFrames.Ack.confirms(hx("20086d1400057000ffffff"), 0x13));
+        // a rejection still confirms the frame arrived
+        assertTrue(BikeFrames.Ack.confirms(hx("20029b4201"), 0x42));
+        // data frames name the phone's last frame in byte 3 too, but are no ACK
+        assertFalse(BikeFrames.Ack.confirms(hx("41520314000514"), 0x14));
+        assertFalse(BikeFrames.Ack.confirms(hx("200213"), 0x13));
+    }
+
+    @Test
     public void status() {
         BikeFrames.Decoder d = new BikeFrames.Decoder();
         BikeFrames.Status s = (BikeFrames.Status) d.decode(hx("300c8bffff050900ffffffffffffff"));

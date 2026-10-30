@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "version": "1.2.9",
+      "changes": [
+        "The phone battery icon on the dash should no longer flash its warning while you navigate: the dash ignored many of the icon updates that came right before an arrow, so KawaNav now sends the next frame only once the dash has taken the last one, as Rideology does"
+      ]
+    },
+    {
       "version": "1.2.8",
       "changes": [
         "A ride's bends: lean, apex speed, radius and speeds in and out of each, the bends braked at the apex or with the throttle snapped open while leant over, and a diagram of the grip the ride used",

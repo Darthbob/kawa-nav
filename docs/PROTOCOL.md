@@ -55,6 +55,12 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   (verified)
 - ACKs are type `0x20` with the request type echoed in byte 3 (byte 3 ∈ {66 for 0x42, 18 for 0x12,
   19 for 0x13, 20 for 0x14, 8 for 0x08, 69 for 0x45}; the 0x0B ACK is not checked). (verified)
+- **The meter takes one frame at a time.** Its ACK comes 0.05–0.25 s after the write; a frame written
+  before that is dropped, with no ACK. On two Z900s (rides of 2026-10-22 to 2026-10-27), while KawaNav
+  repeated the turn frame every second right behind the status icons, only 36–50 % of the 0x13 frames
+  were acknowledged within 5 s; with no turn frames going out, every one was. The dash then went 20–35 s
+  without a status-icon update, the likely cause of the phone-battery warning in issue #7. KawaNav now
+  waits for each frame's ACK before the next write, at most 500 ms, as Rideology does (up to 3000 ms).
 - In the **data frames** byte 3 is not the request answered: on the Z900 it is the type of the last
   frame the phone sent. A 0x41 answer read `41 52 29 14 00` after a 0x14 turn frame went out, the 0x48
   answer `48 16 1A 45 00` after the 0x45 request, the 0x1E answer `1E 2A 17 08 00` after the 0x08. A

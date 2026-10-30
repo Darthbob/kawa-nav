@@ -382,8 +382,10 @@ cannot give, or a drop that is impossible in five seconds, keeps the last level 
 from Android's sticky battery broadcast, with the battery service as a fallback; until there is a
 plausible reading no icon frame is sent at all, rather than an empty battery (the dash draws "not
 available" with its warning icon too). So the dash does not flash its low-battery icon (issue #7).
-Switched off, the icon is removed. A dash has shown the bars; on one phone a warning icon still flashes
-in between now and then, which issue #7 is still looking into.
+Switched off, the icon is removed. A dash has shown the bars. A warning icon that still flashed in
+between while navigating came from the dash ignoring updates that arrived before it had taken the
+previous frame (every 5 s the arrow went out right behind the icons): KawaNav now waits for the dash to
+confirm each frame before sending the next, as Rideology does. This is not yet confirmed on a ride.
 
 #### Headset icon
 
@@ -746,8 +748,9 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   and the range show. Correct them on the Refuels screen to get a true figure.
 - The **12 V battery** warning rule (0.4 V lost over three days of readings) is a sensible guess, not a
   manufacturer's figure, and needs a few weeks of readings before it says anything.
-- The **phone battery icon** has been seen on a real dash, with its bars; a warning icon that flashes in
-  between on some phones is still open ([issue #7](https://github.com/Darthbob/kawa-nav/issues/7)). The
+- The **phone battery icon** has been seen on a real dash, with its bars; whether the warning icon that
+  flashed in between while navigating is gone is not yet confirmed on a ride
+  ([issue #7](https://github.com/Darthbob/kawa-nav/issues/7)). The
   **headset icon**, the **call/mail icons** and the **dash clock** have not been seen on one yet. All of
   them follow the protocol Rideology uses.
 - **R.Score** (Rideology's ride score) is not computed: Kawasaki's cloud does that, and the formula is
