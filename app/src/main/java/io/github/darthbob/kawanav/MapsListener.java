@@ -1,5 +1,6 @@
 package io.github.darthbob.kawanav;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -56,6 +57,7 @@ public class MapsListener extends NotificationListenerService {
     }
 
     @Override
+    @SuppressLint("ThreadConstraint") // icon lookup and saving use Bitmap.compress: small icons, the library is built once
     public void onNotificationPosted(StatusBarNotification sbn) {
         NotifCapture.onPosted(this, sbn);   // debug builds, switched on in the hidden card
         dashAlert(sbn, true);
