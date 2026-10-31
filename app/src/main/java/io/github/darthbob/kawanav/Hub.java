@@ -76,8 +76,13 @@ public final class Hub {
 
     /** The navigation's state, null when it is not running. */
     public static volatile Nav nav;
-    /** The route the planner shows and the navigation rides (replaced when it reroutes). */
+    /** The route the navigation rides (replaced when it reroutes). */
     public static volatile Route route;
+    /** The planner's points, kept while the app runs. */
+    public static final Waypoints planner = new Waypoints();
+    /** Recent destinations and favourite places of the planner ({@link Places}). */
+    public static final String KEY_PLACES_RECENT = "places_recent";
+    public static final String KEY_PLACES_FAVOURITE = "places_favourite";
     /** The route ahead of the rider while navigating ({lat, lon} points), for the curve warnings; else null. */
     public static volatile java.util.List<double[]> navAhead;
     /** Distances ahead (from, to, metres) on roundabouts within {@link #navAhead}: their bends are no curves. */

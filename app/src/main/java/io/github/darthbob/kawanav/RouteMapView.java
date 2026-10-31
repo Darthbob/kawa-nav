@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
@@ -14,6 +15,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.ViewConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +32,9 @@ import java.util.concurrent.Executors;
  * sweeping, orange winding, red very winding), its points, and the rider's position. Under it
  * OpenStreetMap's map where it can be fetched ({@link MapTiles}), and otherwise the offline roads of
  * the downloaded regions ({@link RoadStore}), so it works without a network too. Drag, pinch or double
- * tap; a tap and a long press report where they were.
+ * tap; a tap and a long press report where they were. When {@link #setEditable editable}, the points
+ * can be dragged to another place or tapped. The view's padding is the part covered by other views:
+ * the map centres and fits the route in the rest.
  */
 public final class RouteMapView extends View {
 
@@ -38,10 +42,19 @@ public final class RouteMapView extends View {
         void onTap(double lat, double lon);
 
         void onLongPress(double lat, double lon);
+
+        /** The point {@code index} (as given to {@link #setMarkers}) was dragged to a new place. */
+        default void onMarkerMoved(int index, double lat, double lon) {}
+
+        default void onMarkerTap(int index) {}
     }
 
+    /** Kinds of points: the start, a numbered via point, the destination, a round trip's corner. */
+    public static final int START = 0, VIA = 1, DEST = 2, CORNER = 3;
     /** Colours of the curviness levels. */
     static final int[] LEVEL_COLOURS = {0xFF3D7BFF, 0xFF43A047, 0xFFFB8C00, 0xFFE53935};
+    /** A finger this close to a point picks it up. */
+    private static final int GRAB_DP = 28;
     /** Offline roads are drawn from this tile zoom on (closer than about 1:250 000). */
     private static final int OFFLINE_FROM_ZOOM = 11;
 
@@ -54,6 +67,8 @@ public final class RouteMapView extends View {
     private final Paint marker = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint credit = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint dash = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tilePaint = new Paint(Paint.FILTER_BITMAP_FLAG);
     private final Path path = new Path();
     private final Path arrow = new Path();
@@ -67,8 +82,17 @@ public final class RouteMapView extends View {
     // what is drawn, in Web Mercator
     private double[] rx, ry;
     private int[] segColour;
-    private final List<double[]> markers = new ArrayList<>(); // {x, y, kind}: 0 start, 1 via, 2 destination
+    private final List<double[]> markers = new ArrayList<>(); // {x, y, kind, number}
+    /** A round trip's direction: a dashed arrow from the start to the place it heads for (NaN: none). */
+    private double dirFromX = Double.NaN, dirFromY, dirToX, dirToY;
     private double posX = Double.NaN, posY, posHeading = Double.NaN;
+    // dragging a point: which one, where it was, the finger's offset from it, and whether it moved yet
+    private boolean editable;
+    private int dragging = -1;
+    private double dragFromX, dragFromY, grabDx, grabDy;
+    private float downX, downY;
+    private boolean dragMoved;
+    private final int touchSlop;
     private boolean follow;
     /** The view's centre in Web Mercator and the world's width in screen pixels. */
     private double cx = MapTiles.x(11), cy = MapTiles.y(46), ppw;
@@ -115,6 +139,16 @@ public final class RouteMapView extends View {
         ring.setStrokeWidth(density * 2);
         credit.setTextSize(density * 10);
         credit.setColor(night ? 0xAAFFFFFF : 0xAA000000);
+        label.setTextSize(density * 11);
+        label.setTextAlign(Paint.Align.CENTER);
+        label.setFakeBoldText(true);
+        label.setColor(0xFF171717);
+        dash.setStyle(Paint.Style.STROKE);
+        dash.setStrokeWidth(density * 2.5f);
+        dash.setStrokeCap(Paint.Cap.ROUND);
+        dash.setColor(night ? 0xDDFFFFFF : 0xDD171717);
+        dash.setPathEffect(new DashPathEffect(new float[]{density * 6, density * 5}, 0));
+        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         if (night) tilePaint.setColorFilter(darkMap());
         if (Hub.prefs(context).getBoolean(Hub.KEY_RIDE_MAP, true)) tiles = new MapTiles(context, this::postInvalidateOnAnimation);
         scaler = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -204,11 +238,43 @@ public final class RouteMapView extends View {
 
     /** Start, via points and destination ({lat, lon}); the first is the start, the last the destination. */
     public void setPoints(List<double[]> pts) {
+        int[] kinds = new int[pts.size()];
+        for (int i = 0; i < kinds.length; i++) kinds[i] = i == 0 ? START : i == kinds.length - 1 ? DEST : VIA;
+        setMarkers(pts, kinds);
+    }
+
+    /** Points ({lat, lon}) of the given kinds; via points are numbered in order. */
+    public void setMarkers(List<double[]> pts, int[] kinds) {
+        // a point held by the finger stays under it
+        double[] held = dragging >= 0 && dragging < markers.size() ? markers.get(dragging) : null;
         markers.clear();
+        int number = 0;
         for (int i = 0; i < pts.size(); i++) {
             double[] p = pts.get(i);
-            int kind = i == 0 ? 0 : i == pts.size() - 1 ? 2 : 1;
-            markers.add(new double[]{MapTiles.x(p[1]), MapTiles.y(p[0]), kind});
+            markers.add(new double[]{MapTiles.x(p[1]), MapTiles.y(p[0]), kinds[i], kinds[i] == VIA ? ++number : 0});
+        }
+        if (dragging >= markers.size()) dragging = -1;
+        else if (held != null) {
+            markers.get(dragging)[0] = held[0];
+            markers.get(dragging)[1] = held[1];
+        }
+        invalidate();
+    }
+
+    /** Points can be dragged and tapped ({@link Listener#onMarkerMoved}, {@link Listener#onMarkerTap}). */
+    public void setEditable(boolean on) {
+        editable = on;
+    }
+
+    /** A dashed arrow from one place to another (a round trip's direction); null: none. */
+    public void setDirection(double[] from, double[] to) {
+        if (from == null || to == null) {
+            dirFromX = Double.NaN;
+        } else {
+            dirFromX = MapTiles.x(from[1]);
+            dirFromY = MapTiles.y(from[0]);
+            dirToX = MapTiles.x(to[1]);
+            dirToY = MapTiles.y(to[0]);
         }
         invalidate();
     }
@@ -291,7 +357,8 @@ public final class RouteMapView extends View {
         }
         if (minX > maxX || getWidth() == 0) return;
         float pad = density * 36;
-        double w = Math.max(1, getWidth() - 2 * pad), h = Math.max(1, getHeight() - 2 * pad);
+        double w = Math.max(1, getWidth() - getPaddingLeft() - getPaddingRight() - 2 * pad),
+                h = Math.max(1, getHeight() - getPaddingTop() - getPaddingBottom() - 2 * pad);
         double span = Math.max((maxX - minX) / w, (maxY - minY) / h);
         ppw = span <= 0 ? tilePx * (1 << 15) : Math.min(tilePx * (1 << 16), 1 / span);
         cx = (minX + maxX) / 2;
@@ -313,10 +380,118 @@ public final class RouteMapView extends View {
         return new double[]{lat(wy), wx * 360 - 180};
     }
 
-    /** The turning point: the middle, or low on the screen while heading up and following. */
+    /** The turning point: the middle of the uncovered part, or low in it while heading up and following. */
     private void anchor() {
-        ax = getWidth() / 2f;
-        ay = headingUp && follow ? getHeight() * 0.68f : getHeight() / 2f;
+        int top = getPaddingTop(), h = getHeight() - top - getPaddingBottom();
+        ax = getPaddingLeft() + (getWidth() - getPaddingLeft() - getPaddingRight()) / 2f;
+        ay = top + (headingUp && follow ? h * 0.68f : h / 2f);
+    }
+
+    /** A new covered part keeps the map where it is on the screen (the centre moves with the uncovered part). */
+    @Override
+    public void setPadding(int left, int top, int right, int bottom) {
+        if (getWidth() == 0) {
+            super.setPadding(left, top, right, bottom);
+            return;
+        }
+        anchor();
+        float oldX = ax, oldY = ay;
+        super.setPadding(left, top, right, bottom);
+        anchor();
+        if (!follow) {
+            double[] d = unturn(ax - oldX, ay - oldY);
+            cx += d[0] / ppw;
+            cy += d[1] / ppw;
+        }
+        invalidate();
+    }
+
+    /** Screen position of a Web Mercator point (the map's turn included). */
+    private float[] screen(double wx, double wy) {
+        anchor();
+        double dx = (wx - cx) * ppw, dy = (wy - cy) * ppw;
+        double b = Math.toRadians(bearing), c = Math.cos(b), s = Math.sin(b);
+        return new float[]{(float) (ax + dx * c + dy * s), (float) (ay - dx * s + dy * c)};
+    }
+
+    /** Web Mercator point under a screen position. */
+    private double[] world(float sx, float sy) {
+        anchor();
+        double[] d = unturn(sx - ax, sy - ay);
+        return new double[]{cx + d[0] / ppw, cy + d[1] / ppw};
+    }
+
+    /** The point under the finger (the one drawn on top when several are), or -1. */
+    private int markerAt(float sx, float sy) {
+        float grab = density * GRAB_DP;
+        int best = -1;
+        double bestD = grab;
+        for (int i = markers.size() - 1; i >= 0; i--) {
+            double[] m = markers.get(i);
+            float[] p = screen(m[0], m[1]);
+            double d = Math.hypot(p[0] - sx, p[1] - sy);
+            if (d < bestD) {
+                bestD = d;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    /** Picks up, moves and puts down a point; true while a point is held. */
+    private boolean drag(MotionEvent e) {
+        switch (e.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN: {
+                int hit = markerAt(e.getX(), e.getY());
+                if (hit < 0) return false;
+                dragging = hit;
+                double[] m = markers.get(hit), w = world(e.getX(), e.getY());
+                dragFromX = m[0];
+                dragFromY = m[1];
+                grabDx = m[0] - w[0];
+                grabDy = m[1] - w[1];
+                downX = e.getX();
+                downY = e.getY();
+                dragMoved = false;
+                return true;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                if (dragging < 0) return false;
+                if (!dragMoved && Math.hypot(e.getX() - downX, e.getY() - downY) > touchSlop) dragMoved = true;
+                if (dragMoved) {
+                    double[] w = world(e.getX(), e.getY());
+                    double[] m = markers.get(dragging);
+                    m[0] = w[0] + grabDx;
+                    m[1] = w[1] + grabDy;
+                    invalidate();
+                }
+                return true;
+            }
+            case MotionEvent.ACTION_UP: {
+                if (dragging < 0) return false;
+                int i = dragging;
+                dragging = -1;
+                double[] m = markers.get(i);
+                if (dragMoved) {
+                    if (listener != null) listener.onMarkerMoved(i, lat(m[1]), m[0] * 360 - 180);
+                } else {
+                    if (listener != null) listener.onMarkerTap(i);
+                    performClick();
+                }
+                return true;
+            }
+            case MotionEvent.ACTION_CANCEL: {
+                if (dragging < 0) return false;
+                double[] m = markers.get(dragging);
+                m[0] = dragFromX;
+                m[1] = dragFromY;
+                dragging = -1;
+                invalidate();
+                return true;
+            }
+            default:
+                return dragging >= 0; // a second finger while holding a point does nothing
+        }
     }
 
     private static double lat(double wy) {
@@ -328,6 +503,7 @@ public final class RouteMapView extends View {
         if (e.getActionMasked() == MotionEvent.ACTION_DOWN && getParent() != null) {
             getParent().requestDisallowInterceptTouchEvent(true);
         }
+        if (editable && drag(e)) return true;
         scaler.onTouchEvent(e);
         gestures.onTouchEvent(e);
         return true;
@@ -400,11 +576,25 @@ public final class RouteMapView extends View {
                 ly = y;
             }
         }
-        for (double[] m : markers) {
+        if (dirFromX == dirFromX) drawDirection(canvas, halfW, halfH);
+        for (int i = 0; i < markers.size(); i++) {
+            double[] m = markers.get(i);
             float x = (float) ((m[0] - cx) * ppw + halfW), y = (float) ((m[1] - cy) * ppw + halfH);
             int kind = (int) m[2];
-            dot(canvas, x, y, kind == 1 ? 6 : 8, kind == 0 ? Ui.recordIdle() : kind == 2 ? 0xFF171717 : 0xFFFFFFFF,
-                    kind == 1 ? 0xFF171717 : 0xFFFFFFFF);
+            float grow = i == dragging && dragMoved ? 1.4f : 1; // a held point shows above the finger
+            switch (kind) {
+                case START: dot(canvas, x, y, 9 * grow, Ui.recordIdle(), 0xFFFFFFFF); break;
+                case DEST: dot(canvas, x, y, 9 * grow, 0xFF171717, 0xFFFFFFFF); break;
+                case VIA: {
+                    dot(canvas, x, y, 10 * grow, 0xFFFFFFFF, 0xFF171717);
+                    canvas.save();
+                    canvas.rotate((float) bearing, x, y); // the number stays upright
+                    canvas.drawText(String.valueOf((int) m[3]), x, y - (label.ascent() + label.descent()) / 2, label);
+                    canvas.restore();
+                    break;
+                }
+                default: dot(canvas, x, y, 6 * grow, 0xFFFFFFFF, 0xFF171717); break;
+            }
         }
         if (posX == posX) {
             float x = (float) ((posX - cx) * ppw + halfW), y = (float) ((posY - cy) * ppw + halfH);
@@ -426,7 +616,25 @@ public final class RouteMapView extends View {
         }
         canvas.restore();
         String c = tiles != null && !missing ? "© OpenStreetMap contributors" : "Roads © OpenStreetMap contributors";
-        canvas.drawText(c, getWidth() - credit.measureText(c) - density * 6, getHeight() - density * 6, credit);
+        canvas.drawText(c, getWidth() - getPaddingRight() - credit.measureText(c) - density * 6,
+                getHeight() - getPaddingBottom() - density * 6, credit);
+    }
+
+    /** The round trip's direction: a dashed line from the start with an arrow head at the far end. */
+    private void drawDirection(Canvas canvas, float halfW, float halfH) {
+        float x0 = (float) ((dirFromX - cx) * ppw + halfW), y0 = (float) ((dirFromY - cy) * ppw + halfH);
+        float x1 = (float) ((dirToX - cx) * ppw + halfW), y1 = (float) ((dirToY - cy) * ppw + halfH);
+        double len = Math.hypot(x1 - x0, y1 - y0);
+        if (len < density * 12) return;
+        canvas.drawLine(x0, y0, x1, y1, dash);
+        double a = Math.atan2(y1 - y0, x1 - x0), head = density * 12;
+        arrow.reset();
+        arrow.moveTo(x1, y1);
+        arrow.lineTo((float) (x1 - head * Math.cos(a - 0.45)), (float) (y1 - head * Math.sin(a - 0.45)));
+        arrow.lineTo((float) (x1 - head * Math.cos(a + 0.45)), (float) (y1 - head * Math.sin(a + 0.45)));
+        arrow.close();
+        marker.setColor(dash.getColor());
+        canvas.drawPath(arrow, marker);
     }
 
     /** Screen pixels from the turning point to the farthest corner: what must be drawn when the map turns. */
