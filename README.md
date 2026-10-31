@@ -1,7 +1,8 @@
 # 🏍️ KawaNav
 
-Android app that shows **Google Maps turn-by-turn directions** or the **upcoming curves of the road
-you are on** on the TFT dash of a Kawasaki motorcycle, and that reads the bike's own data (odometer,
+Android app that shows **Google Maps turn-by-turn directions**, **its own offline navigation** (with
+curvy routes and round trips) or the **upcoming curves of the road you are on** on the TFT dash of a
+Kawasaki motorcycle, and that reads the bike's own data (odometer,
 fuel, temperatures, settings), **records your rides** with a track, charts and an export, and keeps a
 diary of refuels, battery readings and maintenance.
 It talks to the dash (Kawasaki calls it the "meter", hence the name in the code and protocol notes) the
@@ -26,7 +27,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 > own risk; there is no warranty (see [License](#-license)).
 
 **Contents:** [Features](#-features) · [Compatibility](#-compatibility) · [Install](#-install) ·
-[Using KawaNav](#-using-kawanav) · [Bike data](#-bike-data) · [Recording rides](#-recording-rides) ·
+[Using KawaNav](#-using-kawanav) · [Route planner and navigation](#-route-planner-and-navigation) ·
+[Bike data](#-bike-data) · [Recording rides](#-recording-rides) ·
 [Diary](#-diary) ·
 [Settings on the bike](#-settings-on-the-bike) ·
 [Speed cameras](#-speed-cameras) ·
@@ -41,6 +43,13 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   of maneuver ("Take the exit") leaves Maps' arrow alone instead of overriding its side. Waze is not supported: its
   notification only says it is running, with no turn in it — checked on a phone, see
   [docs/WAZE.md](docs/WAZE.md).
+- 🛣️ **Route planner and offline navigation**: plan a route from A to B (with via points) or a **round
+  trip** of a chosen length, direction and shape on the downloaded regions, **fastest, curvy or extra
+  curvy**, with motorways, tolls and gravel avoided on request. Ride it with turn-by-turn navigation:
+  arrow and distance on the dash, spoken instructions in the phone's language (English, Italian,
+  German), a new route when you leave it, curve warnings along the planned route. Everything is
+  computed on the phone, no mobile data needed. Save routes as GPX. See
+  [Route planner and navigation](#-route-planner-and-navigation).
 - 🌀 **Free ride: upcoming curves**: without navigation, the dash shows the next curve of the road you
   are on (slight / normal / sharp / hairpin) with its distance, roundabouts with the exit that
   continues the road, and on straights the straight arrow with the distance to the next curve.
@@ -621,11 +630,43 @@ settings it reads back are the ones sent.
 Rideology does not write the suspension settings (KECS) on these dashes either, so KawaNav only reads
 them.
 
+### 🛣️ Route planner and navigation
+
+Open it from the Home menu (**Route planner**) or Settings → "Navigation". Routes are computed on the
+phone from the downloaded regions (see [Offline maps](#-offline-maps)): no mobile data is needed to plan
+or to ride, only to search a place by name and for the map pictures.
+
+- **A to B**: the start is your position (or tap the map, "Start here"); tap the map for the
+  destination and via points, long-press for the destination, or search a place (online). The route
+  can cross from one downloaded region into the next.
+- **Round trip**: pick a length (30–400 km), a direction (or any) and a shape (triangle, square,
+  pentagon, circle or any). KawaNav lays the shape out around the start, puts its corners on nearby
+  roads (winding ones when the profile is curvy) and joins them without riding a road twice where it can
+  avoid it. **Another round trip** gives a different one. In a small region the trip can come out
+  shorter than asked: the planner shows both lengths.
+- **Roads**: *Fastest* is close to the quickest way; *Curvy* prefers winding roads and stays out of
+  towns, trading a little time for bends; *Extra curvy* takes long detours for them. *Avoid
+  motorways*, *Avoid tolls* and *Avoid gravel* (on by default) only use such roads when there is no
+  other way. How winding a road is comes from its shape in the map data: its change of direction per
+  kilometre over about a kilometre of road; the line on the map shows it (blue straight, green sweeping,
+  orange winding, red very winding).
+- **Navigation**: *Start navigation* shows the next maneuver on the dash (the same arrows as for Google
+  Maps, roundabouts with their exit number) and on the phone, and says it a few hundred metres before
+  (from farther away on fast roads) and again at it. Leaving the route gives a new one within a few
+  seconds. With "Curves between Maps instructions" or the spoken curve warnings on, the curves are those
+  of the planned route. It goes on with the screen off and without the bike; stop it on the navigation
+  screen or in its notification. While KawaNav navigates, Google Maps' directions are not sent to the dash.
+- **Save as GPX** puts the route in Download/KawaNav and offers to share it.
+
 ### 🌍 Offline maps
 
-Curves only work where a region is downloaded; nothing is fetched while riding. The app says
-"No offline roads…" when the current area is missing. Download the regions you ride in under
-Settings → "Offline maps", preferably over Wi-Fi.
+Curves, the route planner and the navigation only work where a region is downloaded; nothing is
+fetched while riding. The app says "No offline roads…" when the current area is missing. Download the
+regions you ride in under Settings → "Offline maps", preferably over Wi-Fi.
+
+- Since 1.3 a download also builds the region's **route planning data**, which takes about as much
+  storage again as its road tiles (Andorra: 0.4 MB tiles, 0.4 MB routing data). Regions downloaded with
+  an older KawaNav show "No route planning data yet" and **Update**: download them once more.
 
 - Regions come from [Geofabrik](https://download.geofabrik.de) (OpenStreetMap extracts, rebuilt
   daily). The download is resumable and asks first on mobile data. Converting needs temporary free
@@ -698,6 +739,10 @@ The Start/Stop button on Home is only a manual fallback (autostart missed, testi
   `CLOSE_WAZE_CHANNEL`, no distance, no turn, no arrow), so there is nothing to read. Details and the
   evidence: [docs/WAZE.md](docs/WAZE.md).
 - Only German, English and Italian Maps wording is verified (see [Google Maps languages](#-google-maps-languages)).
+- **The route planner is new and not yet tried on many roads.** How winding a road counts, and how much
+  the curvy profiles give for it, are first settings that will be tuned on real rides. Searching a place by
+  name needs a network (Android's own place search); offline, tap the map. Without a network the map shows
+  the downloaded roads only. Very long routes (several hundred km) can take a while to compute on the phone.
 - **The extras KawaNav reads from its start intent are debug-only.** KawaNav's screen can be started by
   any app on the phone (Android requires it for the launcher), so a release build ignores
   `--ez free_mode`, `--ez export_log`, `--ez bridge` and the rest; `-e offline_region <id>` likewise

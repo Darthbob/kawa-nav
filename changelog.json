@@ -1,6 +1,15 @@
 {
   "versions": [
     {
+      "version": "1.3",
+      "changes": [
+        "Route planner: from A to B with via points, or a round trip of the length, direction and shape you choose, fastest, curvy or extra curvy, computed on the phone from your downloaded regions",
+        "Navigation of its own: the next turn on the dash and on the phone, spoken in your helmet in the phone's language (English, Italian or German), a new route when you leave it, and the curve warnings along the planned route",
+        "The curve and speed camera warnings are said in the phone's language too (English, Italian or German)",
+        "Regions downloaded before this version need downloading once more for the route planner: the offline maps list shows which"
+      ]
+    },
+    {
       "version": "1.2.9",
       "changes": [
         "The phone battery icon on the dash should no longer flash its warning while you navigate: the dash ignored many of the icon updates that came right before an arrow, so KawaNav now sends the next frame only once the dash has taken the last one, as Rideology does"

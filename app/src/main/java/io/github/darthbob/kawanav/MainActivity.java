@@ -659,6 +659,8 @@ public class MainActivity extends KawaActivity {
     /** Rideology's tile menu: the places a rider goes to now and then. */
     private View menu() {
         return statGrid(3,
+                menuTile(R.drawable.ic_route, NavService.running() ? "Navigation" : "Route planner",
+                        v -> startActivity(new Intent(this, NavService.running() ? NavActivity.class : PlannerActivity.class))),
                 menuTile(R.drawable.ic_list, "Recorded rides", v -> openTab(TAB_RIDES, null)),
                 menuTile(R.drawable.ic_pin, "Walk to the bike", v -> walkToBike()),
                 menuTile(R.drawable.ic_map, "Offline maps", v -> openTab(TAB_SETTINGS, "maps")),
