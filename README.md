@@ -655,7 +655,9 @@ or to ride, only to search a place by name and for the map pictures.
   (from farther away on fast roads) and again at it. Leaving the route gives a new one within a few
   seconds. With "Curves between Maps instructions" or the spoken curve warnings on, the curves are those
   of the planned route. It goes on with the screen off and without the bike; stop it on the navigation
-  screen or in its notification. While KawaNav navigates, Google Maps' directions are not sent to the dash.
+  screen or in its notification. The navigation map turns with your direction, the way ahead pointing
+  up and your position low on the screen; **North up** keeps north at the top instead (remembered), and
+  **Overview** shows the whole route. While KawaNav navigates, Google Maps' directions are not sent to the dash.
 - **Save as GPX** puts the route in Download/KawaNav and offers to share it.
 
 ### 🌍 Offline maps

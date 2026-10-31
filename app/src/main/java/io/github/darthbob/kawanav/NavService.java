@@ -112,6 +112,7 @@ public class NavService extends Service implements LocationListener {
         if (navigator == null) return;
         Hub.lastFix = loc;
         updateHeading(loc);
+        Hub.navHeading = heading;
         Navigator.Update u = navigator.onFix(loc.getLatitude(), loc.getLongitude(), heading,
                 loc.hasSpeed() ? loc.getSpeed() : 0);
         String shown = u.state == Navigator.State.ARRIVED ? text.action(navigator.maneuvers().get(navigator.maneuvers().size() - 1))
@@ -205,6 +206,7 @@ public class NavService extends Service implements LocationListener {
         Hub.nav = null;
         Hub.navAhead = null;
         Hub.navRoundabouts = java.util.Collections.emptyList();
+        Hub.navHeading = Double.NaN;
         super.onDestroy();
     }
 

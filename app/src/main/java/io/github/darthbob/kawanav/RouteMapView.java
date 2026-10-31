@@ -72,6 +72,14 @@ public final class RouteMapView extends View {
     private boolean follow;
     /** The view's centre in Web Mercator and the world's width in screen pixels. */
     private double cx = MapTiles.x(11), cy = MapTiles.y(46), ppw;
+    /**
+     * Heading up: while following the rider the map turns so the way ahead points up, and the rider sits
+     * low on the screen. {@link #bearing} is the map's turn now (0: north up); it eases towards the target.
+     */
+    private boolean headingUp;
+    private double bearing, targetBearing, lastHeading = Double.NaN;
+    /** Where on the screen the centre (cx, cy) is drawn, and the map turns around. */
+    private float ax, ay;
 
     // offline roads: tiles of RoadStore, as Web Mercator polylines with their road rank
     private final RoadStore store;
@@ -125,9 +133,11 @@ public final class RouteMapView extends View {
 
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float dx, float dy) {
-                cx += dx / ppw;
-                cy += dy / ppw;
+                double[] d = unturn(dx, dy);
+                cx += d[0] / ppw;
+                cy += d[1] / ppw;
                 follow = false;
+                aim();
                 invalidate();
                 return true;
             }
@@ -208,11 +218,31 @@ public final class RouteMapView extends View {
         posX = MapTiles.x(lon);
         posY = MapTiles.y(lat);
         posHeading = heading;
+        if (heading == heading) lastHeading = heading; // standing still keeps the map as it was
         if (follow) {
             cx = posX;
             cy = posY;
         }
+        aim();
         invalidate();
+    }
+
+    /** The map turns with the rider's direction while it follows them (off: north up). */
+    public void setHeadingUp(boolean on) {
+        headingUp = on;
+        aim();
+        invalidate();
+    }
+
+    /** The turn the map eases towards: the rider's heading in heading-up while following, else north. */
+    private void aim() {
+        targetBearing = headingUp && follow && lastHeading == lastHeading ? lastHeading : 0;
+    }
+
+    /** A screen offset (from the turning point) as an offset in the unturned map. */
+    private double[] unturn(double dx, double dy) {
+        double b = Math.toRadians(bearing), c = Math.cos(b), s = Math.sin(b);
+        return new double[]{dx * c - dy * s, dx * s + dy * c};
     }
 
     /** Keeps the rider in the middle at street level (also when the first position is still to come). */
@@ -225,6 +255,7 @@ public final class RouteMapView extends View {
                 cy = posY;
             }
         }
+        aim();
         invalidate();
     }
 
@@ -266,6 +297,7 @@ public final class RouteMapView extends View {
         cx = (minX + maxX) / 2;
         cy = (minY + maxY) / 2;
         follow = false;
+        aim();
         invalidate();
     }
 
@@ -275,8 +307,16 @@ public final class RouteMapView extends View {
     }
 
     private double[] latLon(float sx, float sy) {
-        double wx = cx + (sx - getWidth() / 2.0) / ppw, wy = cy + (sy - getHeight() / 2.0) / ppw;
+        anchor();
+        double[] d = unturn(sx - ax, sy - ay);
+        double wx = cx + d[0] / ppw, wy = cy + d[1] / ppw;
         return new double[]{lat(wy), wx * 360 - 180};
+    }
+
+    /** The turning point: the middle, or low on the screen while heading up and following. */
+    private void anchor() {
+        ax = getWidth() / 2f;
+        ay = headingUp && follow ? getHeight() * 0.68f : getHeight() / 2f;
     }
 
     private static double lat(double wy) {
@@ -294,7 +334,9 @@ public final class RouteMapView extends View {
     }
 
     private void zoomAround(float fx, float fy, double factor) {
-        double ox = fx - getWidth() / 2.0, oy = fy - getHeight() / 2.0;
+        anchor();
+        double[] o = unturn(fx - ax, fy - ay);
+        double ox = o[0], oy = o[1];
         double px = cx + ox / ppw, py = cy + oy / ppw;
         ppw = Math.max(tilePx * 4, Math.min(tilePx * (1L << (MapTiles.MAX_ZOOM + 1)), ppw * factor));
         if (!follow) {
@@ -318,7 +360,18 @@ public final class RouteMapView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         canvas.drawColor(night ? 0xFF1B1B1F : 0xFFF2EFE9);
-        float halfW = getWidth() / 2f, halfH = getHeight() / 2f;
+        // ease the map's turn towards the rider's heading: no jumps from one fix to the next
+        double turn = RoadNetwork.angleDiff(bearing, targetBearing);
+        if (Math.abs(turn) > 0.3) {
+            bearing = (bearing + turn * 0.18 + 360) % 360;
+            postInvalidateOnAnimation();
+        } else {
+            bearing = targetBearing;
+        }
+        anchor();
+        float halfW = ax, halfH = ay;
+        canvas.save();
+        canvas.rotate((float) -bearing, ax, ay);
         int z = MapTiles.zoomFor(ppw, tilePx);
         boolean missing = tiles == null || drawMap(canvas, z);
         if (missing && z >= OFFLINE_FROM_ZOOM) drawOfflineRoads(canvas, halfW, halfH);
@@ -371,8 +424,16 @@ public final class RouteMapView extends View {
                 dot(canvas, x, y, 7, 0xFF1E88E5, 0xFFFFFFFF);
             }
         }
+        canvas.restore();
         String c = tiles != null && !missing ? "© OpenStreetMap contributors" : "Roads © OpenStreetMap contributors";
         canvas.drawText(c, getWidth() - credit.measureText(c) - density * 6, getHeight() - density * 6, credit);
+    }
+
+    /** Screen pixels from the turning point to the farthest corner: what must be drawn when the map turns. */
+    private double reach() {
+        double w = getWidth(), h = getHeight();
+        if (bearing == 0) return Math.max(Math.max(ax, w - ax), Math.max(ay, h - ay)) + 1;
+        return Math.max(Math.hypot(Math.max(ax, w - ax), ay), Math.hypot(Math.max(ax, w - ax), h - ay)) + 1;
     }
 
     private void dot(Canvas canvas, float x, float y, float radiusDp, int fill, int edge) {
@@ -387,9 +448,12 @@ public final class RouteMapView extends View {
     private boolean drawMap(Canvas canvas, int z) {
         int n = 1 << z;
         double size = ppw / n;
-        double left = cx * ppw - getWidth() / 2.0, top = cy * ppw - getHeight() / 2.0;
-        int x0 = (int) Math.max(0, Math.floor(left / size)), x1 = (int) Math.min(n - 1, Math.floor((left + getWidth()) / size));
-        int y0 = (int) Math.max(0, Math.floor(top / size)), y1 = (int) Math.min(n - 1, Math.floor((top + getHeight()) / size));
+        // world pixels at the canvas origin; the tiles cover a circle round the turning point that holds the
+        // whole screen, whichever way the map is turned
+        double left = cx * ppw - ax, top = cy * ppw - ay;
+        double reach = reach();
+        int x0 = (int) Math.max(0, Math.floor((cx * ppw - reach) / size)), x1 = (int) Math.min(n - 1, Math.floor((cx * ppw + reach) / size));
+        int y0 = (int) Math.max(0, Math.floor((cy * ppw - reach) / size)), y1 = (int) Math.min(n - 1, Math.floor((cy * ppw + reach) / size));
         Set<String> keys = new HashSet<>();
         for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++) keys.add(MapTiles.key(z, x, y));
         tiles.frame(keys);
@@ -422,9 +486,10 @@ public final class RouteMapView extends View {
 
     /** The downloaded regions' roads under the view, loaded tile by tile in the background. */
     private void drawOfflineRoads(Canvas canvas, float halfW, float halfH) {
-        double[] nw = latLon(0, 0), se = latLon(getWidth(), getHeight());
-        int ty0 = RoadStore.tileY(se[0]), ty1 = RoadStore.tileY(nw[0]);
-        int tx0 = RoadStore.tileX(nw[1]), tx1 = RoadStore.tileX(se[1]);
+        double r = reach() / ppw;
+        double north = lat(cy - r), south = lat(cy + r), west = (cx - r) * 360 - 180, east = (cx + r) * 360 - 180;
+        int ty0 = RoadStore.tileY(south), ty1 = RoadStore.tileY(north);
+        int tx0 = RoadStore.tileX(west), tx1 = RoadStore.tileX(east);
         if ((long) (ty1 - ty0 + 1) * (tx1 - tx0 + 1) > 100) return;
         int zoom = MapTiles.zoomFor(ppw, tilePx);
         for (int ty = ty0; ty <= ty1; ty++) {
