@@ -48,7 +48,8 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
   curvy**, with motorways, tolls and gravel avoided on request. Ride it with turn-by-turn navigation:
   arrow and distance on the dash, spoken instructions in the phone's language (English, Italian,
   German), a new route when you leave it, curve warnings along the planned route. Everything is
-  computed on the phone, no mobile data needed. Save routes as GPX. See
+  computed on the phone, no mobile data needed. Drag the points on the map, compare the three route
+  kinds side by side, keep favourite places and save routes to ride later (or as GPX). See
   [Route planner and navigation](#-route-planner-and-navigation).
 - 🌀 **Free ride: upcoming curves**: without navigation, the dash shows the next curve of the road you
   are on (slight / normal / sharp / hairpin) with its distance, roundabouts with the exit that
@@ -636,18 +637,29 @@ Open it from the Home menu (**Route planner**) or Settings → "Navigation". Rou
 phone from the downloaded regions (see [Offline maps](#-offline-maps)): no mobile data is needed to plan
 or to ride, only to search a place by name and for the map pictures.
 
-- **A to B**: the start is your position (or tap the map, "Start here"); tap the map for the
-  destination and via points, long-press for the destination, or search a place (online). The route
-  can cross from one downloaded region into the next.
-- **Round trip**: pick a length (30–400 km), a direction (or any) and a shape (triangle, square,
-  pentagon, circle or any). KawaNav lays the shape out around the start, puts its corners on nearby
-  roads (winding ones when the profile is curvy) and joins them without riding a road twice where it can
-  avoid it. **Another round trip** gives a different one. In a small region the trip can come out
-  shorter than asked: the planner shows both lengths.
-- **Roads**: *Fastest* is close to the quickest way; *Curvy* prefers winding roads and stays out of
-  towns, trading a little time for bends; *Extra curvy* takes long detours for them. *Avoid
-  motorways*, *Avoid tolls* and *Avoid gravel* (on by default) only use such roads when there is no
-  other way. How winding a road is comes from its shape in the map data: its change of direction per
+The map fills the screen; the panel under it holds the points, the route kinds and **Start
+navigation**. The route is planned again as soon as anything changes: no button to press.
+
+- **A to B**: the start is your position. The first tap on the map sets the destination; later taps
+  offer a via point, a new destination or a new start, and a long press sets the destination. A new
+  via point goes where it makes the smallest detour, not at the end. **Drag** any point on the map to
+  move it, or tap it to remove it or keep it as a favourite. The panel lists the points by name (the
+  road's name offline, the address when online): tap one to search another place for it, ✕ removes
+  it. **Via point** searches one, **Reverse** rides it the other way.
+- **Search**: the search (online) lists your **favourite places** and **recent destinations** first;
+  long-press a favourite to rename or remove it.
+- **Round trip**: drag the length bar (20–400 km), tap the map for the direction it heads out to (a
+  dashed arrow shows it; ✕ for any direction) and pick a shape (triangle, square, pentagon, circle or
+  any). Long-press the map for another start. KawaNav lays the shape out around the start, puts its
+  corners on nearby roads (winding ones when the profile is curvy) and joins them without riding a road
+  twice where it can avoid it. The corners show on the map: drag one to move the trip there, tap it to
+  remove it. **Another one** gives a different trip. When the roads around do not allow the length
+  asked for (a small region, mountains), the planner says so.
+- **Roads**: three tiles show the route as *Fastest*, *Curvy* and *Extra curvy* side by side, with
+  length, time and share of winding roads; tap one to ride it. *Fastest* is close to the quickest
+  way; *Curvy* prefers winding roads and stays out of towns, trading a little time for bends; *Extra
+  curvy* takes long detours for them. Under **Options**, *Avoid motorways*, *Avoid tolls* and *Avoid
+  gravel* (on by default) only use such roads when there is no other way. How winding a road is comes from its shape in the map data: its change of direction per
   kilometre over about a kilometre of road; the line on the map shows it (blue straight, green sweeping,
   orange winding, red very winding).
 - **Navigation**: *Start navigation* shows the next maneuver on the dash (the same arrows as for Google
@@ -655,8 +667,13 @@ or to ride, only to search a place by name and for the map pictures.
   (from farther away on fast roads) and again at it. Leaving the route gives a new one within a few
   seconds. With "Curves between Maps instructions" or the spoken curve warnings on, the curves are those
   of the planned route. It goes on with the screen off and without the bike; stop it on the navigation
-  screen or in its notification. While KawaNav navigates, Google Maps' directions are not sent to the dash.
-- **Save as GPX** puts the route in Download/KawaNav and offers to share it.
+  screen or in its notification. The navigation map turns with your direction, the way ahead pointing
+  up and your position low on the screen; **North up** keeps north at the top instead (remembered), and
+  **Overview** shows the whole route. While KawaNav navigates, Google Maps' directions are not sent to the dash.
+- **Saved routes**: the star keeps the route under a name; the list button at the top opens them
+  (long-press to rename or delete). A saved route keeps its points, route kind and options and is
+  planned again when opened, so it follows the regions you have downloaded.
+- **Save as GPX** (the share button) puts the route in Download/KawaNav and offers to share it.
 
 ### 🌍 Offline maps
 

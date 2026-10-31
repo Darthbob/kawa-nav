@@ -27,7 +27,7 @@ public class NavActivity extends KawaActivity {
     private Route shown;
     private Figure distance;
     private TextView action, remaining;
-    private Button followButton;
+    private Button followButton, turnButton;
 
     private final Runnable refresh = new Runnable() {
         @Override
@@ -82,13 +82,23 @@ public class NavActivity extends KawaActivity {
                 followButton.setText("Overview");
             }
         });
+        // heading up (the way ahead points up) or north up; remembered
+        turnButton = neutralButton("", v -> {
+            boolean up = !prefs.getBoolean(Hub.KEY_NAV_HEADING_UP, true);
+            prefs.edit().putBoolean(Hub.KEY_NAV_HEADING_UP, up).apply();
+            map.setHeadingUp(up);
+            turnLabel(up);
+        });
         Button stop = destructiveButton("Stop", v -> {
             NavService.stop(this);
             finish();
         });
-        LinearLayout.LayoutParams half = weight();
-        half.rightMargin = dp(Ui.SPACE2);
-        bottom.addView(followButton, half);
+        LinearLayout.LayoutParams third = weight();
+        third.rightMargin = dp(Ui.SPACE2);
+        bottom.addView(followButton, third);
+        LinearLayout.LayoutParams middle = weight();
+        middle.rightMargin = dp(Ui.SPACE2);
+        bottom.addView(turnButton, middle);
         bottom.addView(stop, weight());
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
@@ -102,8 +112,18 @@ public class NavActivity extends KawaActivity {
             return android.view.WindowInsets.CONSUMED;
         });
         setContentView(frame);
+        boolean up = prefs.getBoolean(Hub.KEY_NAV_HEADING_UP, true);
+        map.setHeadingUp(up);
+        turnLabel(up);
         map.setFollow(true);
         update();
+    }
+
+    /** The button offers the other way of turning the map. */
+    private void turnLabel(boolean headingUp) {
+        turnButton.setText(headingUp ? "North up" : "Heading up");
+        turnButton.setContentDescription(headingUp ? "The map turns with your direction: tap for north up"
+                : "North is up: tap to turn the map with your direction");
     }
 
     @Override
@@ -126,7 +146,12 @@ public class NavActivity extends KawaActivity {
             if (r != null) map.setPoints(r.roundTrip ? java.util.Arrays.asList(r.asked.get(0), r.asked.get(0)) : r.asked);
         }
         Location fix = Hub.lastFix;
-        if (fix != null) map.setPosition(fix.getLatitude(), fix.getLongitude(), fix.hasBearing() ? fix.getBearing() : Double.NaN);
+        if (fix != null) {
+            // the navigation's heading also comes from the movement when the GPS gives none
+            double heading = Hub.navHeading;
+            if (heading != heading && fix.hasBearing()) heading = fix.getBearing();
+            map.setPosition(fix.getLatitude(), fix.getLongitude(), heading);
+        }
         Hub.Nav nav = Hub.nav;
         boolean imperial = prefs.getBoolean(Hub.KEY_IMPERIAL, false);
         if (nav == null) {

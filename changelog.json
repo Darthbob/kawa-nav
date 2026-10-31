@@ -1,6 +1,25 @@
 {
   "versions": [
     {
+      "version": "1.3.1",
+      "changes": [
+        "Route planner: the map fills the screen, with the points, the route kinds and Start navigation in a panel under it",
+        "The route is planned again as soon as you change a point, the route kind or an option: no button to press",
+        "Drag the start, the via points and the destination on the map to move them; tap one to remove it. A new via point goes where it makes the smallest detour",
+        "The points are listed by name (the road offline, the address online), each with its own ✕, and Reverse rides the route the other way",
+        "Fastest, curvy and extra curvy side by side, with length, time and share of winding roads: tap one to ride it",
+        "Favourite places and recent destinations come first in the search",
+        "Save a route under a name and open it again later from the list at the top",
+        "Round trip: drag the length bar, tap the map for the way it heads out to, and drag its corners to move it. The planner says when the roads around do not allow the length you asked for",
+        "During navigation the map turns with your direction, the way ahead pointing up, and shows more of the road in front of you. \"North up\" on the navigation screen keeps north at the top instead",
+        "Route planner: the start is where you are now. It took the phone's last saved position, which could be an old one far away",
+        "Searching a place in the route planner works again: it failed every time",
+        "The navigation screen opens close up on your position, not zoomed far out",
+        "On the way to the destination the navigation shows \"Destination\" instead of \"You have arrived\"",
+        "Offline maps says that the route planner needs the downloaded regions too, and the storage a region takes includes its route planning data"
+      ]
+    },
+    {
       "version": "1.3",
       "changes": [
         "Route planner: from A to B with via points, or a round trip of the length, direction and shape you choose, fastest, curvy or extra curvy, computed on the phone from your downloaded regions",

@@ -30,6 +30,11 @@ public class NavTextTest {
         Instructions.Maneuver exit = m(Instructions.Kind.EXIT, 1, 0, "");
         assertEquals("In 500 Metern Ausfahrt rechts nehmen", NavText.of("de").spoken(exit, 480, false));
         assertEquals("Sei arrivato a destinazione", NavText.of("it").spoken(m(Instructions.Kind.ARRIVE, 0, 0, ""), 500, false));
+        // still ahead: named, not reached
+        assertEquals("Destinazione", NavText.of("it").upcoming(m(Instructions.Kind.ARRIVE, 0, 0, "")));
+        assertEquals("Waypoint 2", NavText.of("en").upcoming(m(Instructions.Kind.VIA, 0, 2, "")));
+        assertEquals("Exit and turns keep their action", "Take the exit on the right",
+                NavText.of("en").upcoming(m(Instructions.Kind.EXIT, 1, 0, "")));
         assertEquals("11th", NavText.of("en").ordinal(11));
         assertEquals("22nd", NavText.of("en").ordinal(22));
     }
