@@ -71,7 +71,8 @@ public class SettingsActivity extends KawaActivity {
             + "then sharp bend right\". It is not said again on its own, unless you come at it too fast.\n\n"
             + "It works with or without navigation, whatever the display shows. During navigation, a bend "
             + "right before Maps' next maneuver is left to Maps' own voice. Needs downloaded roads, like the "
-            + "curves on the display. The voice is the phone's text-to-speech, in English.";
+            + "curves on the display. The voice is the phone's text-to-speech, in the phone's language when "
+            + "it is English, Italian or German, else in English.";
 
     /** "Also when too fast", index: the {@link CurveAlerts} pace. */
     private static final String[] PACE_NAMES = {"Off", "Relaxed", "Normal", "Sporty", "Fast", "From my rides"};
@@ -230,7 +231,7 @@ public class SettingsActivity extends KawaActivity {
         if (prefs.getBoolean(Hub.KEY_CURVE_BEEPS, false) || !sampleSound.canSpeak()) {
             sampleSound.beep(CurveBeeps.bends(3, false, -1));
         } else {
-            sampleSound.say(CurveAlerts.phrase(3));
+            sampleSound.say(NavText.phone().curve(3));
         }
     }
 
@@ -276,6 +277,7 @@ public class SettingsActivity extends KawaActivity {
 
         root.addView(section("autostart", R.drawable.ic_power, "Start automatically", autostartGroup()));
         root.addView(section("road", R.drawable.ic_road, "On the road", roadGroup()));
+        root.addView(section("navigation", R.drawable.ic_route, "Navigation", navigationGroup()));
         root.addView(section("dash", R.drawable.ic_bell, "Dash icons and clock", dashGroup()));
         root.addView(section("recording", R.drawable.ic_route, "Ride recording", recordingGroup()));
         root.addView(section("maps", R.drawable.ic_map, "Offline maps", offlineGroup()));
@@ -340,6 +342,23 @@ public class SettingsActivity extends KawaActivity {
         }));
         helmetRow.addView(helmetSpinner, controlWidth());
         addRow(c, helmetRow);
+        return c;
+    }
+
+    /** KawaNav's own route planner and navigation. */
+    private LinearLayout navigationGroup() {
+        LinearLayout c = group();
+        addRow(c, listRow(R.drawable.ic_route, "Route planner", "A to B or a round trip, on the downloaded regions",
+                null, true, v -> startActivity(new Intent(this, PlannerActivity.class))));
+        addRow(c, choiceRow("Roads", "What the planner looks for unless changed there",
+                new String[]{"Fastest", "Curvy", "Extra curvy"},
+                prefs.getInt(Hub.KEY_NAV_PROFILE, RouteProfile.Kind.CURVY.ordinal()),
+                pos -> prefs.edit().putInt(Hub.KEY_NAV_PROFILE, pos).apply()));
+        addRow(c, switchRow("Spoken navigation", "Turn instructions in your helmet, in the phone's language "
+                + "(English, Italian or German)", Hub.KEY_NAV_VOICE, true));
+        addRow(c, switchRow("Avoid motorways", "Only when there is no other way", Hub.KEY_NAV_AVOID_MOTORWAYS, false));
+        addRow(c, switchRow("Avoid tolls", "Toll roads only when there is no other way", Hub.KEY_NAV_AVOID_TOLLS, false));
+        addRow(c, switchRow("Avoid gravel", "Unpaved roads only when there is no other way", Hub.KEY_NAV_AVOID_UNPAVED, true));
         return c;
     }
 
@@ -884,15 +903,17 @@ public class SettingsActivity extends KawaActivity {
         java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
         for (OfflineRegions.Region r : list) {
             Long server = serverDates.get(r.id);
-            // a region from before the camera data is worth downloading again even without newer data
-            boolean update = (server != null && server - r.dataDate >= OfflineRegions.UPDATE_AFTER_MS) || !r.hazards;
+            // a region from before the camera or the navigation data is worth downloading again even without newer data
+            boolean routing = offlineRegions.hasRouting(r.id);
+            boolean update = (server != null && server - r.dataDate >= OfflineRegions.UPDATE_AFTER_MS) || !r.hazards || !routing;
             String state = server == null ? "Checking for newer data…"
                     : server == 0 ? "Could not check for newer data (offline?)"
                     : update ? "Newer data available from " + df.format(new java.util.Date(server))
                     : "Up to date";
             String sub = String.format(Locale.ROOT, "Data from %s · %.0f MB\n%s%s",
                     df.format(new java.util.Date(r.dataDate)), Math.max(1, sizes.get(r.id) / 1e6), state,
-                    r.hazards ? "" : "\nNo speed cameras in this data yet: download the region again");
+                    (r.hazards ? "" : "\nNo speed cameras in this data yet: download the region again")
+                            + (routing ? "" : "\nNo route planning data yet: download the region again"));
             regionsList.addView(regionRow(r.label, sub, update ? () -> updateRegion(r) : null,
                     () -> confirmDeleteRegion(r)));
         }

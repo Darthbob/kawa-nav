@@ -94,6 +94,11 @@ final class CurveAlerts {
             String next = phrase(then.turn);
             return s + ", then " + Character.toLowerCase(next.charAt(0)) + next.substring(1);
         }
+
+        /** {@link #text} in the language of {@code t} (the phone's, for the voice). */
+        String text(NavText t) {
+            return t.curveWarning(curve.turn, slowDown, then == null ? -1 : then.turn);
+        }
     }
 
     private static final class Said {

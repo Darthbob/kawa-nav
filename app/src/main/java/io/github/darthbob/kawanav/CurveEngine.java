@@ -17,7 +17,8 @@ import java.util.concurrent.Executors;
 
 /**
  * Curves of the road you are on: GPS fix + heading -> match to an OpenStreetMap road -> follow it
- * ahead -> {@link CurveDetector} (and roundabouts with the exit that continues the road).
+ * ahead -> {@link CurveDetector} (and roundabouts with the exit that continues the road). While
+ * KawaNav navigates ({@link NavService}) the route ahead is the planned one.
  *
  * Used for free mode (shows the next curve), for curve warnings between Google Maps
  * instructions and for the spoken curve warnings. Roads come from the downloaded regions
@@ -212,7 +213,20 @@ public final class CurveEngine implements LocationListener {
             return;
         }
         List<RoadNetwork.RoundaboutPass> passes = new ArrayList<>();
-        List<double[]> path = net.pathAhead(m, Math.max(lookahead, STRAIGHT_SEARCH_M), approach, passes);
+        List<double[]> path;
+        List<double[]> navAhead = Hub.navActive() != null ? Hub.navAhead : null;
+        if (navAhead != null && navAhead.size() >= 2) {
+            // KawaNav is navigating: the bends of the planned route, not of the road straight on
+            path = new ArrayList<>(navAhead.size());
+            for (double[] ll : navAhead) path.add(net.project(ll[0], ll[1]));
+            for (double[] rb : Hub.navRoundabouts) {
+                RoadNetwork.RoundaboutPass pass = new RoadNetwork.RoundaboutPass(rb[0], 1, false);
+                pass.exitDist = rb[1];
+                passes.add(pass);
+            }
+        } else {
+            path = net.pathAhead(m, Math.max(lookahead, STRAIGHT_SEARCH_M), approach, passes);
+        }
         List<CurveDetector.Curve> found = new ArrayList<>();
         // the bends of a roundabout are not curves to warn about: the roundabout is shown instead
         for (CurveDetector.Curve cv : CurveDetector.detect(path, CurveDetector.Sensitivity.of(sensitivity))) {

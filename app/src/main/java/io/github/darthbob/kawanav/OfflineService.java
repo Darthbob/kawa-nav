@@ -163,6 +163,7 @@ public class OfflineService extends Service {
         int[] res;
         int cameras = 0;
         PbfImporter.Polygon polygon = PbfImporter.Polygon.read(poly);
+        OfflineRegions regionsBefore = new OfflineRegions(this, store, hazardStore);
         PbfImporter importer = new PbfImporter(pbf, polygon, store, new File(dir, "tmp"), new PbfImporter.Progress() {
             @Override
             public void status(String s) {
@@ -175,7 +176,8 @@ public class OfflineService extends Service {
             }
         });
         try {
-            res = importer.deleteWhenRead().run();
+            res = importer.deleteWhenRead().routingTo(regionsBefore.routingDir(id)).run();
+            RoutingData.changed();
         } finally {
             if (!cancel) {
                 pbf.delete(); // converted (or broken): the next run downloads a fresh one
@@ -191,8 +193,9 @@ public class OfflineService extends Service {
         OfflineRegions regions = new OfflineRegions(this, store, hazardStore);
         regions.save(id, r.label(), r.pbfUrl, dataDate, tiles, !cancel, hazardTiles);
         String msg = String.format(Locale.ROOT,
-                "Done: %s, %d roads in %d tiles (+%d border tiles), %d speed cameras · %.1f MB · %d s",
-                label, res[0], res[1], res[2], cameras, regions.bytes(tiles) / 1e6, (System.currentTimeMillis() - t1) / 1000);
+                "Done: %s, %d roads in %d tiles (+%d border tiles), %d speed cameras, %d junctions for navigation · %.1f MB · %d s",
+                label, res[0], res[1], res[2], cameras, importer.graphSize()[0], regions.bytes(tiles) / 1e6,
+                (System.currentTimeMillis() - t1) / 1000);
         status(msg);
         Logger.log("Offline region " + msg);
     }

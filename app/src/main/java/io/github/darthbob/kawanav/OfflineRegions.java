@@ -140,10 +140,22 @@ public final class OfflineRegions {
         }
     }
 
-    /** Removes the region and its tiles that no other region uses. */
+    /** Where the region's routing graph is stored ({@link RouteGraphBuilder}). */
+    public File routingDir(String id) {
+        return new File(new File(dir.getParentFile(), "routing"), safeKey(id));
+    }
+
+    /** The region was downloaded with this version's routing data (older downloads must be done again). */
+    public boolean hasRouting(String id) {
+        return RouteGraph.exists(routingDir(id));
+    }
+
+    /** Removes the region, its routing graph and its tiles that no other region uses. */
     public synchronized void delete(String id) {
         Region r = find(id);
         new File(dir, safeKey(id) + ".json").delete();
+        RouteGraphBuilder.deleteTree(routingDir(id));
+        RoutingData.changed();
         if (r != null) {
             deleteUnused(r.tiles);
             for (String k : r.hazardTiles) if (!usedHazard(k)) hazards.delete(k);

@@ -1149,10 +1149,21 @@ public class BridgeService extends Service implements KawaBle.Listener {
     }
 
     private Hub.Output decide() {
-        Hub.MapsTurn m = Hub.mapsEnabled(this) ? Hub.maps : null;
+        // KawaNav's own navigation comes before Google Maps' notifications
+        Hub.Nav nav = Hub.navActive();
+        Hub.MapsTurn m = nav == null && Hub.mapsEnabled(this) ? Hub.maps : null;
         // a camera warning comes first: it is short, and it is the one thing the rider cannot see coming
-        Hub.Output cam = cameraWarning(m != null);
+        Hub.Output cam = cameraWarning(m != null || nav != null);
         if (cam != null) return cam;
+        if (nav != null) {
+            if (nav.turn == KawaProtocol.TURN_NONE) return null;
+            int navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, 0);
+            if (navCurves > 0 && nav.state == Navigator.State.NAVIGATING) {
+                Hub.Output c = curve.curveBeforeManeuver(nav.distanceM, navCurves == 1);
+                if (c != null) return c;
+            }
+            return new Hub.Output(nav.turn, CurveEngine.roundDistance(nav.distanceM), "Nav");
+        }
         if (m != null) {
             // e.g. "Navigation wird gestartet…": nothing useful to show yet
             if (m.turn == KawaProtocol.TURN_NONE && m.distanceM < 0) return null;
@@ -1217,14 +1228,16 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (!soundAllowed()) return;
         SharedPreferences p = Hub.prefs(this);
         Hub.MapsTurn m = Hub.mapsEnabled(this) ? Hub.maps : null;
-        double maneuver = m == null ? Double.POSITIVE_INFINITY : m.distanceM;
+        Hub.Nav nav = Hub.navActive();
+        double maneuver = nav != null ? (nav.state == Navigator.State.NAVIGATING ? nav.distanceM : -1)
+                : m == null ? Double.POSITIVE_INFINITY : m.distanceM;
         BikeFrames.Telemetry live = Hub.bike.live;
         double speed = CurveAlerts.speed(live == null ? Double.NaN : live.speedKmh, now - Hub.bike.liveAt, curve.speed());
         CurveAlerts.Warning w = curveAlerts.next(curve.curvesAhead(), speed,
                 p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), paceLean(p.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF)),
                 maneuver, now);
         if (w == null) return;
-        String text = w.text();
+        String text = w.text(NavText.phone());
         Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h (GPS %.0f, radius %.0f m%s)",
                 text, w.curve.startDist, speed * 3.6, curve.speed() * 3.6, w.curve.minRadius,
                 Double.isInfinite(w.okSpeed) ? "" : String.format(Locale.ROOT, ", pace %.0f km/h", w.okSpeed * 3.6)));
@@ -1276,7 +1289,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (beeps()) {
             curveSound.beep(CurveBeeps.camera());
         } else {
-            curveSound.sayAfter(Hazards.spoken(a.camera));
+            curveSound.sayAfter(NavText.phone().camera(a.camera.type, a.camera.maxspeed));
         }
     }
 

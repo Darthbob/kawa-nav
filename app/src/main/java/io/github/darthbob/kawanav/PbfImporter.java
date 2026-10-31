@@ -81,6 +81,9 @@ public final class PbfImporter {
     private int[] lat7, lon7; // their coordinates in 1e-7 degrees
 
     private boolean deleteWhenRead;
+    /** Where the region's routing graph goes; null: no graph (desktop tests of the tiles alone). */
+    private File routingDir;
+    private int[] graphSize = {0, 0};
 
     /** Speed cameras seen while the nodes are read (they are read once: in the first round). */
     private final Map<Long, Hazards.Camera> cameras = new java.util.LinkedHashMap<>();
@@ -90,6 +93,17 @@ public final class PbfImporter {
     public PbfImporter deleteWhenRead() {
         deleteWhenRead = true;
         return this;
+    }
+
+    /** Also build the region's routing graph ({@link RouteGraphBuilder}) into this directory. */
+    public PbfImporter routingTo(File dir) {
+        routingDir = dir;
+        return this;
+    }
+
+    /** {nodes, edges} of the routing graph built by the last {@link #run}. */
+    public int[] graphSize() {
+        return graphSize;
     }
 
     public PbfImporter(File pbf, Polygon region, RoadStore store, File tmpDir, Progress progress) {
@@ -109,14 +123,22 @@ public final class PbfImporter {
     public int[] run() throws Exception {
         tmpDir.mkdirs();
         File waysFile = new File(tmpDir, "ways.bin");
+        RouteGraphBuilder graph = null;
         try {
             boolean sorted = indexBlobs();
             int firstWay = sorted ? firstBlobOf(1) : 0;
             int roads = readWays(firstWay, sorted, waysFile);
             File coords = resolve(waysFile, roads, sorted ? firstWay : blobCount);
             if (deleteWhenRead) pbf.delete(); // frees the storage the tiles are about to need
-            return writeTiles(waysFile, coords, roads);
+            if (routingDir != null) graph = new RouteGraphBuilder(routingDir, tmpDir);
+            int[] res = writeTiles(waysFile, coords, roads, graph);
+            if (graph != null) {
+                graphSize = graph.finish(region::containsTile, progress);
+                graph = null;
+            }
+            return res;
         } finally {
+            if (graph != null) graph.abandon();
             inflater.end();
             File[] fs = tmpDir.listFiles();
             if (fs != null) for (File f : fs) f.delete();
@@ -361,6 +383,9 @@ public final class PbfImporter {
         }
         if (keysS < 0 || refsS < 0) return 0;
         String highway = null, name = "", ref = "", oneway = "", junction = "";
+        // only for the routing graph, see RouteGraphBuilder.attributes
+        String surface = "", tracktype = "", smoothness = "", maxspeed = "", access = "", motorVehicle = "",
+                motorcycle = "", toll = "", sidewalk = "", lit = "";
         Pb kp = new Pb(bl.b, keysS, keysE), vp = new Pb(bl.b, valsS, valsE);
         while (kp.more() && vp.more()) {
             String key = bl.strings[(int) kp.varint()];
@@ -371,6 +396,17 @@ public final class PbfImporter {
                 case "ref": ref = val; break;
                 case "oneway": oneway = val; break;
                 case "junction": junction = val; break;
+                case "surface": surface = val; break;
+                case "tracktype": tracktype = val; break;
+                case "smoothness": smoothness = val; break;
+                case "maxspeed": maxspeed = val; break;
+                case "access": access = val; break;
+                case "motor_vehicle": motorVehicle = val; break;
+                case "motorcycle": motorcycle = val; break;
+                case "toll": toll = val; break;
+                case "sidewalk": case "sidewalk:both": sidewalk = val; break;
+                case "sidewalk:left": case "sidewalk:right": if (!val.equals("no")) sidewalk = "yes"; break;
+                case "lit": lit = val; break;
                 default: break;
             }
         }
@@ -389,6 +425,8 @@ public final class PbfImporter {
         w.writeUTF(ref);
         w.writeUTF(oneway);
         w.writeUTF(junction);
+        w.writeInt(RouteGraphBuilder.attributes(surface, tracktype, smoothness, maxspeed, access, motorVehicle,
+                motorcycle, toll, sidewalk, lit, highway));
         w.writeInt(nodes.size);
         for (int i = 0; i < nodes.size; i++) w.writeLong(nodes.a[i]);
         return nodes.size;
@@ -398,6 +436,7 @@ public final class PbfImporter {
     private static final class WayHead {
         long id;
         String highway, name, ref, oneway, junction;
+        int attributes;
         int n;
 
         WayHead read(DataInputStream in) throws IOException {
@@ -407,6 +446,7 @@ public final class PbfImporter {
             ref = in.readUTF();
             oneway = in.readUTF();
             junction = in.readUTF();
+            attributes = in.readInt();
             n = in.readInt();
             return this;
         }
@@ -423,8 +463,10 @@ public final class PbfImporter {
     // ------------------------------------------------------------------ pass 2: coordinates in rounds
 
     /**
-     * Fills a coordinate file (lat7, lon7 per road point, in the order of the ways file). Round k
-     * handles the node ids with id % rounds == k, so each round's id list fits in memory.
+     * Fills a coordinate file (lat7, lon7 and a junction byte per road point, in the order of the ways
+     * file). Round k handles the node ids with id % rounds == k, so each round's id list fits in memory.
+     * A point is a junction when more than one road point refers to its node (two roads meet, or a way
+     * passes it twice); the routing graph cuts the ways there.
      */
     private File resolve(File waysFile, int roads, int nodeBlobs) throws Exception {
         int rounds = (int) Math.max(1, (totalRefs + roundRefs - 1) / roundRefs);
@@ -446,7 +488,8 @@ public final class PbfImporter {
                 }
             }
             check();
-            need = ids.sortedUnique();
+            java.util.BitSet multi = new java.util.BitSet();
+            need = ids.sortedUnique(multi);
             lat7 = new int[need.length];
             lon7 = new int[need.length];
             Arrays.fill(lat7, MISSING);
@@ -462,19 +505,23 @@ public final class PbfImporter {
                     for (int i = 0; i < h.n; i++) {
                         long id = w.readLong();
                         int la = MISSING, lo = MISSING;
+                        byte junction = 0;
                         if (old != null) {
                             la = old.readInt();
                             lo = old.readInt();
+                            junction = old.readByte();
                         }
                         if (Math.floorMod(id, rounds) == k) {
                             int j = Arrays.binarySearch(need, id);
                             if (j >= 0) {
                                 la = lat7[j];
                                 lo = lon7[j];
+                                if (multi.get(j)) junction = 1;
                             }
                         }
                         c.writeInt(la);
                         c.writeInt(lo);
+                        c.writeByte(junction);
                     }
                 }
             }
@@ -693,7 +740,7 @@ public final class PbfImporter {
     }
 
     /** Sorts the roads into bucket files of {@link #BAND_ROWS} tile rows, then writes each band's tiles. */
-    private int[] writeTiles(File waysFile, File coordsFile, int roads) throws Exception {
+    private int[] writeTiles(File waysFile, File coordsFile, int roads, RouteGraphBuilder graph) throws Exception {
         Map<Integer, DataOutputStream> buckets = new HashMap<>();
         int done = 0;
         WayHead h = new WayHead();
@@ -707,17 +754,30 @@ public final class PbfImporter {
                 int n = h.n;
                 long[] ids = new long[n];
                 int[] la = new int[n], lo = new int[n];
+                boolean[] junction = new boolean[n], gapBefore = new boolean[n];
                 int m = 0;
+                boolean gap = false;
                 for (int i = 0; i < n; i++) {
                     long node = in.readLong();
                     int a = cin.readInt(), o = cin.readInt();
-                    if (a == MISSING) continue; // outside the extract
+                    byte j = cin.readByte();
+                    if (a == MISSING) { // outside the extract
+                        gap = m > 0;
+                        continue;
+                    }
                     ids[m] = node;
                     la[m] = a;
                     lo[m] = o;
+                    junction[m] = j != 0;
+                    gapBefore[m] = gap;
+                    gap = false;
                     m++;
                 }
                 if (m < 2) continue;
+                if (graph != null) {
+                    graph.addWay(h.highway, h.name, h.ref, h.oneway, h.junction, h.attributes, ids, la, lo,
+                            junction, gapBefore, m);
+                }
                 byte[] line = tsv(h.id, h.highway, h.name, h.ref, h.oneway, h.junction, ids, la, lo, m)
                         .getBytes(StandardCharsets.UTF_8);
                 // tiles touched, grouped by band
@@ -918,9 +978,17 @@ public final class PbfImporter {
         }
 
         long[] sortedUnique() {
+            return sortedUnique(null);
+        }
+
+        /** Sorted without repeats; where {@code multi} is given, bit i is set when value i occurred more than once. */
+        long[] sortedUnique(java.util.BitSet multi) {
             Arrays.sort(a, 0, size);
             int n = 0;
-            for (int i = 0; i < size; i++) if (n == 0 || a[i] != a[n - 1]) a[n++] = a[i];
+            for (int i = 0; i < size; i++) {
+                if (n == 0 || a[i] != a[n - 1]) a[n++] = a[i];
+                else if (multi != null) multi.set(n - 1);
+            }
             long[] r = Arrays.copyOf(a, n);
             a = null;
             return r;

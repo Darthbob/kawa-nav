@@ -13,7 +13,8 @@ import android.speech.tts.UtteranceProgressListener;
 import java.util.Locale;
 
 /**
- * Speaks the curve and speed-camera warnings with Android's text-to-speech, or plays their beeps
+ * Speaks the curve and speed-camera warnings and the navigation's instructions with Android's
+ * text-to-speech (in the phone's language, see {@link NavText}), or plays the warnings' beeps
  * ({@link CurveBeeps}), as navigation guidance: the same audio Google Maps' voice uses, so it goes to
  * the helmet intercom the same way and lowers music while it plays. Main thread only (the engine's
  * progress callbacks only give the audio focus back).
@@ -58,9 +59,10 @@ final class CurveSound {
             Logger.log("Curve voice: no text-to-speech on this phone (status " + status + ")");
             return;
         }
-        // the phrases are English; without an English voice the phone's own one reads them
-        if (tts.setLanguage(Locale.ENGLISH) < TextToSpeech.LANG_AVAILABLE) {
-            Logger.log("Curve voice: no English voice installed, using the phone's language");
+        // the phrases are in the phone's language when NavText has it, else English
+        Locale lang = NavText.phone().locale();
+        if (tts.setLanguage(lang) < TextToSpeech.LANG_AVAILABLE) {
+            Logger.log("Curve voice: no " + lang.getDisplayLanguage(Locale.ENGLISH) + " voice installed, using the phone's default");
         }
         tts.setAudioAttributes(ATTRIBUTES);
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {

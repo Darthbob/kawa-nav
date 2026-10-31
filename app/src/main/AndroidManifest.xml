@@ -111,6 +111,26 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
+        <!-- route planner and turn-by-turn navigation on the downloaded regions -->
+        <activity
+            android:name=".PlannerActivity"
+            android:exported="false"
+            android:label="Route planner"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <activity
+            android:name=".NavActivity"
+            android:exported="false"
+            android:label="Navigation"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait" />
+
+        <service
+            android:name=".NavService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
         <service
             android:name=".BridgeService"
             android:exported="false"

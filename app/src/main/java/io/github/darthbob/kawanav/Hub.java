@@ -53,6 +53,60 @@ public final class Hub {
         }
     }
 
+    /** KawaNav's own navigation ({@link NavService}): what the dash and the screens show. */
+    public static final class Nav {
+        public final int turn;           // KawaProtocol turn id
+        public final int distanceM;      // to the maneuver
+        public final String text;        // "Turn left onto Via Roma"
+        public final double remainingM;
+        public final double remainingS;
+        public final Navigator.State state;
+        public final long updatedAt;
+
+        public Nav(int turn, int distanceM, String text, double remainingM, double remainingS, Navigator.State state) {
+            this.turn = turn;
+            this.distanceM = distanceM;
+            this.text = text;
+            this.remainingM = remainingM;
+            this.remainingS = remainingS;
+            this.state = state;
+            this.updatedAt = System.currentTimeMillis();
+        }
+    }
+
+    /** The navigation's state, null when it is not running. */
+    public static volatile Nav nav;
+    /** The route the planner shows and the navigation rides (replaced when it reroutes). */
+    public static volatile Route route;
+    /** The route ahead of the rider while navigating ({lat, lon} points), for the curve warnings; else null. */
+    public static volatile java.util.List<double[]> navAhead;
+    /** Distances ahead (from, to, metres) on roundabouts within {@link #navAhead}: their bends are no curves. */
+    public static volatile java.util.List<double[]> navRoundabouts = java.util.Collections.emptyList();
+
+    /** KawaNav's navigation, while it is running and its last fix is recent. */
+    public static Nav navActive() {
+        Nav n = nav;
+        return n != null && System.currentTimeMillis() - n.updatedAt < 15_000 ? n : null;
+    }
+
+    /** Spoken navigation (on unless turned off). */
+    public static final String KEY_NAV_VOICE = "nav_voice";
+    /** The planner's route kind: an index into {@link RouteProfile.Kind} (curvy unless changed). */
+    public static final String KEY_NAV_PROFILE = "nav_profile";
+    public static final String KEY_NAV_AVOID_MOTORWAYS = "nav_avoid_motorways";
+    public static final String KEY_NAV_AVOID_TOLLS = "nav_avoid_tolls";
+    /** Gravel and dirt roads avoided (on unless turned off). */
+    public static final String KEY_NAV_AVOID_UNPAVED = "nav_avoid_unpaved";
+
+    /** The route profile the settings choose. */
+    public static RouteProfile routeProfile(Context c) {
+        SharedPreferences p = prefs(c);
+        RouteProfile.Kind[] kinds = RouteProfile.Kind.values();
+        int k = Math.max(0, Math.min(kinds.length - 1, p.getInt(KEY_NAV_PROFILE, RouteProfile.Kind.CURVY.ordinal())));
+        return new RouteProfile(kinds[k], p.getBoolean(KEY_NAV_AVOID_MOTORWAYS, false),
+                p.getBoolean(KEY_NAV_AVOID_TOLLS, false), p.getBoolean(KEY_NAV_AVOID_UNPAVED, true));
+    }
+
     // --- live state
     public static MapsTurn maps;
     public static boolean serviceRunning;
