@@ -215,12 +215,15 @@ public final class RouteMapView extends View {
         invalidate();
     }
 
+    /** Keeps the rider in the middle at street level (also when the first position is still to come). */
     public void setFollow(boolean f) {
         follow = f;
-        if (f && posX == posX) {
-            cx = posX;
-            cy = posY;
+        if (f) {
             ppw = Math.max(ppw, tilePx * (1 << 16));
+            if (posX == posX) {
+                cx = posX;
+                cy = posY;
+            }
         }
         invalidate();
     }

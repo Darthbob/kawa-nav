@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "version": "1.3.1",
+      "changes": [
+        "Route planner: the start is where you are now. It took the phone's last saved position, which could be an old one far away",
+        "Searching a place in the route planner works again: it failed every time",
+        "The navigation screen opens close up on your position, not zoomed far out",
+        "On the way to the destination the navigation shows \"Destination\" instead of \"You have arrived\"",
+        "Offline maps says that the route planner needs the downloaded regions too, and the storage a region takes includes its route planning data"
+      ]
+    },
+    {
       "version": "1.3",
       "changes": [
         "Route planner: from A to B with via points, or a round trip of the length, direction and shape you choose, fastest, curvy or extra curvy, computed on the phone from your downloaded regions",

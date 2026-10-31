@@ -116,7 +116,7 @@ public class NavService extends Service implements LocationListener {
                 loc.hasSpeed() ? loc.getSpeed() : 0);
         String shown = u.state == Navigator.State.ARRIVED ? text.action(navigator.maneuvers().get(navigator.maneuvers().size() - 1))
                 : u.state == Navigator.State.OFF_ROUTE ? text.recalculating()
-                : u.next == null ? "" : text.action(u.next);
+                : u.next == null ? "" : text.upcoming(u.next);
         Hub.nav = new Hub.Nav(u.turn(), u.state == Navigator.State.ARRIVED ? 0 : (int) Math.round(u.toNext), shown,
                 u.remaining, u.remainingTime, u.state);
         Hub.navAhead = u.state == Navigator.State.NAVIGATING ? navigator.pathAhead(LOOKAHEAD_M) : null;

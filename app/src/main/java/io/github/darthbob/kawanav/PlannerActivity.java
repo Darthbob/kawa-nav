@@ -56,6 +56,8 @@ public class PlannerActivity extends KawaActivity {
     private final List<double[]> vias = new ArrayList<>();
     private double[] dest;
     private long seed;
+    /** A position asked for since the planner opened (the phone's last known one can be hours old). */
+    private Location fresh;
 
     private LinearLayout abBox, rtBox, resultBox;
     private Button modeAb, modeRt, calculate, another;
@@ -179,6 +181,7 @@ public class PlannerActivity extends KawaActivity {
         setMode(mode);
         Location here = lastLocation();
         if (here != null) map.center(here.getLatitude(), here.getLongitude(), 11);
+        askPosition(here == null);
         worker.execute(() -> {
             try {
                 RouteGraph g = RoutingData.graph(this);
@@ -304,29 +307,50 @@ public class PlannerActivity extends KawaActivity {
         return l == null ? null : new double[]{l.getLatitude(), l.getLongitude()};
     }
 
+    /** The rider's position: one asked for since the planner opened, else a recent one; null when there is none. */
     private Location lastLocation() {
+        if (fresh != null) return fresh;
         Location fix = Hub.lastFix;
-        if (fix != null && System.currentTimeMillis() - fix.getTime() < 10 * 60_000) return fix;
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return fix;
+        if (recent(fix)) return fix;
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null;
         try {
             Location l = getSystemService(LocationManager.class).getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            return l != null ? l : fix;
+            return recent(l) ? l : null;
         } catch (SecurityException e) {
-            return fix;
+            return null;
+        }
+    }
+
+    /** A position from the last few minutes: an older one may be far from where the rider is now. */
+    private static boolean recent(Location l) {
+        return l != null && System.currentTimeMillis() - l.getTime() < 5 * 60_000;
+    }
+
+    /** Asks the GPS for the current position; the map moves to it when {@code center}. */
+    private void askPosition(boolean center) {
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
+        try {
+            getSystemService(LocationManager.class).getCurrentLocation(LocationManager.GPS_PROVIDER, null,
+                    getMainExecutor(), l -> {
+                        if (isFinishing() || l == null) return;
+                        fresh = l;
+                        if (center) map.center(l.getLatitude(), l.getLongitude(), 13);
+                        pointsChanged();
+                    });
+        } catch (SecurityException | IllegalArgumentException e) {
+            Logger.log("Planner: no position: " + e);
         }
     }
 
     private void toMyPosition() {
-        double[] h = here();
-        if (h == null) {
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                requestMissingPermissions();
-            } else {
-                status.setText("No position yet: waiting for GPS. You can also tap the map to choose the start.");
-            }
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestMissingPermissions();
             return;
         }
-        map.center(h[0], h[1], 13);
+        double[] h = here();
+        if (h != null) map.center(h[0], h[1], 13);
+        else status.setText("Waiting for GPS… You can also tap the map and choose \"Start here\".");
+        askPosition(true);
     }
 
     private void search(String q) {
@@ -336,27 +360,31 @@ public class PlannerActivity extends KawaActivity {
             status.setText("This phone has no place search: tap the map instead.");
             return;
         }
-        double[] c = map.centre();
-        new Geocoder(this, Locale.getDefault()).getFromLocationName(q, 6, c[0] - 3, c[1] - 4, c[0] + 3, c[1] + 4,
-                new Geocoder.GeocodeListener() {
-                    @Override
-                    public void onGeocode(List<Address> list) {
-                        main.post(() -> searchResults(list));
-                    }
+        new Geocoder(this, Locale.getDefault()).getFromLocationName(q, 8, new Geocoder.GeocodeListener() {
+            @Override
+            public void onGeocode(List<Address> list) {
+                main.post(() -> searchResults(list));
+            }
 
-                    @Override
-                    public void onError(String message) {
-                        main.post(() -> status.setText("Search failed (no network?): tap the map instead."));
-                    }
-                });
+            @Override
+            public void onError(String message) {
+                Logger.log("Planner: place search failed: " + message);
+                main.post(() -> status.setText("Search failed (" + message + "): tap the map instead."));
+            }
+        });
     }
 
-    private void searchResults(List<Address> list) {
-        if (list == null || list.isEmpty()) {
+    private void searchResults(List<Address> found) {
+        if (found == null || found.isEmpty()) {
             status.setText("Nothing found. Tap the map instead.");
             return;
         }
         status.setText("");
+        // the nearest first: to the rider, or to what the map shows
+        double[] ref = here() != null ? here() : map.centre();
+        List<Address> list = new ArrayList<>(found);
+        list.sort((a, b) -> Double.compare(Ride.distanceM(ref[0], ref[1], a.getLatitude(), a.getLongitude()),
+                Ride.distanceM(ref[0], ref[1], b.getLatitude(), b.getLongitude())));
         String[] names = new String[list.size()];
         for (int i = 0; i < names.length; i++) {
             Address a = list.get(i);

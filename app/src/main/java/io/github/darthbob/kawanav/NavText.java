@@ -88,6 +88,16 @@ public final class NavText {
         return s + t(" onto ", " in ", " auf ") + m.road;
     }
 
+    /**
+     * What the screen shows for a maneuver still ahead: {@link #action}, except that the destination and
+     * the via points are named rather than reached ("Destination", not "You have arrived").
+     */
+    public String upcoming(Instructions.Maneuver m) {
+        if (m.kind == Instructions.Kind.ARRIVE) return t("Destination", "Destinazione", "Ziel");
+        if (m.kind == Instructions.Kind.VIA) return t("Waypoint ", "Tappa ", "Zwischenziel ") + m.number;
+        return action(m);
+    }
+
     /** "In 300 metres, turn left onto Via Roma"; just the action when it is close. */
     public String spoken(Instructions.Maneuver m, double distanceM, boolean imperial) {
         String a = action(m);

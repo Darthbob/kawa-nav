@@ -505,8 +505,8 @@ public class SettingsActivity extends KawaActivity {
         LinearLayout c = group();
         LinearLayout intro = column();
         intro.setPadding(0, dp(10), 0, dp(6));
-        intro.addView(secondary("Curves are only shown where the roads are downloaded. Download the regions you "
-                + "ride in, over Wi-Fi. Regions add up: e.g. Bayern now, Tirol later."));
+        intro.addView(secondary("Curves, the route planner and the navigation only work where the roads are "
+                + "downloaded. Download the regions you ride in, over Wi-Fi. Regions add up: e.g. Bayern now, Tirol later."));
         intro.addView(note("Road data © OpenStreetMap contributors (ODbL)"));
         c.addView(intro);
         storedView = itemTitle("");
@@ -1010,8 +1010,9 @@ public class SettingsActivity extends KawaActivity {
                 if (selectedRegion != r) return;
                 long free = getCacheDir().getUsableSpace();
                 regionInfo.setText(size < 0 ? r.label() : String.format(Locale.ROOT,
-                        "%s: %.0f MB download, about %.0f MB stored\nNeeds %.1f GB free while converting (%.1f GB free)",
-                        r.label(), size / 1e6, size / 1e6 * 0.09, (size * 1.25 + 500e6) / 1e9, free / 1e9));
+                        "%s: %.0f MB download, about %.0f MB stored with the route planning data\n"
+                                + "Needs %.1f GB free while converting (%.1f GB free)",
+                        r.label(), size / 1e6, Math.max(1, size / 1e6 * 0.18), (size * 1.25 + 500e6) / 1e9, free / 1e9));
             });
         }, "region-size").start();
     }
