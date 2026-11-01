@@ -68,6 +68,10 @@ public final class Hub {
         /** The maneuver straight after the next one (turn id, "Then turn right"), TURN_NONE / null when none. */
         public int thenTurn = KawaProtocol.TURN_NONE;
         public String thenText;
+        /** Metres ridden along {@link Hub#route}, its maneuvers, and how winding the next km are ({@link Navigator#curvesAhead}). */
+        public double progressM;
+        public java.util.List<Instructions.Maneuver> maneuvers;
+        public java.util.List<double[]> curves;
 
         public Nav(int turn, int distanceM, String text, double remainingM, double remainingS, Navigator.State state) {
             this.turn = turn;

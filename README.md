@@ -673,7 +673,13 @@ navigation**. The route is planned again as soon as anything changes: no button 
   the time it takes and the arrival time; a red line when the GPS signal is lost and an orange one for
   a speed camera ahead (when the speed camera warnings are on). At the bottom: your speed (from the
   GPS), the speed limit of the road when the map has it (the speed turns red more than 3 km/h over it),
-  and the road's name. The map turns with
+  the road's name, and a bar of how winding the next 15 km are ("Next 15 km · 60% winding", in the
+  map's colours). The **list** button there shows the turns still ahead with their distance; with a
+  via point ahead, **Skip waypoint** leaves it out and goes on to the next point. With the bike
+  connected, an orange line warns when its range does not reach the destination with 10 km to spare.
+  The part of the route already ridden turns grey and the next maneuver has a white dot. While it
+  follows you, the map zooms out the faster you ride and in again before a maneuver (a pinch keeps
+  your zoom until the map follows you again). The navigation also shows over the lock screen. The map turns with
   your direction, the way ahead pointing up and your position low on the screen; **North up** keeps
   north at the top instead (remembered), and **Overview** shows the whole route. After you move the map
   or look at the overview, it follows you again 10 seconds after you last touched the screen. **Tap the

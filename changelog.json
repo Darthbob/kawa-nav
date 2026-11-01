@@ -10,7 +10,12 @@
         "At the destination the navigation screen sums up the ride (distance, time, moving average) and Close ends it",
         "Navigation screen: a big arrow for the next maneuver (roundabouts with the exit number), and the one after it when it comes right after",
         "Navigation screen: your speed, the road's speed limit (your speed turns red above it) and the road's name at the bottom",
-        "Navigation screen: a line warns when the GPS signal is lost, and when a speed camera is ahead"
+        "Navigation screen: a line warns when the GPS signal is lost, and when a speed camera is ahead",
+        "Navigation: the map zooms out the faster you ride and in again before a turn, greys the part of the route already ridden and marks the next turn",
+        "Navigation screen: a bar shows how winding the next 15 km are",
+        "Navigation screen: the list of the turns ahead, where a waypoint you no longer want can be skipped",
+        "Navigation screen: with the bike connected, a warning when its range does not reach the destination",
+        "The navigation screen also shows over the lock screen"
       ]
     },
     {

@@ -24,8 +24,10 @@ import java.util.Locale;
 /**
  * The navigation on the phone's screen: the map following the rider, the next maneuver's arrow with its
  * distance (the dash shows the same arrow) and the one straight after it, what is left and when the
- * ride ends, a lost GPS signal or a speed camera ahead, and at the bottom the speed, the road's limit
- * and its name. The navigation itself runs in {@link NavService}: leaving this screen does not stop it.
+ * ride ends, a lost GPS signal, a speed camera ahead or a bike range too short, and at the bottom the
+ * speed, the road's limit and its name, how winding the next km are and the list of the turns ahead
+ * (where a via point can be skipped). The map greys the part ridden, marks the next maneuver and zooms
+ * with the speed. The navigation itself runs in {@link NavService}: leaving this screen does not stop it.
  *
  * Made for gloves: the map follows the rider again a while after it was moved or the overview shown,
  * Stop needs a second tap, a tap on the maneuver says it again and the speaker turns the voice off and
@@ -41,15 +43,22 @@ public class NavActivity extends KawaActivity {
     private static final long FIX_LOST_MS = 5_000;
     /** The speed turns red this far over the limit (km/h). */
     private static final int OVER_LIMIT_KMH = 3;
+    /** The bike's range must reach the destination with this to spare (km), or the screen says so. */
+    private static final int RANGE_SPARE_KM = 10;
+    /** The bike's range is believed this long after the dash last sent it. */
+    private static final long RANGE_FRESH_MS = 5 * 60_000;
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private RouteMapView map;
     private RouteGraph graph;
     private Route shown;
     private Figure distance, speed;
-    private TextView action, remaining, thenText, limit, road, gpsBanner, cameraBanner;
+    private TextView action, remaining, thenText, limit, road, gpsBanner, cameraBanner, rangeBanner, curvesLabel;
     private TurnIcon arrow, thenArrow;
-    private LinearLayout thenRow, info;
+    private CurvesBar curves;
+    private LinearLayout thenRow, info, curvesRow;
+    /** The GPS speed (m/s) evened out over a few seconds, for the map's zoom. */
+    private double smoothSpeed;
     private ImageView voiceButton;
     private Button followButton, turnButton, stopButton;
     private long touchedAt;
@@ -78,6 +87,7 @@ public class NavActivity extends KawaActivity {
         prefs = Hub.prefs(this);
         night = isNight();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setShowWhenLocked(true); // on the handlebar the phone may lock: the navigation stays in view
         try {
             graph = RoutingData.graph(this);
         } catch (Exception e) {
@@ -139,6 +149,8 @@ public class NavActivity extends KawaActivity {
         upper.addView(gpsBanner);
         cameraBanner = banner("", Ui.warnFill(), Ui.bannerInk());
         upper.addView(cameraBanner);
+        rangeBanner = banner("", Ui.warnFill(), Ui.bannerInk());
+        upper.addView(rangeBanner);
         FrameLayout.LayoutParams tlp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP);
         tlp.setMargins(dp(Ui.SPACE3), dp(Ui.SPACE3), dp(Ui.SPACE3), 0);
@@ -146,8 +158,12 @@ public class NavActivity extends KawaActivity {
 
         LinearLayout bottom = row();
         followButton = neutralButton("Overview", v -> {
-            if (map.following()) map.fitRoute();
-            else map.setFollow(true);
+            if (map.following()) {
+                map.fitRoute();
+            } else {
+                map.setFollow(true);
+                map.autoZoom();
+            }
             followLabel();
         });
         // heading up (the way ahead points up) or north up; remembered
@@ -175,15 +191,17 @@ public class NavActivity extends KawaActivity {
         middle.rightMargin = dp(Ui.SPACE2);
         bottom.addView(turnButton, middle);
         bottom.addView(stopButton, weight());
-        // over the buttons: the speed, the road's limit and its name
-        info = row();
-        info.setPadding(dp(Ui.SPACE3), dp(Ui.SPACE2), dp(Ui.SPACE3), dp(Ui.SPACE2));
+        // over the buttons: the speed, the road's limit and its name, the turns ahead; how winding the next km are
+        info = column();
+        info.setPadding(dp(Ui.SPACE3), dp(Ui.SPACE2), dp(Ui.SPACE1), dp(Ui.SPACE2));
         GradientDrawable infoBg = new GradientDrawable();
         infoBg.setColor(Ui.surface(night));
         infoBg.setCornerRadius(dp(Ui.RADIUS_GROUP));
         info.setBackground(infoBg);
+        LinearLayout infoRow = row();
+        info.addView(infoRow);
         speed = figure(28, Gravity.START);
-        info.addView(speed.view);
+        infoRow.addView(speed.view);
         limit = new TextView(this);
         limit.setGravity(Gravity.CENTER);
         limit.setTextSize(16);
@@ -197,14 +215,25 @@ public class NavActivity extends KawaActivity {
         limit.setBackground(sign);
         LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(dp(44), dp(44));
         llp.leftMargin = dp(Ui.SPACE3);
-        info.addView(limit, llp);
+        infoRow.addView(limit, llp);
         road = text(15, false);
         road.setTextColor(Ui.inkSecondary(night));
         road.setSingleLine(true);
         road.setEllipsize(android.text.TextUtils.TruncateAt.END);
         road.setGravity(Gravity.END);
         road.setPadding(dp(Ui.SPACE3), 0, 0, 0);
-        info.addView(road, weight());
+        infoRow.addView(road, weight());
+        infoRow.addView(headerAction(R.drawable.ic_list, "Turns ahead and waypoints", v -> showTurns()),
+                new LinearLayout.LayoutParams(dp(Ui.TOUCH_MIN), dp(Ui.TOUCH_MIN)));
+        curvesRow = row();
+        curvesRow.setPadding(0, dp(Ui.SPACE1), dp(Ui.SPACE2), dp(Ui.SPACE1));
+        curvesLabel = secondary("");
+        curvesRow.addView(curvesLabel);
+        curves = new CurvesBar(this);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, dp(8), 1);
+        clp.leftMargin = dp(Ui.SPACE3);
+        curvesRow.addView(curves, clp);
+        info.addView(curvesRow);
         LinearLayout lower = column();
         LinearLayout.LayoutParams ilp = matchWrap();
         ilp.bottomMargin = dp(Ui.SPACE2);
@@ -331,10 +360,19 @@ public class NavActivity extends KawaActivity {
             tint(stopButton, Ui.dangerFill(night));
             stopLabel();
         }
-        if (!map.following() && SystemClock.uptimeMillis() - touchedAt > FOLLOW_AGAIN_MS) map.setFollow(true);
+        if (SystemClock.uptimeMillis() - touchedAt > FOLLOW_AGAIN_MS) {
+            if (!map.following()) map.setFollow(true);
+            map.autoZoom(); // a pinch is forgotten too
+        }
         followLabel();
         boolean navigating = nav != null && nav.state == Navigator.State.NAVIGATING;
-        showAlerts(nav != null, fix);
+        // the zoom: farther out when fast, closer before a maneuver
+        smoothSpeed += ((fresh(fix) && fix.hasSpeed() ? fix.getSpeed() : 0) - smoothSpeed) * 0.3;
+        if (navigating && map.following()) map.zoomTo(Navigator.mapZoom(smoothSpeed, nav.distanceM));
+        Route route = Hub.route;
+        map.setProgress(nav == null ? 0 : nav.progressM,
+                navigating && nav.distanceM >= 0 && route == shown && route != null ? route.pointAt(nav.progressM + nav.distanceM) : null);
+        showAlerts(nav, fix, imperial);
         showInfo(navigating ? nav : null, fix, imperial);
         boolean then = navigating && nav.thenText != null;
         thenRow.setVisibility(then ? View.VISIBLE : View.GONE);
@@ -367,13 +405,61 @@ public class NavActivity extends KawaActivity {
         return fix != null && SystemClock.elapsedRealtimeNanos() - fix.getElapsedRealtimeNanos() <= FIX_LOST_MS * 1_000_000;
     }
 
-    /** While navigating: the GPS signal lost, and a speed camera the bridge warns of (it goes to the dash too). */
-    private void showAlerts(boolean active, Location fix) {
-        gpsBanner.setVisibility(active && !fresh(fix) ? View.VISIBLE : View.GONE);
+    /**
+     * While navigating ({@code nav} not null): the GPS signal lost, a speed camera the bridge warns of (it
+     * goes to the dash too), and a bike whose range does not reach the destination.
+     */
+    private void showAlerts(Hub.Nav nav, Location fix, boolean imperial) {
+        gpsBanner.setVisibility(nav != null && !fresh(fix) ? View.VISIBLE : View.GONE);
         Hub.Output out = Hub.output;
-        String alert = active && out != null ? out.alert : null;
+        String alert = nav != null && out != null ? out.alert : null;
         cameraBanner.setVisibility(alert != null ? View.VISIBLE : View.GONE);
         if (alert != null && !alert.contentEquals(cameraBanner.getText())) cameraBanner.setText(alert);
+        BikeFrames.VehicleInfo bike = Hub.bike.info;
+        boolean low = nav != null && Hub.bikeConnected && bike != null && bike.rangeKm >= 0
+                && System.currentTimeMillis() - Hub.bike.infoAt < RANGE_FRESH_MS
+                && bike.rangeKm < nav.remainingM / 1000 + RANGE_SPARE_KM;
+        rangeBanner.setVisibility(low ? View.VISIBLE : View.GONE);
+        if (low) {
+            String s = "Range " + NavText.shown(bike.rangeKm * 1000.0, imperial) + ", "
+                    + NavText.shown(nav.remainingM, imperial) + " to go: refuel on the way";
+            if (!s.contentEquals(rangeBanner.getText())) rangeBanner.setText(s);
+        }
+    }
+
+    /** The turns still ahead with their distance; a via point ahead can be left out from here. */
+    private void showTurns() {
+        Hub.Nav nav = Hub.nav;
+        if (nav == null || nav.maneuvers == null) return;
+        boolean imperial = prefs.getBoolean(Hub.KEY_IMPERIAL, false);
+        NavText text = NavText.phone();
+        LinearLayout list = column();
+        list.setPadding(dp(Ui.SPACE5), dp(Ui.SPACE2), dp(Ui.SPACE5), dp(Ui.SPACE2));
+        int via = 0;
+        for (Instructions.Maneuver m : nav.maneuvers) {
+            if (m.kind == Instructions.Kind.DEPART || m.at <= nav.progressM + 0.5) continue;
+            if (m.kind == Instructions.Kind.VIA && via == 0) via = m.number;
+            LinearLayout r = row();
+            r.setPadding(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
+            TurnIcon icon = new TurnIcon(this);
+            icon.setTurn(m.turn);
+            r.addView(icon, new LinearLayout.LayoutParams(dp(32), dp(32)));
+            TextView t = text(15, false);
+            t.setText(text.upcoming(m));
+            t.setPadding(dp(Ui.SPACE3), 0, dp(Ui.SPACE2), 0);
+            r.addView(t, weight());
+            r.addView(secondary(NavText.shown(m.at - nav.progressM, imperial)));
+            list.addView(r);
+        }
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(list);
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this)
+                .setTitle("Turns ahead")
+                .setView(scroll)
+                .setNegativeButton("Close", null);
+        // a via point the rider does not want any more: the route goes on to the next point
+        if (via > 0) b.setPositiveButton("Skip waypoint " + via, (d, w) -> NavService.skipVia(this));
+        b.show();
     }
 
     /** The speed (red over the limit), the speed limit of the road ridden and its name; hidden when null. */
@@ -390,6 +476,14 @@ public class NavActivity extends KawaActivity {
             limit.setContentDescription("Speed limit " + limit.getText() + (imperial ? " mph" : " km/h"));
         }
         if (!nav.road.contentEquals(road.getText())) road.setText(nav.road);
+        java.util.List<double[]> c = nav.curves;
+        double span = c == null || c.isEmpty() ? 0 : c.get(c.size() - 1)[1];
+        curvesRow.setVisibility(span >= 1000 ? View.VISIBLE : View.GONE);
+        if (span >= 1000) {
+            curves.set(c, span);
+            curvesLabel.setText(String.format(Locale.ROOT, "Next %s · %d%% winding", NavText.shown(span, imperial),
+                    Math.round(Navigator.windingShare(c) * 100)));
+        }
     }
 
     /** At the destination: the flag, the ride summed up, the whole route in view and Close. */
@@ -399,8 +493,9 @@ public class NavActivity extends KawaActivity {
         arrow.setTurn(43);
         distance.view.setVisibility(View.GONE);
         thenRow.setVisibility(View.GONE);
-        showAlerts(false, null);
+        showAlerts(null, null, imperial);
         showInfo(null, null, imperial);
+        map.setProgress(0, null);
         action.setText(done.text);
         String s = NavText.shown(done.riddenM, imperial) + " in " + NavText.duration(done.elapsedMs / 1000.0);
         if (done.movingMs >= 60_000) {

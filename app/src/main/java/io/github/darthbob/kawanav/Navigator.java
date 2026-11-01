@@ -182,6 +182,46 @@ public final class Navigator {
         return new Update(state, next, toNext, remaining, time, say);
     }
 
+    /**
+     * How winding the route is over the next {@code metres}: runs of {from, to, level}, metres ahead of
+     * the rider and the curviness level 0..3 ({@link RouteGraph#curvy}: straight to very winding).
+     */
+    public List<double[]> curvesAhead(double metres) {
+        List<double[]> l = new ArrayList<>();
+        double end = Math.min(route.length, progress + metres);
+        for (int i = route.stateAt(progress); i < route.states.length && route.stateFrom[i] < end; i++) {
+            int level = RouteGraph.curvy(graph.flags(RouteGraph.edgeOf(route.states[i])));
+            double a = Math.max(route.stateFrom[i], progress) - progress, b = Math.min(route.stateTo[i], end) - progress;
+            if (b <= a) continue;
+            double[] last = l.isEmpty() ? null : l.get(l.size() - 1);
+            if (last != null && last[2] == level && Math.abs(last[1] - a) < 1) last[1] = b;
+            else l.add(new double[]{a, b, level});
+        }
+        return l;
+    }
+
+    /** The share (0..1) of {@link #curvesAhead} on winding and very winding roads. */
+    public static double windingShare(List<double[]> runs) {
+        double all = 0, winding = 0;
+        for (double[] r : runs) {
+            all += r[1] - r[0];
+            if (r[2] >= 2) winding += r[1] - r[0];
+        }
+        return all <= 0 ? 0 : winding / all;
+    }
+
+    /**
+     * The navigation map's zoom (a Web Mercator level) for the speed (m/s) and the distance to the next
+     * maneuver (negative: none): closer when slow, farther out when fast to see more of the road ahead,
+     * and close again before a maneuver so its junction can be read.
+     */
+    public static double mapZoom(double speed, double toNext) {
+        double z = Math.max(14.5, Math.min(17, 17.3 - speed * 3.6 / 40));
+        if (toNext >= 0 && toNext < 250) return Math.max(z, 17);
+        if (toNext >= 0 && toNext < 600) return Math.max(z, 16.3);
+        return z;
+    }
+
     /** The edge the rider is on, or -1 when off the route or arrived. */
     private int edgeHere() {
         if (state != State.NAVIGATING || route.states.length == 0) return -1;

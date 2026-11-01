@@ -35,6 +35,9 @@ public class NavService extends Service implements LocationListener {
     private static final int NOTIFICATION_ID = 5;
     private static final String ACTION_STOP = "io.github.darthbob.kawanav.NAV_STOP";
     private static final String ACTION_SAY = "io.github.darthbob.kawanav.NAV_SAY";
+    private static final String ACTION_SKIP = "io.github.darthbob.kawanav.NAV_SKIP";
+    /** How far ahead the screen shows how winding the route is. */
+    static final double CURVES_AHEAD_M = 15_000;
     /** After a failed new route, the next try waits this long. */
     private static final long REROUTE_RETRY_MS = 15_000;
     private static final double LOOKAHEAD_M = 3000;
@@ -72,6 +75,11 @@ public class NavService extends Service implements LocationListener {
         if (running()) c.startService(new Intent(c, NavService.class).setAction(ACTION_SAY));
     }
 
+    /** Leaves out the next via point: a new route to the points after it. */
+    public static void skipVia(Context c) {
+        if (running()) c.startService(new Intent(c, NavService.class).setAction(ACTION_SKIP));
+    }
+
     public static boolean running() {
         return Hub.nav != null;
     }
@@ -95,6 +103,11 @@ public class NavService extends Service implements LocationListener {
         if (intent != null && ACTION_SAY.equals(intent.getAction())) {
             // only while navigating: never starts a navigation (after arriving, the flag stays a while)
             if (navigator != null) say(navigator.repeat(), true);
+            else if (Hub.nav == null) stopSelf();
+            return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_SKIP.equals(intent.getAction())) {
+            if (navigator != null) skipVia();
             else if (Hub.nav == null) stopSelf();
             return START_NOT_STICKY;
         }
@@ -149,7 +162,10 @@ public class NavService extends Service implements LocationListener {
                 : u.next == null ? "" : text.upcoming(u.next);
         Hub.Nav nav = new Hub.Nav(u.turn(), u.state == Navigator.State.ARRIVED ? 0 : (int) Math.round(u.toNext), shown,
                 u.remaining, u.remainingTime, u.state);
+        nav.maneuvers = navigator.maneuvers();
+        nav.progressM = navigator.progress();
         if (u.state == Navigator.State.NAVIGATING) {
+            nav.curves = navigator.curvesAhead(CURVES_AHEAD_M);
             nav.road = navigator.road();
             nav.limitKmh = navigator.speedLimit();
             Instructions.Maneuver then = navigator.then(u.next);
@@ -169,7 +185,7 @@ public class NavService extends Service implements LocationListener {
             lastNotification = note;
             getSystemService(NotificationManager.class).notify(NOTIFICATION_ID, notification(note));
         }
-        if (u.state == Navigator.State.OFF_ROUTE) reroute(loc);
+        if (u.state == Navigator.State.OFF_ROUTE) reroute(loc, navigator.targets());
         if (u.state == Navigator.State.ARRIVED) {
             Hub.navArrival = new Hub.Arrival(shown, riddenM, System.currentTimeMillis() - startedAt, movingMs);
             Logger.log(String.format(Locale.ROOT, "Navigation: arrived, %.1f km in %s", riddenM / 1000,
@@ -194,14 +210,32 @@ public class NavService extends Service implements LocationListener {
         voice.say(s);
     }
 
-    /** A new route from here to what is left of the old one, in the background. */
-    private void reroute(Location loc) {
+    /**
+     * The rider leaves out the next via point: a new route from here to the via points after it and the
+     * destination. While a new route is still being computed, it waits for it.
+     */
+    private void skipVia() {
+        if (navigator == null || lastMoveFix == null || navigator.route().roundTrip) return;
+        if (rerouting) {
+            main.postDelayed(this::skipVia, 1000);
+            return;
+        }
+        List<double[]> targets = navigator.targets();
+        if (targets.size() < 2) return;
+        targets.remove(0);
+        Logger.log("Navigation: via point skipped by the rider");
+        rerouteFailedAt = 0;
+        reroute(lastMoveFix, targets);
+    }
+
+    /** A new route from here to the targets (what is left of the old one), in the background. */
+    private void reroute(Location loc, List<double[]> targets) {
         if (rerouting || System.currentTimeMillis() - rerouteFailedAt < REROUTE_RETRY_MS) return;
         rerouting = true;
         Route old = navigator.route();
         List<double[]> pts = new ArrayList<>();
         pts.add(new double[]{loc.getLatitude(), loc.getLongitude()});
-        pts.addAll(navigator.targets());
+        pts.addAll(targets);
         double h = heading;
         boolean lh = leftHand();
         worker.execute(() -> {

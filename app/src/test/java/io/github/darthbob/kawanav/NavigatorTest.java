@@ -147,6 +147,32 @@ public class NavigatorTest {
     }
 
     @Test
+    public void curvesAheadEndWithTheRoute() throws Exception {
+        RouteGraph g = crossing();
+        Route r = route(g, 100, 0, 1000, 900);
+        Navigator nav = new Navigator(g, r, NavText.of("en"), false, false);
+        nav.onFix(TestGraphs.lat(0), TestGraphs.lon(300), 90, 10);
+        List<double[]> near = nav.curvesAhead(400);
+        assertEquals("two straight roads are one run", 1, near.size());
+        assertEquals(0, near.get(0)[0], 1);
+        assertEquals(400, near.get(0)[1], 1);
+        assertEquals(0, near.get(0)[2], 0);
+        List<double[]> far = nav.curvesAhead(15_000);
+        assertEquals("up to the destination", 1600, far.get(far.size() - 1)[1], 2);
+        assertEquals(0, Navigator.windingShare(far), 1e-9);
+        assertEquals(0.25, Navigator.windingShare(Arrays.asList(new double[]{0, 300, 0}, new double[]{300, 400, 3})), 1e-9);
+    }
+
+    @Test
+    public void theMapZoomsOutWhenFastAndInBeforeATurn() {
+        assertEquals("slow: close", 17, Navigator.mapZoom(3, -1), 1e-9);
+        assertEquals("motorway: far out", 14.5, Navigator.mapZoom(36, -1), 1e-9);
+        assertEquals(16.05, Navigator.mapZoom(50 / 3.6, 5000), 1e-6);
+        assertEquals("a turn close by: close again", 17, Navigator.mapZoom(36, 200), 1e-9);
+        assertEquals(16.3, Navigator.mapZoom(36, 500), 1e-9);
+    }
+
+    @Test
     public void pathAheadFollowsTheRoute() throws Exception {
         RouteGraph g = crossing();
         Route r = route(g, 100, 0, 1000, 900);
