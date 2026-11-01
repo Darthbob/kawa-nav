@@ -106,6 +106,33 @@ public final class NavText {
         return head + afterWords(a);
     }
 
+    /**
+     * The next maneuver when the rider asks for it: {@link #spoken}, and the destination or a via point
+     * with its distance ("Destination in 2 kilometres").
+     */
+    public String ahead(Instructions.Maneuver m, double distanceM, boolean imperial) {
+        if (m.kind != Instructions.Kind.ARRIVE && m.kind != Instructions.Kind.VIA) return spoken(m, distanceM, imperial);
+        if (distanceM < 40) return upcoming(m);
+        return upcoming(m) + t(" in ", " tra ", " in ") + distance(distanceM, imperial);
+    }
+
+    /** A distance on the screen: "850 m", "4.2 km", "37 km"; "300 ft", "0.8 mi", "23 mi". */
+    public static String shown(double m, boolean imperial) {
+        if (imperial) {
+            if (m < 300) return Math.round(m * 3.28084 / 10) * 10 + " ft";
+            double miles = m / 1609.344;
+            return String.format(Locale.ROOT, miles < 9.95 ? "%.1f mi" : "%.0f mi", miles);
+        }
+        if (m < 995) return CurveEngine.roundDistance(m) + " m";
+        return String.format(Locale.ROOT, m < 9950 ? "%.1f km" : "%.0f km", m / 1000);
+    }
+
+    /** A time on the screen: "48 min", "1 h 05 min". */
+    public static String duration(double seconds) {
+        long min = Math.max(1, Math.round(seconds / 60));
+        return min < 60 ? min + " min" : String.format(Locale.ROOT, "%d h %02d min", min / 60, min % 60);
+    }
+
     /** The phrase continuing a sentence: lower case first letter, except German nouns. */
     private String afterWords(String a) {
         if (lang.equals("de") && (a.startsWith("Auffahrt") || a.startsWith("Ausfahrt") || a.startsWith("Kurve")

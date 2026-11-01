@@ -106,6 +106,21 @@ public class NavigatorTest {
     }
 
     @Test
+    public void saysTheNextManeuverWhenAsked() throws Exception {
+        RouteGraph g = crossing();
+        Route r = route(g, 100, 0, 1000, 900);
+        Navigator nav = new Navigator(g, r, NavText.of("en"), false, false);
+        nav.onFix(TestGraphs.lat(0), TestGraphs.lon(300), 90, 10);
+        assertEquals("In 700 metres, turn left onto Via Nord", nav.repeat());
+        nav.onFix(TestGraphs.lat(0), TestGraphs.lon(700), 90, 10);
+        nav.onFix(TestGraphs.lat(0), TestGraphs.lon(950), 90, 10);
+        nav.onFix(TestGraphs.lat(100), TestGraphs.lon(1000), 0, 10);
+        assertEquals("Destination in 800 metres", nav.repeat());
+        for (int i = 0; i < 3; i++) nav.onFix(TestGraphs.lat(300), TestGraphs.lon(1150 + 10 * i), 0, 10);
+        assertEquals("Recalculating the route", nav.repeat());
+    }
+
+    @Test
     public void pathAheadFollowsTheRoute() throws Exception {
         RouteGraph g = crossing();
         Route r = route(g, 100, 0, 1000, 900);

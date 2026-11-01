@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "version": "1.3.2",
+      "changes": [
+        "Navigation screen: the map follows you again 10 seconds after you moved it or looked at the overview, and the button always says what it does (Overview or Follow me)",
+        "Navigation screen: what is left shows metres near the end instead of \"0 km\", with the time it still takes next to the arrival time",
+        "Navigation screen: Stop asks for a second tap, so one touch with a glove does not end the navigation",
+        "Navigation screen: the speaker turns the spoken navigation off and on during the ride, and a tap on the instruction says it again",
+        "At the destination the navigation screen sums up the ride (distance, time, moving average) and Close ends it"
+      ]
+    },
+    {
       "version": "1.3.1",
       "changes": [
         "Route planner: the map fills the screen, with the points, the route kinds and Start navigation in a panel under it",

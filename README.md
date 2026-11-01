@@ -667,9 +667,15 @@ navigation**. The route is planned again as soon as anything changes: no button 
   (from farther away on fast roads) and again at it. Leaving the route gives a new one within a few
   seconds. With "Curves between Maps instructions" or the spoken curve warnings on, the curves are those
   of the planned route. It goes on with the screen off and without the bike; stop it on the navigation
-  screen or in its notification. The navigation map turns with your direction, the way ahead pointing
-  up and your position low on the screen; **North up** keeps north at the top instead (remembered), and
-  **Overview** shows the whole route. While KawaNav navigates, Google Maps' directions are not sent to the dash.
+  screen (**Stop**, then *Tap again*: one touch with a glove does not end it) or in its notification.
+  The navigation screen shows what is left, the time it takes and the arrival time. The map turns with
+  your direction, the way ahead pointing up and your position low on the screen; **North up** keeps
+  north at the top instead (remembered), and **Overview** shows the whole route. After you move the map
+  or look at the overview, it follows you again 10 seconds after you last touched the screen. **Tap the
+  instruction** to hear it again (also with the voice off); the **speaker** turns the spoken
+  navigation off and on (the same as "Spoken navigation" in Settings). At the destination the screen
+  sums up the ride: distance, time and moving average. While KawaNav navigates, Google Maps' directions
+  are not sent to the dash.
 - **Saved routes**: the star keeps the route under a name; the list button at the top opens them
   (long-press to rename or delete). A saved route keeps its points, route kind and options and is
   planned again when opened, so it follows the regions you have downloaded.

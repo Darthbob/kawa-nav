@@ -180,6 +180,14 @@ public final class Navigator {
         return new Update(state, next, toNext, remaining, time, say);
     }
 
+    /** What to say when the rider asks for it: the next maneuver and its distance, or where the navigation stands. */
+    public String repeat() {
+        if (state == State.ARRIVED) return text.action(maneuvers.get(maneuvers.size() - 1));
+        if (state == State.OFF_ROUTE) return text.recalculating();
+        Instructions.Maneuver next = Instructions.next(maneuvers, progress);
+        return next == null ? null : text.ahead(next, next.at - progress, imperial);
+    }
+
     /**
      * The phrase due now, or null: a maneuver is said early (a distance that grows with speed), again
      * close to it, and once more at it; the very start says which road to follow.

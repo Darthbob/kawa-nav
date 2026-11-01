@@ -74,8 +74,25 @@ public final class Hub {
         }
     }
 
+    /** How a navigation ended at its destination: what the navigation screen sums up. */
+    public static final class Arrival {
+        public final String text;        // "You have arrived"
+        public final double riddenM;     // ridden while moving
+        public final long elapsedMs;     // from the start to the destination
+        public final long movingMs;
+
+        public Arrival(String text, double riddenM, long elapsedMs, long movingMs) {
+            this.text = text;
+            this.riddenM = riddenM;
+            this.elapsedMs = elapsedMs;
+            this.movingMs = movingMs;
+        }
+    }
+
     /** The navigation's state, null when it is not running. */
     public static volatile Nav nav;
+    /** The last navigation's arrival, null when it was stopped before (or a new one runs). */
+    public static volatile Arrival navArrival;
     /** The route the navigation rides (replaced when it reroutes). */
     public static volatile Route route;
     /** The planner's points, kept while the app runs. */
