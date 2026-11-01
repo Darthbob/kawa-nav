@@ -32,7 +32,8 @@ import java.util.concurrent.Executors;
  * sweeping, orange winding, red very winding), its points, and the rider's position. Under it
  * OpenStreetMap's map where it can be fetched ({@link MapTiles}), and otherwise the offline roads of
  * the downloaded regions ({@link RoadStore}), so it works without a network too. Drag, pinch or double
- * tap; a tap and a long press report where they were. When {@link #setEditable editable}, the points
+ * tap; a tap and a long press report where they were. While navigating, the part of the route ridden is
+ * grey, the next maneuver has a dot, and the zoom follows {@link #zoomTo}. When {@link #setEditable editable}, the points
  * can be dragged to another place or tapped. The view's padding is the part covered by other views:
  * the map centres and fits the route in the rest.
  */
@@ -82,6 +83,13 @@ public final class RouteMapView extends View {
     // what is drawn, in Web Mercator
     private double[] rx, ry;
     private int[] segColour;
+    /** Each point's distance along the route, the metres ridden (drawn grey), and the next maneuver (NaN: none). */
+    private double[] rd;
+    private double ridden;
+    private double manX = Double.NaN, manY;
+    /** The zoom the map eases to (world width in pixels, 0: none), and whether a finger zoomed since. */
+    private double targetPpw;
+    private boolean zoomedByHand;
     private final List<double[]> markers = new ArrayList<>(); // {x, y, kind, number}
     /** A round trip's direction: a dashed arrow from the start to the place it heads for (NaN: none). */
     private double dirFromX = Double.NaN, dirFromY, dirToX, dirToY;
@@ -212,12 +220,15 @@ public final class RouteMapView extends View {
 
     /** The route to draw (null: none), coloured by its edges' curviness. */
     public void setRoute(Route r, RouteGraph g) {
+        ridden = 0;
+        manX = Double.NaN;
         if (r == null || r.lat.length < 2) {
-            rx = ry = null;
+            rx = ry = rd = null;
             segColour = null;
             invalidate();
             return;
         }
+        rd = r.dist;
         int n = r.lat.length;
         rx = new double[n];
         ry = new double[n];
@@ -234,6 +245,35 @@ public final class RouteMapView extends View {
             segColour[i] = LEVEL_COLOURS[level];
         }
         invalidate();
+    }
+
+    /** How far along the route the rider is (the part behind is grey) and where the next maneuver is ({lat, lon}, null: none). */
+    public void setProgress(double metres, double[] maneuver) {
+        ridden = metres;
+        if (maneuver == null) {
+            manX = Double.NaN;
+        } else {
+            manX = MapTiles.x(maneuver[1]);
+            manY = MapTiles.y(maneuver[0]);
+        }
+        invalidate();
+    }
+
+    /**
+     * Eases the map to a zoom level, unless a finger zoomed it since {@link #autoZoom} (the navigation
+     * zooms out when fast and in before a maneuver).
+     */
+    public void zoomTo(double zoom) {
+        if (zoomedByHand) return;
+        double t = tilePx * Math.pow(2, zoom);
+        if (Math.abs(t - targetPpw) < 1e-6 * t) return;
+        targetPpw = t;
+        invalidate();
+    }
+
+    /** {@link #zoomTo} works again after a finger zoomed. */
+    public void autoZoom() {
+        zoomedByHand = false;
     }
 
     /** Start, via points and destination ({lat, lon}); the first is the start, the last the destination. */
@@ -333,6 +373,7 @@ public final class RouteMapView extends View {
     public void center(double lat, double lon, int zoom) {
         cx = MapTiles.x(lon);
         cy = MapTiles.y(lat);
+        targetPpw = 0;
         ppw = tilePx * (1L << zoom);
         follow = false;
         invalidate();
@@ -360,6 +401,7 @@ public final class RouteMapView extends View {
         double w = Math.max(1, getWidth() - getPaddingLeft() - getPaddingRight() - 2 * pad),
                 h = Math.max(1, getHeight() - getPaddingTop() - getPaddingBottom() - 2 * pad);
         double span = Math.max((maxX - minX) / w, (maxY - minY) / h);
+        targetPpw = 0;
         ppw = span <= 0 ? tilePx * (1 << 15) : Math.min(tilePx * (1 << 16), 1 / span);
         cx = (minX + maxX) / 2;
         cy = (minY + maxY) / 2;
@@ -514,6 +556,8 @@ public final class RouteMapView extends View {
         double[] o = unturn(fx - ax, fy - ay);
         double ox = o[0], oy = o[1];
         double px = cx + ox / ppw, py = cy + oy / ppw;
+        targetPpw = 0;
+        zoomedByHand = true;
         ppw = Math.max(tilePx * 4, Math.min(tilePx * (1L << (MapTiles.MAX_ZOOM + 1)), ppw * factor));
         if (!follow) {
             cx = px - ox / ppw;
@@ -544,6 +588,16 @@ public final class RouteMapView extends View {
         } else {
             bearing = targetBearing;
         }
+        // and the zoom the navigation asks for
+        if (targetPpw > 0) {
+            double f = targetPpw / ppw;
+            if (Math.abs(Math.log(f)) > 0.004) {
+                ppw *= Math.pow(f, 0.15);
+                postInvalidateOnAnimation();
+            } else {
+                ppw = targetPpw;
+            }
+        }
         anchor();
         float halfW = ax, halfH = ay;
         canvas.save();
@@ -570,13 +624,17 @@ public final class RouteMapView extends View {
             for (int i = 1; i < rx.length; i++) {
                 float x = (float) ((rx[i] - cx) * ppw + halfW), y = (float) ((ry[i] - cy) * ppw + halfH);
                 if (Math.abs(x - lx) < step && Math.abs(y - ly) < step && i < rx.length - 1) continue;
-                line.setColor(segColour[i - 1]);
+                // the part already ridden is grey
+                line.setColor(rd != null && rd[i] <= ridden ? (night ? 0xFF5F5F66 : 0xFFB0B0B8) : segColour[i - 1]);
                 canvas.drawLine(lx, ly, x, y, line);
                 lx = x;
                 ly = y;
             }
         }
         if (dirFromX == dirFromX) drawDirection(canvas, halfW, halfH);
+        if (manX == manX) {
+            dot(canvas, (float) ((manX - cx) * ppw + halfW), (float) ((manY - cy) * ppw + halfH), 7, 0xFFFFFFFF, 0xFF171717);
+        }
         for (int i = 0; i < markers.size(); i++) {
             double[] m = markers.get(i);
             float x = (float) ((m[0] - cx) * ppw + halfW), y = (float) ((m[1] - cy) * ppw + halfH);

@@ -1328,6 +1328,7 @@ public class PlannerActivity extends KawaActivity {
         }
         if (!r.roundTrip && w.dest != null) Places.addRecent(prefs, new Places.Place(w.dest.name, w.dest.lat, w.dest.lon));
         Hub.route = r;
+        Hub.navArrival = null; // the navigation screen must not sum up the last ride
         if (NavService.running()) NavService.stop(this);
         main.postDelayed(() -> {
             NavService.start(this);

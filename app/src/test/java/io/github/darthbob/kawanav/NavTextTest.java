@@ -40,6 +40,44 @@ public class NavTextTest {
     }
 
     @Test
+    public void askedForTheNextManeuver() {
+        Instructions.Maneuver left = m(Instructions.Kind.TURN, -1, 0, "Via Roma");
+        assertEquals("In 300 metres, turn left onto Via Roma", NavText.of("en").ahead(left, 310, false));
+        Instructions.Maneuver dest = m(Instructions.Kind.ARRIVE, 0, 0, "");
+        assertEquals("Destination in 2 kilometres", NavText.of("en").ahead(dest, 2000, false));
+        assertEquals("Destinazione tra 2 chilometri", NavText.of("it").ahead(dest, 2000, false));
+        assertEquals("Zwischenziel 1 in 500 Metern", NavText.of("de").ahead(m(Instructions.Kind.VIA, 0, 1, ""), 480, false));
+        assertEquals("close: just named", "Destination", NavText.of("en").ahead(dest, 20, false));
+    }
+
+    @Test
+    public void theManeuverAfterTheNext() {
+        Instructions.Maneuver left = m(Instructions.Kind.TURN, -1, 0, "Via Roma");
+        assertEquals("Then turn left onto Via Roma", NavText.of("en").thenShown(left));
+        assertEquals("Poi svolta a sinistra in Via Roma", NavText.of("it").thenShown(left));
+        assertEquals("Dann links abbiegen auf Via Roma", NavText.of("de").thenShown(left));
+        Instructions.Maneuver dest = m(Instructions.Kind.ARRIVE, 0, 0, "");
+        assertEquals("Poi destinazione", NavText.of("it").thenShown(dest));
+        assertEquals("a German noun keeps its capital", "Dann Ziel", NavText.of("de").thenShown(dest));
+    }
+
+    @Test
+    public void distancesAndTimesOnTheScreen() {
+        assertEquals("850 m", NavText.shown(847, false));
+        assertEquals("990 m", NavText.shown(994, false));
+        assertEquals("1.0 km", NavText.shown(996, false));
+        assertEquals("4.2 km", NavText.shown(4240, false));
+        assertEquals("37 km", NavText.shown(36_800, false));
+        assertEquals("not 0 km near the end", "420 m", NavText.shown(423, false));
+        assertEquals("660 ft", NavText.shown(200, true));
+        assertEquals("0.8 mi", NavText.shown(1300, true));
+        assertEquals("23 mi", NavText.shown(37_000, true));
+        assertEquals("1 min", NavText.duration(10));
+        assertEquals("48 min", NavText.duration(48 * 60 + 10));
+        assertEquals("1 h 05 min", NavText.duration(65 * 60));
+    }
+
+    @Test
     public void distances() {
         NavText it = NavText.of("it"), en = NavText.of("en");
         assertEquals("1,5 chilometri", it.distance(1530, false));

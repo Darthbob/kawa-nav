@@ -22,6 +22,8 @@ public final class Navigator {
     /** This many fixes in a row off the route, and it is left. */
     static final int OFF_ROUTE_FIXES = 3;
     static final double ARRIVED_M = 30;
+    /** The screen shows the maneuver after the next one when it follows within this (metres). */
+    static final double THEN_M = 300;
 
     /** What the navigation looks like after a fix. */
     public static final class Update {
@@ -178,6 +180,80 @@ public final class Navigator {
         double remaining = Math.max(0, route.length - progress);
         double time = route.length > 0 ? route.time * remaining / route.length : 0;
         return new Update(state, next, toNext, remaining, time, say);
+    }
+
+    /**
+     * How winding the route is over the next {@code metres}: runs of {from, to, level}, metres ahead of
+     * the rider and the curviness level 0..3 ({@link RouteGraph#curvy}: straight to very winding).
+     */
+    public List<double[]> curvesAhead(double metres) {
+        List<double[]> l = new ArrayList<>();
+        double end = Math.min(route.length, progress + metres);
+        for (int i = route.stateAt(progress); i < route.states.length && route.stateFrom[i] < end; i++) {
+            int level = RouteGraph.curvy(graph.flags(RouteGraph.edgeOf(route.states[i])));
+            double a = Math.max(route.stateFrom[i], progress) - progress, b = Math.min(route.stateTo[i], end) - progress;
+            if (b <= a) continue;
+            double[] last = l.isEmpty() ? null : l.get(l.size() - 1);
+            if (last != null && last[2] == level && Math.abs(last[1] - a) < 1) last[1] = b;
+            else l.add(new double[]{a, b, level});
+        }
+        return l;
+    }
+
+    /** The share (0..1) of {@link #curvesAhead} on winding and very winding roads. */
+    public static double windingShare(List<double[]> runs) {
+        double all = 0, winding = 0;
+        for (double[] r : runs) {
+            all += r[1] - r[0];
+            if (r[2] >= 2) winding += r[1] - r[0];
+        }
+        return all <= 0 ? 0 : winding / all;
+    }
+
+    /**
+     * The navigation map's zoom (a Web Mercator level) for the speed (m/s) and the distance to the next
+     * maneuver (negative: none): closer when slow, farther out when fast to see more of the road ahead,
+     * and close again before a maneuver so its junction can be read.
+     */
+    public static double mapZoom(double speed, double toNext) {
+        double z = Math.max(14.5, Math.min(17, 17.3 - speed * 3.6 / 40));
+        if (toNext >= 0 && toNext < 250) return Math.max(z, 17);
+        if (toNext >= 0 && toNext < 600) return Math.max(z, 16.3);
+        return z;
+    }
+
+    /** The edge the rider is on, or -1 when off the route or arrived. */
+    private int edgeHere() {
+        if (state != State.NAVIGATING || route.states.length == 0) return -1;
+        return RouteGraph.edgeOf(route.states[route.stateAt(progress)]);
+    }
+
+    /** The road the rider is on ("SS38 Via dello Stelvio"), "" when it has no name or they are off the route. */
+    public String road() {
+        int e = edgeHere();
+        return e < 0 ? "" : Instructions.road(graph, e);
+    }
+
+    /** The speed limit (km/h) of the road the rider is on, 0 when the map does not have it. */
+    public int speedLimit() {
+        int e = edgeHere();
+        return e < 0 ? 0 : RouteGraph.maxspeedKmh(graph.flags(e));
+    }
+
+    /** The maneuver after {@code next} when it follows within {@link #THEN_M} (not a via point), else null. */
+    public Instructions.Maneuver then(Instructions.Maneuver next) {
+        int i = next == null ? -1 : maneuvers.indexOf(next);
+        if (i < 0 || i + 1 >= maneuvers.size()) return null;
+        Instructions.Maneuver after = maneuvers.get(i + 1);
+        return after.kind == Instructions.Kind.VIA || after.at - next.at > THEN_M ? null : after;
+    }
+
+    /** What to say when the rider asks for it: the next maneuver and its distance, or where the navigation stands. */
+    public String repeat() {
+        if (state == State.ARRIVED) return text.action(maneuvers.get(maneuvers.size() - 1));
+        if (state == State.OFF_ROUTE) return text.recalculating();
+        Instructions.Maneuver next = Instructions.next(maneuvers, progress);
+        return next == null ? null : text.ahead(next, next.at - progress, imperial);
     }
 
     /**
