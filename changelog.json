@@ -7,7 +7,10 @@
         "Navigation screen: what is left shows metres near the end instead of \"0 km\", with the time it still takes next to the arrival time",
         "Navigation screen: Stop asks for a second tap, so one touch with a glove does not end the navigation",
         "Navigation screen: the speaker turns the spoken navigation off and on during the ride, and a tap on the instruction says it again",
-        "At the destination the navigation screen sums up the ride (distance, time, moving average) and Close ends it"
+        "At the destination the navigation screen sums up the ride (distance, time, moving average) and Close ends it",
+        "Navigation screen: a big arrow for the next maneuver (roundabouts with the exit number), and the one after it when it comes right after",
+        "Navigation screen: your speed, the road's speed limit (your speed turns red above it) and the road's name at the bottom",
+        "Navigation screen: a line warns when the GPS signal is lost, and when a speed camera is ahead"
       ]
     },
     {

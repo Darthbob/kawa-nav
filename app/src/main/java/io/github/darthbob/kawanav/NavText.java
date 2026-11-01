@@ -136,7 +136,7 @@ public final class NavText {
     /** The phrase continuing a sentence: lower case first letter, except German nouns. */
     private String afterWords(String a) {
         if (lang.equals("de") && (a.startsWith("Auffahrt") || a.startsWith("Ausfahrt") || a.startsWith("Kurve")
-                || a.startsWith("Kehre"))) {
+                || a.startsWith("Kehre") || a.startsWith("Ziel") || a.startsWith("Zwischenziel"))) {
             return a;
         }
         return Character.toLowerCase(a.charAt(0)) + a.substring(1);
@@ -145,6 +145,11 @@ public final class NavText {
     /** The maneuver after the next one, said with it when it follows straight after: "then turn right". */
     public String then(Instructions.Maneuver m) {
         return t(", then ", ", poi ", ", dann ") + afterWords(action(m));
+    }
+
+    /** The maneuver after the next one, on the screen under it: "Then turn right onto Via Roma". */
+    public String thenShown(Instructions.Maneuver m) {
+        return t("Then ", "Poi ", "Dann ") + afterWords(upcoming(m));
     }
 
     public String recalculating() {

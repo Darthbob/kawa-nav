@@ -62,6 +62,12 @@ public final class Hub {
         public final double remainingS;
         public final Navigator.State state;
         public final long updatedAt;
+        /** The road ridden now ("" unknown) and its speed limit (km/h, 0 unknown). */
+        public String road = "";
+        public int limitKmh;
+        /** The maneuver straight after the next one (turn id, "Then turn right"), TURN_NONE / null when none. */
+        public int thenTurn = KawaProtocol.TURN_NONE;
+        public String thenText;
 
         public Nav(int turn, int distanceM, String text, double remainingM, double remainingS, Navigator.State state) {
             this.turn = turn;

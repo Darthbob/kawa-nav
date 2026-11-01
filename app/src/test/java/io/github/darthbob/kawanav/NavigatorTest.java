@@ -121,6 +121,32 @@ public class NavigatorTest {
     }
 
     @Test
+    public void knowsTheRoadItsLimitAndTheManeuverAfterTheNext() throws Exception {
+        RouteGraph g = TestGraphs.open(TestGraphs.build(Arrays.asList(
+                TestGraphs.way(new long[]{1, 2, 3}, 0, 0, 1000, 0, 2000, 0).name("Via Roma")
+                        .attributes(RouteGraphBuilder.attributes("", "", "", "70", "", "", "", "")),
+                TestGraphs.way(new long[]{2, 4, 5}, 1000, 0, 1000, 200, 1000, 1000).name("Via Nord"),
+                TestGraphs.way(new long[]{4, 6}, 1000, 200, 0, 200).name("Via Ovest"),
+                TestGraphs.way(new long[]{10, 2}, 1000, -1000, 1000, 0).name("Via Sud"))));
+        Route r = route(g, 100, 0, 500, 200);
+        Navigator nav = new Navigator(g, r, NavText.of("en"), false, false);
+        Navigator.Update u = nav.onFix(TestGraphs.lat(0), TestGraphs.lon(300), 90, 10);
+        assertEquals("Via Roma", nav.road());
+        assertEquals(70, nav.speedLimit());
+        assertEquals("Turn left onto Via Nord", NavText.of("en").action(u.next));
+        Instructions.Maneuver then = nav.then(u.next);
+        assertEquals("200 m after it", "Then turn left onto Via Ovest", NavText.of("en").thenShown(then));
+
+        nav.onFix(TestGraphs.lat(0), TestGraphs.lon(600), 90, 10);
+        nav.onFix(TestGraphs.lat(0), TestGraphs.lon(950), 90, 10);
+        u = nav.onFix(TestGraphs.lat(100), TestGraphs.lon(1000), 0, 10);
+        assertEquals("Via Nord", nav.road());
+        assertEquals("no limit in the map", 0, nav.speedLimit());
+        assertEquals(Instructions.Kind.TURN, u.next.kind);
+        assertNull("the destination is 500 m after it", nav.then(u.next));
+    }
+
+    @Test
     public void pathAheadFollowsTheRoute() throws Exception {
         RouteGraph g = crossing();
         Route r = route(g, 100, 0, 1000, 900);

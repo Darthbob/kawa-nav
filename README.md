@@ -668,7 +668,12 @@ navigation**. The route is planned again as soon as anything changes: no button 
   seconds. With "Curves between Maps instructions" or the spoken curve warnings on, the curves are those
   of the planned route. It goes on with the screen off and without the bike; stop it on the navigation
   screen (**Stop**, then *Tap again*: one touch with a glove does not end it) or in its notification.
-  The navigation screen shows what is left, the time it takes and the arrival time. The map turns with
+  The navigation screen shows the next maneuver's arrow (the exit number in a roundabout's ring), and
+  under it the maneuver straight after when it follows within 300 m ("Then turn right"); what is left,
+  the time it takes and the arrival time; a red line when the GPS signal is lost and an orange one for
+  a speed camera ahead (when the speed camera warnings are on). At the bottom: your speed (from the
+  GPS), the speed limit of the road when the map has it (the speed turns red more than 3 km/h over it),
+  and the road's name. The map turns with
   your direction, the way ahead pointing up and your position low on the screen; **North up** keeps
   north at the top instead (remembered), and **Overview** shows the whole route. After you move the map
   or look at the overview, it follows you again 10 seconds after you last touched the screen. **Tap the

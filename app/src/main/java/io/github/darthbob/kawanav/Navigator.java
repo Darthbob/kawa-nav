@@ -22,6 +22,8 @@ public final class Navigator {
     /** This many fixes in a row off the route, and it is left. */
     static final int OFF_ROUTE_FIXES = 3;
     static final double ARRIVED_M = 30;
+    /** The screen shows the maneuver after the next one when it follows within this (metres). */
+    static final double THEN_M = 300;
 
     /** What the navigation looks like after a fix. */
     public static final class Update {
@@ -178,6 +180,32 @@ public final class Navigator {
         double remaining = Math.max(0, route.length - progress);
         double time = route.length > 0 ? route.time * remaining / route.length : 0;
         return new Update(state, next, toNext, remaining, time, say);
+    }
+
+    /** The edge the rider is on, or -1 when off the route or arrived. */
+    private int edgeHere() {
+        if (state != State.NAVIGATING || route.states.length == 0) return -1;
+        return RouteGraph.edgeOf(route.states[route.stateAt(progress)]);
+    }
+
+    /** The road the rider is on ("SS38 Via dello Stelvio"), "" when it has no name or they are off the route. */
+    public String road() {
+        int e = edgeHere();
+        return e < 0 ? "" : Instructions.road(graph, e);
+    }
+
+    /** The speed limit (km/h) of the road the rider is on, 0 when the map does not have it. */
+    public int speedLimit() {
+        int e = edgeHere();
+        return e < 0 ? 0 : RouteGraph.maxspeedKmh(graph.flags(e));
+    }
+
+    /** The maneuver after {@code next} when it follows within {@link #THEN_M} (not a via point), else null. */
+    public Instructions.Maneuver then(Instructions.Maneuver next) {
+        int i = next == null ? -1 : maneuvers.indexOf(next);
+        if (i < 0 || i + 1 >= maneuvers.size()) return null;
+        Instructions.Maneuver after = maneuvers.get(i + 1);
+        return after.kind == Instructions.Kind.VIA || after.at - next.at > THEN_M ? null : after;
     }
 
     /** What to say when the rider asks for it: the next maneuver and its distance, or where the navigation stands. */

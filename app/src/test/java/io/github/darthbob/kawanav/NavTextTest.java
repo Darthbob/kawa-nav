@@ -51,6 +51,17 @@ public class NavTextTest {
     }
 
     @Test
+    public void theManeuverAfterTheNext() {
+        Instructions.Maneuver left = m(Instructions.Kind.TURN, -1, 0, "Via Roma");
+        assertEquals("Then turn left onto Via Roma", NavText.of("en").thenShown(left));
+        assertEquals("Poi svolta a sinistra in Via Roma", NavText.of("it").thenShown(left));
+        assertEquals("Dann links abbiegen auf Via Roma", NavText.of("de").thenShown(left));
+        Instructions.Maneuver dest = m(Instructions.Kind.ARRIVE, 0, 0, "");
+        assertEquals("Poi destinazione", NavText.of("it").thenShown(dest));
+        assertEquals("a German noun keeps its capital", "Dann Ziel", NavText.of("de").thenShown(dest));
+    }
+
+    @Test
     public void distancesAndTimesOnTheScreen() {
         assertEquals("850 m", NavText.shown(847, false));
         assertEquals("990 m", NavText.shown(994, false));
