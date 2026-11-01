@@ -723,6 +723,9 @@ public abstract class KawaActivity extends Activity {
             label = itemTitle(labelText);
             view.addView(label, weight());
             figure = new Figure(22, Gravity.END);
+            // a long value wraps instead of taking the whole row: the label would get no width at all and
+            // grow one letter per line
+            figure.number.setMaxWidth(getResources().getDisplayMetrics().widthPixels / 2);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.leftMargin = dp(Ui.SPACE2);

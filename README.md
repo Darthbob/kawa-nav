@@ -444,9 +444,11 @@ gauge and the battery voltage, then groups everything the dash reported when it 
   they are gone a few seconds after the bike stops sending.
 - **Suspension**: the body's acceleration and the yaw, roll and pitch rates from the IMU (a Z900 sends
   them too), and on bikes with the electronic suspension its travel and where the damping stands.
-- **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
-  their date and the kilometres left, and the odometer they fall at ("in 11,045 km (at 16,597 km)").
-  A reminder the meter keeps switched off is marked "reminder off".
+- **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change), as
+  Rideology shows them. The Kawasaki service is due at an odometer reading, with the kilometres left
+  ("at 12,000 km (1,050 km left) or by 18 Mar 2027"); the oil change in so many kilometres, with the
+  odometer that makes ("in 11,045 km (at 16,597 km) or by 29 Sept 2027"). A reminder switched off on
+  the dash says "off".
 - **Dash**: the clock the dash has (and the shift lamp setting), as last read.
 - **Parked**: after the link is lost, the phone's position at that moment, with a "Walk to the bike"
   button that opens Maps in walking mode. It appears only if the phone had a recent position (curves or

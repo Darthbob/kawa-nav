@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "1.3.3",
+      "changes": [
+        "Bike tab, Maintenance: the Kawasaki service is shown at the odometer reading it is due at, with the kilometres left, like Rideology",
+        "Bike tab, Maintenance: a reminder switched off on the dash says \"off\" instead of the dash's default date and kilometres",
+        "Bike tab: the names of the maintenance reminders no longer disappear when the phone writes dates day first"
+      ]
+    },
+    {
       "version": "1.3.2",
       "changes": [
         "Navigation screen: the map follows you again 10 seconds after you moved it or looked at the overview, and the button always says what it does (Overview or Follow me)",

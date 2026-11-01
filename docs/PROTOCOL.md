@@ -844,9 +844,20 @@ its frame arrives. With the 0x1D config, the three reminders decode as:
 
 The oil change's distance **counts down with the odometer**: 11,338 km at 5,259 km, 11,045 km at
 5,552 km, both due at 16,597 km, and the same sum at all ten reads in between. So the distance is what
-is left, not the odometer it is due at. Whether notify bits 0 mean a reminder that is off (the Kawasaki
-service's 2024-01-01 and 0 km look like an unset one), and what the rider's 12,000 km is, needs the
-dash's own maintenance page: the debug build's Field tests list it. (observed)
+is left, not the odometer it is due at. (observed)
+
+**Rideology's reading of 0x1E** (`qe/b.java:294-324`, `fe/i.java:705-754`):
+- It keeps a reminder's date and distance only when the notify nibble (high nibble of the byte after
+  the block id, bytes 8, 18 and 28) is 1 to 3, or 1 to 2 for the rider's reminder. For 0, 15 or an
+  absent field it shows "---": the reminder is off, and its date and distance are the meter's defaults
+  (2024-01-01, 0 km or 12,000 km above).
+- It labels the Kawasaki service's distance "At" and the oil change's "In", and shows both values as
+  they come, without arithmetic: the Kawasaki service's distance is the odometer it is due at. A
+  second bike fits it: Kawasaki service on, 12,000 km, at about 10,950 km on the odometer (KawaNav's
+  sum said 22,950 km); Rideology said "At 12,000 km", "By 2027/03/18", and "---" for the oil change
+  and the rider's reminder, both off.
+- The rider's reminder has no word in front of it, so whether its distance is left or an odometer is
+  not known. KawaNav reads it like the oil change. (code, observed)
 
 ### Test marks (2026-10-27)
 

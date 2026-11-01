@@ -915,7 +915,24 @@ public class BikeFramesTest {
         assertEquals(2027, k.year);
         assertEquals(30000, k.distanceKm);
         assertTrue(k.hasDate());
+        assertTrue(k.on());
         assertEquals(-1, s.reminders[BikeFrames.ServiceIndicator.OIL].distanceKm);
+        assertFalse(s.reminders[BikeFrames.ServiceIndicator.OIL].on());
+    }
+
+    @Test
+    public void maintenanceReminderOnlyOnForRideologysNotifyValues() {
+        byte[] v = blank(0x1E, 45);
+        put(v, 15, 0x05, 0x0D, 0x00, 0x3F, 0xFF, 0xFF, 0xFF, 0x00, 0x2E, 0xE0); // rider's reminder, notify 3
+        put(v, 25, 0x05, 0x0E, 0x00, 0x39, 0x01, 0x1B, 0xFF, 0x00, 0x2E, 0xE0); // oil change, notify 3
+        BikeFrames.ServiceIndicator s = (BikeFrames.ServiceIndicator) new BikeFrames.Decoder().decode(v);
+        assertEquals(3, s.reminders[BikeFrames.ServiceIndicator.RIDER].notify);
+        assertFalse("the rider's reminder only knows 1 and 2", s.reminders[BikeFrames.ServiceIndicator.RIDER].on());
+        assertTrue(s.reminders[BikeFrames.ServiceIndicator.OIL].on());
+        put(v, 28, 0x09); // notify 0
+        s = (BikeFrames.ServiceIndicator) new BikeFrames.Decoder().decode(v);
+        assertFalse(s.reminders[BikeFrames.ServiceIndicator.OIL].on());
+        assertEquals(12000, s.reminders[BikeFrames.ServiceIndicator.OIL].distanceKm);
     }
 
     /** A 0x41 frame like vehicleInfoArithmetic's, every value the meter would mark as "not current". */

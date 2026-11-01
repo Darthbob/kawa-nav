@@ -66,15 +66,48 @@ public class MaintenanceLogTest {
         java.util.Calendar due = java.util.Calendar.getInstance();
         due.clear();
         due.set(2027, java.util.Calendar.SEPTEMBER, 29);
-        assertEquals(df.format(due.getTime()) + " or in 11,045 km (at 16,597 km)",
+        assertEquals("in 11,045 km (at 16,597 km) or by " + df.format(due.getTime()),
                 MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.OIL], 5552, df));
         assertEquals("in 11,045 km", MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.OIL], Double.NaN,
-                java.text.DateFormat.getDateInstance()).replaceFirst("^.* or ", ""));
-        // the two reminders whose notify bits are 0
-        assertTrue(MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.KAWASAKI], 5552, df).endsWith("reminder off"));
-        assertEquals("in 12,000 km (at 17,552 km) · reminder off",
-                MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.RIDER], 5552, df));
+                java.text.DateFormat.getDateInstance()).replaceFirst(" or .*$", ""));
+        // the two reminders whose notify bits are 0: their 1 Jan 2024, 0 km and 12,000 km are only defaults
+        assertEquals("off", MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.KAWASAKI], 5552, df));
+        assertEquals("off", MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.RIDER], 5552, df));
         assertEquals(3, MaintenanceLog.dueFromDash(s, 5552).size());
+    }
+
+    /**
+     * A bike with the Kawasaki service switched on and the other two off, as Rideology showed it:
+     * Kawasaki service at 12,000 km by 18 Mar 2027, oil change and rider's reminder "---".
+     */
+    private static BikeFrames.ServiceIndicator serviceOn() {
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(KawaProtocol.parseHex("1D0C0C140005414300C3FC00CFFFFF"));
+        return (BikeFrames.ServiceIndicator) d.decode(KawaProtocol.parseHex(("1E 2A 17 08 00"
+                + " 05 4C 00 13 12 1B 00 00 2E E0 05 4D 00 0F FF FF FF 00 2E E0 05 4E 00 01 01 18 00 00 2E E0"
+                + " FF FF FF FF FF FF FF FF FF FF").replace(" ", "")));
+    }
+
+    @Test
+    public void theKawasakiServiceIsDueAtAnOdometer() {
+        java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, java.util.Locale.GERMANY);
+        BikeFrames.ServiceIndicator s = serviceOn();
+        BikeFrames.ServiceIndicator.Reminder k = s.reminders[BikeFrames.ServiceIndicator.KAWASAKI];
+        assertTrue(k.on());
+        java.util.Calendar date = java.util.Calendar.getInstance();
+        date.clear();
+        date.set(2027, java.util.Calendar.MARCH, 18);
+        String by = " or by " + df.format(date.getTime());
+        assertEquals("at 12,000 km (1,050 km left)" + by, MaintenanceLog.due(k, 10950, df));
+        assertEquals("at 12,000 km (100 km overdue)" + by, MaintenanceLog.due(k, 12100, df));
+        assertEquals("at 12,000 km" + by, MaintenanceLog.due(k, Double.NaN, df));
+        assertEquals("off", MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.RIDER], 10950, df));
+        assertEquals("off", MaintenanceLog.due(s.reminders[BikeFrames.ServiceIndicator.OIL], 10950, df));
+        // a day-first date ("18.03.2027") must not start the text: a row shows a value starting with a
+        // number as one big figure, and this one is far too long for that
+        for (String line : MaintenanceLog.dueFromDash(s, 10950)) {
+            assertTrue(line, line.replaceFirst("^[^:]*: ", "").matches("^[a-z].*"));
+        }
     }
 
     // ------------------------------------------------------------------ the rider's own reminders
