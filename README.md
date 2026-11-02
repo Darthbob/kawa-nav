@@ -244,10 +244,16 @@ navigation, and notification access is no longer needed.
 
 #### Show upcoming curves
 
-Free ride: when Maps is not navigating, KawaNav follows the road you are on (at junctions: the road
-with the same name or number, else the straightest one) and shows what comes next:
+Free ride: when Maps is not navigating, KawaNav follows the road you are on and shows what comes next.
+At a junction it takes the road that keeps your road's name or number, as long as that one does not
+turn more than 45° further than the straightest road on; otherwise the straightest one, with a
+preference for roads of the same or a higher class (a main road that bends slightly over a lane straight
+on). A road that turns back by more than 150° is never taken. So a named road that leaves at a right
+angle at a T junction where an unnamed road carries straight on is not followed: KawaNav keeps to the
+road as it lies, like a rider who has no map. What the dash shows:
 
-- the next curve with its distance to where the bend starts; once you are in a bend, the one after it;
+- the next curve with its distance to where the bend starts (where the road begins to turn, to within
+  5 m); once you are in a bend, the one after it;
 - a roundabout as roundabout symbol with the exit that continues your road;
 - on a straight, the straight arrow with the distance to the next curve (searched up to 3 km ahead,
   or to the end of the downloaded roads).

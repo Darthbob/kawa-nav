@@ -143,13 +143,15 @@ public class RoadNetworkTest {
     }
 
     @Test
-    public void everyHighwayIsKeptNoneIsIgnored() {
-        // the network does not filter by highway: a footway counts like a residential road (class 6),
-        // so whoever feeds the network must leave out what motorcycles can't ride
-        RoadNetwork net = net(straightRoad().highway("footway"), way(2, new long[]{7, 8}, 0, 50, 100, 50).highway(""));
-        assertEquals(2, net.size());
-        assertEquals(6, net.roads.get(0).rank);
-        assertEquals(6, net.roads.get(1).rank);
+    public void waysAMotorcycleCannotRideAreLeftOut() {
+        // a footway, a cycleway or a way without a kind in a tile must not be matched and followed
+        // like a residential road: the network keeps the kinds the region import keeps, and no other
+        RoadNetwork net = net(straightRoad().highway("footway"), way(2, new long[]{7, 8}, 0, 50, 100, 50).highway(""),
+                way(3, new long[]{9, 10}, 0, 100, 100, 100).highway("cycleway"),
+                way(4, new long[]{11, 12}, 0, 150, 100, 150).highway("living_street"));
+        assertEquals(1, net.size());
+        assertEquals(4, net.roads.get(0).id);
+        for (String h : RoadNetwork.HIGHWAYS) assertEquals(h, 1, net(straightRoad().highway(h)).size());
     }
 
     @Test
@@ -164,7 +166,7 @@ public class RoadNetworkTest {
         assertEquals(6, RoadNetwork.rank("residential"));
         assertEquals(7, RoadNetwork.rank("living_street"));
         assertEquals("ramps come last", 8, RoadNetwork.rank("primary_link"));
-        assertEquals("unknown kinds count like residential", 6, RoadNetwork.rank("footway"));
+        assertEquals("a kind the network does not take still has a class, for the map's colours", 6, RoadNetwork.rank("footway"));
     }
 
     @Test
@@ -347,19 +349,19 @@ public class RoadNetworkTest {
     }
 
     @Test
-    public void pathStopsAtTheFirstVertexAtOrBeyondTheLookAhead() {
+    public void pathIsExactlyAsLongAsTheLookAhead() {
         Way road = way(1, new long[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
                 0, 0, 100, 0, 200, 0, 300, 0, 400, 0, 500, 0, 600, 0, 700, 0, 800, 0, 900, 0, 1000, 0);
         RoadNetwork net = net(road);
         RoadNetwork.Match m = net.match(250, 0, 90, null);
-        // whole vertices are added while the path is shorter than the look-ahead: it ends at the first
-        // vertex at or beyond it, so it may be up to one segment longer than asked
-        assertEquals(250, length(net.pathAhead(m, 249)), 1e-6);
+        // the last point is cut inside the segment the look-ahead ends in, so "straight for 1000 m"
+        // and the bends found are measured on the look-ahead, not on up to one segment more
         List<double[]> path = net.pathAhead(m, 220);
-        assertEquals("overshoots 220 m to the vertex at 500", 250, length(path), 1e-6);
-        assertEndsAt("", path, 500, 0);
-        assertEquals(350, length(net.pathAhead(m, 251)), 1e-6);
-        assertEquals(350, length(net.pathAhead(m, 349)), 1e-6);
+        assertEquals(220, length(path), 1e-6);
+        assertEndsAt("cut at 470, between the vertices at 400 and 500", path, 470, 0);
+        assertEquals(249, length(net.pathAhead(m, 249)), 1e-6);
+        assertEquals("a look-ahead ending on a vertex ends there", 250, length(net.pathAhead(m, 250)), 1e-6);
+        assertEquals(251, length(net.pathAhead(m, 251)), 1e-6);
         assertEquals("the whole road when the look-ahead is longer", 750, length(net.pathAhead(m, 5000)), 1e-6);
     }
 
@@ -477,7 +479,7 @@ public class RoadNetworkTest {
         assertEndsAt("all the way to the end of Via Roma", path, 600, 0);
         assertEquals(850, length(path), 1e-6);
         path = net.pathAhead(m, 400);
-        assertEndsAt("the look-ahead ends on the second way", path, 300, 0);
+        assertEndsAt("the look-ahead ends 400 m on, inside the second way", path, 150, 0);
     }
 
     // ------------------------------------------------------------------ roundabouts

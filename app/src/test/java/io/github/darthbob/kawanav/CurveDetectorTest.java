@@ -32,10 +32,11 @@ public class CurveDetectorTest {
     private static final double ANGLE_TOL = 3;
     /**
      * How far the reported start may lie before the arc really begins (and the end after it ends):
-     * the heading change is smoothed over a 30 m window, so the detector sees a bend a little early.
+     * the road is resampled every 5 m and the first sampled step that turns counts, so one step early
+     * at most; and after the arc ends ({@link #EDGE_LATE_M}) likewise one step.
      */
-    private static final double EDGE_EARLY_M = 25;
-    private static final double EDGE_LATE_M = 5;
+    private static final double EDGE_EARLY_M = 2 * CurveDetector.STEP;
+    private static final double EDGE_LATE_M = 2 * CurveDetector.STEP;
 
     /**
      * A synthetic road in the path's metres (x east, y north), starting at the rider at the origin
@@ -325,9 +326,10 @@ public class CurveDetectorTest {
         CurveDetector.Curve c = curves.get(0);
         assertEquals(SHARP_RIGHT, c.turn);
         assertEquals(90, c.angle, ANGLE_TOL);
-        // the whole heading change sits on one node: smoothing spreads it over a window on each side
-        assertEquals(100 - CurveDetector.WINDOW_M, c.startDist, 1);
-        assertEquals(100 + CurveDetector.WINDOW_M, c.endDist, 1);
+        // the whole heading change sits on one node: the bend starts and ends at that node, not a
+        // smoothing window before and after it
+        assertEquals(100, c.startDist, 1);
+        assertEquals(100, c.endDist, 1);
     }
 
     @Test

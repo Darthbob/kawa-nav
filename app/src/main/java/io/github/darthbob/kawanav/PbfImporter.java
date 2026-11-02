@@ -53,10 +53,8 @@ public final class PbfImporter {
         }
     }
 
-    private static final Set<String> HIGHWAYS = new HashSet<>(Arrays.asList(
-            "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
-            "secondary", "secondary_link", "tertiary", "tertiary_link", "unclassified", "residential",
-            "living_street", "road"));
+    /** The highway kinds that become roads: the one list, shared with the network that reads the tiles. */
+    private static final Set<String> HIGHWAYS = RoadNetwork.HIGHWAYS;
     /** Tile rows per temporary bucket file when sorting roads into tiles. */
     private static final int BAND_ROWS = 1;
     /**
