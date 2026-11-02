@@ -145,35 +145,6 @@
     </issue>
 
     <issue
-        id="WakelockTimeout"
-        message="Provide a timeout when requesting a wakelock with `PowerManager.Wakelock.acquire(long timeout)`. This will ensure the OS will cleanup any wakelocks that last longer than you intend, and will save your user&apos;s battery."
-        errorLine1="        wakeLock.acquire();"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/io/github/darthbob/kawanav/BridgeService.java"
-            line="457"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 33. Merge all the resources in this folder into `mipmap-anydpi`.">
-        <location
-            file="src/main/res/mipmap-anydpi-v26"/>
-    </issue>
-
-    <issue
-        id="StaticFieldLeak"
-        message="Do not place Android context classes in static fields; this is a memory leak"
-        errorLine1="    private static Context bondContext;"
-        errorLine2="            ~~~~~~">
-        <location
-            file="src/main/java/io/github/darthbob/kawanav/BikePresence.java"
-            line="48"
-            column="13"/>
-    </issue>
-
-    <issue
         id="UsableSpace"
         message="Consider also using `StorageManager#getAllocatableBytes` and `allocateBytes` which will consider clearable cached data"
         errorLine1="        long free = dir.getUsableSpace() + (pbf.exists() ? pbf.length() : 0)"

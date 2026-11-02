@@ -107,13 +107,25 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private boolean locationAllowed;
     /** Keeps the CPU running with the screen off so the meter keeps getting updates every second. */
     private PowerManager.WakeLock wakeLock;
+    /**
+     * The wake lock is held for this long at a time and renewed by every tick ({@link #renewWakeLock}):
+     * a service whose tick loop died (an exception in it, the handler blocked) then loses the lock on
+     * its own instead of keeping the phone awake all night; a healthy one never notices.
+     */
+    private static final long WAKE_LOCK_MS = 10 * 60_000;
+    private long wakeLockRenewedAt;
 
     private static final String ACTION_STOP = "io.github.darthbob.kawanav.STOP_BRIDGE";
     private static final String EXTRA_AUTO = "auto";
 
     /** Started by {@link BikePresence} (bike seen), not by the user. */
     private boolean autoStarted;
-    private long bikeAbsentSince;
+    /** When the bike was last connected (or the bridge started), for the autostop and the GPS pause. */
+    private long bikeAbsentSince = System.currentTimeMillis();
+    /** The settings ask for the curve engine (free ride, curves between maneuvers, cameras or the voice). */
+    private boolean curveWanted;
+    /** Without the bike, a ride or a navigation for this long, the GPS goes off until the bike is back. */
+    private static final long GPS_IDLE_MS = AUTO_STOP_MS;
 
     // ------------------------------------------------------------------ static API
 
@@ -452,7 +464,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         }
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "KawaNav:bridge");
         wakeLock.setReferenceCounted(false);
-        wakeLock.acquire();
+        renewWakeLock();
 
         Hub.serviceRunning = true;
         BikeStore.load(this);
@@ -840,11 +852,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 });
             }, "rides-lean").start();
         }
-        if ((free || navCurves || cameras || spoken) && locationAllowed) {
-            curve.start();
-        } else {
-            curve.stop();
-        }
+        curveWanted = (free || navCurves || cameras || spoken) && locationAllowed;
+        updateCurveEngine();
         // the speech engine starts with the setting, so the first curve is not said late
         if (spoken && curveSound == null) {
             curveSound = new CurveSound(this);
@@ -855,6 +864,29 @@ public class BridgeService extends Service implements KawaBle.Listener {
         tick();
     }
 
+    /**
+     * The curve engine (and with it the GPS at 1 Hz) runs while something needs the rider's position:
+     * the bike is connected, or was less than {@link #GPS_IDLE_MS} ago, a ride is being recorded or
+     * waits for the bike, or KawaNav navigates. A bridge started by hand and left running without the
+     * bike otherwise kept the GPS on for hours; it now waits with the GPS off and is back the second the
+     * bike connects ({@link #GPS_IDLE_MS} is the autostart's own stop delay, so an autostart never waits).
+     */
+    private void updateCurveEngine() {
+        boolean positionNeeded = ble.isReady()
+                || System.currentTimeMillis() - bikeAbsentSince < GPS_IDLE_MS
+                || recorder.state() != RideRecorder.IDLE || recorder.waitingForBike()
+                || Hub.navActive() != null;
+        if (curveWanted && positionNeeded) {
+            curve.start();
+        } else if (curveWanted && curve.running()) {
+            curve.stop();
+            Logger.log("Bike away for " + GPS_IDLE_MS / 60_000 + " min, no ride: GPS off until it is back");
+            Hub.curveStatus = "Waiting for the bike (GPS off)";
+        } else if (!curveWanted) {
+            curve.stop();
+        }
+    }
+
     private final Runnable tickLoop = new Runnable() {
         @Override
         public void run() {
@@ -863,21 +895,31 @@ public class BridgeService extends Service implements KawaBle.Listener {
         }
     };
 
+    /**
+     * Takes the wake lock for another {@link #WAKE_LOCK_MS}. Not reference counted: each acquire restarts
+     * the timeout. Renewed once a minute, not every second, so the lock's own bookkeeping stays cheap.
+     */
+    private void renewWakeLock() {
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (wakeLock.isHeld() && now - wakeLockRenewedAt < 60_000) return;
+        wakeLockRenewedAt = now;
+        wakeLock.acquire(WAKE_LOCK_MS);
+    }
+
     private void tick() {
         long now = System.currentTimeMillis();
         if (now - lastTick < 200) return; // poke() right after a tick
         lastTick = now;
+        renewWakeLock();
 
-        if (autoStarted) {
-            if (ble.isReady()) {
-                bikeAbsentSince = now;
-            } else if (now - bikeAbsentSince > AUTO_STOP_MS && !recorder.waitingForBike()) {
-                // a ride waiting for the bike ends by the rider's choice first (RideEnd), then the bridge
-                Logger.log("Bike not connected for " + AUTO_STOP_MS / 60_000 + " min after autostart: stopping the bridge");
-                stopSelf();
-                return;
-            }
+        if (ble.isReady()) bikeAbsentSince = now;
+        if (autoStarted && !ble.isReady() && now - bikeAbsentSince > AUTO_STOP_MS && !recorder.waitingForBike()) {
+            // a ride waiting for the bike ends by the rider's choice first (RideEnd), then the bridge
+            Logger.log("Bike not connected for " + AUTO_STOP_MS / 60_000 + " min after autostart: stopping the bridge");
+            stopSelf();
+            return;
         }
+        updateCurveEngine();
 
         // the ride state is for the UI, so it is updated whether or not the bike is connected
         Hub.rideState = recorder.state();

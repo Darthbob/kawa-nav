@@ -767,7 +767,10 @@ fallback.
   to it: nothing happens, the log says so, and Home's orange banner asks for the permission. Turning
   it back on is enough — the association does not have to be set up again.
 
-The Start/Stop button on Home is only a manual fallback (autostart missed, testing).
+The Start/Stop button on Home is only a manual fallback (autostart missed, testing). Started by hand and
+left running without the bike, KawaNav switches the GPS off once the bike has been gone 5 minutes with no
+ride being recorded and no navigation running (Home says "Waiting for the bike (GPS off)"), and switches
+it back on the moment the bike connects.
 
 ## 🚧 Known limitations
 

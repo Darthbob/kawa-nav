@@ -83,6 +83,11 @@ public final class CurveEngine implements LocationListener {
         Logger.log("Curve detection on");
     }
 
+    /** The GPS is on and the curves are being followed. */
+    public boolean running() {
+        return running;
+    }
+
     public void stop() {
         if (!running) return;
         running = false;
