@@ -7,7 +7,8 @@
         "Bike tab, Maintenance: a reminder switched off on the dash says \"off\" instead of the dash's default date and kilometres",
         "Bike tab: the names of the maintenance reminders no longer disappear when the phone writes dates day first",
         "A crash of the app is written into the log, so Export the log carries it with what led up to it",
-        "Started by hand and left running without the bike, KawaNav switches the GPS off after 5 minutes (unless a ride is being recorded or a navigation runs) and on again when the bike connects, instead of using it for hours"
+        "Started by hand and left running without the bike, KawaNav switches the GPS off after 5 minutes (unless a ride is being recorded or a navigation runs) and on again when the bike connects, instead of using it for hours",
+        "Converting a downloaded region sizes its work to the memory the phone gives the app: fewer rounds and a faster conversion on phones with more, no out-of-memory on phones with less"
       ]
     },
     {

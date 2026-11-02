@@ -29,9 +29,9 @@ import java.util.zip.Inflater;
  *
  * Memory stays small (a country fits) by working through temporary files:
  * 1. ways: roads (same highway types as the live download) go to a temporary file;
- * 2. nodes: coordinates of the road points, in rounds of at most {@link #ROUND_REFS} node ids
- *    (one round for a state, several for a country), stored in a coordinate file parallel to
- *    the road points;
+ * 2. nodes: coordinates of the road points, in rounds of at most {@link #roundRefs} node ids
+ *    (one round for a state, several for a country; sized to the heap), stored in a coordinate
+ *    file parallel to the road points;
  * 3. each road is written into every tile it touches. Geofabrik files are sorted (nodes, ways,
  * relations), so pass 1 starts at the first way block and pass 2 stops there.
  *
@@ -59,10 +59,21 @@ public final class PbfImporter {
             "living_street", "road"));
     /** Tile rows per temporary bucket file when sorting roads into tiles. */
     private static final int BAND_ROWS = 1;
-    /** Road points resolved per round: ~200 MB of memory at most. */
-    private static final long ROUND_REFS = 8_000_000;
-    /** {@link #ROUND_REFS}, smaller in desktop tests to exercise several rounds. */
-    static long roundRefs = ROUND_REFS;
+    /**
+     * Road points resolved per round, sized to the heap ({@link #roundRefsFor}): the ids of a round, sorted
+     * (the list and its copy without repeats, briefly side by side), then their coordinates, come to
+     * about 17 bytes per point at the peak; 32 are budgeted, from half the heap. A 512 MB heap gives the
+     * 8 million points of earlier versions (~200 MB), a smaller one more rounds instead of an OutOfMemory,
+     * a bigger one fewer rounds and a faster conversion.
+     */
+    private static final long ROUND_REFS_MIN = 1_000_000, ROUND_REFS_MAX = 32_000_000;
+    private static final int ROUND_REF_BYTES = 32;
+    static long roundRefs = roundRefsFor(Runtime.getRuntime().maxMemory());
+
+    /** Points per round for a heap of {@code maxMemory} bytes, see {@link #roundRefs}. */
+    static long roundRefsFor(long maxMemory) {
+        return Math.max(ROUND_REFS_MIN, Math.min(ROUND_REFS_MAX, maxMemory / 2 / ROUND_REF_BYTES));
+    }
     private static final int MISSING = Integer.MIN_VALUE;
 
     private final File pbf;
