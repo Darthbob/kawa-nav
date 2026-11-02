@@ -40,8 +40,6 @@ public class BridgeService extends Service implements KawaBle.Listener {
     /** Rides and refuels: things that happened, not things that are wrong. */
     private static final String CHANNEL_RIDES = "rides";
     private static final int CAMERA_NOTIFICATION_ID = 2;
-    /** While navigating, a camera takes the arrow over only this close (the maneuver matters more). */
-    private static final double CAMERA_NAV_M = 250;
     private static final int NOTIFICATION_ID = 1;
     private static final long TICK_MS = 1000;
     private static final long NO_BIKE_RETRY_MS = 15_000;
@@ -1148,49 +1146,20 @@ public class BridgeService extends Service implements KawaBle.Listener {
         a2dpProfile = null;
     }
 
+    /** What the dash shows this second: the settings, the curve engine and {@link Hub} go to {@link DashArbiter}. */
     private Hub.Output decide() {
-        // KawaNav's own navigation comes before Google Maps' notifications
-        Hub.Nav nav = Hub.navActive();
-        Hub.MapsTurn m = nav == null && Hub.mapsEnabled(this) ? Hub.maps : null;
-        // a camera warning comes first: it is short, and it is the one thing the rider cannot see coming
-        Hub.Output cam = cameraWarning(m != null || nav != null);
-        if (cam != null) return cam;
-        if (nav != null) {
-            if (nav.turn == KawaProtocol.TURN_NONE) return null;
-            int navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, 0);
-            if (navCurves > 0 && nav.state == Navigator.State.NAVIGATING) {
-                Hub.Output c = curve.curveBeforeManeuver(nav.distanceM, navCurves == 1);
-                if (c != null) return c;
-            }
-            return new Hub.Output(nav.turn, CurveEngine.roundDistance(nav.distanceM), "Nav");
-        }
-        if (m != null) {
-            // e.g. "Navigation wird gestartet…": nothing useful to show yet
-            if (m.turn == KawaProtocol.TURN_NONE && m.distanceM < 0) return null;
-            // between Maps instructions: warn about curves on the way to the next maneuver
-            int navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, 0);
-            if (navCurves > 0) {
-                Hub.Output c = curve.curveBeforeManeuver(m.distanceM, navCurves == 1);
-                if (c != null) return c;
-            }
-            return new Hub.Output(m.turn, m.distanceM, "Maps");
-        }
-        if (Hub.freeMode(this)) return curve.current();
-        return null;
-    }
-
-    /**
-     * The camera ahead, when the warnings are on and it is close enough: the whole warning distance
-     * in free mode, {@link #CAMERA_NAV_M} while navigating (the Maps arrow matters more there).
-     */
-    private Hub.Output cameraWarning(boolean navigating) {
-        if (!Hub.camerasEnabled(this) || !locationAllowed) return null;
-        Hazards.Ahead a = curve.cameraAhead();
-        if (a == null) return null;
-        double window = navigating ? Math.min(Hub.cameraWarnM(this), CAMERA_NAV_M) : Hub.cameraWarnM(this);
-        if (a.distanceM > window) return null;
-        return new Hub.Output(KawaProtocol.CAMERA_TURN, CurveEngine.roundDistance(a.distanceM), "Camera",
-                a.camera.id, Hazards.describe(a.camera, a.distanceM));
+        DashArbiter.Inputs in = new DashArbiter.Inputs();
+        in.nav = Hub.navActive();
+        in.maps = Hub.maps;
+        in.mapsEnabled = Hub.mapsEnabled(this);
+        in.freeMode = Hub.freeMode(this);
+        in.navCurves = Hub.prefs(this).getInt(Hub.KEY_NAV_CURVES, DashArbiter.NAV_CURVES_OFF);
+        in.freeRide = curve.current();
+        in.curves = curve.curvesNow();
+        in.camera = curve.cameraAhead();
+        in.camerasEnabled = Hub.camerasEnabled(this) && locationAllowed;
+        in.cameraWarnM = Hub.cameraWarnM(this);
+        return DashArbiter.decide(in);
     }
 
     /**
