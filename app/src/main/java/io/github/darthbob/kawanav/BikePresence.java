@@ -43,9 +43,12 @@ public class BikePresence extends CompanionDeviceService {
     private static final Object CACHE = new Object();
     private static AssociationInfo cached;
     private static boolean cachedValid;
-    /** The bond-state receiver of a pairing in flight, so it can be unregistered before the next one. */
+    /**
+     * The bond-state receiver of a pairing in flight, so it can be unregistered before the next one. It
+     * is registered on the application context (the one singleton every context leads to), so whoever
+     * unregisters it only needs a context of its own, and no context is kept here.
+     */
     private static BroadcastReceiver bondReceiver;
-    private static Context bondContext;
 
     // ------------------------------------------------------------------ presence events
 
@@ -182,8 +185,7 @@ public class BikePresence extends CompanionDeviceService {
         // one pairing at a time: the receiver lives on the application context, so a second tap while
         // the first is still in flight would leave the first one registered for the life of the process
         // (every later bond-state event, for any device, going to a handler nobody owns).
-        unregisterBondReceiver();
-        Context app = c.getApplicationContext();
+        unregisterBondReceiver(c);
         BroadcastReceiver r = new BroadcastReceiver() {
             @Override
             public void onReceive(Context ctx, Intent i) {
@@ -192,37 +194,36 @@ public class BikePresence extends CompanionDeviceService {
                 int state = i.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);
                 if (state == BluetoothDevice.BOND_BONDED) {
                     paired(ctx, b);
-                    unregisterBondReceiver();
+                    unregisterBondReceiver(ctx);
                 } else if (state == BluetoothDevice.BOND_NONE) {
                     Hub.pairStatus = "Pairing failed: ignition on, Rideology closed, then try again";
                     Logger.log("Pairing with " + d.getAddress() + " failed or was declined");
-                    unregisterBondReceiver();
+                    unregisterBondReceiver(ctx);
                 }
             }
         };
         bondReceiver = r;
-        bondContext = app;
-        app.registerReceiver(r, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED), Context.RECEIVER_EXPORTED);
+        c.getApplicationContext().registerReceiver(r, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED),
+                Context.RECEIVER_EXPORTED);
         Logger.log("Pairing with " + info.getDisplayName() + " (" + d.getAddress() + ")…");
         if (d.createBond()) {
             Hub.pairStatus = "Pairing… confirm on the phone (and the dash) if asked";
         } else {
             Hub.pairStatus = "Pairing could not start: ignition on, then try again";
             Logger.log("Pairing could not start (createBond refused)");
-            unregisterBondReceiver(); // no bond event will ever come: do not keep the receiver
+            unregisterBondReceiver(c); // no bond event will ever come: do not keep the receiver
         }
     }
 
     /** Drops the bond-state receiver of a pairing: it finished, failed, or a new attempt replaced it. */
-    private static void unregisterBondReceiver() {
+    private static void unregisterBondReceiver(Context c) {
         if (bondReceiver == null) return;
         try {
-            bondContext.unregisterReceiver(bondReceiver);
+            c.getApplicationContext().unregisterReceiver(bondReceiver);
         } catch (IllegalArgumentException e) {
             // already gone: the system dropped it with the context
         }
         bondReceiver = null;
-        bondContext = null;
     }
 
     private static void paired(Context c, BluetoothDevice d) {
