@@ -166,10 +166,10 @@ public final class BikeData {
             sb.append(String.format(Locale.ROOT,
                     "Info (%s ago): odo %d km, trip A %s, trip B %s, fuel %d bars, range %d km (symbol %d), "
                             + "avg mileage %s, consumption %s, avg speed %d, battery %s V (meter %s V), outside %s °C, "
-                            + "total fuel %s L, total time %d\n",
+                            + "total fuel %s L, total time %d, low fuel %d\n",
                     ago(infoAt, now), i.odometerKm, num(i.tripAKm), num(i.tripBKm), i.fuelBars, i.rangeKm, i.rangeSymbol,
                     num(i.avgMileage), num(i.fuelConsumption), i.avgSpeedKmh, num(i.ecuBatteryV), num(i.meterBatteryV),
-                    num(i.outsideC), num(i.totalFuelL), i.totalTime));
+                    num(i.outsideC), num(i.totalFuelL), i.totalTime, i.lowFuel));
         }
         if (ext != null) {
             BikeFrames.LogExt e = ext;

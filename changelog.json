@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "1.3.4",
+      "changes": [
+        "Bike tab and Home: on dashes that send a low fuel warning, \"Low fuel\" next to the fuel bars and a \"Fuel is low\" warning with the range left, as Rideology shows since its October update (a 2026 Z900 does not send it)",
+        "A Kawasaki with an older dash (not BLE5, like most 2019-2024 Rideology bikes, the Z650 S or the Ninja 1100SX) is recognized: Home says it is not supported instead of trying to connect over and over"
+      ]
+    },
+    {
       "version": "1.3.3",
       "changes": [
         "Bike tab, Maintenance: the Kawasaki service is shown at the odometer reading it is due at, with the kilometres left, like Rideology",

@@ -38,6 +38,12 @@ public final class KawaBle {
         /** A frame from the meter on one of the notify characteristics. */
         void onNotify(UUID characteristic, byte[] value);
 
+        /**
+         * The meter has only the services of the dashes before BLE5: KawaNav cannot talk to it, so the link
+         * is closed and not tried again (instead of {@link #onLinkLost}).
+         */
+        default void onOlderDash() {}
+
         /** Debug: the meter's services and characteristics, see {@link #setDumpServices}. */
         void onServicesDump(String dump);
 
@@ -367,6 +373,11 @@ public final class KawaBle {
             if (discoveries++ < DISCOVERY_RETRIES) {
                 log("Discovering services again");
                 g.discoverServices();
+            } else if (svc == null && KawaProtocol.olderDash(serviceUuids(g))) {
+                // decided only once the list has been read again: an incomplete one must not pass for this
+                log("Older Kawasaki meter (not BLE5): KawaNav cannot talk to it, not reconnecting");
+                disconnect();
+                listener.onOlderDash();
             } else {
                 missingStreak++;
                 log("Kawasaki service still missing: reconnecting in " + reconnectDelayMs() / 1000 + " s");
@@ -404,6 +415,12 @@ public final class KawaBle {
             setReady(true);
             opDone();
         });
+    }
+
+    private static java.util.List<UUID> serviceUuids(BluetoothGatt g) {
+        java.util.List<UUID> out = new java.util.ArrayList<>();
+        for (BluetoothGattService s : g.getServices()) out.add(s.getUuid());
+        return out;
     }
 
     /**

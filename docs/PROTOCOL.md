@@ -3,8 +3,14 @@
 Source: Rideology The App Motorcycle `jp.co.khi.mce.rideologytheappV2`, decompiled with jadx.
 Obfuscated names below refer to that build; **line numbers refer to the 2.11.9 tree**
 (`research/rideology-2.11.9/sources/…`, not in the repository) unless a section says 2.11.13 (the
-older decompile the nav/indication sections were first written from). Every claim is tagged
+older decompile the nav/indication sections were first written from) or 2.11.14 (the newer one,
+`research/rideology-2.11.14/sources/…`, decompiled with jadx `--show-bad-code` like 2.11.9; R8 moved
+most packages there by one letter: `ne/` → `oe/`, `qe/` → `re/`, `oh/` → `ph/`). Every claim is tagged
 **verified** (read in the decompiled code), **inferred** or **unknown**.
+
+2.11.14 (versionCode 152, 2026-10-29) against 2.11.9: the BLE UUIDs, the constant requests, the connect
+sequence, the frame ids the parsers handle and every byte the parsers read are the same, except the
+[low fuel warning](#low-fuel-warning-21114) in byte 31 of 0x40 and 0x41. (verified)
 
 ## Transport
 
@@ -93,7 +99,7 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
 | 28 | trip A | trip B | average speed | outside air temperature |
 | 29 | range symbol | range | fuel consumption | total time |
 | 30 | — | — | — | — (unused) |
-| 31 | — | — | instant fuel mileage | — |
+| 31 | — | — | instant fuel mileage | low fuel warning (2.11.14; 2.11.9 reads nothing here) |
 | 32 | max lean left | max lean right | — | — |
 | 33 | odometer valid bit present | meter 12 V valid bit present | average mileage valid bit present | instant fuel valid bit present |
 | 33 | trip A valid bit present | trip B valid bit present | average speed valid bit present | outside temperature valid bit present |
@@ -134,6 +140,26 @@ three notifies and runs `ne/c.java` case 2, which queues in this order (verified
   `h.a()`/`q.a()` helpers). (verified)
 - Asked for again when the info screen updates, and at connect — **there is no interval poll on BLE5**
   (`oh/b.java:152-177`). (verified)
+
+#### Low fuel warning (2.11.14)
+
+- **Byte 31 bits 3-0** of the 0x41 is the dash's low fuel warning, read only when the 0x40 nibble for it
+  (byte 31 bits 1-0) is exactly 0 (`re/a.java:412`; the nibble is `Ble5Value/i.java:161`, kept as
+  `meter_fuel_notification`, `a0/t.java:217`). It is stored as `VehicleInfoDetail.fuelNotification`.
+  (verified, 2.11.14)
+- The vehicle info screen shows **"Low fuel level"** (`vehicle_info_fuel_lfw`) when the value is **0**;
+  any other value shows nothing (`androidx/camera/core/impl/e.java:430-441`, the `engine_ble5` case of
+  `jf/c.java:766`, called at `fe/i.java:336`). jadx's normal output loses the `return true` of this
+  check; its `-m simple` output shows it. What the other values mean is unknown. (verified, 2.11.14)
+- 2.11.9 has no low fuel warning for a BLE5 bike: the same check returns false for `engine_ble5`, and
+  only the older bikes (`engine`) get one, from the fuel gauge (0 bars with the gauge's config at 2).
+  (verified)
+- A Z900 2026 does not have it: its 0x40 sends `F3` in byte 31 (bits 1-0 = 3) and its 0x41 `FF` (every
+  0x40 and 0x41 of the log of 2026-10-22 to 10-27). The Z500 sample has the whole block 25-34 absent.
+  Which bikes send it is unknown; it came in the same release as the 2027 Ninja H2, Ninja 650, KLX300
+  and KLE650. (verified for the Z900; unknown for the others)
+- KawaNav: `BikeFrames.VehicleInfo.lowFuel`, with the same strict gate (an unread 0x40 shows nothing,
+  where Rideology's default config would read the byte), and a "Fuel is low" warning on Home.
 
 ### 0x45 – riding log extension (`Ble5Value.q`)
 
@@ -672,6 +698,32 @@ KawaNav never logs this frame.)
   (`assets/vehicle_settings/*.json`), not by the 0x40 flags; only the odometer flag is read for the
   mileage tile. (verified)
 
+## Meters before BLE5 (not supported)
+
+The bikes Rideology finds by meter part number ([MODELS.md](MODELS.md)) have a meter without the BLE5
+service. Rideology talks to them through a second controller (`ne/v0.java`, ~8000 lines shared with the
+EV/HEV code) and another GATT profile, picked from the services the meter lists (`ne/x.java:288-314`):
+`8c541dd9…` present → profile `ne/t.java`, otherwise `ne/s.java`. (verified, 2.11.9)
+
+| Profile | Service | Notify (CCCD enabled, `e.java` `M()`/`S()`) | Write (`e.java:840` `y0`) |
+|---|---|---|---|
+| `ne/s` (type 1) | `5d0994f1-26c6-4af0-9b30-a691d0f19ee1` | `399aafb7-4ed7-4334-8a9b-4075d9160fe3`, `160c5a35-ee8c-4141-87a3-a4632fa62b84` | `40e288bd-b367-4c4a-a5f7-b4dff69f09e7` |
+| `ne/t` (type 2) | `8c541dd9-7faa-4045-a1b9-749e25dd7114` | `e138cf59-18d2-4ef9-9f0e-70efdb54163d`, `c4612e9f-7db9-4b1e-acea-c972189d2c5e` | `71260af2-5f9d-4f9e-9e0e-55a3ab0d23cf` |
+
+- The two profiles also build different packets for longer messages: type 1 an 11-byte `04 <len> …`
+  first packet and `05 09 <9 bytes>` ones after it, type 2 12-byte `15 0A <10 bytes>` ones. Writes are
+  short frames such as `11 00`, `02 00` and the 20-byte call/mail icons `0A 0C …`. No app-level
+  encryption; bonding as for BLE5. (verified, frame meanings not worked out)
+- What Rideology does with them (branch 3 of the dispatcher, `oh/b.java:413-530`): vehicle info and
+  status reads, vehicle settings read and write (riding mode, power, KTRC, KQS, packed as for BLE5),
+  general settings (units, `UnitSettingFragment`), riding log start and list delete, the call/mail icons,
+  the phone and setting names, the clock. (verified)
+- **No turn-by-turn and no status icons**: `NAVI_CONTROL_POINT` and `METER_INDICATION` are handled in
+  the BLE5 branch only (`oh/b.java:333`, `:376`; the same in 2.11.14, `ph/b.java`). (verified)
+- KawaNav: `KawaProtocol.olderDash` — once the service list has been read again (an incomplete one must
+  not count), a meter without the BLE5 service but with one of these two is closed and not tried again,
+  and Home says the dash is not supported. Not seen on such a bike yet.
+
 ## Still unknown / to verify on the bike
 
 The debug build lists the tests below that can be done at the bike, with their steps and a "done" mark,
@@ -720,7 +772,7 @@ when one is added here.
 | BLE5, in use | 0x03 0x08 0x0A 0x0B 0x1A 0x1B 0x1D 0x1E 0x13 0x14 0x12 0x40 0x41 0x45 0x47 0x48 0x4A 0x4B | model info, meter init, pairing-history reset (never sent by KawaNav), phone name, capabilities, general settings, maintenance config/indicator, dash icons, turn-by-turn, notifications, the vehicle frames |
 | BLE5, seen but not decoded | 0x01 0x20 0x30 | 0x01 is an empty "accepted" reply; 0x20 the ACK; 0x30 the meter's status frame, which Rideology has no receive handler for and drops |
 | EV / HEV family | 0x07 0x0E 0x11 0x16 0x17 0x23 0x24 0x31 0x32 0x35 0x42 0x52 0x62 | battery pack, EV modes, walk mode, an energy histogram. Reached only on the e-1 and HEV bikes |
-| BLE4 (older dashes) | 0x0A (the call/mail icons there), 0x12 as settings read, 0x17, and the 0x0E histogram | a different protocol entirely (see `Ble4VehicleSettingViewModel`) |
+| BLE4 (older dashes) | 0x0A (the call/mail icons there), 0x12 as settings read, 0x17, and the 0x0E histogram | a different protocol entirely (see `Ble4VehicleSettingViewModel` and [Meters before BLE5](#meters-before-ble5-not-supported)) |
 
   The EV/HEV ids are the ones a 2025+ petrol bike never sends; if one appears in a capture, the
   assumption that this is a BLE5 combustion meter is wrong.

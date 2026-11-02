@@ -701,8 +701,8 @@ public class MainActivity extends KawaActivity {
                     : "Start before the ride, or let KawaNav start by itself (Settings).");
         } else {
             boolean noBike = Hub.bikeStatus.startsWith("No paired");
-            chip = Hub.bikeConnected ? "Connected" : noBike ? "Not paired" : "Searching";
-            chipInk = Hub.bikeConnected ? Ui.ok(night) : noBike ? Ui.danger(night) : Ui.warn(night);
+            chip = Hub.bikeConnected ? "Connected" : Hub.bikeOlderDash ? "Not supported" : noBike ? "Not paired" : "Searching";
+            chipInk = Hub.bikeConnected ? Ui.ok(night) : noBike || Hub.bikeOlderDash ? Ui.danger(night) : Ui.warn(night);
             statusHint.setText(Hub.bikeStatus + (Hub.bikeHint.isEmpty() ? "" : "\n" + Hub.bikeHint));
         }
         String chipText = "● " + chip;

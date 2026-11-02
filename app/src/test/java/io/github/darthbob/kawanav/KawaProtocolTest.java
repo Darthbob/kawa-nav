@@ -2,6 +2,7 @@ package io.github.darthbob.kawanav;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -75,5 +76,21 @@ public class KawaProtocolTest {
         // day/month/hour/minute/second "unchanged" are FF, but the year slot is (byte)(-1-2000) = 0x2F
         assertEquals("1b0c00ffff054a0159ffff2fffffff",
                 hex(KawaProtocol.shiftLampWrite(1, 25)));
+    }
+
+    /** A dash with only the services of the meters before BLE5 is one KawaNav cannot talk to. */
+    @Test
+    public void olderDash() {
+        java.util.UUID access = java.util.UUID.fromString("00001800-0000-1000-8000-00805f9b34fb");
+        java.util.UUID older1 = java.util.UUID.fromString("5d0994f1-26c6-4af0-9b30-a691d0f19ee1");
+        java.util.UUID older2 = java.util.UUID.fromString("8c541dd9-7faa-4045-a1b9-749e25dd7114");
+        assertTrue(KawaProtocol.olderDash(List.of(access, older1)));
+        assertTrue(KawaProtocol.olderDash(List.of(older2)));
+        // the BLE5 service wins, whatever else the meter lists
+        assertFalse(KawaProtocol.olderDash(List.of(access, KawaProtocol.SERVICE)));
+        assertFalse(KawaProtocol.olderDash(List.of(older2, KawaProtocol.SERVICE)));
+        // neither kind (an incomplete list, another device): not an older dash, KawaNav keeps trying
+        assertFalse(KawaProtocol.olderDash(List.of(access)));
+        assertFalse(KawaProtocol.olderDash(List.of()));
     }
 }

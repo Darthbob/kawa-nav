@@ -120,18 +120,23 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 ### 🏍️ Supported motorcycles
 
 Any Kawasaki whose dash shows Rideology's turn-by-turn navigation (BLE5 meter). From Kawasaki's
-model pages (details and sources in [docs/MODELS.md](docs/MODELS.md)):
+model pages and Rideology's model list (details and sources in [docs/MODELS.md](docs/MODELS.md)):
 
 | Status | Models |
 |---|---|
 | ✅ Tested | Z900 2026 |
 | 👍 Turn-by-turn confirmed by Kawasaki | Z900 / Z900 SE (2025+), Z1100 / Z1100 SE (2026+), Ninja ZX-10R / ZX-10RR (2026+) |
-| ❓ Unclear | Ninja 1100SX, Versys 1100 (2025+), Z650 S (2026), Ninja 650 / Ninja H2 (2027) |
-| ❌ Not supported | Z900RS 2026 (analog dials), Rideology bikes 2019–2024 (older dashes without turn-by-turn) |
+| ❓ BLE5 meter, turn-by-turn not known | Z500 / Ninja 500 (2024+), KLX230 (2024+), KLE500 (2026+), KLX300 / KLE650 (2027) |
+| ❌ Not supported | Z900RS 2026 (analog dials); meters that are not BLE5: Ninja 1100SX, Versys 1100 (2025+), Z650 S (2026), Ninja 650 / Ninja H2 (2027) and the other Rideology bikes of 2019–2024 |
+
+Which meter a model has comes from Rideology's own model list: it finds a BLE5 bike by its VIN and any
+other by its meter's part number. None of these bikes but the Z900 has been tried with KawaNav.
 
 KawaNav does not check the model. After connecting it asks the dash what it can show; a dash that
 reports no turn-by-turn support gets a warning in the app (KawaNav keeps sending, the arrows will
-probably not appear).
+probably not appear). A dash with Kawasaki's older protocol (not BLE5) is recognized by its Bluetooth
+services: Home says "Older Kawasaki dash: not supported", and KawaNav stops trying to connect until it
+is started again.
 
 ### 🌐 Google Maps languages
 
@@ -363,7 +368,7 @@ with the engine running. A warning needs both readings the bike gives (the ECU's
 the threshold, and the meter's next answer 20 s later must say the same: the fuel pump priming before
 a start, or the voltage just after one, is not a battery problem. A reading is only judged against the
 engine state it was taken in: the voltage read just before a start is not a charging voltage. Switched
-off, battery warnings are not shown; tyre and ABS warnings stay.
+off, battery warnings are not shown; tyre, ABS and low fuel warnings stay.
 
 #### Clutch warning
 
@@ -466,6 +471,11 @@ asks the bike for its values again.
 
 Values are shown with the names Rideology uses; where the name could not be verified against a real
 bike yet, the number the bike sent is printed in brackets next to it.
+
+**Low fuel**: a dash that sends a low fuel warning gets "Low fuel" next to the fuel bars, and a "Fuel is
+low" warning with the range left, on Home and as a notification. Rideology reads this warning since its
+version 2.11.14 (October 2026); a 2026 Z900 does not send it, and KawaNav only reads it once the dash
+has said it sends one, so it shows nothing on bikes without it.
 
 ### ⛽ Diary
 

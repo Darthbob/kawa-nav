@@ -268,6 +268,8 @@ public final class BikeFrames {
         public static final Flag FUEL_CONSUMPTION = new Flag("fuel consumption", 29, 0x0C);
         public static final Flag TOTAL_TIME = new Flag("total time", 29, 0x03);
         public static final Flag INSTANT_FUEL = new Flag("instant fuel consumption", 31, 0x0C);
+        /** The dash sends a low fuel warning in the 0x41 (byte 31); 0 = yes (Rideology 2.11.14, Ble5Value/i.java K). */
+        public static final Flag LOW_FUEL = new Flag("low fuel warning", 31, 0x03);
         /** The meter keeps the largest lean of the trip (0x41 bytes 53/54); 0 = yes (Ble5Value/i.java K, L). */
         public static final Flag MAX_LEAN_LEFT = new Flag("max lean left", 32, 0xC0);
         public static final Flag MAX_LEAN_RIGHT = new Flag("max lean right", 32, 0x30);
@@ -290,8 +292,8 @@ public final class BikeFrames {
                 INTAKE_TEMP, BOOST_TEMP, BOOST_PRESSURE, FUEL_INJECTION, WHEEL_SPEED, ENGINE_SPEED, GEAR, THROTTLE,
                 ACCELERATION, LEAN, WHEELIE, WHEELIE_ANGLE, TCS_HB, TCS_LB, RIDER_TORQUE, ENGINE_TORQUE_REQUEST,
                 ENGINE_TORQUE, ODOMETER, FUEL_GAUGE, AVG_MILEAGE, METER_BATTERY, TRIP_A, TRIP_B, AVG_SPEED,
-                OUTSIDE_TEMP, RANGE_SYMBOL, RANGE, FUEL_CONSUMPTION, TOTAL_TIME, INSTANT_FUEL, MAX_LEAN_LEFT,
-                MAX_LEAN_RIGHT, OUTSIDE_TEMP_VALID};
+                OUTSIDE_TEMP, RANGE_SYMBOL, RANGE, FUEL_CONSUMPTION, TOTAL_TIME, INSTANT_FUEL, LOW_FUEL,
+                MAX_LEAN_LEFT, MAX_LEAN_RIGHT, OUTSIDE_TEMP_VALID};
 
         public final boolean valid;
 
@@ -407,6 +409,12 @@ public final class BikeFrames {
         public final int avgSpeedKmh, rangeSymbol, rangeKm, totalTime;
         /** The largest lean of the trip the meter shows, degrees each way; -1 when the bike has none. */
         public final int maxLeanLeft, maxLeanRight;
+        /**
+         * The dash's low fuel warning (byte 31 bits 3-0, Rideology 2.11.14's "fuelNotification"): 1 when the
+         * dash sends 0, which Rideology shows as "Low fuel level"; 0 for any other value; -1 when the bike
+         * has none or its 0x40 is not read yet.
+         */
+        public final int lowFuel;
 
         /**
          * Values the meter fills with an all-ones placeholder while it has none (Rideology drops these:
@@ -447,6 +455,8 @@ public final class BikeFrames {
             // max lean: bytes 53/54 (7 bits, 127 = none), gated by 0x40 byte 32 and their bits in byte 47
             maxLeanLeft = lean(v, 53, 3, c, InfoConfig.MAX_LEAN_LEFT);
             maxLeanRight = lean(v, 54, 2, c, InfoConfig.MAX_LEAN_RIGHT);
+            // a warning, so only on the config's word (re/a.java:412 in 2.11.14): a Z900 sends 3 there and FF
+            lowFuel = in(v, 31) && zero(c, InfoConfig.LOW_FUEL) ? ((u8(v, 31) & 0x0F) == 0 ? 1 : 0) : -1;
         }
 
         private static int lean(byte[] v, int i, int validBitOf47, InfoConfig c, Flag f) {

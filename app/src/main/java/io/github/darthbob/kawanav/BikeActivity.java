@@ -768,7 +768,8 @@ public class BikeActivity extends KawaActivity {
         }
         int bars = info == null ? -1 : info.fuelBars;
         fuel.set(Math.max(0, bars), fuelSegments(bars));
-        fuelText.setText(bars < 0 ? "Fuel –" : bars + (bars == 1 ? " bar" : " bars"));
+        String lowFuel = info != null && info.lowFuel == 1 ? " · Low fuel" : "";
+        fuelText.setText((bars < 0 ? "Fuel –" : bars + (bars == 1 ? " bar" : " bars")) + lowFuel);
         double v = info == null ? Double.NaN : battery(info);
         battery.setText(Double.isNaN(v) ? "Battery –" : String.format(Locale.ROOT, "Battery %.1f V", v));
 

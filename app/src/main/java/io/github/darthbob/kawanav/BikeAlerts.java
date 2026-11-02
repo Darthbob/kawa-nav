@@ -6,8 +6,9 @@ import java.util.Locale;
 
 /**
  * Warnings the bike sends but the dash may not make obvious: a tyre losing pressure or a TPMS sensor
- * with a flat battery (0x45 byte 49), an ABS system error (0x4A byte 37 bits 3-2), and a 12 V battery
- * that is low or not being charged (0x41). Plain Java: {@link #current} looks at the bike's last values,
+ * with a flat battery (0x45 byte 49), an ABS system error (0x4A byte 37 bits 3-2), the dash's low fuel
+ * warning (0x41 byte 31, on dashes that send one), and a 12 V battery that is low or not being charged
+ * (0x41). Plain Java: {@link #current} looks at the bike's last values,
  * {@link Tracker} turns them into "new since last time" so each problem is announced once.
  */
 public final class BikeAlerts {
@@ -68,6 +69,11 @@ public final class BikeAlerts {
                     "The ABS may not work: check the warning lamp on the dash and have the bike looked at"));
         }
         BikeFrames.VehicleInfo info = b.info;
+        if (info != null && now - b.infoAt <= FRESH_MS && info.lowFuel == 1) {
+            out.add(new Alert("fuel_low", "Fuel is low", info.rangeKm >= 0
+                    ? String.format(Locale.ROOT, "%d km of range left on the dash: fill up soon", info.rangeKm)
+                    : "The dash reports a low fuel level: fill up soon"));
+        }
         // a reading taken before the engine last started or stopped belongs to the other state: judged
         // against this one's threshold, the 11.5 V read before a start became "not being charged" at
         // every start. The next answer, 20 s later, decides.
