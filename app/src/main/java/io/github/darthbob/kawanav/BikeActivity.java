@@ -197,6 +197,13 @@ public class BikeActivity extends KawaActivity {
         return Math.max(6, bars);
     }
 
+    /** The gauge in words: "4 bars", "1 bar", "Reserve" (the last bar blinking); null when not read. */
+    static String fuelWords(int bars) {
+        if (bars < 0) return null;
+        if (bars == BikeFrames.VehicleInfo.FUEL_RESERVE) return "Reserve";
+        return bars + (bars == 1 ? " bar" : " bars");
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -246,7 +253,7 @@ public class BikeActivity extends KawaActivity {
         ktrcChanged = changedPill();
         kqsChanged = changedPill();
         presetNote = secondary("");
-        presetNote.setTextColor(Ui.accent(night));
+        presetNote.setTextColor(Ui.accentText(night));
         presetNote.setVisibility(View.GONE);
         watchMode();
         powerSpinner.setOnItemSelectedListener(onSelect(pos -> {
@@ -343,7 +350,7 @@ public class BikeActivity extends KawaActivity {
     }
 
     private TextView changedPill() {
-        TextView t = pill("changed", (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accent(night));
+        TextView t = pill("changed", (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accentText(night));
         t.setVisibility(View.GONE);
         return t;
     }
@@ -768,8 +775,9 @@ public class BikeActivity extends KawaActivity {
         }
         int bars = info == null ? -1 : info.fuelBars;
         fuel.set(Math.max(0, bars), fuelSegments(bars));
+        fuel.setReserve(bars == BikeFrames.VehicleInfo.FUEL_RESERVE);
         String lowFuel = info != null && info.lowFuel == 1 ? " · Low fuel" : "";
-        fuelText.setText((bars < 0 ? "Fuel –" : bars + (bars == 1 ? " bar" : " bars")) + lowFuel);
+        fuelText.setText((bars < 0 ? "Fuel –" : fuelWords(bars)) + lowFuel);
         double v = info == null ? Double.NaN : battery(info);
         battery.setText(Double.isNaN(v) ? "Battery –" : String.format(Locale.ROOT, "Battery %.1f V", v));
 
@@ -909,7 +917,7 @@ public class BikeActivity extends KawaActivity {
         if (i == null) return "";
         List<String> parts = new ArrayList<>();
         if (i.odometerKm >= 0) parts.add(String.format(Locale.ROOT, "%,d km", i.odometerKm));
-        if (i.fuelBars >= 0) parts.add("fuel " + i.fuelBars + (i.fuelBars == 1 ? " bar" : " bars"));
+        if (i.fuelBars >= 0) parts.add("fuel " + fuelWords(i.fuelBars).toLowerCase(Locale.ROOT));
         if (i.rangeKm >= 0) parts.add("range " + i.rangeKm + " km");
         double v = battery(i);
         if (!Double.isNaN(v)) parts.add(String.format(Locale.ROOT, "%.1f V", v));

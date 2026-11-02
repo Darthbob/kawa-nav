@@ -112,7 +112,7 @@ public final class ChartView extends View {
         line.setStyle(Paint.Style.STROKE);
         line.setStrokeWidth(d * 2);
         night = Ui.night(context);
-        line.setColor(Ui.accent(night));
+        line.setColor(Ui.accentText(night));
         grid.setColor(Ui.chartGrid(night));
         grid.setStrokeWidth(1);
         text.setColor(Ui.chartInk(night));
@@ -331,7 +331,7 @@ public final class ChartView extends View {
 
     /** One line alone in the accent colour; of several, the last (what the engine gives) keeps it. */
     private int lineColour(int l, int count) {
-        if (count == 1 || l == count - 1) return Ui.accent(night);
+        if (count == 1 || l == count - 1) return Ui.accentText(night);
         return l == count - 2 ? Ui.warn(night) : Ui.inkSecondary(night);
     }
 

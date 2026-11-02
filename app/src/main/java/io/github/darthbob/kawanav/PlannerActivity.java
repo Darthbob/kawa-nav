@@ -83,7 +83,10 @@ public class PlannerActivity extends KawaActivity {
     /** The next route found is fitted into the view (not after a tap or a drag: the rider is looking there). */
     private boolean fitNext = true;
     private long fittedAt;
-    /** A position asked for since the planner opened (the phone's last known one can be hours old). */
+    /**
+     * A position asked for since the planner opened (the phone's last known one can be hours old). It may
+     * come from Wi-Fi and cell towers: it stays in the planner, the navigation follows the GPS only.
+     */
     private Location fresh;
     /** What each point on the map is: {kind, index in its list}. */
     private final List<int[]> slots = new ArrayList<>();
@@ -186,6 +189,7 @@ public class PlannerActivity extends KawaActivity {
         bar.addOnLayoutChangeListener(cover);
         sheet.addOnLayoutChangeListener(cover);
         setContentView(frame);
+        if (missingMaps()) return;
 
         showOptions();
         setMode(prefs.getInt(KEY_MODE, 0) == 1);
@@ -196,6 +200,7 @@ public class PlannerActivity extends KawaActivity {
             try {
                 RouteGraph g = RoutingData.graph(this);
                 double[] middle = middle(g);
+                showBorders(false);
                 main.post(() -> {
                     graph = g;
                     // no position and nothing planned yet: show the downloaded roads
@@ -217,6 +222,19 @@ public class PlannerActivity extends KawaActivity {
         super.onDestroy();
     }
 
+    /**
+     * The downloaded regions' borders on the map; those of regions downloaded before the border was kept
+     * are fetched (a few KB each) and then shown too. On the worker thread.
+     */
+    private void showBorders(boolean fetched) {
+        OfflineRegions regions = new OfflineRegions(this, new RoadStore(this), new HazardStore(this));
+        List<double[]> rings = regions.borders();
+        main.post(() -> {
+            if (!isFinishing()) map.setBorders(rings);
+        });
+        if (!fetched && regions.fetchBorders()) showBorders(true);
+    }
+
     /** The middle of the downloaded roads (from a sample of their junctions), or null without any. */
     private static double[] middle(RouteGraph g) {
         int n = g.nodeCount();
@@ -229,6 +247,44 @@ public class PlannerActivity extends KawaActivity {
             maxLon = Math.max(maxLon, g.lon(i));
         }
         return new double[]{(minLat + maxLat) / 2, (minLon + maxLon) / 2};
+    }
+
+    /**
+     * Without routing data the planner cannot plan anything, and its status line was easy to miss: say so
+     * as soon as it opens, with the way to the offline maps. True when it did (the planner then waits).
+     */
+    private boolean missingMaps() {
+        int state = RoutingData.state(this);
+        if (state == RoutingData.READY) return false;
+        String title, text;
+        if (Hub.offlineRunning) {
+            title = "Map still downloading";
+            text = "The route planner works once the region being downloaded is ready: Offline maps shows how far "
+                    + "it is.";
+        } else if (state == RoutingData.OLD_REGIONS) {
+            title = "Update your maps";
+            text = "Your regions were downloaded with an older KawaNav and have no route planning data yet. Download "
+                    + "them once more under Offline maps (Update): that adds the route planning data, about as much "
+                    + "storage again as the region takes now.";
+        } else {
+            title = "Download a map first";
+            text = "KawaNav plans routes on the phone, from the map of a region you download once (OpenStreetMap, "
+                    + "preferably over Wi-Fi). Download the region you ride in under Offline maps, e.g. Bayern or "
+                    + "Tirol. Then the route planner, the navigation and the curve warnings work there, also "
+                    + "without mobile data.";
+        }
+        Logger.log("Planner: no routing data (" + title + ")");
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(text)
+                .setCancelable(false)
+                .setPositiveButton("Offline maps", (d, which) -> {
+                    openTab(TAB_SETTINGS, "maps");
+                    finish();
+                })
+                .setNegativeButton("Back", (d, which) -> finish())
+                .show();
+        return true;
     }
 
     private static String noDataText() {
@@ -677,7 +733,7 @@ public class PlannerActivity extends KawaActivity {
     private void reverse() {
         double[] h = here();
         if (!w.reverse(h, h == null ? MY_POSITION : roadName(h[0], h[1]))) {
-            status.setText(w.dest == null ? "Choose a destination first." : "Waiting for GPS…");
+            status.setText(w.dest == null ? "Choose a destination first." : "Finding your position…");
             return;
         }
         fitNext = true;
@@ -768,13 +824,23 @@ public class PlannerActivity extends KawaActivity {
         return l != null && System.currentTimeMillis() - l.getTime() < 5 * 60_000;
     }
 
-    /** Asks the GPS for the current position; the map moves to it when {@code center}. */
+    /**
+     * Asks for the current position; the map moves to it when {@code center}. Android's fused provider
+     * (GPS, Wi-Fi, cell towers) answers in a building within seconds, where the GPS alone may never: tens
+     * of metres are close enough for a start, which goes to the nearest road anyway.
+     */
     private void askPosition(boolean center) {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
         try {
-            getSystemService(LocationManager.class).getCurrentLocation(LocationManager.GPS_PROVIDER, null,
+            LocationManager lm = getSystemService(LocationManager.class);
+            String provider = quickProvider(lm);
+            lm.getCurrentLocation(provider, null,
                     getMainExecutor(), l -> {
                         if (isFinishing() || l == null) return;
+                        if (fresh == null) {
+                            Logger.log(String.format(Locale.ROOT, "Planner: position from %s, ±%.0f m", l.getProvider(),
+                                    l.hasAccuracy() ? l.getAccuracy() : -1f));
+                        }
                         fresh = l;
                         if (center) map.center(l.getLatitude(), l.getLongitude(), 13);
                         // the start is the rider's position: plan from there if nothing is planned yet
@@ -786,6 +852,14 @@ public class PlannerActivity extends KawaActivity {
         }
     }
 
+    /** The quickest source of a position: fused where the phone has it, else Wi-Fi and cell towers, else the GPS. */
+    private static String quickProvider(LocationManager lm) {
+        for (String p : new String[]{LocationManager.FUSED_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
+            if (lm.hasProvider(p) && lm.isProviderEnabled(p)) return p;
+        }
+        return LocationManager.GPS_PROVIDER;
+    }
+
     private void toMyPosition() {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestMissingPermissions();
@@ -793,7 +867,7 @@ public class PlannerActivity extends KawaActivity {
         }
         double[] h = here();
         if (h != null) map.center(h[0], h[1], 13);
-        else status.setText("Waiting for GPS… You can also long-press the map for a start.");
+        else status.setText("Finding your position… You can also long-press the map for a start.");
         askPosition(true);
     }
 
@@ -1122,7 +1196,7 @@ public class PlannerActivity extends KawaActivity {
             List<double[]> pts = w.forRouter(here);
             if (pts == null) {
                 show(null);
-                status.setText(w.start == null && here == null ? "Waiting for GPS… or tap Start to choose one."
+                status.setText(w.start == null && here == null ? "Finding your position… or tap Start to choose one."
                         : "Tap the map or search for a destination.");
                 return;
             }
@@ -1166,7 +1240,7 @@ public class PlannerActivity extends KawaActivity {
             double[] s = w.start != null ? w.start.latLon() : here;
             if (s == null) {
                 show(null);
-                status.setText("Waiting for GPS… or long-press the map for the start.");
+                status.setText("Finding your position… or long-press the map for the start.");
                 return;
             }
             List<double[]> loop = w.cornersEdited && !w.corners.isEmpty() ? w.forLoop(here) : null;
@@ -1300,7 +1374,7 @@ public class PlannerActivity extends KawaActivity {
             sb.append('\n').append(line);
             tiles[k].setText(sb);
             GradientDrawable bg = rounded(Ui.surfaceSunken(night), dp(Ui.RADIUS_TILE));
-            if (k == sel) bg.setStroke(dp(2), Ui.accent(night));
+            if (k == sel) bg.setStroke(dp(2), Ui.accentText(night));
             tiles[k].setBackground(new RippleDrawable(ColorStateList.valueOf(Ui.rippleOnPlain(night)), bg, null));
             tiles[k].setSelected(k == sel);
         }

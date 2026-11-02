@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- a page's scroll view: with an id Android keeps its position when the screen is recreated
+         (the theme changed in the settings) -->
+    <item name="page_scroll" type="id" />
+</resources>

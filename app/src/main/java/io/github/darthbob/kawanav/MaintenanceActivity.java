@@ -224,7 +224,7 @@ public class MaintenanceActivity extends KawaActivity {
                 String item = MaintenanceLog.ITEMS[k];
                 Button b = button(item, v -> add(item));
                 b.setTextSize(13);
-                b.setTextColor(Ui.accent(night));
+                b.setTextColor(Ui.accentText(night));
                 line.addView(b, weight());
             }
             c.addView(line);

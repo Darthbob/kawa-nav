@@ -181,8 +181,8 @@ KawaNav shows these steps itself ("Switch greyed out?") when it notices the situ
 ### 📱 The app
 
 Laid out like Rideology: a bar at the bottom with **Home**, **Bike**, the round **record button**,
-**Rides** and **Settings**. It follows the phone's dark or light mode (black with lime green, or white
-with violet).
+**Rides** and **Settings**. It follows the phone's dark or light mode (black or white, with lime
+green), or stays light or dark as chosen under Settings → Appearance → Theme.
 
 - **Home**: the link to the bike and what the dash shows right now, the ride being recorded, the bike's
   last values ("My vehicle") and a menu of shortcuts. The orange banner shows up here too.
@@ -240,6 +240,7 @@ In the **Settings** tab:
 | [Say speed cameras](#-speed-cameras) | Off | Each camera also said in the helmet (or beeped) |
 | [Distances in feet](#distances-in-feet) | Off | Imperial distances |
 | [Left-hand traffic](#left-hand-traffic) | Off | For countries driving on the left (UK, Ireland, …) |
+| Theme | Like the phone | Like the phone / Light / Dark: the app's colours (under Appearance) |
 
 #### Google Maps directions
 
@@ -442,7 +443,9 @@ so read it before you share it. The notification capture stays in the debug buil
 
 Home shows the bike's last values under "My vehicle" (range, fuel bars, odometer); tapping them, or the
 **Bike** tab, opens the bike's own screen. It starts with the remaining range in big figures, the fuel
-gauge and the battery voltage, then groups everything the dash reported when it was last connected:
+gauge and the battery voltage, then groups everything the dash reported when it was last connected. The
+fuel gauge shows the dash's six bars; on reserve, like on the dash, only the last bar is left, orange and
+blinking, with "Reserve" next to it (also under "My vehicle"):
 
 - **Basic information**: odometer, trip A/B, average fuel economy and consumption, average speed, total
   engine hours, outside temperature, the largest lean of the trip each way, the fuel burned in total, both
@@ -480,9 +483,9 @@ has said it sends one, so it shows nothing on bikes without it.
 ### ⛽ Diary
 
 Under the bike's values, three cards keep what the dash cannot: **Refuels** (a fill is noticed while the
-bike stands at the pump — the gauge and the range jumping up — with the litres estimated from the tank
-size you set and the fuel used between fills; correct anything by tapping it, add a fill by hand, or
-long-press to delete), **12 V battery** (tapping the battery figure on the bike screen opens the
+bike stands at the pump — the gauge and the range jumping up, also from reserve — with the litres
+estimated from the tank size you set and the fuel used between fills; correct anything by tapping it,
+add a fill by hand, or long-press to delete), **12 V battery** (tapping the battery figure on the bike screen opens the
 readings taken at rest with the engine off, charted, with a warning once they have slid for a while; a
 reading needs the engine not to have run for half an hour, and none is taken while the starter turns) and
 **Maintenance** (what you had done, when and at what odometer, next to the reminders the dash keeps).
@@ -654,12 +657,20 @@ them.
 
 Open it from the Home menu (**Route planner**) or Settings → "Navigation". Routes are computed on the
 phone from the downloaded regions (see [Offline maps](#-offline-maps)): no mobile data is needed to plan
-or to ride, only to search a place by name and for the map pictures.
+or to ride, only to search a place by name and for the map pictures. Without a downloaded region the
+planner says so as soon as it opens (**Download a map first**) and takes you to Offline maps; with
+regions downloaded before 1.3 it asks to update them (**Update your maps**), and while a region is
+still downloading it says to wait for it.
 
 The map fills the screen; the panel under it holds the points, the route kinds and **Start
-navigation**. The route is planned again as soon as anything changes: no button to press.
+navigation**. The route is planned again as soon as anything changes: no button to press. A thin red
+line on the map marks the border of each downloaded region, so you see how far the offline roads reach
+(with several regions, each has its own line). For regions downloaded before this version the planner
+fetches the border once, a few KB, the next time it is opened with a connection.
 
-- **A to B**: the start is your position. The first tap on the map sets the destination; later taps
+- **A to B**: the start is your position: the planner takes it from Android's location service (GPS,
+  Wi-Fi and cell towers), so it comes within seconds also in a building, a few tens of metres off at
+  worst. The navigation itself follows the GPS only. The first tap on the map sets the destination; later taps
   offer a via point, a new destination or a new start, and a long press sets the destination. A new
   via point goes where it makes the smallest detour, not at the end. **Drag** any point on the map to
   move it, or tap it to remove it or keep it as a favourite. The panel lists the points by name (the

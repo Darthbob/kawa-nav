@@ -404,8 +404,10 @@ public final class BikeFrames {
                 fuelConsumption;
         /** Odometer in km (whole km). */
         public final int odometerKm;
-        /** Fuel gauge bars as on the dash. */
+        /** Fuel gauge bars as on the dash: 1 to 6, or {@link #FUEL_RESERVE}. */
         public final int fuelBars;
+        /** The gauge on reserve: the dash shows its last bar blinking orange (Rideology blinks it too). */
+        public static final int FUEL_RESERVE = 0;
         public final int avgSpeedKmh, rangeSymbol, rangeKm, totalTime;
         /** The largest lean of the trip the meter shows, degrees each way; -1 when the bike has none. */
         public final int maxLeanLeft, maxLeanRight;

@@ -25,6 +25,11 @@ Pull requests fail when `changelog.json` has no entry for the current versionNam
 User-visible changes that are not released yet can already be added to the top entry of a new,
 higher version in `changelog.json`; the version in `app/build.gradle` decides when it is released.
 
+A changelog line says only what differs from the last released version, as a rider of that version
+will notice it, in one plain sentence. It is not a record of the work: when a later change reworks
+something still unreleased, rewrite its line to the end result instead of adding a line about the
+change, and leave out the reasons and steps in between.
+
 ## Code
 
 - Java 17, minSdk 33, Android framework only: no AndroidX, no third-party libraries in the app

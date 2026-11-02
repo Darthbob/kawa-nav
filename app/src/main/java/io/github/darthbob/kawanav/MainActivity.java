@@ -565,7 +565,7 @@ public class MainActivity extends KawaActivity {
         meterArrow = text(52, true);
         meterArrow.setGravity(Gravity.CENTER);
         meterArrow.setMinWidth(dp(68));
-        meterArrow.setTextColor(Ui.accent(night));
+        meterArrow.setTextColor(Ui.accentText(night));
         meter.addView(meterArrow);
         LinearLayout mt = column();
         meterTextBlock = mt;
@@ -773,7 +773,8 @@ public class MainActivity extends KawaActivity {
             bikeRange.set(info.rangeKm >= 0 ? info.rangeKm + " km" : "–");
             bikeOdometer.set(info.odometerKm >= 0 ? String.format(Locale.ROOT, "%,d km", info.odometerKm) : "–");
             bikeFuel.set(info.fuelBars, BikeActivity.fuelSegments(info.fuelBars));
-            bikeFuelText.setText(info.fuelBars >= 0 ? "Fuel · " + info.fuelBars + (info.fuelBars == 1 ? " bar" : " bars") : "Fuel");
+            bikeFuel.setReserve(info.fuelBars == BikeFrames.VehicleInfo.FUEL_RESERVE);
+            bikeFuelText.setText(info.fuelBars >= 0 ? "Fuel · " + BikeActivity.fuelWords(info.fuelBars) : "Fuel");
         }
         bikeUpdated.setText(Hub.bikeConnected && info != null ? "Connected"
                 : info == null ? "Odometer, fuel, temperatures, maintenance and riding modes appear once the bike is connected"

@@ -28,8 +28,8 @@ import java.util.Map;
 
 /**
  * The Settings tab: starting by itself, what goes on the dash on the road, the dash icons and clock,
- * ride recording, offline maps, the debug tools (debug builds, seven taps on the title), the legal
- * notes and the log export. Other tabs open it at a section ({@link #EXTRA_SECTION}).
+ * ride recording, offline maps, the app's light or dark theme, the debug tools (debug builds, seven
+ * taps on the title), the legal notes and the log export. Other tabs open it at a section ({@link #EXTRA_SECTION}).
  */
 public class SettingsActivity extends KawaActivity {
 
@@ -281,6 +281,7 @@ public class SettingsActivity extends KawaActivity {
         root.addView(section("dash", R.drawable.ic_bell, "Dash icons and clock", dashGroup()));
         root.addView(section("recording", R.drawable.ic_route, "Ride recording", recordingGroup()));
         root.addView(section("maps", R.drawable.ic_map, "Offline maps", offlineGroup()));
+        root.addView(section("appearance", R.drawable.ic_theme, "Appearance", appearanceGroup()));
         if (Hub.DEBUG_TOOLS) root.addView(debugCard());
         if (Hub.DEBUG_TOOLS) root.addView(bikeDebugCard());
         if (Hub.DEBUG_TOOLS) root.addView(notifDebugCard());
@@ -377,7 +378,7 @@ public class SettingsActivity extends KawaActivity {
         ft.addView(itemTitle("Show upcoming curves"));
         ft.addView(secondary("Without navigation, the bike's display shows the next curve of the road you are on"));
         freeModeStatus = secondary("");
-        freeModeStatus.setTextColor(Ui.accent(night));
+        freeModeStatus.setTextColor(Ui.accentText(night));
         ft.addView(freeModeStatus);
         fr.addView(ft, weight());
         fr.addView(free);
@@ -395,7 +396,7 @@ public class SettingsActivity extends KawaActivity {
                     BridgeService.settingsChanged();
                 }));
         paceStatus = secondary("");
-        paceStatus.setTextColor(Ui.accent(night));
+        paceStatus.setTextColor(Ui.accentText(night));
         int pace = prefs.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF);
         addRow(c, choiceRow("Also when too fast", "Any bend, with \"slow down\", when you come at it faster than "
                 + "your pace takes it", curvePaceInfo(), paceStatus, PACE_NAMES, pace, pos -> {
@@ -551,6 +552,17 @@ public class SettingsActivity extends KawaActivity {
         return c;
     }
 
+    private LinearLayout appearanceGroup() {
+        LinearLayout c = group();
+        addRow(c, choiceRow("Theme", "White or black, with lime green. Like the phone: "
+                + "follows the phone's dark mode", Ui.THEME_LABELS, prefs.getInt(Hub.KEY_THEME, Ui.THEME_SYSTEM), pos -> {
+                    if (pos == prefs.getInt(Hub.KEY_THEME, Ui.THEME_SYSTEM)) return; // the spinner's first call
+                    prefs.edit().putInt(Hub.KEY_THEME, pos).apply();
+                    Ui.applyTheme(this, pos); // the open screens are recreated in the new colours
+                }));
+        return c;
+    }
+
     /** Legal notes: riding safety, affiliation, map data credit, licence (GPL-3.0 §5d), version; the log export. */
     private LinearLayout aboutGroup() {
         LinearLayout c = group();
@@ -562,7 +574,7 @@ public class SettingsActivity extends KawaActivity {
                 + "\n\nVersion " + BuildConfig.VERSION_NAME + (Hub.DEBUG_TOOLS ? " (debug)" : ""));
         t.setPadding(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE3));
         t.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
-        t.setLinkTextColor(Ui.accent(night));
+        t.setLinkTextColor(Ui.accentText(night));
         c.addView(t);
         addRow(c, listRow(R.drawable.ic_download, "Export the log", "Copies KawaNav's log to Download/KawaNav, to "
                 + "send with a problem report. It holds Google Maps' directions with street names, the bike's "
@@ -695,7 +707,7 @@ public class SettingsActivity extends KawaActivity {
             Button b = button("Read " + String.format(Locale.ROOT, "%02X", id), v -> android.widget.Toast.makeText(this,
                     BridgeService.read(id) ? "Asked the bike for " + BikeFrames.name(id) : "Bike not connected",
                     android.widget.Toast.LENGTH_SHORT).show());
-            b.setTextColor(Ui.accent(night));
+            b.setTextColor(Ui.accentText(night));
             outline(b);
             LinearLayout.LayoutParams lp = weight();
             lp.rightMargin = dp(Ui.SPACE1);
@@ -736,7 +748,7 @@ public class SettingsActivity extends KawaActivity {
             }
             android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
         });
-        mark.setTextColor(Ui.accent(night));
+        mark.setTextColor(Ui.accentText(night));
         outline(mark);
         box.addView(mark, matchWrap());
         return box;
@@ -757,7 +769,7 @@ public class SettingsActivity extends KawaActivity {
             Button b = button(event == DashAlerts.ADDED ? "Show" : "Clear", v -> android.widget.Toast.makeText(this,
                     BridgeService.sendDashAlert(ancsTest, event) ? "Sent: " + DashAlerts.describe(ancsTest, event)
                             : "Bike not connected", android.widget.Toast.LENGTH_SHORT).show());
-            b.setTextColor(Ui.accent(night));
+            b.setTextColor(Ui.accentText(night));
             outline(b);
             LinearLayout.LayoutParams lp = weight();
             lp.rightMargin = dp(Ui.SPACE1);
@@ -798,7 +810,7 @@ public class SettingsActivity extends KawaActivity {
             }
             android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
         });
-        send.setTextColor(Ui.accent(night));
+        send.setTextColor(Ui.accentText(night));
         outline(send);
         r.addView(send);
         box.addView(r);

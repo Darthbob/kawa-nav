@@ -150,10 +150,72 @@ public final class OfflineRegions {
         return RouteGraph.exists(routingDir(id));
     }
 
+    /**
+     * The region's border (Geofabrik's .poly, a few KB), kept for the planner's map to show how far the
+     * downloaded roads reach. Regions downloaded before it was kept have none: {@link #fetchBorders}.
+     */
+    public File borderFile(String id) {
+        return new File(dir, safeKey(id) + ".poly");
+    }
+
+    /** Keeps the border a download was cut to. */
+    public void keepBorder(String id, File poly) {
+        try {
+            java.nio.file.Files.copy(poly.toPath(), borderFile(id).toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (java.io.IOException e) {
+            Logger.log("Region border of " + id + " not kept: " + e);
+        }
+    }
+
+    /**
+     * The borders of all downloaded regions, each ring as lon, lat pairs. Regions overlap (a state
+     * inside its country): each keeps its own rings. Regions without a border file are left out.
+     */
+    public List<double[]> borders() {
+        List<double[]> rings = new ArrayList<>();
+        for (Region r : list()) {
+            File f = borderFile(r.id);
+            if (!f.isFile()) continue;
+            try {
+                rings.addAll(PbfImporter.Polygon.read(f).rings);
+            } catch (Exception e) {
+                Logger.log("Region border of " + r.label + " unreadable: " + e);
+            }
+        }
+        return rings;
+    }
+
+    /**
+     * Downloads the border of each region that has none (downloaded before it was kept): a few KB from
+     * Geofabrik per region, the whole extract is not needed again. Network: not on the main thread.
+     * True when one was fetched.
+     */
+    public boolean fetchBorders() {
+        boolean fetched = false;
+        for (Region r : list()) {
+            File f = borderFile(r.id);
+            if (f.isFile()) continue;
+            File tmp = new File(dir, safeKey(r.id) + ".poly.tmp");
+            try {
+                Geofabrik.download(Geofabrik.polyUrl(r.pbfUrl), tmp, null);
+                PbfImporter.Polygon.read(tmp); // a border, not an error page
+                if (!tmp.renameTo(f)) throw new java.io.IOException("cannot store it");
+                Logger.log("Region border of " + r.label + " fetched (" + f.length() / 1024 + " KB)");
+                fetched = true;
+            } catch (Exception e) {
+                tmp.delete();
+                Logger.log("Region border of " + r.label + " not fetched: " + e.getMessage());
+            }
+        }
+        return fetched;
+    }
+
     /** Removes the region, its routing graph and its tiles that no other region uses. */
     public synchronized void delete(String id) {
         Region r = find(id);
         new File(dir, safeKey(id) + ".json").delete();
+        borderFile(id).delete();
         RouteGraphBuilder.deleteTree(routingDir(id));
         RoutingData.changed();
         if (r != null) {

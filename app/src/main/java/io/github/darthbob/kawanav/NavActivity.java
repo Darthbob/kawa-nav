@@ -297,7 +297,7 @@ public class NavActivity extends KawaActivity {
 
     private void voiceLabel(boolean on) {
         voiceButton.setImageResource(on ? R.drawable.ic_volume : R.drawable.ic_volume_off);
-        voiceButton.setColorFilter(on ? Ui.accent(night) : Ui.inkSecondary(night));
+        voiceButton.setColorFilter(on ? Ui.accentText(night) : Ui.inkSecondary(night));
         voiceButton.setContentDescription(on ? "Voice on: tap to turn it off" : "Voice off: tap to turn it on");
     }
 
@@ -468,7 +468,7 @@ public class NavActivity extends KawaActivity {
         if (nav == null) return;
         double kmh = fresh(fix) && fix.hasSpeed() ? fix.getSpeed() * 3.6 : -1;
         speed.set(kmh < 0 ? "–" : Math.round(imperial ? kmh / 1.609344 : kmh) + (imperial ? " mph" : " km/h"));
-        speed.color(nav.limitKmh > 0 && kmh > nav.limitKmh + OVER_LIMIT_KMH ? Ui.danger(night) : Ui.accent(night));
+        speed.color(nav.limitKmh > 0 && kmh > nav.limitKmh + OVER_LIMIT_KMH ? Ui.danger(night) : Ui.accentText(night));
         limit.setVisibility(nav.limitKmh > 0 ? View.VISIBLE : View.GONE);
         if (nav.limitKmh > 0) {
             // OpenStreetMap's limits are in km/h here; in mph they were set in steps of 5

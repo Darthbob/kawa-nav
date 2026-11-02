@@ -73,6 +73,7 @@ public abstract class KawaActivity extends Activity {
     protected ScrollView page(View content) {
         systemBarsFollowTheme();
         ScrollView scroll = new ScrollView(this);
+        scroll.setId(R.id.page_scroll); // keeps its position when the screen is recreated
         scroll.setBackgroundColor(Ui.bg(night));
         scroll.addView(content);
         scroll.setClipToPadding(true);
@@ -102,6 +103,7 @@ public abstract class KawaActivity extends Activity {
     protected View tabPage(int tab, View content) {
         systemBarsFollowTheme();
         ScrollView scroll = new ScrollView(this);
+        scroll.setId(R.id.page_scroll); // keeps its position when the screen is recreated
         scroll.addView(content);
         scroll.setClipToPadding(true);
         pageScroll = scroll;
@@ -163,7 +165,7 @@ public abstract class KawaActivity extends Activity {
 
     private View tabItem(int tab, int drawable, String label, int current) {
         boolean on = tab == current;
-        int color = on ? Ui.accent(night) : Ui.inkSecondary(night);
+        int color = on ? Ui.accentText(night) : Ui.inkSecondary(night);
         LinearLayout item = column();
         item.setGravity(Gravity.CENTER);
         ImageView icon = new ImageView(this);
@@ -319,7 +321,7 @@ public abstract class KawaActivity extends Activity {
     protected ImageView headerAction(int drawable, String description, View.OnClickListener l) {
         ImageView v = new ImageView(this);
         v.setImageResource(drawable);
-        v.setColorFilter(Ui.accent(night));
+        v.setColorFilter(Ui.accentText(night));
         v.setScaleType(ImageView.ScaleType.CENTER);
         v.setContentDescription(description);
         v.setBackground(new RippleDrawable(ColorStateList.valueOf(Ui.rippleOnPlain(night)), null, null));
@@ -365,7 +367,7 @@ public abstract class KawaActivity extends Activity {
     protected TextView number(int size) {
         TextView t = text(size, false);
         t.setTypeface(Ui.numbers());
-        t.setTextColor(Ui.accent(night));
+        t.setTextColor(Ui.accentText(night));
         t.setFontFeatureSettings("tnum");
         t.setIncludeFontPadding(false);
         return t;
@@ -567,7 +569,7 @@ public abstract class KawaActivity extends Activity {
 
     /** The "DEBUG" tag of the test tools. */
     protected TextView debugPill() {
-        return pill("DEBUG", (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accent(night));
+        return pill("DEBUG", (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accentText(night));
     }
 
     // ------------------------------------------------------------------ numbers
@@ -896,7 +898,7 @@ public abstract class KawaActivity extends Activity {
         return b;
     }
 
-    /** The main action of a screen or card: accent fill (lime / violet), 56 dp tall. */
+    /** The main action of a screen or card: lime fill with dark text, 56 dp tall. */
     protected Button primaryButton(String text, View.OnClickListener l) {
         Button b = button(text, l);
         b.setTextColor(Ui.onAccent(night));
@@ -916,7 +918,7 @@ public abstract class KawaActivity extends Activity {
     /** The other choice: outline, accent text, quieter than the primary action. */
     protected Button secondaryButton(String text, View.OnClickListener l) {
         Button b = button(text, l);
-        b.setTextColor(Ui.accent(night));
+        b.setTextColor(Ui.accentText(night));
         outline(b);
         return b;
     }
@@ -1001,7 +1003,7 @@ public abstract class KawaActivity extends Activity {
         int accent = Ui.accent(night);
         s.setThumbTintList(new ColorStateList(states, new int[]{accent, Ui.outline(night)}));
         s.setTrackTintList(new ColorStateList(states,
-                new int[]{(accent & 0x00FFFFFF) | 0x66000000, night ? 0x33545454 : 0x33D9D8E3}));
+                new int[]{(accent & 0x00FFFFFF) | 0x66000000, night ? 0x33545454 : 0x33D9D9D9}));
         return s;
     }
 
@@ -1046,7 +1048,7 @@ public abstract class KawaActivity extends Activity {
         if (info != null) {
             TextView more = text(13, false);
             more.setText("What do the options mean?");
-            more.setTextColor(Ui.accent(night));
+            more.setTextColor(Ui.accentText(night));
             more.setPadding(0, dp(Ui.SPACE1), 0, dp(Ui.SPACE1));
             more.setOnClickListener(v -> new AlertDialog.Builder(this)
                     .setTitle(title)
@@ -1069,7 +1071,7 @@ public abstract class KawaActivity extends Activity {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 TextView t = (TextView) super.getView(position, convertView, parent);
-                t.setTextColor(Ui.accent(night));
+                t.setTextColor(Ui.accentText(night));
                 t.setTextSize(15);
                 t.setPadding(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE3));
                 t.setMinimumHeight(dp(Ui.TOUCH_MIN));

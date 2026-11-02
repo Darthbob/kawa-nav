@@ -285,6 +285,8 @@ public final class Hub {
      * openstreetmap.org, which then sees the area looked at: the one thing about a ride that leaves the phone.
      */
     public static final String KEY_RIDE_MAP = "ride_map";
+    /** Light or dark: {@link Ui#THEME_SYSTEM} (default, like the phone), THEME_LIGHT or THEME_DARK. */
+    public static final String KEY_THEME = "theme";
     /** Set while the bridge is being started only because a ride was asked for. */
     public static final String KEY_RIDE_WANTED = "ride_wanted";
     /** Ride state ({@link RideRecorder#IDLE}, RECORDING, PAUSED) and its "3.4 km · 12 min" text, for the UI. */

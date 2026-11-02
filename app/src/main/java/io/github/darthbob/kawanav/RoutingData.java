@@ -48,8 +48,30 @@ final class RoutingData {
 
     /** Some region has routing data. */
     static boolean available(Context c) {
-        File[] fs = root(c).listFiles(File::isDirectory);
+        return available(root(c));
+    }
+
+    private static boolean available(File root) {
+        File[] fs = root.listFiles(File::isDirectory);
         if (fs != null) for (File f : fs) if (RouteGraph.exists(f)) return true;
         return false;
+    }
+
+    /** What the planner has to plan on: routing data, no region at all, or only regions without it. */
+    static final int READY = 0, NO_REGION = 1, OLD_REGIONS = 2;
+
+    static int state(Context c) {
+        return state(c.getApplicationContext().getFilesDir());
+    }
+
+    /**
+     * @param files the app's files folder: "routing" holds the graphs, "regions" a record per downloaded
+     *              region ({@link OfflineRegions}); a region downloaded before 1.3 (or in an older routing
+     *              format) has a record but no graph
+     */
+    static int state(File files) {
+        if (available(new File(files, "routing"))) return READY;
+        File[] records = new File(files, "regions").listFiles((d, n) -> n.endsWith(".json"));
+        return records != null && records.length > 0 ? OLD_REGIONS : NO_REGION;
     }
 }

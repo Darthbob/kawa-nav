@@ -147,6 +147,9 @@ public class NavService extends Service implements LocationListener {
     @Override
     public void onLocationChanged(Location loc) {
         if (navigator == null) return;
+        // GPS only: a Wi-Fi or cell position (the planner's quick start) is tens of metres off and has no
+        // speed or heading; the navigation would follow the wrong road and announce turns at the wrong place
+        if (!LocationManager.GPS_PROVIDER.equals(loc.getProvider())) return;
         Hub.lastFix = loc;
         updateHeading(loc);
         if (lastMoveFix != null && loc.hasSpeed() && loc.getSpeed() >= MIN_SPEED_MOVING) {

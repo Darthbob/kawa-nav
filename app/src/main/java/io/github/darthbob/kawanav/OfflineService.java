@@ -178,6 +178,7 @@ public class OfflineService extends Service {
         try {
             res = importer.deleteWhenRead().routingTo(regionsBefore.routingDir(id)).run();
             RoutingData.changed();
+            regionsBefore.keepBorder(id, poly);
         } finally {
             if (!cancel) {
                 pbf.delete(); // converted (or broken): the next run downloads a fresh one
