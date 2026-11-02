@@ -41,6 +41,21 @@ android {
         }
     }
 
+    // Lint: a new warning fails the build (CI runs lintDebug; assembleRelease runs lintVitalRelease).
+    // The warnings the code had when this was switched on are in lint-baseline.xml: fix them when
+    // touching that code, and delete the entry from the baseline. The UI is in English by design,
+    // built in code without string resources, so the translation checks are off.
+    lint {
+        warningsAsErrors = true
+        abortOnError = true
+        baseline = file('lint-baseline.xml')
+        disable += ['SetTextI18n', 'HardcodedText']
+        // the orientation is fixed on purpose: the app is used on a bike, one hand, portrait
+        disable += ['LockedOrientationActivity']
+        // a Gradle plugin or SDK update is Dependabot's job, not a build failure
+        disable += ['GradleDependency', 'OldTargetApi', 'AndroidGradlePluginVersion']
+    }
+
     buildTypes {
         debug {
             minifyEnabled false
