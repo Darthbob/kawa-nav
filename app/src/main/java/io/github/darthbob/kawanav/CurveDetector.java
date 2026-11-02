@@ -6,8 +6,8 @@ import java.util.List;
 /**
  * Finds curves on a polyline ahead of the rider and maps them to Kawasaki turn icons.
  * The path is resampled every {@link #STEP} metres; heading change is smoothed over a
- * {@link #WINDOW_M} window so sparse OSM geometry (a bend drawn with 2-3 nodes) is not
- * mistaken for a hairpin. Plain Java so it can be unit-tested off-device.
+ * {@link #WINDOW_M} window so sparse OSM geometry (a bend drawn with 2-3 nodes) reads as the bend
+ * it is, not as a kink. Plain Java so it can be unit-tested off-device.
  */
 public final class CurveDetector {
     private CurveDetector() {}
@@ -163,9 +163,17 @@ public final class CurveDetector {
             // win[] spans 2*half+1 heading changes, i.e. that many STEPs of road
             double minRadius = maxWin > 0 ? (2 * half + 1) * STEP / Math.toRadians(maxWin) : Double.MAX_VALUE;
             if (Math.abs(total) >= minAngle) {
-                double start = (from + 1) * STEP;
-                double end = (to + 1) * STEP;
-                double[] at = pts[from + 1];
+                // The window reaches the threshold half a window before the road itself bends, so the bend
+                // starts (and ends) where the heading really changes its way inside the window: the first
+                // and last step that turns the bend's way at a good part of the rate the window asks for.
+                // So the distance shown and said is the distance to the bend, not to 15 m before it.
+                double eps = threshold / (2 * half + 1) / 2;
+                int first = from, last = to;
+                while (first < to && !(Math.signum(d[first]) == sign && Math.abs(d[first]) >= eps)) first++;
+                while (last > first && !(Math.signum(d[last]) == sign && Math.abs(d[last]) >= eps)) last--;
+                double start = (first + 1) * STEP;
+                double end = (last + 1) * STEP;
+                double[] at = pts[first + 1];
                 if (a == 0) { // already in the bend
                     start = 0;
                     at = pts[0];

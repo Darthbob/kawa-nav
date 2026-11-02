@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "version": "1.3.3",
+      "changes": [
+        "Bike tab, Maintenance: the Kawasaki service is shown at the odometer reading it is due at, with the kilometres left, like Rideology",
+        "Bike tab, Maintenance: a reminder switched off on the dash says \"off\" instead of the dash's default date and kilometres",
+        "Bike tab: the names of the maintenance reminders no longer disappear when the phone writes dates day first",
+        "A crash of the app is written into the log, so Export the log carries it with what led up to it",
+        "Started by hand and left running without the bike, KawaNav switches the GPS off after 5 minutes (unless a ride is being recorded or a navigation runs) and on again when the bike connects, instead of using it for hours",
+        "Converting a downloaded region sizes its work to the memory the phone gives the app: fewer rounds and a faster conversion on phones with more, no out-of-memory on phones with less",
+        "Curves: the distance to a bend is to where the road starts to turn, not 15 to 30 m before it as it was; a bend drawn as a single corner in the map starts at that corner"
+      ]
+    },
+    {
       "version": "1.3.2",
       "changes": [
         "Navigation screen: the map follows you again 10 seconds after you moved it or looked at the overview, and the button always says what it does (Overview or Follow me)",

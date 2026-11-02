@@ -232,26 +232,40 @@ public final class MaintenanceLog {
     }
 
     /**
-     * When one of the dash's reminders is due, null when it says nothing. The date is the day it is due;
-     * the distance is what is left, counting down with the odometer (a Z900's oil change read 11,338 km
-     * at 5,259 km and 11,045 km at 5,552 km: due at 16,597 km both times), so with the odometer known it
-     * also says where it falls. A reminder whose notify bits are 0 is marked off.
+     * When one of the dash's reminders is due, null when it says nothing, "off" when it is switched off
+     * (its date and distance are then only the meter's defaults). The distance comes first, so the text
+     * starts with a word and never shows as one big figure.
+     *
+     * <p>The Kawasaki service's distance is the odometer it is due at (Rideology: "At 12,000 km"). The
+     * oil change's is what is left, counting down with the odometer (Rideology: "In"; a Z900 read 11,338
+     * km at 5,259 km and 11,045 km at 5,552 km: due at 16,597 km both times). The rider's reminder is read
+     * like the oil change; Rideology shows it without a word, so that is not known.
      */
     static String due(BikeFrames.ServiceIndicator.Reminder m, double odoKm, java.text.DateFormat df) {
         if (!m.supported) return null;
+        if (!m.on()) return "off";
         List<String> due = new ArrayList<>();
+        if (m.distanceKm >= 0) {
+            String km;
+            if (m.kind == BikeFrames.ServiceIndicator.KAWASAKI) {
+                km = String.format(java.util.Locale.ROOT, "at %,d km", m.distanceKm);
+                if (odoKm >= 0) {
+                    long left = Math.round(m.distanceKm - odoKm);
+                    km += left > 0 ? String.format(java.util.Locale.ROOT, " (%,d km left)", left)
+                            : left < 0 ? String.format(java.util.Locale.ROOT, " (%,d km overdue)", -left) : " (due now)";
+                }
+            } else {
+                km = String.format(java.util.Locale.ROOT, "in %,d km", m.distanceKm);
+                if (odoKm >= 0) km += String.format(java.util.Locale.ROOT, " (at %,.0f km)", odoKm + m.distanceKm);
+            }
+            due.add(km);
+        }
         if (m.hasDate()) {
             java.util.Calendar cal = java.util.Calendar.getInstance();
             cal.clear();
             cal.set(m.year, m.month - 1, m.day);
-            due.add(df.format(cal.getTime()));
+            due.add("by " + df.format(cal.getTime()));
         }
-        if (m.distanceKm >= 0) {
-            String km = String.format(java.util.Locale.ROOT, "in %,d km", m.distanceKm);
-            if (odoKm >= 0) km += String.format(java.util.Locale.ROOT, " (at %,.0f km)", odoKm + m.distanceKm);
-            due.add(km);
-        }
-        if (due.isEmpty()) return null;
-        return String.join(" or ", due) + (m.notify == 0 ? " · reminder off" : "");
+        return due.isEmpty() ? null : String.join(" or ", due);
     }
 }

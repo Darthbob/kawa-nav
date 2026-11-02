@@ -149,7 +149,7 @@ public final class RoadNetwork {
         this.ky = 111_132.0;
         this.kx = 111_320.0 * Math.cos(Math.toRadians(lat0));
         for (RawWay w : ways) {
-            if (w.nodes.length < 2 || w.nodes.length != w.lats.length) continue;
+            if (w.nodes.length < 2 || w.nodes.length != w.lats.length || !HIGHWAYS.contains(w.highway)) continue;
             double[] x = new double[w.lats.length];
             double[] y = new double[w.lats.length];
             for (int i = 0; i < x.length; i++) {
@@ -185,6 +185,17 @@ public final class RoadNetwork {
         return Math.hypot(p[0], p[1]);
     }
 
+    /**
+     * The OpenStreetMap highway kinds a motorcycle rides: what the region import keeps, and all the
+     * network takes. A tile that held anything else (a footway, a cycleway, a way without a kind) must
+     * not have it matched and followed like a residential road.
+     */
+    public static final java.util.Set<String> HIGHWAYS = java.util.Collections.unmodifiableSet(new java.util.HashSet<>(
+            java.util.Arrays.asList("motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
+                    "secondary", "secondary_link", "tertiary", "tertiary_link", "unclassified", "residential",
+                    "living_street", "road")));
+
+    /** The class of a road, 0 motorway to 8 ramp; a kind outside {@link #HIGHWAYS} counts like residential. */
     static int rank(String highway) {
         switch (highway) {
             case "motorway": return 0;
@@ -286,9 +297,11 @@ public final class RoadNetwork {
     }
 
     /**
-     * Polyline (x, y pairs) starting at the matched point and following the road for maxLen metres.
-     * At the end of a way it continues on the way that keeps the same name/ref, else the straightest
-     * one, preferring roads of the same or higher class. Stops at dead ends.
+     * Polyline (x, y pairs) starting at the matched point and following the road for maxLen metres
+     * (exactly: the last point is cut at that distance). At the end of a way it continues on the way
+     * that keeps the same name/ref if that turns less than 45° more than the straightest, else the
+     * straightest one, preferring roads of the same or higher class (10° per class). Stops at dead
+     * ends and where every way on turns back more than 150°.
      *
      * Roundabouts are driven through to the exit that continues the approach road (same name/ref,
      * else closest to straight on); each one is reported in {@code passes}. {@code approach} is the
@@ -317,6 +330,14 @@ public final class RoadNetwork {
             double[] v = {r.x[idx], r.y[idx]};
             double step = Math.hypot(v[0] - last[0], v[1] - last[1]);
             if (step > 0.01) {
+                if (len + step > maxLen) {
+                    // the look-ahead ends inside this segment: the path ends there, not at its far vertex
+                    double t = (maxLen - len) / step;
+                    pts.add(new double[]{last[0] + t * (v[0] - last[0]), last[1] + t * (v[1] - last[1])});
+                    len = maxLen;
+                    if (pass != null) pass.exitDist = len;
+                    break;
+                }
                 len += step;
                 pts.add(v);
             }

@@ -31,10 +31,16 @@ higher version in `changelog.json`; the version in `app/build.gradle` decides wh
   (JUnit for the JVM tests in `app/src/test` only).
 - The UI is built in code (no XML layouts): screens extend `KawaActivity`, shared styling is in
   `Ui`; UI text is English.
-- Shared state between services and UI and the setting keys are in `Hub`; log with `Logger`.
+- Shared state between services and UI and the setting keys are in `Hub`; log with `Logger`
+  (`KawaApp` sets it up and sends crashes into it).
+- What the dash shows each second is decided in `DashArbiter` (plain Java, tested in
+  `DashArbiterTest`); `BridgeService` only gathers its inputs and sends the frame. Keep rules about
+  precedence, distances and windows there, not in the service.
 - When behaviour users notice changes, update README.md too.
-- Build and test: `gradle assembleDebug testDebugUnitTest` (Gradle 9.6.x as in CI, JDK 17+; there
-  is no Gradle wrapper).
+- Build and test: `gradle assembleDebug testDebugUnitTest lintDebug` (Gradle 9.6.x as in CI,
+  JDK 17+; there is no Gradle wrapper). Lint warnings fail the build; the ones from before that rule
+  are listed in `app/lint-baseline.xml` — fix them when you touch that code and remove the entry,
+  never add to the baseline.
 
 ## Never commit
 
@@ -44,3 +50,6 @@ higher version in `changelog.json`; the version in `app/build.gradle` decides wh
   tracks
 - `keystore.properties`, `*.jks`, `*.keystore` (release signing; CI gets the key from the secrets
   of the `release` environment)
+- exported logs and notification captures (`*-kawanav.log*.txt`, `*-notif-*.txt`, `*-icons-*.png`):
+  they hold the bike's Bluetooth address, the helmet's name, street names and other apps'
+  notification text. Keep them outside the checkout (they are git-ignored, but `git add -f` is not)

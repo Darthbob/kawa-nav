@@ -35,8 +35,11 @@
         </intent>
     </queries>
 
-    <!-- backup: only rides, settings and the bike's last values, see res/xml/data_extraction_rules.xml -->
+    <!-- backup: only rides, settings and the bike's last values, see res/xml/data_extraction_rules.xml.
+         largeHeap: converting a downloaded region (PbfImporter sizes its rounds to the heap, but
+         RouteGraphBuilder.finish holds a country's junctions and road links in arrays at once) -->
     <application
+        android:name=".KawaApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="KawaNav"

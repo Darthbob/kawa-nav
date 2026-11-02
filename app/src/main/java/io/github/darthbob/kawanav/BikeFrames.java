@@ -982,10 +982,13 @@ public final class BikeFrames {
         /** One reminder: due date and/or distance; -1 where not set. */
         public static final class Reminder {
             public final boolean supported;
+            /** {@link #KAWASAKI}, {@link #RIDER} or {@link #OIL}. */
+            public final int kind;
             public final int notify, day, month, year, distanceKm;
 
             /** @param c the maintenance config; only a valid one hides fields (each by its own flag) */
             Reminder(byte[] v, int base, ServiceConfig c, int which) {
+                kind = which;
                 ServiceConfig cfg = c != null && c.valid ? c : null;
                 boolean b = blockPresent(v, base - 2) && v.length > base + 7;
                 supported = b && (cfg == null || cfg.has(which, ServiceConfig.CAPABILITY));
@@ -1007,6 +1010,15 @@ public final class BikeFrames {
 
             public boolean hasDate() {
                 return year > 0 && month > 0 && day > 0;
+            }
+
+            /**
+             * The reminder is switched on. Rideology keeps a reminder's date and distance only for notify
+             * 1 to 3 (1 or 2 for the rider's) and shows "---" otherwise (qe/b.java:294-324): a reminder
+             * that is off still holds the meter's defaults, such as 1 Jan 2024 and 12,000 km.
+             */
+            public boolean on() {
+                return notify >= 1 && notify <= (kind == RIDER ? 2 : 3);
             }
         }
 

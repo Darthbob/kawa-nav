@@ -29,10 +29,6 @@ public final class CurveEngine implements LocationListener {
 
     private static final long STALE_FIX_MS = 5_000;
     private static final double MIN_SPEED_FOR_BEARING = 2.0; // m/s
-    /** During navigation, a curve is shown this close at most (the Maps arrow otherwise). */
-    private static final double NAV_CURVE_SHOW_M = 300;
-    /** ... and only if it comes clearly before the next Maps maneuver. */
-    private static final double NAV_CURVE_BEFORE_MANEUVER_M = 50;
     /** Free mode on a straight: how far to search for the next curve to show "straight for X m". */
     private static final double STRAIGHT_SEARCH_M = 3000;
 
@@ -87,6 +83,11 @@ public final class CurveEngine implements LocationListener {
         Logger.log("Curve detection on");
     }
 
+    /** The GPS is on and the curves are being followed. */
+    public boolean running() {
+        return running;
+    }
+
     public void stop() {
         if (!running) return;
         running = false;
@@ -121,24 +122,11 @@ public final class CurveEngine implements LocationListener {
     }
 
     /**
-     * Curve warning during navigation: the next curve within {@link #NAV_CURVE_SHOW_M} that comes
-     * before the next Maps maneuver, or null.
-     *
-     * @param maneuverDist distance to the Maps maneuver (m); unknown (negative) means it is
-     *                     imminent ("Ankunft", "Links abbiegen" without distance): no curve then
-     * @param sharpOnly    only sharp curves and hairpins
+     * The curves ahead of the last fix, nearest first, for the curve warnings between the maneuvers
+     * ({@link DashArbiter#curveBeforeManeuver}); empty when the fix is old.
      */
-    public Hub.Output curveBeforeManeuver(int maneuverDist, boolean sharpOnly) {
-        if (!fresh() || maneuverDist < 0) return null;
-        for (CurveDetector.Curve c : curves) {
-            if (c.startDist <= CurveDetector.ENTERED_M) continue;
-            if (c.startDist > NAV_CURVE_SHOW_M) return null;
-            if (c.startDist > maneuverDist - NAV_CURVE_BEFORE_MANEUVER_M) return null;
-            boolean sharp = c.turn == 3 || c.turn == 4 || c.turn == 7 || c.turn == 8;
-            if (sharpOnly && !sharp) continue;
-            return new Hub.Output(c.turn, roundDistance(c.startDist), "Curve");
-        }
-        return null;
+    public List<CurveDetector.Curve> curvesNow() {
+        return fresh() ? curves : Collections.emptyList();
     }
 
     /** The curves ahead for the spoken warnings, each with where it starts; empty when the fix is old. */

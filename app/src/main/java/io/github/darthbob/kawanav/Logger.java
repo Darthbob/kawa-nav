@@ -48,6 +48,53 @@ public final class Logger {
         if (dir == null) dir = context.getApplicationContext().getFilesDir();
     }
 
+    /**
+     * From then on an uncaught exception, on any thread, goes into the log file before Android ends the
+     * process, so "Export the log" carries the crash with what led up to it. Written on the crashing
+     * thread itself, not through {@link #log}: that one posts to the main thread and a background
+     * writer, neither of which runs again once the process is being killed. Android's own handler
+     * (the "KawaNav keeps stopping" dialog, the tombstone) runs afterwards as before.
+     */
+    public static void installCrashHandler() {
+        Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
+        if (previous instanceof CrashHandler) return;
+        Thread.setDefaultUncaughtExceptionHandler(new CrashHandler(previous));
+    }
+
+    private static final class CrashHandler implements Thread.UncaughtExceptionHandler {
+        private final Thread.UncaughtExceptionHandler previous;
+
+        CrashHandler(Thread.UncaughtExceptionHandler previous) {
+            this.previous = previous;
+        }
+
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+            try {
+                warn("crash", e);
+                File d = dir;
+                if (d != null) appendToFile(d, crashLine(t.getName(), e));
+            } catch (Throwable ignored) {
+                // nothing left to do for it; the crash itself must still reach Android
+            }
+            if (previous != null) previous.uncaughtException(t, e);
+        }
+    }
+
+    /**
+     * The log entry for a crash: the stamp, the thread and the whole stack trace with its causes, as
+     * {@link Throwable#printStackTrace} prints it. Package-private for the tests.
+     */
+    static String crashLine(String thread, Throwable e) {
+        java.io.StringWriter trace = new java.io.StringWriter();
+        e.printStackTrace(new java.io.PrintWriter(trace));
+        String stamp;
+        synchronized (fmt) { // SimpleDateFormat is not thread-safe, and the main thread may be stamping a line
+            stamp = fmt.format(new Date());
+        }
+        return stamp + "  CRASH on thread \"" + thread + "\": " + trace.toString().trim();
+    }
+
     public static void log(String line) {
         if (main == null) {
             System.out.println(line);
@@ -58,7 +105,10 @@ public final class Logger {
             return;
         }
         Log.i(TAG, line);
-        String stamped = fmt.format(new Date()) + "  " + line;
+        String stamped;
+        synchronized (fmt) {
+            stamped = fmt.format(new Date()) + "  " + line;
+        }
         File d = dir;
         if (d != null) io.execute(() -> appendToFile(d, stamped));
     }

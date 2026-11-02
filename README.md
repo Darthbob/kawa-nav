@@ -244,10 +244,16 @@ navigation, and notification access is no longer needed.
 
 #### Show upcoming curves
 
-Free ride: when Maps is not navigating, KawaNav follows the road you are on (at junctions: the road
-with the same name or number, else the straightest one) and shows what comes next:
+Free ride: when Maps is not navigating, KawaNav follows the road you are on and shows what comes next.
+At a junction it takes the road that keeps your road's name or number, as long as that one does not
+turn more than 45° further than the straightest road on; otherwise the straightest one, with a
+preference for roads of the same or a higher class (a main road that bends slightly over a lane straight
+on). A road that turns back by more than 150° is never taken. So a named road that leaves at a right
+angle at a T junction where an unnamed road carries straight on is not followed: KawaNav keeps to the
+road as it lies, like a rider who has no map. What the dash shows:
 
-- the next curve with its distance to where the bend starts; once you are in a bend, the one after it;
+- the next curve with its distance to where the bend starts (where the road begins to turn, to within
+  5 m); once you are in a bend, the one after it;
 - a roundabout as roundabout symbol with the exit that continues your road;
 - on a straight, the straight arrow with the distance to the next curve (searched up to 3 km ahead,
   or to the end of the downloaded roads).
@@ -422,7 +428,8 @@ not consulted there, because the arrow already shows which way around the rounda
 
 Settings → About → **Export the log** copies KawaNav's log of the last runs to `Download/KawaNav`, to
 attach to a problem report (e.g. a GitHub issue). It records what KawaNav did and sent to the dash,
-also on a ride: every change of the arrow and the status icons, with the values behind them. It also
+also on a ride: every change of the arrow and the status icons, with the values behind them, and a
+crash of the app with what led up to it. It also
 holds Google Maps' directions with street names, the bike's Bluetooth address and the helmet's name,
 so read it before you share it. The notification capture stays in the debug build's own export.
 
@@ -444,9 +451,11 @@ gauge and the battery voltage, then groups everything the dash reported when it 
   they are gone a few seconds after the bike stops sending.
 - **Suspension**: the body's acceleration and the yaw, roll and pitch rates from the IMU (a Z900 sends
   them too), and on bikes with the electronic suspension its travel and where the damping stands.
-- **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change) with
-  their date and the kilometres left, and the odometer they fall at ("in 11,045 km (at 16,597 km)").
-  A reminder the meter keeps switched off is marked "reminder off".
+- **Maintenance**: the reminders the meter keeps (Kawasaki service, the rider's own, oil change), as
+  Rideology shows them. The Kawasaki service is due at an odometer reading, with the kilometres left
+  ("at 12,000 km (1,050 km left) or by 18 Mar 2027"); the oil change in so many kilometres, with the
+  odometer that makes ("in 11,045 km (at 16,597 km) or by 29 Sept 2027"). A reminder switched off on
+  the dash says "off".
 - **Dash**: the clock the dash has (and the shift lamp setting), as last read.
 - **Parked**: after the link is lost, the phone's position at that moment, with a "Walk to the bike"
   button that opens Maps in walking mode. It appears only if the phone had a recent position (curves or
@@ -764,7 +773,10 @@ fallback.
   to it: nothing happens, the log says so, and Home's orange banner asks for the permission. Turning
   it back on is enough — the association does not have to be set up again.
 
-The Start/Stop button on Home is only a manual fallback (autostart missed, testing).
+The Start/Stop button on Home is only a manual fallback (autostart missed, testing). Started by hand and
+left running without the bike, KawaNav switches the GPS off once the bike has been gone 5 minutes with no
+ride being recorded and no navigation running (Home says "Waiting for the bike (GPS off)"), and switches
+it back on the moment the bike connects.
 
 ## 🚧 Known limitations
 
