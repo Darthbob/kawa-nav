@@ -150,6 +150,8 @@ public final class Hub {
     /** What the rider can do about the bike status, or "". */
     public static String bikeHint = "";
     public static boolean bikeConnected;
+    /** The bike's dash is older than BLE5 (KawaProtocol.olderDash): KawaNav does not connect to it. */
+    public static boolean bikeOlderDash;
     /** What the meter shows right now (null: nothing). */
     public static Output output;
     public static String outputStatus = "–";

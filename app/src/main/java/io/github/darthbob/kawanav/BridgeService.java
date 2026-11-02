@@ -598,6 +598,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.bikeStatus = "Not running";
         Hub.bikeHint = "";
         Hub.bikeConnected = false;
+        Hub.bikeOlderDash = false;
         Hub.output = null;
         Hub.outputStatus = "–";
         Hub.iconsStatus = "–";
@@ -616,6 +617,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private void connectBike() {
         if (destroyed) return;
         handler.removeCallbacks(connectRunnable);
+        Hub.bikeOlderDash = false;
         // the permission can be revoked while the service runs (autostart path): every Bluetooth call
         // below would throw SecurityException on the main thread
         if (!Hub.bluetoothAllowed(this)) {
@@ -827,6 +829,21 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.bikeConnected = false;
         updateNotification();
         handler.postDelayed(connectRunnable, ble.reconnectDelayMs());
+    }
+
+    @Override
+    public void onOlderDash() {
+        if (destroyed) return;
+        // trying again would only find the same services: wait until KawaNav is started again
+        handler.removeCallbacks(connectRunnable);
+        Hub.bikeOlderDash = true;
+        Hub.bikeConnected = false;
+        Hub.bikeStatus = "Older Kawasaki dash: not supported";
+        Hub.bikeHint = "This dash uses Kawasaki's protocol from before BLE5: it cannot show directions, and "
+                + "KawaNav cannot talk to it."
+                + (bikeGuessed ? " Several Kawasakis are paired: set up \"Start automatically\" with the one you ride." : "");
+        Logger.log("Bridge: older Kawasaki dash, not connecting again until KawaNav is started again");
+        updateNotification();
     }
 
     // ------------------------------------------------------------------ output
@@ -1313,7 +1330,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         return pace > CurveAlerts.PACE_OFF && pace < CurveAlerts.PACE_LEAN.length ? CurveAlerts.PACE_LEAN[pace] : 0;
     }
 
-    /** Tyre, ABS and battery warnings: shown on Home while they last, announced once each. */
+    /** Tyre, ABS, low fuel and battery warnings: shown on Home while they last, announced once each. */
     private void bikeAlerts(long now) {
         java.util.List<BikeAlerts.Alert> alerts = bikeAlertMonitor.current(Hub.bike, now);
         if (!Hub.prefs(this).getBoolean(Hub.KEY_BATTERY_WARNINGS, true)) {

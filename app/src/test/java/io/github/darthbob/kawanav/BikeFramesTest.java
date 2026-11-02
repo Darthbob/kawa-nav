@@ -1002,6 +1002,35 @@ public class BikeFramesTest {
         assertEquals(-1, plain.maxLeanLeft);               // max lean needs the config to say it exists
     }
 
+    /** 0x41 byte 31: the dash's low fuel warning (Rideology 2.11.14), only when the 0x40 says the bike sends it. */
+    @Test
+    public void lowFuelWarning() {
+        byte[] v = blank(0x41, 85);
+        put(v, 25, 0x05, 0x16);
+        put(v, 31, 0x00);                                  // 0: the dash warns
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(infoConfigWithValidBits());               // its byte 31 bits 1-0 are 0: the bike sends it
+        assertEquals(1, ((BikeFrames.VehicleInfo) d.decode(v)).lowFuel);
+        put(v, 31, 0xF0);                                  // only the low nibble counts
+        assertEquals(1, ((BikeFrames.VehicleInfo) d.decode(v)).lowFuel);
+        put(v, 31, 0x01);                                  // any other value: no warning
+        assertEquals(0, ((BikeFrames.VehicleInfo) d.decode(v)).lowFuel);
+
+        put(v, 31, 0x00);
+        // no 0x40 yet: nothing, although Rideology's default config would read the byte
+        assertEquals(-1, ((BikeFrames.VehicleInfo) new BikeFrames.Decoder().decode(v)).lowFuel);
+        // a Z900's 0x40 sends F3 in byte 31 (bits 1-0 = 3): it has no warning (and its 0x41 sends FF)
+        byte[] z900 = infoConfigWithValidBits();
+        put(z900, 31, 0xF3);
+        BikeFrames.Decoder z = new BikeFrames.Decoder();
+        z.decode(z900);
+        assertEquals(-1, ((BikeFrames.VehicleInfo) z.decode(v)).lowFuel);
+        // the block that carries byte 31 is absent (as on the Z500): nothing
+        byte[] noBlock = blank(0x41, 85);
+        put(noBlock, 31, 0x00);
+        assertEquals(-1, ((BikeFrames.VehicleInfo) d.decode(noBlock)).lowFuel);
+    }
+
     /** TPMS counts as present unless byte 45 or 46 is FF — an ordinary 05 block marker included. */
     @Test
     public void tpmsPresentWithBlockMarker() {

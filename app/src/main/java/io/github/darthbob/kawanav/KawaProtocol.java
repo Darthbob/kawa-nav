@@ -19,6 +19,22 @@ public final class KawaProtocol {
             UUID.fromString("5e119eba-35a7-4463-a7af-7fa40a302350"),
     };
     public static final UUID CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+    /**
+     * The services of the meters before BLE5 (the bikes Rideology finds by meter part number: most of
+     * 2019-2024, Ninja 1100SX, Z650 S, Ninja 650 / H2 2027): Rideology talks to them with another
+     * protocol, without turn-by-turn (ne/x.java:288-314, ne/s.java, ne/t.java in 2.11.9).
+     */
+    public static final UUID[] OLDER_SERVICES = {
+            UUID.fromString("5d0994f1-26c6-4af0-9b30-a691d0f19ee1"),
+            UUID.fromString("8c541dd9-7faa-4045-a1b9-749e25dd7114"),
+    };
+
+    /** The meter has no BLE5 service but one of the older ones: a dash KawaNav cannot talk to. */
+    public static boolean olderDash(List<UUID> services) {
+        if (services.contains(SERVICE)) return false;
+        for (UUID u : OLDER_SERVICES) if (services.contains(u)) return true;
+        return false;
+    }
 
     /** Navigation status (Ble5Value.n). */
     public static final String[] FLAG_NAMES = {"Navigating", "Rerouting", "Arrived", "No navigation"};

@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-/** Tyre, ABS and battery warnings from the bike's values, and announcing each one once. */
+/** Tyre, ABS, low fuel and battery warnings from the bike's values, and announcing each one once. */
 public class BikeAlertsTest {
 
     private static final long NOW = 1_800_000_000_000L;
@@ -51,6 +51,37 @@ public class BikeAlertsTest {
         BikeFramesTest.put(v, 37, 0x03);               // front and rear ABS working: no fault
         b.apply(new BikeFrames.Decoder().decode(v), NOW);
         assertTrue(BikeAlerts.current(b, NOW).isEmpty());
+    }
+
+    /** A 0x41 after a 0x40 that says the dash sends its low fuel warning: byte 31, and the range (-1: none). */
+    private static BikeData withFuelWarning(int byte31, int rangeKm) {
+        byte[] v = BikeFramesTest.blank(0x41, 85);
+        BikeFramesTest.put(v, 25, 0x05, 0x16);
+        BikeFramesTest.put(v, 31, byte31);
+        if (rangeKm >= 0) {
+            BikeFramesTest.put(v, 45, 0x05, 0x18);
+            BikeFramesTest.put(v, 47, rangeKm >> 8 & 0x03, rangeKm & 0xFF);   // byte 47 bit 7 clear: current
+        }
+        BikeFrames.Decoder d = new BikeFrames.Decoder();
+        d.decode(BikeFramesTest.infoConfigWithValidBits());
+        BikeData b = new BikeData();
+        b.apply(d.decode(v), NOW);
+        return b;
+    }
+
+    @Test
+    public void lowFuel() {
+        List<BikeAlerts.Alert> low = BikeAlerts.current(withFuelWarning(0x00, 42), NOW);
+        assertEquals(1, low.size());
+        assertEquals("fuel_low", low.get(0).id);
+        assertEquals("42 km of range left on the dash: fill up soon", low.get(0).detail);
+        assertEquals("The dash reports a low fuel level: fill up soon",
+                BikeAlerts.current(withFuelWarning(0x00, -1), NOW).get(0).detail);
+        assertTrue(BikeAlerts.current(withFuelWarning(0x01, 42), NOW).isEmpty());
+        assertTrue(BikeAlerts.current(withFuelWarning(0x00, 42), NOW + BikeAlerts.FRESH_MS + 1).isEmpty());
+        // not a battery warning: "Battery warnings" off keeps it, and it is not held for a second answer
+        assertEquals(1, BikeAlerts.withoutBattery(low).size());
+        assertEquals("fuel_low", new BikeAlerts.Monitor().current(withFuelWarning(0x00, 42), NOW).get(0).id);
     }
 
     private static BikeData withBattery(int ecuByte) {
