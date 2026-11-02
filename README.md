@@ -422,7 +422,8 @@ not consulted there, because the arrow already shows which way around the rounda
 
 Settings → About → **Export the log** copies KawaNav's log of the last runs to `Download/KawaNav`, to
 attach to a problem report (e.g. a GitHub issue). It records what KawaNav did and sent to the dash,
-also on a ride: every change of the arrow and the status icons, with the values behind them. It also
+also on a ride: every change of the arrow and the status icons, with the values behind them, and a
+crash of the app with what led up to it. It also
 holds Google Maps' directions with street names, the bike's Bluetooth address and the helmet's name,
 so read it before you share it. The notification capture stays in the debug build's own export.
 

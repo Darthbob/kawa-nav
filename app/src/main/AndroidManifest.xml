@@ -37,6 +37,7 @@
 
     <!-- backup: only rides, settings and the bike's last values, see res/xml/data_extraction_rules.xml -->
     <application
+        android:name=".KawaApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="KawaNav"
