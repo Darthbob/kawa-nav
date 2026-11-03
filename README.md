@@ -46,10 +46,10 @@ Z900 (2026, "Kawasaki-ZR900S") with a Pixel 9. Free software under the
 - 🛣️ **Route planner and offline navigation**: plan a route from A to B (with via points) or a **round
   trip** of a chosen length, direction and shape on the downloaded regions, **fastest, curvy or extra
   curvy**, with motorways, tolls and gravel avoided on request. Ride it with turn-by-turn navigation:
-  arrow and distance on the dash, spoken instructions in the phone's language (English, Italian,
-  German), a new route when you leave it, curve warnings along the planned route. Everything is
-  computed on the phone, no mobile data needed. Drag the points on the map, compare the three route
-  kinds side by side, keep favourite places and save routes to ride later (or as GPX). See
+  arrow and distance on the dash, spoken instructions in the app's language (see [App
+  languages](#-app-languages)), a new route when you leave it, curve warnings along the planned route.
+  Everything is computed on the phone, no mobile data needed. Drag the points on the map, compare the
+  three route kinds side by side, keep favourite places and save routes to ride later (or as GPX). See
   [Route planner and navigation](#-route-planner-and-navigation).
 - 🌀 **Free ride: upcoming curves**: without navigation, the dash shows the next curve of the road you
   are on (slight / normal / sharp / hairpin) with its distance, roundabouts with the exit that
@@ -153,7 +153,18 @@ icon is not recognised.
 Distances are read in m/km, mi/ft/yd and Cyrillic/Greek units (м/км, μ/χλμ). The word lists are in
 `MapsParser.java`.
 
-The app's own screen is in English.
+### 🗣️ App languages
+
+KawaNav's screens and its voice (navigation, curve, camera and cold engine warnings) speak **English,
+German, Italian, French, Spanish, Dutch, Portuguese, Polish and Swedish**. They follow the phone's
+language when KawaNav has it, else English; Settings → Appearance → **Language** picks one for KawaNav
+alone, and **System default** goes back to the phone's (Android's own per-app language, also under
+Android settings → Apps → KawaNav → Language). The voice needs the phone's text-to-speech voice for
+that language; without one, the phone's default voice reads the words.
+
+The translations were written with AI help and not all checked by native speakers: corrections are
+welcome, in `app/src/main/res/values-<language>/strings.xml` (the spoken phrases are in `NavText.java`).
+The log, the debug tools, the exported files and the release notes stay in English.
 
 ## 📦 Install
 
@@ -182,7 +193,8 @@ KawaNav shows these steps itself ("Switch greyed out?") when it notices the situ
 
 Laid out like Rideology: a bar at the bottom with **Home**, **Bike**, the round **record button**,
 **Rides** and **Settings**. It follows the phone's dark or light mode (black or white, with lime
-green), or stays light or dark as chosen under Settings → Appearance → Theme.
+green), or stays light or dark as chosen under Settings → Appearance → Theme. Its texts and voice are
+in nine languages ([App languages](#-app-languages)).
 
 - **Home**: the link to the bike and what the dash shows right now, the ride being recorded, the bike's
   last values ("My vehicle") and a menu of shortcuts. The orange banner shows up here too.
@@ -241,6 +253,7 @@ In the **Settings** tab:
 | [Distances in feet](#distances-in-feet) | Off | Imperial distances |
 | [Left-hand traffic](#left-hand-traffic) | Off | For countries driving on the left (UK, Ireland, …) |
 | Theme | Like the phone | Like the phone / Light / Dark: the app's colours (under Appearance) |
+| [Language](#-app-languages) | System default | System default / one of the nine languages: the app's texts and voice (under Appearance) |
 
 #### Google Maps directions
 
@@ -300,8 +313,8 @@ sharp bends and hairpins, or all curves that count under "Which curves count". O
   Only a bend of the kinds you picked is named this way (any kind when the kinds are off).
 - It works with or without navigation, whatever the dash shows. During navigation a bend within 50 m
   of Maps' next maneuver is left to Maps' own voice, and nothing is said while Maps names no distance.
-- The voice is the phone's text-to-speech, in English (the phone's own voice reads the words if no
-  English voice is installed). It plays as navigation guidance, like Google Maps' voice: it goes to
+- The voice is the phone's text-to-speech, in the app's language (the phone's own voice reads the words
+  if no voice for that language is installed). It plays as navigation guidance, like Google Maps' voice: it goes to
   the helmet intercom and turns music down while it speaks.
 - **Speak only through a headset** (on by default) keeps it quiet while no Bluetooth or wired headset
   is connected, so the phone does not speak out of a pocket.

@@ -1,0 +1,1159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the translation work in 1.4.0; edit this file directly. Every language has
+     every text of res/values/strings.xml (StringsTest, lint MissingTranslation). -->
+<resources>
+
+    <!-- Settings: explanations -->
+    <string name="settings_cameras_info">Från offlinekartornas data: telefonen visar den och motorcykelns display får avståndet. Ladda ner regionen igen om den laddades ner före den här versionen. Fartkameravarningar under körning är förbjudna i vissa länder (Tyskland, Frankrike, Schweiz)</string>
+    <string name="settings_curves_info">Vinkeln är den totala riktningsändringen genom hela kurvan: 90° är en rätvinklig kurva, 180° en hårnålskurva. En kurva måste också vara tillräckligt snäv; långa, svepande motorvägskurvor räknas inte.\n\nBara snäva: från 45°, radie upp till ~170 m. Bara kurvor du verkligen måste bromsa för.\n\nNormal: från 30°, radie upp till ~250 m.\n\nÄven svaga: från 20°, radie upp till ~350 m. Två kurvor åt samma håll tätt efter varandra kan smälta ihop till en.\n\nAlla över 15°: från 16°, radie upp till ~570 m. Allt utom de svagaste kurvorna; kurvor tätt efter varandra hålls isär. Rekommenderas.\n\nPil på motorcykelns display:\n• Svag: under 55° och vidare än 60 m radie\n• Normal: 55° eller mer, eller snävare än 60 m\n• Skarp: 100° eller mer, eller snävare än 30 m\n• Hårnål (U-svängspil): 150° eller mer och snävare än 35 m</string>
+    <string name="settings_curve_sound_info">KawaNav säger vilken sorts kurva det är och åt vilket håll, som ”Skarp kurva vänster” eller ”Hårnålskurva höger”, ungefär 6 sekunder innan kurvan börjar i din fart: från 50 m före när det går långsamt upp till 300 m när det går fort. Varje kurva en gång, och inget under 10 km/h. Din fart är motorcykelns egen så länge den är ansluten, utan GPS-fördröjning; utan motorcykeln GPS-farten.\n\nSorterna är pilens på motorcykelns display (se ”Vilka kurvor som räknas”):\n• Bara hårnålskurvor\n• Skarpa och hårnålskurvor\n• Alla kurvor: även normala och svaga\n\n”Även när för fort” lägger till kurvorna du kommer för fort mot för ditt tempo, med ”sakta ner”; det fungerar även med den här avstängd.\n\nEn kurva som börjar inom 80 m efter slutet på den sagda nämns tillsammans med den: ”Hårnålskurva vänster, sedan skarp kurva höger”. Den sägs inte igen för sig, om du inte kommer för fort mot den.\n\nDet fungerar med eller utan navigering, vad displayen än visar. Under navigering lämnas en kurva precis före Maps nästa manöver åt Maps egen röst. Kräver nedladdade vägar, precis som kurvorna på displayen. Rösten är telefonens talsyntes, på KawaNavs språk (Inställningar → Utseende → Språk).</string>
+    <string name="common_off">Av</string>
+    <string name="settings_pace_relaxed">Lugnt</string>
+    <string name="settings_pace_normal">Normalt</string>
+    <string name="settings_pace_sporty">Sportigt</string>
+    <string name="settings_pace_fast">Snabbt</string>
+    <string name="settings_pace_from_rides">Från mina turer</string>
+    <string name="settings_pace_info_intro">Ditt tempo är hur mycket du lutar genom en kurva. Ur kurvans radie i kartdatan ger det farten du skulle ta kurvan i:</string>
+    <string name="settings_pace_info_line">%1$s (%2$.0f°): %3$.0f km/h vid 30 m radie, %4$.0f km/h vid 100 m</string>
+    <string name="settings_pace_info_rides">Från mina turer: lutningen du brukar nå i en kurva under dina senaste %1$d turer, när de innehåller %2$d kurvor; Normalt till dess. En kurva räknas från %3$.0f km/h och %4$d° lutning. Kräver turer inspelade med motorcykeln ansluten, och räknas om varje gång KawaNav startar</string>
+    <string name="settings_pace_info_too_fast">Kommer du mot en kurva mer än %1$.0f%% fortare än så hör du den med ”sakta ner” (”Kurva vänster, sakta ner”) när mjuk inbromsning precis skulle räcka: ungefär 0,3 g, efter %2$.1f s för att höra och reagera. Saktar du redan ner tillräckligt sägs ingenting.\n\nAlla sorters kurvor, även med ”Talade kurvvarningar” av, så länge de räknas under ”Vilka kurvor som räknas”. Radien från kartan är grov, och en vid linje gör en kurva vidare än vägen: farterna är på den försiktiga sidan.</string>
+    <plurals name="settings_pace_usual">
+        <item quantity="one">Du brukar luta %1$.0f° i en kurva: %2$d kurvor på din senaste %3$d tur</item>
+        <item quantity="other">Du brukar luta %1$.0f° i en kurva: %2$d kurvor på dina senaste %3$d turer</item>
+    </plurals>
+    <string name="settings_pace_counting">%1$d av de %2$d kurvor som behövs i dina turer hittills: Normalt till dess</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Inställningar</string>
+    <string name="settings_section_autostart">Starta automatiskt</string>
+    <string name="settings_section_road">På vägen</string>
+    <string name="settings_section_navigation">Navigering</string>
+    <string name="settings_section_dash">Displayikoner och klocka</string>
+    <string name="settings_section_recording">Turinspelning</string>
+    <string name="settings_section_maps">Offlinekartor</string>
+    <string name="settings_section_appearance">Utseende</string>
+    <string name="settings_section_about">Om</string>
+    <string name="settings_autostart_bike">När motorcykeln slås på</string>
+    <string name="settings_autostart_helmet">När min hjälm ansluter</string>
+    <string name="settings_autostart_helmet_sub">Din intercom ansluter av sig själv när den slås på. Medan den är ansluten visar motorcykelns display headsetikonen</string>
+    <string name="settings_helmet_saved">Sparad</string>
+    <string name="settings_route_planner">Ruttplanerare</string>
+    <string name="settings_route_planner_sub">Från A till B eller en rundtur, på de nedladdade regionerna</string>
+    <string name="settings_roads">Vägar</string>
+    <string name="settings_roads_sub">Vad planeraren letar efter om du inte ändrar det där</string>
+    <string name="settings_roads_fastest">Snabbast</string>
+    <string name="settings_roads_curvy">Kurvig</string>
+    <string name="settings_roads_extra_curvy">Extra kurvig</string>
+    <string name="settings_avoid_motorways">Undvik motorvägar</string>
+    <string name="settings_avoid_motorways_sub">Bara när det inte finns någon annan väg</string>
+    <string name="settings_avoid_tolls">Undvik vägtullar</string>
+    <string name="settings_avoid_tolls_sub">Tullvägar bara när det inte finns någon annan väg</string>
+    <string name="settings_avoid_gravel">Undvik grus</string>
+    <string name="settings_avoid_gravel_sub">Grusvägar bara när det inte finns någon annan väg</string>
+    <string name="settings_maps">Vägbeskrivningar från Google Maps</string>
+    <string name="settings_maps_sub">Medan Maps navigerar visar motorcykelns display dess vägbeskrivningar</string>
+    <string name="settings_free_mode">Visa kommande kurvor</string>
+    <string name="settings_free_mode_sub">Utan navigering visar motorcykelns display nästa kurva på vägen du kör på</string>
+    <string name="settings_nav_curves">Kurvvarningar under navigering</string>
+    <string name="settings_nav_curves_sub">Visas upp till 300 m före en kurva, mellan Maps vägbeskrivningar</string>
+    <string name="settings_nav_curves_sharp">Bara skarpa</string>
+    <string name="settings_nav_curves_all">Alla</string>
+    <string name="settings_curve_sound">Talade kurvvarningar</string>
+    <string name="settings_curve_sound_sub">Sägs i hjälmen några sekunder före kurvan</string>
+    <string name="settings_curve_sound_hairpins">Bara hårnålskurvor</string>
+    <string name="settings_curve_sound_sharp">Skarpa och hårnålskurvor</string>
+    <string name="settings_curve_sound_all">Alla kurvor</string>
+    <string name="settings_pace">Även när för fort</string>
+    <string name="settings_pace_sub">Alla kurvor, med ”sakta ner”, när du kommer mot dem fortare än ditt tempo tar dem</string>
+    <string name="settings_headset_only">Tala bara genom ett headset</string>
+    <string name="settings_headset_only_sub">Tyst medan inget Bluetooth- eller trådbundet headset är anslutet, så att telefonen själv inte pratar</string>
+    <string name="settings_beeps">Pip i stället för ord</string>
+    <string name="settings_beeps_sub">I örat på kurvans sida: ett pip för en kurva, två för en skarp, tre för en hårnål, högre och snabbare när för fort</string>
+    <string name="settings_hear_sample">Lyssna på en kurvvarning</string>
+    <string name="settings_play">Spela upp</string>
+    <string name="settings_curves">Vilka kurvor som räknas</string>
+    <string name="settings_curves_sub">Hur mycket en kurva måste svänga för att visas</string>
+    <string name="settings_curves_tight">Bara snäva</string>
+    <string name="settings_curves_gentle">Även svaga</string>
+    <string name="settings_curves_all">Alla över 15°</string>
+    <string name="settings_lookahead">Framförhållning</string>
+    <string name="settings_lookahead_sub">Hur långt fram nästa kurva söks</string>
+    <string name="settings_imperial">Avstånd i fot</string>
+    <string name="settings_imperial_sub">I stället för meter</string>
+    <string name="settings_fuel_unit">Bränsleförbrukning</string>
+    <string name="settings_fuel_unit_sub">Enheten för motorcykelns genomsnittliga och momentana bränsleförbrukning</string>
+    <string name="settings_left_hand">Vänstertrafik</string>
+    <string name="settings_left_hand_sub">Storbritannien, Irland…: rondeller körs medurs</string>
+    <string name="settings_battery_warnings">Batterivarningar</string>
+    <string name="settings_battery_warnings_sub">När motorcykelns 12 V-batteri är svagt, eller motorn går och det inte laddas</string>
+    <string name="settings_clutch">Kopplingsvarning</string>
+    <string name="settings_clutch_sub">Efter en inspelad tur, när motorn gick före bakhjulet vid mer än en hård acceleration: kopplingen kanske slirar</string>
+    <string name="settings_cold_rpm">Kall motor: varvtal</string>
+    <string name="settings_cold_rpm_sub">Varningen kommer över det här varvtalet</string>
+    <string name="settings_cold_warm">Kall motor: varm från</string>
+    <string name="settings_cold_warm_sub">Kylvätsketemperaturen från vilken motorn räknas som varm</string>
+    <string name="settings_cameras">Fartkameravarningar</string>
+    <string name="settings_camera_warn">Varna för en kamera</string>
+    <string name="settings_camera_warn_sub">Hur långt före den varningen kommer</string>
+    <string name="settings_camera_voice">Säg fartkameror</string>
+    <string name="settings_camera_voice_sub">Med fartkameravarningar på sägs varje kamera också i hjälmen när dess varning kommer (”Fartkamera framöver, gräns 50”), eller med pip en tvåtonssiren, helt olik en kurvas pip. Precis som kurvvarningarna bara genom ett headset, om det inte är avstängt</string>
+    <string name="settings_ignore_caps">Skicka pilar och ikoner ändå</string>
+    <string name="settings_ignore_caps_sub">Displayen säger om den alls har svänganvisningar och statusikoner, och KawaNav tror på den, precis som Rideology: det den säger att den inte kan visa skickas inte. Slå på detta om pilar eller ikoner fungerade förut och slutade: vissa displayer svarar fel.</string>
+    <string name="settings_phone_battery">Telefonens batteri</string>
+    <string name="settings_phone_battery_sub">Motorcykelns display visar telefonens batteri (4 streck) och när den laddas</string>
+    <string name="settings_clock">Ställ displayklockan från telefonen</string>
+    <string name="settings_clock_sub">En gång per anslutning, precis som Rideology. Behåller växlingslampan som den är inställd på motorcykeln</string>
+    <string name="settings_dash_calls">Samtalsikon på displayen</string>
+    <string name="settings_dash_calls_sub">En ikon medan ett samtal kommer in; kräver åtkomst till aviseringar. Inga nummer eller namn skickas</string>
+    <string name="settings_dash_mail">Mejl- och meddelandeikon på displayen</string>
+    <string name="settings_dash_mail_sub">En ikon när ett mejl eller meddelande kommer (Gmail, Meddelanden, LINE…); kräver åtkomst till aviseringar</string>
+    <string name="settings_ride_auto">Börja spela in av sig själv</string>
+    <string name="settings_ride_auto_sub">Så fort motorcykeln är ansluten och rör sig</string>
+    <string name="settings_ride_end">Avsluta en tur</string>
+    <string name="settings_ride_end_sub">När motorcykeln stängs av: direkt, eller några minuter senare så att ett tankstopp stannar i samma tur</string>
+    <string name="settings_ride_map">Karta under spåret</string>
+    <string name="settings_ride_map_sub">OpenStreetMaps karta bakom en turs spår. Kartan hämtas från openstreetmap.org för området du tittar på och sparas en tid på telefonen</string>
+    <string name="settings_rides">Inspelade turer</string>
+    <string name="settings_rides_sub">Allt du har spelat in, med spår och diagram</string>
+    <string name="settings_maps_intro">Kurvor, ruttplaneraren och navigeringen fungerar bara där vägarna är nedladdade. Ladda ner regionerna du kör i, via wifi. Regioner läggs ihop: t.ex. Bayern nu, Tyrolen senare.</string>
+    <string name="settings_maps_credit">Vägdata © OpenStreetMap-bidragsgivare (ODbL)</string>
+    <string name="settings_download_region">Ladda ner en region</string>
+    <string name="settings_region_hint">Sök en region: Skåne, Tyrolen, Schweiz…</string>
+    <string name="settings_download">Ladda ner</string>
+    <string name="settings_update">Uppdatera</string>
+    <string name="common_delete">Radera</string>
+    <string name="common_cancel">Avbryt</string>
+    <string name="settings_other_roads">Andra vägar</string>
+    <string name="settings_delete_region_message">Dess vägar tas bort från telefonen. Vägar som en annan nedladdad region också täcker blir kvar.</string>
+    <string name="settings_delete_other_title">Radera andra vägar?</string>
+    <string name="settings_delete_other_message">Vägar från tidigare nedladdningar som inte hör till någon region i listan tas bort.</string>
+    <string name="settings_regions_offline">Regionlistan är inte tillgänglig. Är du online?</string>
+    <string name="settings_pick_region">Välj en region i listan</string>
+    <string name="settings_mobile_data">Mobildata</string>
+    <string name="settings_export_log">Exportera loggen</string>
+    <string name="settings_export_log_sub">Kopierar KawaNavs logg till Download/KawaNav, att skicka med en felrapport. Den innehåller Google Maps vägbeskrivningar med gatunamn, motorcykelns Bluetooth-adress och hjälmens namn: läs den innan du delar den</string>
+
+    <!-- Settings: with values -->
+    <string name="settings_nav_voice">Talad navigering</string>
+    <string name="settings_nav_voice_sub">Svänganvisningar i hjälmen, på KawaNavs språk</string>
+    <string name="unit_m">%1$d m</string>
+    <string name="settings_hear_sample_sub">Spelar nu varningen för en skarp vänsterkurva (”%1$s”, eller dess pip), för att ställa in volymen i hjälmen</string>
+    <string name="settings_cold_engine">Varning för kall motor</string>
+    <string name="settings_cold_engine_sub">”%1$s” i hjälmen när du varvar motorn över varvtalet nedan innan kylvätskan når temperaturen nedan</string>
+    <string name="settings_dash_no_icons">Din motorcykels display sa att den inte visar några statusikoner</string>
+    <string name="settings_dash_no_clock">Din motorcykels display sa att telefonen inte får ställa dess klocka</string>
+    <string name="main_riding_notice">KawaNav är ett körstöd, inte ett säkerhetssystem. Vägbeskrivningar och kurvor kan komma sent, saknas eller vara fel. Kör alltid efter det du ser på vägen och håll blicken på den.</string>
+    <string name="main_affiliation_notice">KawaNav är ett fristående projekt, inte knutet till eller godkänt av Kawasaki eller Google.</string>
+    <string name="settings_about_data">Vägdata © OpenStreetMap-bidragsgivare, tillgängliga under Open Database License (ODbL), nedladdade från Geofabrik.</string>
+    <string name="settings_about_licence">KawaNav © 2026 Darthbob och jackyes. Fri programvara under GNU General Public License v3, utan någon garanti. Källkod: github.com/Darthbob/kawa-nav</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_log_none">Ingen logg att exportera</string>
+    <plurals name="settings_log_files">
+        <item quantity="one">%1$d fil i Download/KawaNav</item>
+        <item quantity="other">%1$d filer i Download/KawaNav</item>
+    </plurals>
+    <string name="settings_autostart_on_for">På för %1$s</string>
+    <string name="settings_autostart_set_up_sub">Ställs in en gång bredvid motorcykeln, tändningen på, Rideology stängd</string>
+    <string name="settings_autostart_turn_off">Stäng av</string>
+    <string name="settings_autostart_set_up">Ställ in</string>
+    <string name="settings_free_mode_active">Aktiv</string>
+    <string name="settings_regions_none">Inga regioner nedladdade än</string>
+    <string name="settings_regions_stored">Nedladdat · %1$.0f MB</string>
+    <string name="settings_region_checking">Letar efter nyare data…</string>
+    <string name="settings_region_check_failed">Kunde inte leta efter nyare data (offline?)</string>
+    <string name="settings_region_newer">Nyare data finns från %1$s</string>
+    <string name="settings_region_up_to_date">Aktuell</string>
+    <string name="settings_region_data">Data från %1$s · %2$.0f MB</string>
+    <string name="settings_region_no_cameras">Inga fartkameror i dessa data än: ladda ner regionen igen</string>
+    <string name="settings_region_no_routing">Inga data för ruttplanering än: ladda ner regionen igen</string>
+    <string name="settings_other_roads_sub">%1$.0f MB från tidigare nedladdningar, inte del av någon region</string>
+    <string name="settings_region_checking_size">%1$s: kontrollerar storleken…</string>
+    <string name="settings_region_size">%1$s: %2$.0f MB att ladda ner, ungefär %3$.0f MB sparat med data för ruttplanering\nKräver %4$.1f GB ledigt under konverteringen (%5$.1f GB ledigt)</string>
+    <string name="settings_mobile_data_message">Du är inte på wifi. Filen för %1$s kan vara flera hundra MB. Ladda ner ändå?</string>
+    <string name="settings_delete_region_title">Radera %1$s?</string>
+    <string name="settings_language">Språk</string>
+    <string name="settings_language_sub">Appens texter och dess röst. Systemstandard: telefonens språk om KawaNav har det, annars engelska</string>
+    <string name="settings_language_system">Systemstandard</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_sub">Vitt eller svart, med limegrönt. Som telefonen: följer telefonens mörka läge</string>
+
+    <!-- Settings -->
+    <string name="settings_pace_looking">Tittar på dina turer…</string>
+
+    <!-- Theme -->
+    <string name="theme_system">Som telefonen</string>
+    <string name="theme_light">Ljust</string>
+    <string name="theme_dark">Mörkt</string>
+
+    <!-- Units -->
+    <string name="unit_rpm">%1$,d v/min</string>
+
+    <!-- Language -->
+    <string name="lang_code">sv</string>
+
+    <!-- Home -->
+    <string name="main_notice_title">Innan du kör</string>
+    <string name="main_notice_ok">Jag förstår</string>
+    <string name="main_maps_access_title">Läs Google Maps vägbeskrivningar</string>
+    <string name="main_maps_access_message">För att visa Maps vägbeskrivningar på displayen läser KawaNav Maps navigeringsavisering.\n\nSlå på ”KawaNav” på nästa skärm.</string>
+    <string name="common_continue">Fortsätt</string>
+    <string name="main_not_now">Inte nu</string>
+    <string name="main_restricted_steps">KawaNav installerades från en nedladdad fil, så Android skyddar den här inställningen. Lås upp den en gång:\n\n1. ”Prova reglaget”: tryck en gång på KawaNav och dess gråa reglage. Android vägrar, men då visas steg 2.\n2. ”Öppna appinfo”: tryck på ⋮ uppe till höger, sedan på ”Tillåt begränsade inställningar” och bekräfta.\n3. Tillbaka i KawaNav trycker du på ”Öppna” för Google Maps vägbeskrivningar: nu fungerar reglaget.</string>
+    <string name="main_restricted_shot">Appinfo med menyn öppen: Tillåt begränsade inställningar</string>
+    <string name="main_restricted_title">Grått reglage?</string>
+    <string name="main_open_app_info">Öppna appinfo</string>
+    <string name="main_try_switch">Prova reglaget</string>
+    <string name="common_close">Stäng</string>
+    <string name="main_my_vehicle">Mitt fordon</string>
+    <string name="main_menu">Meny</string>
+    <string name="main_camera_sub">Från offlinekartornas data</string>
+    <string name="main_on_dash">På displayen nu</string>
+    <string name="main_pause">Pausa</string>
+    <string name="main_stop_ride">Avsluta turen</string>
+    <string name="main_range">Räckvidd</string>
+    <string name="main_fuel">Bränsle</string>
+    <string name="main_odometer">Mätarställning</string>
+    <string name="main_walk">Gå till motorcykeln</string>
+    <string name="main_dash_icons">Displayikoner</string>
+    <string name="main_no_parked">Ingen parkeringsplats än: den sparas när förbindelsen med motorcykeln bryts</string>
+    <string name="main_no_maps_app">Ingen kartapp hittades</string>
+    <string name="main_stopped_by_hand">Stoppad för hand: den automatiska starten väntar tills motorcykeln stängs av (din Bluetooth-enhet startar den ändå). Starta ansluter nu.</string>
+    <string name="main_start_hint">Starta före turen, eller låt KawaNav starta av sig själv (Inställningar).</string>
+    <string name="main_nothing_to_show">Inget att visa</string>
+    <string name="main_nothing_sent">Inget skickat till motorcykeln</string>
+    <string name="main_maps_starting">Google Maps startar…</string>
+    <string name="main_waiting_gps">Väntar på GPS</string>
+    <string name="main_start_maps_or_curves">Starta navigeringen i Google Maps, eller slå på kommande kurvor</string>
+    <string name="main_turn_on_maps_or_curves">Slå på Google Maps vägbeskrivningar eller kommande kurvor</string>
+    <string name="main_from_maps">Från Google Maps</string>
+    <string name="main_from_camera">Fartkamera från offlinekartornas data</string>
+    <string name="main_from_curves">Kurva framöver på din väg</string>
+    <string name="main_stop_kawanav">Stoppa KawaNav</string>
+    <string name="main_start_kawanav">Starta KawaNav</string>
+    <string name="main_ride_paused">● Turen pausad</string>
+    <string name="main_ride_recording">● Turen spelas in</string>
+    <string name="main_chip_connected">Ansluten</string>
+    <string name="main_bike_values_hint">Mätarställning, bränsle, temperaturer, underhåll och körlägen visas när motorcykeln är ansluten</string>
+    <string name="main_banner_sub">För bästa upplevelse på motorcykeln:</string>
+    <string name="main_perms">Tillåt Bluetooth, plats och aviseringar</string>
+    <string name="main_perms_sub">För att prata med motorcykeln och hitta kurvorna framöver</string>
+    <string name="main_allow">Tillåt</string>
+    <string name="main_bluetooth">Slå på Bluetooth</string>
+    <string name="main_bluetooth_sub">KawaNav når inte motorcykeln medan den är avstängd</string>
+    <string name="main_turn_on">Slå på</string>
+    <string name="main_gps">Slå på platstjänster</string>
+    <string name="main_gps_sub">Kommande kurvor kräver GPS</string>
+    <string name="main_open">Öppna</string>
+    <string name="main_access">Tillåt läsning av Google Maps vägbeskrivningar</string>
+    <string name="main_access_sub_file">Slå på ”KawaNav” i listan som öppnas. Grått? Tryck för hjälp</string>
+    <string name="main_access_sub">Slå på ”KawaNav” i listan som öppnas</string>
+    <string name="main_battery">Tillåt obegränsad batterianvändning</string>
+    <string name="main_battery_sub">Så att Android inte stoppar KawaNav i fickan</string>
+    <string name="main_bg_location">Ställ plats på ”Tillåt alltid”</string>
+    <string name="main_bg_location_sub">För kurvor efter en automatisk start</string>
+    <string name="main_update_stops">\n\nKawaNav stannar under uppdateringen. Starta det igen efteråt.</string>
+    <string name="main_later">Senare</string>
+    <string name="main_skip_version">Hoppa över den här versionen</string>
+    <string name="main_allow_installs">Tillåt installation av uppdateringar</string>
+    <string name="main_allow_installs_message">Android frågar en gång om KawaNav får installera appar.\n\nSlå på ”Tillåt från den här källan” på nästa skärm och gå sedan tillbaka.</string>
+    <string name="main_update_failed">Nedladdningen av uppdateringen misslyckades. Är du online?</string>
+
+    <!-- Home: with values -->
+    <string name="bridge_no_paired">Ingen parkopplad Kawasaki hittades</string>
+    <string name="main_chip_not_supported">Stöds inte</string>
+    <string name="main_chip_not_paired">Inte parkopplad</string>
+    <string name="main_chip_searching">Söker</string>
+    <string name="unit_km">%1$d km</string>
+    <string name="unit_km_grouped">%1$,d km</string>
+    <string name="main_fuel_bars">Bränsle · %1$s</string>
+    <plurals name="main_banner_title">
+        <item quantity="one">%1$d inställning behöver din uppmärksamhet</item>
+        <item quantity="other">%1$d inställningar behöver din uppmärksamhet</item>
+    </plurals>
+    <string name="main_pair_hint">Tändningen på och Rideology stängd, välj sedan din motorcykel</string>
+    <string name="main_pair">Parkoppla din motorcykel</string>
+    <string name="main_pair_button">Parkoppla</string>
+    <string name="turn_straight">Rakt fram</string>
+    <string name="turn_left">Sväng vänster</string>
+    <string name="turn_right">Sväng höger</string>
+    <string name="turn_sharp_left">Skarpt vänster</string>
+    <string name="turn_sharp_right">Skarpt höger</string>
+    <string name="turn_slight_left">Svagt vänster</string>
+    <string name="turn_slight_right">Svagt höger</string>
+    <string name="turn_u_left">U-sväng vänster</string>
+    <string name="turn_u_right">U-sväng höger</string>
+    <string name="turn_fork_left">Vägskäl, håll vänster</string>
+    <string name="turn_fork_right">Vägskäl, håll höger</string>
+    <string name="turn_fork_middle">Vägskäl, håll i mitten</string>
+    <string name="turn_ramp_left">Påfart till vänster</string>
+    <string name="turn_ramp_right">Påfart till höger</string>
+    <string name="turn_exit_left">Avfart till vänster</string>
+    <string name="turn_exit_right">Avfart till höger</string>
+    <string name="turn_merge_left">Kör in från vänster</string>
+    <string name="turn_merge_right">Kör in från höger</string>
+    <string name="turn_roundabout">Rondell, avfart %1$d</string>
+    <string name="turn_departure">Avfärd</string>
+    <string name="turn_destination">Mål</string>
+    <string name="turn_waypoint">Delmål %1$d</string>
+    <string name="main_update_title">KawaNav %1$s finns</string>
+    <string name="main_update_downloading">Laddar ner KawaNav %1$s</string>
+
+    <!-- Bike tab: rows -->
+    <string name="bike_row_basic_information">Grundinformation</string>
+    <string name="bike_row_engine">Motor</string>
+    <string name="bike_row_suspension">Fjädring</string>
+    <string name="bike_row_maintenance">Underhåll</string>
+    <string name="bike_row_riding_modes">Körlägen</string>
+    <string name="bike_row_dash">Display</string>
+    <string name="bike_row_odometer">Mätarställning</string>
+    <string name="bike_row_trip_a">Trip A</string>
+    <string name="bike_row_trip_b">Trip B</string>
+    <string name="bike_row_average_fuel_economy">Genomsnittlig förbrukning</string>
+    <string name="bike_row_fuel_consumption">Förbrukning</string>
+    <string name="bike_row_average_speed">Medelhastighet</string>
+    <string name="bike_row_total_time">Total tid</string>
+    <string name="bike_row_outside_temperature">Utetemperatur</string>
+    <string name="bike_row_max_lean_left">Max lutning vänster</string>
+    <string name="bike_row_max_lean_right">Max lutning höger</string>
+    <string name="bike_row_fuel_used_in_total">Bränsle förbrukat totalt</string>
+    <string name="bike_row_battery_engine_control_unit">Batteri (motorstyrenhet)</string>
+    <string name="bike_row_battery_dash">Batteri (display)</string>
+    <string name="bike_row_distance_in_total">Total sträcka</string>
+    <string name="bike_row_speed">Hastighet</string>
+    <string name="bike_row_engine_speed">Varvtal</string>
+    <string name="bike_row_gear">Växel</string>
+    <string name="bike_row_throttle">Gas</string>
+    <string name="bike_row_lean_angle">Lutningsvinkel</string>
+    <string name="bike_row_acceleration">Acceleration</string>
+    <string name="bike_row_front_brake_unverified">Frambroms (ej verifierat)</string>
+    <string name="bike_row_traction_control_reading_unverified">Antispinnsystemets mätvärde (ej verifierat)</string>
+    <string name="bike_row_abs">ABS</string>
+    <string name="bike_row_wheelie">Wheelie</string>
+    <string name="bike_row_cruise_control">Farthållare</string>
+    <string name="bike_row_torque_asked_by_the_throttle">Vridmoment begärt av gasen</string>
+    <string name="bike_row_torque_the_engine_control_asks_for">Vridmoment begärt av motorstyrningen</string>
+    <string name="bike_row_torque_from_the_engine">Motorns vridmoment</string>
+    <string name="bike_row_front_brake_master_unverified">Huvudcylinder fram (ej verifierat)</string>
+    <string name="bike_row_rear_brake_master_unverified">Huvudcylinder bak (ej verifierat)</string>
+    <string name="bike_row_rear_brake_caliper_unverified">Bromsok bak (ej verifierat)</string>
+    <string name="bike_row_abs_working">ABS-ingrepp</string>
+    <string name="bike_row_abs_switching">ABS-omkoppling</string>
+    <string name="bike_row_fuel_use_now">Förbrukning nu</string>
+    <string name="bike_row_fuel_economy_now">Bränsleekonomi nu</string>
+    <string name="bike_row_coolant_temperature">Kylvätsketemperatur</string>
+    <string name="bike_row_oil_temperature">Oljetemperatur</string>
+    <string name="bike_row_intake_air_temperature">Insugslufttemperatur</string>
+    <string name="bike_row_front_tyre">Framdäck</string>
+    <string name="bike_row_rear_tyre">Bakdäck</string>
+    <string name="bike_row_front_travel">Fjädringsväg fram</string>
+    <string name="bike_row_rear_travel">Fjädringsväg bak</string>
+    <string name="bike_row_acceleration_forward_accelerating">Acceleration (framåt, + = accelererar)</string>
+    <string name="bike_row_acceleration_sideways">Acceleration (i sidled)</string>
+    <string name="bike_row_acceleration_up">Acceleration (uppåt)</string>
+    <string name="bike_row_yaw_rate_turning_right">Girhastighet (+ = svänger höger)</string>
+    <string name="bike_row_roll_rate_rolling_right">Rollhastighet (+ = lutar höger)</string>
+    <string name="bike_row_pitch_rate">Tipphastighet</string>
+    <string name="bike_row_front_wheel_speed_filtered">Framhjulets hastighet (filtrerad)</string>
+    <string name="bike_row_rear_wheel_speed_filtered">Bakhjulets hastighet (filtrerad)</string>
+    <string name="bike_row_traction_control_level">Antispinnsystemets nivå</string>
+    <string name="bike_row_quick_shifter">Quickshifter</string>
+    <string name="bike_row_wheelie_suspension_unit">Wheelie (fjädringsstyrenhet)</string>
+    <string name="bike_row_damping_now">Dämpning nu</string>
+    <string name="bike_row_where_the_suspension_stands">Fjädringens läge</string>
+    <string name="bike_row_riding_mode">Körläge</string>
+    <string name="bike_row_power_mode">Effektläge</string>
+    <string name="bike_row_ktrc">KTRC</string>
+    <string name="bike_row_quickshifter_kqs">Quickshifter (KQS)</string>
+    <string name="bike_row_engine_brake_kebc">Motorbroms (KEBC)</string>
+    <string name="bike_row_suspension_mode_kecs">Fjädringsläge (KECS)</string>
+    <string name="bike_row_kecs_preload">KECS-förspänning</string>
+    <string name="bike_row_kecs_load_adjustment">KECS-lastanpassning</string>
+    <string name="bike_row_front_compression">Kompression fram</string>
+    <string name="bike_row_front_rebound">Retur fram</string>
+    <string name="bike_row_rear_compression">Kompression bak</string>
+    <string name="bike_row_rear_rebound">Retur bak</string>
+    <string name="bike_row_clock_when_read">Klocka (vid avläsning)</string>
+    <string name="bike_row_shift_lamp">Växlingslampa</string>
+
+    <!-- Bike tab: values -->
+    <string name="bike_value_tcs">hög %1$d / låg %2$d</string>
+    <string name="common_yes">ja</string>
+    <string name="bike_value_wheelie">ja, %1$.0f°</string>
+    <string name="bike_value_cruise_mode">på, läge %1$d</string>
+    <string name="common_on">på</string>
+    <string name="common_off_lower">av</string>
+    <string name="bike_value_bike_units">%1$d (motorcykelns enheter)</string>
+    <string name="bike_value_abs_working">mål %1$d, indikator %2$d</string>
+    <string name="bike_value_dash_units_2">%1$.2f (displayens enheter)</string>
+    <string name="bike_value_dash_units_1">%1$.1f (displayens enheter)</string>
+    <string name="bike_value_kqs">ner %1$d, upp %2$d</string>
+    <string name="bike_value_suspension">kalibrering %1$d, status %2$d, styrenhet %3$d</string>
+    <string name="bike_abs_fault">fel</string>
+    <string name="bike_abs_inspection">kontrolläge</string>
+    <string name="bike_abs_both">ingriper fram och bak</string>
+    <string name="bike_abs_front">ingriper fram</string>
+    <string name="bike_abs_rear">ingriper bak</string>
+    <string name="bike_abs_ready">redo</string>
+    <string name="bike_ago_now">nyss</string>
+    <string name="bike_ago_min">för %1$d min sedan</string>
+    <string name="bike_ago_h">för %1$d h sedan</string>
+    <string name="bike_not_read">Inte avläst än: värdena visas när motorcykeln är ansluten</string>
+    <string name="bike_read_ago">Avläst %1$s</string>
+    <string name="bike_title">Din motorcykel</string>
+    <string name="bike_summary_fuel">bränsle %1$s</string>
+    <string name="bike_summary_range">räckvidd %1$d km</string>
+    <string name="bike_fuel_reserve">Reserv</string>
+    <plurals name="bike_fuel_bars">
+        <item quantity="one">%1$d streck</item>
+        <item quantity="other">%1$d streck</item>
+    </plurals>
+    <string name="bike_low_fuel">Lite bränsle</string>
+    <string name="bike_fuel_unknown">Bränsle –</string>
+    <string name="bike_battery_unknown">Batteri –</string>
+    <string name="bike_battery">Batteri %1$.1f V</string>
+    <string name="bike_lamp_on_dash">På displayen nu: %1$s, %2$,d v/min</string>
+    <string name="bike_not_connected_reason">motorcykeln är inte ansluten</string>
+    <string name="bike_parked_text">%1$s, %2$s · position inom ungefär %3$.0f m</string>
+    <string name="bike_last_parked">Senast parkerad</string>
+    <string name="bike_parked">Parkerad</string>
+    <string name="bike_maintenance_due">Dags: %1$s</string>
+    <string name="bike_last_fill">Senaste tankning %1$s</string>
+    <string name="bike_vin">VIN %1$s</string>
+
+    <!-- Bike tab: with values -->
+    <string name="bike_profiles_full">Högst %1$d profiler: radera en först</string>
+    <string name="bike_profile_saved">Sparade ”%1$s” på telefonen</string>
+    <string name="bike_profile_no_mode">Den här motorcykeln har inget %1$s: körläget blev som det var</string>
+    <string name="bike_profile_replace_title">Ersätta profilen ”%1$s”?</string>
+    <string name="bike_profile_delete_title">Radera profilen ”%1$s”?</string>
+    <string name="bike_name_note">Upp till %1$d byte, skickas med inställningarna som Rideology skickar en inställnings titel, och namnet en profil sparas under. Om displayen visar det någonstans är inte känt än.</string>
+    <string name="bike_send_message">Allt detta går till motorcykeln i en enda skrivning:\n\n%1$s\n\nMotorcykeln måste stå still, vara i friläge och gasen måste vara stängd. KawaNav kontrollerar detta igen innan det skickas och läser tillbaka inställningarna efteråt.</string>
+    <string name="bike_not_sent">Inte skickat: %1$s</string>
+    <string name="bike_lamp_message_off">Displayen tänder växlingslampan vid %1$,d v/min, eller inte alls.</string>
+    <string name="bike_lamp_message">Displayen tänder växlingslampan vid %1$,d v/min, i läget %2$s.</string>
+    <string name="bike_km_ago">för %1$,.0f km sedan</string>
+
+    <!-- Bike tab -->
+    <string name="bike_read_again">Läs av värdena igen</string>
+    <string name="bike_asked">Frågade motorcykeln efter dess värden</string>
+    <string name="bike_not_connected">Motorcykeln är inte ansluten</string>
+    <string name="bike_values_note">Värden som motorcykeln rapporterade dem vid senaste anslutningen. Tryck på VIN för att visa hela.</string>
+    <string name="bike_ride_settings">Körinställningar</string>
+    <string name="bike_ride_settings_note">Skriver körläge, effekt, KTRC och KQS till motorcykeln, som Rideologys inställningsskärm, och ett namn för dem om du anger ett. De går alltid tillsammans i en skrivning: de du lämnar som de är går som motorcykeln har dem. Sport, Road och Rain sätter effekt och KTRC till sina egna värden, som i Rideology; ändra någon av dem så blir läget Rider, som behåller dina. Sparade som profil finns de på telefonen att välja och skicka igen. Motorcykeln måste stå still, vara i friläge och gasen måste vara stängd.</string>
+    <string name="bike_profile">Profil</string>
+    <string name="bike_power">Effekt</string>
+    <string name="bike_not_in_mode">Inte del av körläget</string>
+    <string name="bike_kqs">KQS</string>
+    <string name="bike_name_hint">Namn (valfritt)</string>
+    <string name="bike_name">Namn</string>
+    <string name="bike_save_profile">Spara som profil</string>
+    <string name="bike_delete_profile">Radera profil</string>
+    <string name="bike_back_to_bike">Tillbaka till motorcykelns värden</string>
+    <string name="bike_send">Skicka till motorcykeln</string>
+    <string name="bike_changed">ändrat</string>
+    <string name="bike_none">Ingen</string>
+    <string name="bike_profile_name_first">Ge profilen ett namn först, i fältet Namn</string>
+    <string name="bike_profile_replace_message">Den sparas på telefonen med värdena som väljarna visar nu.</string>
+    <string name="bike_replace">Ersätt</string>
+    <string name="bike_profile_delete_message">Den tas bara bort från telefonen: motorcykeln behåller sina inställningar.</string>
+    <string name="bike_send_title">Skicka inställningarna till motorcykeln?</string>
+    <string name="bike_send_button">Skicka</string>
+    <string name="bike_shift_lamp">Displayens växlingslampa</string>
+    <string name="bike_shift_lamp_note">Skriver bara växlingslampan; displayens klocka förblir som den är. Motorcykeln måste vara ansluten (den behöver inte stå still).</string>
+    <string name="bike_lights_up">Tänds</string>
+    <string name="bike_at">Vid</string>
+    <string name="bike_send_dash">Skicka till displayen</string>
+    <string name="bike_lamp_send_title">Skicka växlingslampan till displayen?</string>
+    <string name="bike_lamp_not_read">Inte avläst än: slå på tändningen medan KawaNav körs</string>
+    <string name="bike_refuels">Tankningar</string>
+    <string name="bike_refuel_diary">Tankdagbok</string>
+    <string name="bike_refuel_diary_sub">Liter, mätarställning och vad motorcykeln förbrukade mellan tankningarna</string>
+    <string name="bike_maintenance_none">Inget antecknat: för bok över arbeten som displayen inte ser.</string>
+    <string name="bike_maintenance_log">Servicebok</string>
+    <string name="bike_maintenance_log_sub">Vad du har låtit göra, när och vid vilken mätarställning</string>
+    <string name="bike_fuel_none">Inget inspelat än: tanka med appen ansluten så märks det.</string>
+    <string name="bike_connected_updating">Ansluten · värdena uppdateras medan motorcykeln är på</string>
+    <string name="bike_remaining_range">Återstående räckvidd</string>
+    <string name="bike_remaining_range_unread">Återstående räckvidd: inte avläst än</string>
+    <string name="bike_modes_seven">Den här motorcykeln rapporterar 7 körlägen: Rider 2–4 finns i listan.</string>
+    <string name="bike_modes_unknown">Hur många körlägen motorcykeln har är inte känt än (inget färdigt svar på 0x47): listan erbjuder de fyra som alla motorcyklar har.</string>
+    <string name="bike_modes_four">Den här motorcykeln rapporterar 4 körlägen, så listan slutar vid Rider.</string>
+    <string name="bike_no_values">Inga värden än</string>
+    <string name="bike_no_values_sub">Starta KawaNav och slå på tändningen: motorcykeln skickar sina värden när den är ansluten.</string>
+    <string name="bike_modes_note">Namnen kommer från Rideology; numret motorcykeln skickade står inom parentes. Visas bara där motorcykeln säger att den har inställningen.</string>
+
+    <!-- Route planner: with values -->
+    <string name="planner_shape_any">Valfri form</string>
+    <string name="planner_shape_triangle">Triangel</string>
+    <string name="planner_shape_square">Kvadrat</string>
+    <string name="planner_shape_pentagon">Femhörning</string>
+    <string name="planner_shape_circle">Cirkel</string>
+    <string name="planner_my_position">Min position</string>
+    <string name="planner_saved_round_trip">rundtur</string>
+    <string name="planner_legend_straight">rak</string>
+    <string name="planner_legend_sweeping">svepande</string>
+    <string name="planner_legend_winding">kurvig</string>
+    <string name="planner_legend_very_winding">mycket kurvig</string>
+    <string name="planner_data_unreadable">Ruttdata oläsbara: ladda ner regionen igen (%1$s)</string>
+    <string name="planner_direction_any">Valfri riktning: tryck på kartan för att visa vägen</string>
+    <string name="planner_direction_towards">Mot %1$s</string>
+    <string name="planner_point_description">%1$s: %2$s. Tryck för att välja en annan plats.</string>
+    <string name="planner_start">Start</string>
+    <string name="planner_destination">Mål</string>
+    <string name="planner_via_number">Delmål %1$d</string>
+    <string name="planner_near">Nära %1$s</string>
+    <string name="planner_round_trip_start">Rundturens start</string>
+    <string name="planner_new_via">Nytt delmål</string>
+    <string name="planner_search_failed">Sökningen misslyckades (%1$s): tryck på kartan i stället.</string>
+    <string name="planner_favourite_saved">”%1$s” är nu en favorit: den kommer först i sökningen.</string>
+    <string name="planner_avoid_motorways">motorvägar</string>
+    <string name="planner_avoid_tolls">vägtullar</string>
+    <string name="planner_avoid_gravel">grus</string>
+    <string name="planner_avoiding_nothing">Undviker inget</string>
+    <string name="planner_avoiding">Undviker %1$s</string>
+    <string name="planner_list_and">%1$s och %2$s</string>
+    <string name="planner_shorter">Kortare än de begärda %1$s: inte tillräckligt med vägar runt omkring.</string>
+    <string name="planner_longer">Längre än de begärda %1$s: ingen närmare lösning på vägarna runt omkring.</string>
+    <string name="planner_no_route_why">Ingen rutt: %1$s. Punkterna måste ligga i en nedladdad region.</string>
+    <string name="planner_winding_share">%1$d%% kurvig</string>
+    <string name="planner_tile_no_route">ingen rutt</string>
+    <string name="planner_tile_tap">tryck för att planera</string>
+    <string name="planner_round_trip_name">Rundtur på %1$s från %2$s</string>
+    <string name="planner_route_saved">Sparad som ”%1$s”: öppna den med listknappen överst.</string>
+    <string name="planner_saving_failed_why">Det gick inte att spara: %1$s</string>
+    <string name="planner_renaming_failed">Det gick inte att byta namn: %1$s</string>
+    <string name="planner_delete_route_title">Radera ”%1$s”?</string>
+    <string name="planner_share">Dela %1$s</string>
+    <string name="planner_gpx_saved">%1$s sparad i Download/KawaNav</string>
+
+    <!-- Route planner -->
+    <string name="planner_saved_routes">Sparade rutter</string>
+    <string name="planner_map_downloading">Kartan laddas fortfarande ner</string>
+    <string name="planner_map_downloading_text">Ruttplaneraren fungerar när regionen som laddas ner är klar: Offlinekartor visar hur långt den har kommit.</string>
+    <string name="planner_update_maps">Uppdatera dina kartor</string>
+    <string name="planner_update_maps_text">Dina regioner laddades ner med en äldre KawaNav och har inga data för ruttplanering än. Ladda ner dem en gång till under Offlinekartor (Uppdatera): det lägger till data för ruttplanering, ungefär lika mycket lagring som regionen tar nu.</string>
+    <string name="planner_download_first">Ladda ner en karta först</string>
+    <string name="planner_download_first_text">KawaNav planerar rutter på telefonen, från kartan över en region du laddar ner en gång (OpenStreetMap, helst via wifi). Ladda ner regionen du kör i under Offlinekartor, t.ex. Skåne eller Tyrolen. Då fungerar ruttplaneraren, navigeringen och kurvvarningarna där, även utan mobildata.</string>
+    <string name="common_back">Tillbaka</string>
+    <string name="planner_no_data">Inga ruttdata än: ladda ner en region under Inställningar, Offlinekartor. Regioner som laddades ner med en äldre KawaNav måste laddas ner en gång till.</string>
+    <string name="planner_a_to_b">A till B</string>
+    <string name="planner_round_trip">Rundtur</string>
+    <string name="planner_via">Delmål</string>
+    <string name="planner_reverse">Vänd</string>
+    <string name="planner_length">Längd</string>
+    <string name="planner_length_description">Rundturens längd</string>
+    <string name="planner_any_direction">Valfri riktning</string>
+    <string name="planner_another">En till</string>
+    <string name="planner_options">Alternativ</string>
+    <string name="planner_start_navigation">Starta navigering</string>
+    <string name="planner_save_route">Spara rutten</string>
+    <string name="planner_save_gpx">Spara som GPX</string>
+    <string name="planner_dest_hint">Mål: tryck på kartan eller sök</string>
+    <string name="planner_remove">Ta bort</string>
+    <string name="planner_via_here">Delmål här</string>
+    <string name="planner_dest_here">Mål här</string>
+    <string name="planner_start_here">Start här</string>
+    <string name="planner_use_position">Använd min position</string>
+    <string name="planner_remove_corner">Ta bort det här hörnet</string>
+    <string name="planner_save_favourite">Spara som favorit</string>
+    <string name="planner_choose_dest">Välj ett mål först.</string>
+    <string name="planner_finding">Letar efter din position…</string>
+    <string name="planner_finding_long_press">Letar efter din position… Du kan också hålla ner på kartan för en start.</string>
+    <string name="planner_search_hint">Sök en plats (online)</string>
+    <string name="planner_search">Sök</string>
+    <string name="planner_favourites_hint">Håll ner på en favorit för att byta namn på den eller ta bort den.</string>
+    <string name="planner_favourites_empty">Dina favoritplatser och senaste mål visas här.</string>
+    <string name="planner_no_search">Den här telefonen har ingen platssökning: tryck på kartan i stället.</string>
+    <string name="planner_searching">Söker…</string>
+    <string name="planner_nothing_found">Inget hittades. Tryck på kartan i stället.</string>
+    <string name="planner_rename">Byt namn</string>
+    <string name="planner_remove_favourite">Ta bort från favoriter</string>
+    <string name="planner_save">Spara</string>
+    <string name="planner_shape_title">Rundturens form</string>
+    <string name="planner_options_note">Kurvig föredrar slingriga vägar och undviker tätorter; extra kurvig tar långa omvägar för kurvornas skull. Rutterna räknas ut på telefonen från de nedladdade OpenStreetMap-regionerna (Inställningar, Offlinekartor).</string>
+    <string name="planner_route_options">Ruttalternativ</string>
+    <string name="planner_done">Klar</string>
+    <string name="planner_opening">Öppnar ruttdata…</string>
+    <string name="planner_finding_or_start">Letar efter din position… eller tryck på Start för att välja en.</string>
+    <string name="planner_tap_or_search">Tryck på kartan eller sök ett mål.</string>
+    <string name="planner_same_place">Starten och målet är samma plats.</string>
+    <string name="planner_planning">Planerar rutten…</string>
+    <string name="planner_finding_or_long_press">Letar efter din position… eller håll ner på kartan för starten.</string>
+    <string name="planner_planning_round_trip">Planerar en rundtur…</string>
+    <string name="planner_no_saved">Inga sparade rutter än: planera en och tryck på stjärnan för att behålla den.</string>
+    <string name="common_ok">OK</string>
+    <string name="planner_saved_routes_edit">Sparade rutter (håll ner för att redigera)</string>
+    <string name="planner_saving_failed">Det gick inte att spara</string>
+
+    <!-- Ride: with values -->
+    <string name="ride_distance_caption">Sträcka · %1$s</string>
+    <string name="ride_ended">avslutad: %1$s</string>
+    <string name="ride_colours">Färgerna följer diagrammet: %1$s från blått (%2$s eller mindre) till rött (%3$s eller mer)%4$s.</string>
+    <string name="ride_colours_line">linjen %1$s</string>
+    <string name="ride_colours_none">Den här turen har ingen %1$s där den har en position: spåret är grått.</string>
+    <string name="ride_track_note">Den gröna punkten är där den började; att zooma i diagrammet tonar ner resten av turen. Nyp eller dubbeltryck på kartan för att zooma, dra för att flytta runt.</string>
+    <string name="ride_chart_missing">den här turen har ingen %1$s</string>
+    <string name="ride_chart_hint">Rör vid linjen för att se sekunden, nyp eller dubbeltryck för att zooma in</string>
+    <string name="ride_chart_marks">markeringar nedtill: antispinn (orange), ABS (rött)</string>
+    <string name="ride_bends_none">inga</string>
+    <plurals name="ride_bends">
+        <item quantity="one">%1$d kurva</item>
+        <item quantity="other">%1$d kurvor</item>
+    </plurals>
+    <string name="ride_bend_title">%1$s · %2$s · %3$.0f° i %4$.0f km/h</string>
+    <string name="ride_left">vänster</string>
+    <string name="ride_right">höger</string>
+    <string name="ride_bend_line">%1$.0f → %2$.0f km/h · radie %3$.0f m</string>
+    <string name="ride_bend_throttle">gas %1$.0f %% vid apex</string>
+    <string name="ride_bend_braking">bromsning vid apex</string>
+    <string name="ride_bend_snap">gasen öppnad tvärt</string>
+    <string name="ride_bend_shifted">växlade ner</string>
+    <string name="ride_grip_note">Varje punkt är en sekunds körning: i sidled från lutningen, framåt och bakåt från fartändringen. Hårdaste inbromsning %1$.2f g, hårdaste acceleration %2$.2f g, mest i sidled %3$.2f g.</string>
+    <string name="ride_economy">%1$.1f L/100 km över %2$,.1f km</string>
+    <string name="ride_economy_estimated">uppskattat från den momentana förbrukningen: den här motorcykeln skickar ingen bränsleräknare</string>
+    <string name="ride_legend">Lägsta, genomsnittliga och högsta värdet av de sekunder motorcykeln skickade det.</string>
+    <string name="ride_legend_extremes">Lägsta, genomsnittliga och högsta värdet av de sekunder motorcykeln skickade det; där ett medelvärde inte säger något (rotationshastigheter, slir), från lägsta till högsta.</string>
+    <string name="ride_legend_economy">Förbrukningens medelvärde är sträckan delat med de förbrända litrarna.</string>
+    <string name="ride_distance_odo_gps">Sträcka: vägmätare / GPS</string>
+    <string name="ride_recorded">Inspelad</string>
+    <string name="ride_seconds_recorded">Inspelade sekunder</string>
+    <string name="ride_seconds_value">%1$d av %2$d (%3$.0f %%)</string>
+    <string name="ride_preview_gps">%1$d sekunder, med GPS-spår</string>
+    <string name="ride_preview_no_gps">%1$d sekunder, utan GPS-spår</string>
+    <string name="ride_range_to">%1$s till %2$s</string>
+    <string name="ride_neutral">I friläge</string>
+    <string name="ride_in_gear">På växel %1$d</string>
+    <string name="ride_gear_changes">Växlingar</string>
+    <string name="ride_up_down">%1$d upp, %2$d ner</string>
+    <string name="ride_with_kqs">Med quickshiftern</string>
+    <string name="ride_clutch_slipping">slirar kanske: %1$d s vid %2$d gaspådrag</string>
+    <string name="ride_clutch_holds_once">håller (%1$d s högt vid ett gaspådrag)</string>
+    <string name="ride_clutch_holds">håller</string>
+    <string name="ride_clutch">Koppling under last</string>
+    <string name="ride_engine_gear">Motorn mot växeln</string>
+    <string name="ride_engine_gear_value">%1$+.1f %% typiskt, %2$+.1f %% som mest, under %3$s</string>
+    <string name="ride_never">aldrig</string>
+    <string name="ride_min_s">%1$d min %2$02d s</string>
+    <string name="ride_s">%1$d s</string>
+    <string name="ride_up_to">upp till %1$s</string>
+
+    <!-- Ride -->
+    <string name="ride_rename">Byt namn på den här turen</string>
+    <string name="ride_not_found">Turen hittades inte</string>
+    <string name="ride_track">Spår</string>
+    <string name="ride_fit">Visa hela turen</string>
+    <string name="ride_osm">© OpenStreetMap-bidragsgivare</string>
+    <string name="ride_values">Värden</string>
+    <string name="ride_fit_chart">Visa hela turen i diagrammet</string>
+    <string name="ride_bends_title">Kurvor</string>
+    <string name="ride_grip_description">Greppet turen använde: varje sekunds acceleration i sidled och framåt</string>
+    <string name="ride_the_bends">Kurvorna</string>
+    <string name="ride_bends_how">En kurva är två sekunder eller mer med mer än 10° lutning åt samma håll; dess apex är sekunden med mest lutning. Radien är den som fart och lutning ger i en jämn kurva. Bromsning vid apex: gasen stängd och motorcykeln bromsar mer än 0,1 g där. Tryck på en kurva för att se den på spåret och i diagrammet.</string>
+    <string name="ride_typical_lean">Typisk lutning</string>
+    <string name="ride_typical_apex">Typisk fart vid apex</string>
+    <string name="ride_out_in">Ut jämfört med in</string>
+    <string name="ride_left_right">Vänster / höger</string>
+    <string name="ride_braking_apex">Bromsning vid apex</string>
+    <string name="ride_snap">Gasen öppnad tvärt i lutning</string>
+    <string name="ride_downshift">Nedväxling i lutning</string>
+    <string name="ride_summary">Sammanfattning</string>
+    <string name="ride_time">Tid</string>
+    <string name="ride_average">Snitt</string>
+    <string name="ride_top_speed">Toppfart</string>
+    <string name="ride_max_lean">Max lutning</string>
+    <string name="ride_max_rpm">Max varvtal</string>
+    <string name="ride_fuel_used">Bränsle förbrukat</string>
+    <string name="ride_phone_only">Inspelad med bara telefonen: inga värden från motorcykeln.</string>
+    <string name="ride_no_gps">Inspelad utan GPS: inget spår och ingen höjd.</string>
+    <string name="ride_tcs">Antispinn</string>
+    <string name="ride_abs">ABS</string>
+    <string name="ride_cruise">Farthållare</string>
+    <string name="ride_wheelie">Framhjulet i luften</string>
+    <string name="ride_keep_share">Behåll eller dela</string>
+    <string name="ride_export_csv">Exportera CSV</string>
+    <string name="ride_export_gpx">Exportera GPX</string>
+    <string name="ride_export_full">CSV (alla värden)</string>
+    <string name="ride_export_raw">Råfil</string>
+    <string name="ride_export_note">CSV har Rideologys kolumner, så att befintliga verktyg kan läsa turen. ”CSV (alla värden)” har varje värde KawaNav spelar in, en kolumn var — samma tabell som appen för, och som ”Råfil” också ger, i appens eget format. GPX är ett spår för kartprogram. Alla hamnar i Download/KawaNav.</string>
+    <string name="ride_recording_title">Den här turen spelas in just nu</string>
+    <string name="ride_recording_message">Avsluta turen först (inspelningsknappen på Hem), radera den sedan.</string>
+    <string name="ride_delete_title">Radera den här turen?</string>
+    <string name="ride_delete_message">Den inspelade turen och dess spår tas bort från telefonen.</string>
+    <string name="ride_export_failed">Exporten misslyckades</string>
+
+    <!-- Ride: names -->
+    <string name="ride_name_engine_speed">Varvtal</string>
+    <string name="ride_name_throttle">Gas</string>
+    <string name="ride_name_torque_asked_by_the_throttle">Vridmoment begärt av gasen</string>
+    <string name="ride_name_bike_units">motorcykelns enheter</string>
+    <string name="ride_name_torque_the_engine_control_asks_for">Vridmoment begärt av motorstyrningen</string>
+    <string name="ride_name_torque_from_the_engine">Motorns vridmoment</string>
+    <string name="ride_name_fuel_use">Förbrukning</string>
+    <string name="ride_name_dash_units">displayens enheter</string>
+    <string name="ride_name_fuel_economy_instant">Förbrukning, momentan</string>
+    <string name="ride_name_front_suspension">Framfjädring</string>
+    <string name="ride_name_rear_suspension">Bakfjädring</string>
+    <string name="ride_name_front_suspension_speed_unverified">Framfjädringens hastighet (ej verifierat)</string>
+    <string name="ride_name_rear_suspension_speed_unverified">Bakfjädringens hastighet (ej verifierat)</string>
+    <string name="ride_name_acceleration">Acceleration</string>
+    <string name="ride_name_acceleration_forward">Acceleration, framåt</string>
+    <string name="ride_name_acceleration_sideways">Acceleration, i sidled</string>
+    <string name="ride_name_acceleration_up">Acceleration, uppåt</string>
+    <string name="ride_name_lean_angle_either_side">Lutningsvinkel, åt båda håll</string>
+    <string name="ride_name_roll_rate">Rollhastighet</string>
+    <string name="ride_name_yaw_rate">Girhastighet</string>
+    <string name="ride_name_pitch_rate">Tipphastighet</string>
+    <string name="ride_name_front_wheel_filtered">Framhjul (filtrerat)</string>
+    <string name="ride_name_rear_wheel_filtered">Bakhjul (filtrerat)</string>
+    <string name="ride_name_wheelie_angle">Wheelie-vinkel</string>
+    <string name="ride_name_front_tyre">Framdäck</string>
+    <string name="ride_name_rear_tyre">Bakdäck</string>
+    <string name="ride_name_front_brake">Frambroms</string>
+    <string name="ride_name_front_brake_master_unverified">Huvudcylinder fram (ej verifierat)</string>
+    <string name="ride_name_raw">rå</string>
+    <string name="ride_name_rear_brake_master_unverified">Huvudcylinder bak (ej verifierat)</string>
+    <string name="ride_name_rear_brake_caliper_unverified">Bromsok bak (ej verifierat)</string>
+    <string name="ride_name_rear_wheel_slip">Bakhjulsslir</string>
+    <string name="ride_name_battery">Batteri</string>
+    <string name="ride_name_coolant">Kylvätska</string>
+    <string name="ride_name_oil">Olja</string>
+    <string name="ride_name_intake_air">Insugsluft</string>
+    <string name="ride_name_outside">Ute</string>
+    <string name="ride_name_speed_gps">Hastighet (GPS)</string>
+    <string name="ride_name_gps_accuracy">GPS-noggrannhet</string>
+    <string name="ride_name_altitude">Höjd</string>
+    <string name="ride_name_speed">Hastighet</string>
+    <string name="ride_name_engine">Motor</string>
+    <string name="ride_name_torque">Vridmoment</string>
+    <string name="ride_name_throttle_line">gas</string>
+    <string name="ride_name_control_line">styrning</string>
+    <string name="ride_name_engine_line">motor</string>
+    <string name="ride_name_gear">Växel</string>
+    <string name="ride_name_lean_angle">Lutningsvinkel</string>
+    <string name="ride_name_oil_temperature">Oljetemperatur</string>
+    <string name="ride_name_fuel_economy">Förbrukning</string>
+    <string name="ride_name_outside_temperature">Utetemperatur</string>
+    <string name="ride_name_chassis_and_suspension">Chassi och fjädring</string>
+    <string name="ride_name_brakes_and_electronics">Bromsar och elektronik</string>
+    <string name="ride_name_temperatures">Temperaturer</string>
+    <string name="ride_name_data_quality">Datakvalitet</string>
+
+    <!-- Rides: with values -->
+    <plurals name="rides_totals">
+        <item quantity="one">%1$d tur · %2$s den här veckan · %3$.0f km totalt</item>
+        <item quantity="other">%1$d turer · %2$s den här veckan · %3$.0f km totalt</item>
+    </plurals>
+    <string name="rides_fastest">Snabbast: %1$.0f km/h den %2$s</string>
+    <string name="rides_most_lean">Mest lutning: %1$.0f° vänster, %2$.0f° höger den %3$s</string>
+    <string name="rides_longest">Längsta turen: %1$.0f km den %2$s</string>
+    <string name="rides_hottest">Varmaste motorn: %1$.0f °C den %2$s</string>
+    <string name="rides_hardest_braking">Hårdaste inbromsning: %1$.2f g den %2$s</string>
+    <string name="rides_most_suspension">Mest fjädringsväg: %1$.1f mm den %2$s</string>
+    <string name="rides_altogether">Totalt %1$,.0f km på %2$s</string>
+    <string name="rides_in_tcs">%1$s med antispinn</string>
+    <string name="rides_in_abs">%1$s med ABS</string>
+    <string name="rides_wheel_up">%1$s med framhjulet i luften</string>
+    <plurals name="rides_year">
+        <item quantity="one">%1$d: %2$,.0f km · %3$d tur</item>
+        <item quantity="other">%1$d: %2$,.0f km · %3$d turer</item>
+    </plurals>
+    <string name="rides_recording_now">spelas in nu</string>
+    <string name="rides_recovered">återställd efter en omstart</string>
+    <string name="rides_track_lost">spåret förlorat</string>
+    <string name="rides_max_speed">max %1$.0f km/h</string>
+    <string name="rides_no_gps">inget GPS-spår</string>
+
+    <!-- Rides -->
+    <string name="rides_title">Körjournal</string>
+    <string name="rides_note">Turer sparas bara på telefonen. Ingenting laddas upp någonstans.</string>
+    <string name="rides_this_week">Den här veckan</string>
+    <string name="rides_this_month">Den här månaden</string>
+    <string name="rides_this_year">Det här året</string>
+    <string name="rides_first">Spela in din första tur</string>
+    <string name="rides_first_sub">Tryck på den runda knappen nedan innan du kör. Motorcykelns värden (fart, motor, växel, gas, lutning, temperaturer) och telefonens spår skrivs till telefonen en gång i sekunden medan den är ansluten.</string>
+    <string name="rides_records">Rekord</string>
+
+    <!-- Refuels -->
+    <string name="fuel_note">Motorcykeln rapporterar inte hur mycket bränsle som fylls på: den rapporterar bränslemätaren, räckvidden och bränslet den har förbränt totalt. Tankningar räknas ut från att mätaren hoppar upp medan motorcykeln står still; litrarna är en uppskattning tills du rättar dem.</string>
+    <string name="fuel_tank">Tank</string>
+    <string name="fuel_tank_note">Vad en full tank rymmer, för att räkna om mätaren till liter. Siffran står i din motorcykels instruktionsbok.</string>
+    <string name="fuel_change">Ändra</string>
+    <string name="fuel_tank_capacity">Tankvolym i liter</string>
+    <string name="fuel_add">Lägg till en tankning</string>
+    <string name="fuel_add_note">För en tankning som appen inte såg: motorcykeln var avstängd, eller mätaren rörde sig inte.</string>
+    <string name="fuel_add_by_hand">Lägg till för hand</string>
+    <string name="fuel_litres_added">Påfyllda liter</string>
+    <string name="fuel_added_by_hand">tillagd för hand</string>
+    <string name="fuel_unreadable">Tankdagboken kunde inte läsas</string>
+    <string name="fuel_unreadable_sub">Filen sparas som fuel.json.bad och inget skrivs över den: tankningar du lägger till nu hamnar i en ny fil.</string>
+    <string name="fuel_none">Inga tankningar än</string>
+    <string name="fuel_none_sub">Står du vid pumpen med appen ansluten märks en tankning av sig själv.</string>
+    <string name="fuel_litres_hint">liter</string>
+    <string name="fuel_note_hint">anteckning (var, vad du betalade…)</string>
+    <string name="fuel_delete_title">Radera den här tankningen?</string>
+
+    <!-- Refuels: with values -->
+    <string name="fuel_since_last">%1$.1f L/100 km sedan senaste tankningen</string>
+    <string name="fuel_first">Första tankningen i dagboken</string>
+    <string name="fuel_litres_unknown">Liter okända: tryck för att fylla i dem</string>
+    <plurals name="fuel_count">
+        <item quantity="one">%1$d tankning</item>
+        <item quantity="other">%1$d tankningar</item>
+    </plurals>
+    <string name="fuel_total">%1$,.1f L totalt</string>
+
+    <!-- Refuels -->
+    <string name="fuel_estimated">uppskattat</string>
+
+    <!-- Maintenance: log -->
+    <string name="maint_oil_change">Oljebyte</string>
+    <string name="maint_oil_filter">Oljefilter</string>
+    <string name="maint_air_filter">Luftfilter</string>
+    <string name="maint_chain">Kedja</string>
+    <string name="maint_tyres">Däck</string>
+    <string name="maint_brake_pads">Bromsbelägg</string>
+    <string name="maint_brake_fluid">Bromsvätska</string>
+    <string name="maint_coolant">Kylvätska</string>
+    <string name="maint_spark_plugs">Tändstift</string>
+    <string name="maint_valves">Ventilspel</string>
+    <string name="maint_battery">Batteri</string>
+    <string name="maint_other">Annat</string>
+    <string name="maint_or">%1$s eller %2$s</string>
+    <plurals name="maint_months">
+        <item quantity="one">%1$d månad</item>
+        <item quantity="other">%1$d månader</item>
+    </plurals>
+    <string name="maint_every">var %1$s</string>
+    <string name="maint_never_logged">aldrig antecknat: anteckna det en gång för att börja räkna</string>
+    <string name="maint_km_over">%1$,.0f km över</string>
+    <string name="maint_since">sedan %1$s</string>
+    <string name="maint_due">dags: %1$s</string>
+    <string name="maint_in_km">om %1$,.0f km</string>
+    <string name="maint_by">senast %1$s</string>
+    <string name="maint_wait_odometer">kilometrarna räknas när motorcykeln har skickat sin mätarställning</string>
+    <string name="maint_log_odometer">anteckna mätarställningen med arbetet för att räkna kilometrarna</string>
+    <string name="maint_at_km">vid %1$,d km</string>
+    <string name="maint_km_left">%1$,d km kvar</string>
+    <string name="maint_km_overdue">%1$,d km försenat</string>
+    <string name="maint_due_now">dags nu</string>
+    <string name="maint_in_km_whole">om %1$,d km</string>
+    <string name="maint_at_km_whole">vid %1$,.0f km</string>
+    <string name="maint_service_kawasaki">Kawasaki-service</string>
+    <string name="maint_service_rider">Förarens påminnelse</string>
+
+    <!-- Maintenance -->
+    <string name="maint_note">Sparas bara på telefonen. ”Displayen säger” kommer från displayen själv; dina påminnelser och det du skriver här är din egen anteckning om utfört arbete.</string>
+    <string name="maint_dash_says">Displayen säger</string>
+    <string name="maint_your_reminders">Dina påminnelser</string>
+    <string name="maint_reminders_empty">Hur ofta ett arbete ska göras, räknat från senaste gången det antecknades här: kedjan var 1 000 km, oljan varje år. En avisering säger till när något är dags.</string>
+    <string name="maint_add_reminder">Lägg till en påminnelse</string>
+    <string name="maint_other_dots">Annat…</string>
+    <string name="maint_remind_me">Påminn mig om</string>
+    <string name="maint_what_due">vad som ska göras</string>
+    <string name="maint_next">Nästa</string>
+    <string name="maint_every_km">var … km (tomt: inte efter km)</string>
+    <string name="maint_every_months">var … månad (tomt: inte efter datum)</string>
+    <string name="maint_counted">Räknat från senaste gången det antecknades, det som kommer först.</string>
+    <string name="maint_add_job">Lägg till ett arbete</string>
+    <string name="maint_add_job_sub">Vad du gjorde, när och vid vilken mätarställning.</string>
+    <string name="maint_odometer_hint">mätarställning i km</string>
+    <string name="maint_note_hint">vad som gjordes, vad det kostade…</string>
+    <string name="maint_what_done">vad som gjordes</string>
+    <string name="maint_note_short">anteckning</string>
+    <string name="maint_delete_title">Radera den här anteckningen?</string>
+
+    <!-- Maintenance: with values -->
+    <string name="maint_odometer_now">Mätarställning nu: %1$,.0f km</string>
+    <string name="maint_soon">snart: %1$s</string>
+    <string name="maint_nothing_yet">Inget antecknat än</string>
+    <plurals name="maint_entries">
+        <item quantity="one">%1$d anteckning</item>
+        <item quantity="other">%1$d anteckningar</item>
+    </plurals>
+    <plurals name="maint_days_ago">
+        <item quantity="one">för %1$d dag sedan</item>
+        <item quantity="other">för %1$d dagar sedan</item>
+    </plurals>
+    <string name="maint_no_odometer">ingen mätarställning</string>
+
+    <!-- Navigation: with values -->
+    <string name="nav_remaining">%1$s kvar · %2$s · ankomst %3$s</string>
+    <string name="nav_refuel">Räckvidd %1$s, %2$s kvar: tanka på vägen</string>
+    <string name="nav_limit_description">Hastighetsgräns %1$s</string>
+    <string name="nav_next_winding">Nästa %1$s · %2$d%% kurvigt</string>
+    <string name="nav_done">%1$s på %2$s</string>
+    <string name="nav_moving_average">%1$.0f %2$s i snitt under körning</string>
+    <string name="nav_skip_via">Hoppa över delmål %1$d</string>
+
+    <!-- Navigation -->
+    <string name="nav_no_gps">Ingen GPS-signal: väntar på din position</string>
+    <string name="nav_overview">Översikt</string>
+    <string name="nav_stop">Stoppa</string>
+    <string name="nav_turns_ahead_description">Kommande svängar och delmål</string>
+    <string name="nav_north_up">Norr uppåt</string>
+    <string name="nav_heading_up">Färdriktning uppåt</string>
+    <string name="nav_heading_up_description">Kartan vrids med din riktning: tryck för norr uppåt</string>
+    <string name="nav_north_up_description">Norr är uppåt: tryck för att låta kartan vridas med din riktning</string>
+    <string name="nav_follow">Följ mig</string>
+    <string name="nav_tap_again">Tryck igen</string>
+    <string name="nav_close_description">Stäng navigeringen</string>
+    <string name="nav_tap_again_description">Tryck igen för att stoppa navigeringen</string>
+    <string name="nav_stop_description">Stoppa navigeringen</string>
+    <string name="nav_voice_on">Röst på: tryck för att stänga av</string>
+    <string name="nav_voice_off">Röst av: tryck för att slå på</string>
+    <string name="nav_no_headset">Inget headset anslutet: KawaNav talar bara genom ett headset (Inställningar)</string>
+    <string name="nav_starting">Startar…</string>
+    <string name="nav_stopped">Navigeringen stoppad</string>
+    <string name="nav_turns_ahead">Kommande svängar</string>
+
+    <!-- Battery: with values -->
+    <plurals name="battery_summary">
+        <item quantity="one">%1$d mätning · senast %2$.1f V · lägst %3$.1f V</item>
+        <item quantity="other">%1$d mätningar · senast %2$.1f V · lägst %3$.1f V</item>
+    </plurals>
+    <string name="battery_declining">Batteriet har tappat %1$.1f V under den loggade tiden: det kan vara på väg att ta slut.</string>
+    <string name="battery_low">Vid %1$.1f V är den här mätningen låg: ladda det, eller låt kontrollera batteriet.</string>
+    <string name="battery_since_first">%1$+.1f V sedan den första</string>
+
+    <!-- Battery -->
+    <string name="battery_title">12 V-batteri</string>
+    <string name="battery_note">En mätning görs varje gång appen ansluter med motorn avstängd: vad ett batteri gör i vila avslöjar dess ålder. En mätning under 12,4 V en varm dag, eller som sjunker månad för månad, är värd en titt.</string>
+    <string name="battery_at_rest">Vilospänning</string>
+    <string name="battery_unreadable">Batteriloggen kunde inte läsas</string>
+    <string name="battery_unreadable_sub">Filen sparas som battery.json.bad och inget skrivs över den.</string>
+    <string name="battery_none">Inga mätningar än</string>
+    <string name="battery_nothing">Inget inspelat än</string>
+    <string name="battery_nothing_sub">Anslut till motorcykeln med motorn avstängd så görs den första mätningen.</string>
+    <string name="battery_fine">Ingen nedgång att oroa sig för hittills.</string>
+
+    <!-- Tabs and record button: with values -->
+    <string name="tab_selected">%1$s, vald</string>
+    <string name="record_not_started">Inte startad: %1$s</string>
+    <string name="section_open">%1$s, öppen</string>
+    <string name="section_closed">%1$s, stängd</string>
+
+    <!-- Tabs and record button -->
+    <string name="tab_home">Hem</string>
+    <string name="tab_bike">Motorcykel</string>
+    <string name="tab_rides">Turer</string>
+    <string name="record_idle">Spela in en tur</string>
+    <string name="record_paused">Turen pausad: fortsätt eller avsluta</string>
+    <string name="record_recording">Spelar in: pausa eller avsluta</string>
+    <string name="main_ride_recording_plain">Turen spelas in</string>
+    <string name="record_starting">Startar KawaNav och spelar in turen</string>
+    <string name="record_paused_title">Turen pausad</string>
+    <string name="common_what_options">Vad betyder alternativen?</string>
+    <string name="bg_location_title">Plats: ”Tillåt alltid”</string>
+    <string name="bg_location_message">Autostart startar KawaNav medan telefonen ligger låst i fickan. För att då visa kurvvarningar behöver KawaNav GPS i bakgrunden.\n\nVälj ”Tillåt alltid” på nästa skärm.\n\nUtan det fungerar Google Maps pilar ändå, men kurvvarningarna börjar först när du öppnar KawaNav.</string>
+
+    <!-- Service: with values -->
+    <string name="bridge_not_taken">Inte godtaget: motorcykeln svarade %1$s.</string>
+    <string name="bridge_read_back_differs">Skickat, men motorcykeln läser tillbaka läge %1$d, effekt %2$d, KTRC %3$d, KQS %4$d (sina egna nummer), inte det som skickades. Kontrollera displayen.</string>
+    <string name="bridge_lamp_levels">displayen tar nivåer från %1$d till %2$d</string>
+    <string name="bridge_lamp_refused">Inte godtaget: displayen avvisade det (resultat %1$d).</string>
+    <string name="bridge_looking_for">Letar efter %1$s…</string>
+    <string name="bridge_connected_to">Ansluten till %1$s</string>
+    <string name="bridge_the_bike">motorcykeln</string>
+    <string name="bridge_output_not_connected">%1$s (motorcykeln inte ansluten)</string>
+    <string name="bridge_battery_down">Batteriet blir sämre</string>
+    <string name="bridge_battery_down_text">12 V-batteriet har tappat %1$.1f V under den loggade tiden: låt kontrollera det innan det lämnar dig stående någonstans.</string>
+    <plurals name="bridge_maintenance_due">
+        <item quantity="one">%1$d underhållsarbete är dags</item>
+        <item quantity="other">%1$d underhållsarbeten är dags</item>
+    </plurals>
+    <string name="bridge_clutch_text">Vid %1$d hårda accelerationer på den här turen varvade motorn upp till %2$.1f%% högre än växeln och farten ger: kopplingen kanske slirar. Låt kontrollera den.</string>
+    <string name="bridge_curves_paused">Kurvdetekteringen pausad: tryck för att öppna KawaNav</string>
+    <string name="bridge_refuel">Tankning registrerad</string>
+    <string name="bridge_refuel_text">%1$s — rätta litrarna om de är fel.</string>
+
+    <!-- Service -->
+    <string name="bridge_busy">motorcykeln svarar fortfarande på en annan förfrågan, försök igen</string>
+    <string name="bridge_sending">Skickar…</string>
+    <string name="bridge_no_answer">Inget svar från motorcykeln: så vitt KawaNav vet ändrades ingenting. Kontrollera displayen.</string>
+    <string name="bridge_applying">Displayen tillämpar det…</string>
+    <string name="bridge_reading_back">Läser tillbaka inställningarna…</string>
+    <string name="bridge_not_read_back">Skickat, men inställningarna kunde inte läsas tillbaka: kontrollera displayen.</string>
+    <string name="bridge_done">Klart: motorcykeln läser tillbaka det som skickades.</string>
+    <string name="bridge_lamp_not_supported">den här displayen tar inga inställningar för växlingslampan</string>
+    <string name="bridge_sending_lamp">Skickar växlingslampan…</string>
+    <string name="bridge_lamp_no_answer">Inget svar från displayen: kontrollera den.</string>
+    <string name="bridge_lamp_taken">Godtaget av displayen: kontrollera dess växlingslampa.</string>
+    <string name="bridge_channel_connection">Anslutning till motorcykeln</string>
+    <string name="bridge_channel_warnings">Varningar</string>
+    <string name="bridge_channel_rides">Turer och tankningar</string>
+    <string name="bridge_not_running">Körs inte</string>
+    <string name="bridge_bluetooth_not_allowed">Bluetooth inte tillåtet</string>
+    <string name="bridge_pair_hint">Parkoppla motorcykeln en gång: ”Parkoppla din motorcykel” i den orange banderollen (tändningen på).</string>
+    <string name="bridge_several">Flera Kawasaki är parkopplade med den här telefonen. Ställ in ”Starta automatiskt” med din, bredvid den med tändningen på, så att KawaNav vet vilken; eller ta bort den andra i Bluetooth-inställningarna.</string>
+    <string name="bridge_ignition">Slå på tändningen. Rideology måste vara stängt: motorcykeln pratar med en app i taget.</string>
+    <string name="bridge_no_turn_by_turn">Den här motorcykelns display rapporterar inga svänganvisningar, så pilar och kurvor skickas inte till den. Om de fungerade förut, slå på ”Skicka pilar och ikoner ändå” i Inställningar.</string>
+    <string name="bridge_no_status_icons">Den här motorcykelns display rapporterar inga statusikoner, så ikonerna för samtal, mejl och telefon skickas inte till den. ”Skicka pilar och ikoner ändå” i Inställningar åsidosätter detta.</string>
+    <string name="bridge_reconnecting">Anslutningen bröts, ansluter igen…</string>
+    <string name="bridge_older_dash">Äldre Kawasaki-display: stöds inte</string>
+    <string name="bridge_waiting_bike">Väntar på motorcykeln (GPS av)</string>
+    <string name="bridge_camera_source">Från KawaNavs offlinekartdata</string>
+    <string name="bridge_clutch_title">Kopplingen kanske slirar</string>
+
+    <!-- Service -->
+    <string name="bridge_older_dash_hint">Den här displayen använder Kawasakis protokoll från före BLE5: den kan inte visa vägbeskrivningar, och KawaNav kan inte prata med den.</string>
+    <string name="bridge_older_dash_several">Flera Kawasaki är parkopplade: ställ in ”Starta automatiskt” med den du kör.</string>
+
+    <!-- Hub -->
+    <string name="hub_bluetooth_hint">KawaNav får inte använda Bluetooth: öppna KawaNav och tillåt ”Enheter i närheten”.</string>
+
+    <!-- Speed cameras -->
+    <string name="camera_red_light">Rödljuskamera</string>
+    <string name="camera_average">Medelhastighetskontroll</string>
+    <string name="camera_speed">Fartkamera</string>
+    <string name="camera_ahead">%1$s framöver</string>
+    <string name="camera_limit">%1$s, gräns %2$d</string>
+    <string name="camera_in">%1$s om %2$s</string>
+
+    <!-- Curves -->
+    <string name="curves_no_roads">Inga offlinevägar: ladda ner en region under Offlinekartor</string>
+    <string name="curves_loading">Läser in vägar…</string>
+    <string name="curves_no_roads_here">Inga offlinevägar här: ladda ner den här regionen under Offlinekartor</string>
+    <string name="curves_waiting_movement">Väntar på rörelse för att veta riktningen</string>
+    <string name="curves_no_road">Inte på en känd väg</string>
+    <string name="curves_gps_off">GPS är av</string>
+
+    <!-- Pairing -->
+    <string name="pair_looking">Letar efter motorcykeln: tändningen på, Rideology stängd…</string>
+    <string name="pair_failed">Parkopplingen misslyckades: tändningen på, Rideology stängd, försök sedan igen</string>
+    <string name="pair_pairing">Parkopplar… bekräfta på telefonen (och displayen) om du blir tillfrågad</string>
+    <string name="pair_could_not_start">Parkopplingen kunde inte starta: slå på tändningen och försök igen</string>
+    <string name="pair_no_bike">Ingen motorcykel vald: tändningen på, Rideology stängd, försök sedan igen</string>
+
+    <!-- Offline maps: with values -->
+    <string name="offline_failed">Misslyckades: %1$s</string>
+    <string name="offline_too_large">regionen är för stor för den här telefonen, välj en mindre</string>
+    <string name="offline_downloading">%1$s: laddar ner %2$.0f / %3$.0f MB</string>
+    <string name="offline_no_space">inte tillräckligt med ledigt utrymme: %1$s behöver ungefär %2$.1f GB, %3$.1f GB ledigt</string>
+    <string name="offline_cameras">%1$s: sparar fartkameror…</string>
+    <string name="offline_done">Klart: %1$s, %2$d vägar i %3$d rutor (+%4$d kantrutor), %5$d fartkameror, %6$d korsningar för navigering · %7$.1f MB · %8$d s</string>
+
+    <!-- Offline maps -->
+    <string name="offline_channel">Nedladdning av offlinevägar</string>
+    <string name="offline_stopped">Stoppad av Android: en nedladdning får bara pågå så länge. Starta den igen.</string>
+    <string name="offline_cancelled">Avbruten (nedladdningen fortsätter när du startar den igen)</string>
+    <string name="offline_loading_list">Läser in regionlistan…</string>
+    <string name="offline_title">KawaNav offlinevägar</string>
+
+    <!-- Navigation -->
+    <string name="nav_starting_navigation">Startar navigeringen…</string>
+    <string name="nav_notification_title">KawaNav-navigering</string>
+
+    <!-- Updates -->
+    <string name="update_failed">Uppdateringen misslyckades</string>
+    <string name="update_failed_why">Uppdateringen misslyckades: %1$s</string>
+
+    <!-- Updates -->
+    <string name="update_no_changes">Ingen lista över ändringar för den här versionen.</string>
+    <string name="update_not_signed">Uppdateringen misslyckades: den här KawaNav är inte signerad som utgåvan (felsökningsversion?)</string>
+
+    <!-- Ride settings -->
+    <string name="write_no_data">inga aktuella data från motorcykeln: låt den vara påslagen</string>
+    <string name="write_stand_still">motorcykeln måste stå still</string>
+    <string name="write_neutral">motorcykeln måste vara i friläge</string>
+    <string name="write_throttle">gasen måste vara stängd</string>
+    <string name="write_no_config">motorcykeln sa inte vilka inställningar den tar</string>
+    <string name="write_no_settings">den här motorcykeln tar inga körinställningar</string>
+
+    <!-- Ride settings: with values -->
+    <string name="write_bad_mode">körläge %1$d erbjuder motorcykeln inte</string>
+    <string name="write_bad_power">effektläge %1$d erbjuder motorcykeln inte</string>
+    <string name="write_bad_ktrc">KTRC-nivå %1$d kan inte skrivas</string>
+    <string name="write_bad_kqs">quickshiftervärdet %1$d är varken OFF eller ON</string>
+    <string name="write_bad_kebc">motorbromsvärdet %1$d erbjuder motorcykeln inte</string>
+    <string name="write_your_own">Egna: %1$s</string>
+    <string name="write_preset">%1$s: effekt %2$s, KTRC %3$s</string>
+    <string name="write_bike_other">(motorcykeln har andra värden)</string>
+    <string name="write_rider_note">%1$s har effekt %2$s och KTRC %3$s, så med andra värden är körläget nu Rider, som behåller dina egna.</string>
+    <string name="write_kebc_line">Motorbroms: %1$s (som motorcykeln har den)</string>
+    <string name="write_name_none">Namn: inget</string>
+    <string name="write_name">Namn: ”%1$s”</string>
+    <string name="write_lamp_on">På</string>
+    <string name="write_lamp_tacho">Varvräknare</string>
+    <string name="write_lamp_led_tacho">LED + varvräknare</string>
+    <string name="write_ready">Redo</string>
+    <string name="write_not_ready">Inte redo: %1$s</string>
+    <string name="write_accepted">godtaget</string>
+    <string name="write_applying">displayen tillämpar det; vänta tills det är klart</string>
+    <string name="write_rejected">avvisat (resultat %1$02X)</string>
+
+    <!-- Warnings: with values -->
+    <string name="alert_fuel_low_range">%1$d km räckvidd kvar enligt displayen: tanka snart</string>
+    <string name="alert_not_charging_text">%1$.1f V med motorn igång: kontrollera laddningssystemet</string>
+    <string name="alert_battery_low_text">%1$.1f V: motorcykeln kanske inte startar nästa gång</string>
+    <string name="alert_tyre_now">%1$.2f bar nu: stanna och kontrollera det</string>
+
+    <!-- Warnings -->
+    <string name="alert_tyre_front">Framdäcket tappar tryck</string>
+    <string name="alert_tyre_rear">Bakdäcket tappar tryck</string>
+    <string name="alert_sensor_front">Framdäckets sensorbatteri är svagt</string>
+    <string name="alert_sensor_front_text">Trycksensorn i framhjulet behöver ett nytt batteri</string>
+    <string name="alert_sensor_rear">Bakdäckets sensorbatteri är svagt</string>
+    <string name="alert_sensor_rear_text">Trycksensorn i bakhjulet behöver ett nytt batteri</string>
+    <string name="alert_abs">ABS rapporterar ett fel</string>
+    <string name="alert_abs_text">ABS kanske inte fungerar: kontrollera varningslampan på displayen och låt någon titta på motorcykeln</string>
+    <string name="alert_fuel_low">Lite bränsle</string>
+    <string name="alert_fuel_low_text">Displayen rapporterar låg bränslenivå: tanka snart</string>
+    <string name="alert_not_charging">Batteriet laddas inte</string>
+    <string name="alert_battery_low">Batteriet är svagt</string>
+    <string name="alert_check">Stanna och kontrollera det</string>
+
+    <!-- Routing -->
+    <string name="route_no_road_start">ingen väg nära starten</string>
+    <string name="route_no_road_dest">ingen väg nära målet</string>
+    <string name="route_too_long">rutten är för lång för sökningen på den här telefonen</string>
+    <string name="route_no_connection">ingen väg förbinder de här punkterna</string>
+
+    <!-- Routing -->
+    <string name="route_no_road_via">ingen väg nära delmål %1$d</string>
+
+    <!-- Routing -->
+    <string name="route_no_roads_round">inga vägar runt starten för en rundtur</string>
+    <string name="route_no_round">ingen rundtur hittades</string>
+
+    <!-- Recording -->
+    <string name="record_no_space">inte tillräckligt med ledigt utrymme på telefonen</string>
+
+    <!-- Recording -->
+    <string name="ride_end_at_once">Direkt</string>
+    <string name="ride_end_5">Efter 5 min</string>
+    <string name="ride_end_15">Efter 15 min</string>
+
+    <!-- Ride -->
+    <string name="bends_most_lean">Mest lutning</string>
+    <string name="bends_fastest">Snabbast</string>
+    <string name="bends_best_exit">Bästa utgång</string>
+    <string name="bends_speed_lost">Mest fart förlorad</string>
+    <string name="bends_ride_order">I turens ordning</string>
+
+    <!-- Maps -->
+    <string name="map_track_description">Turens spår på en karta. Nyp för att zooma, dra för att flytta.</string>
+
+    <!-- Maps -->
+    <string name="map_description">Karta. Dra för att flytta, nyp för att zooma, tryck för att välja en plats.</string>
+    <string name="map_roads_credit">Vägar © OpenStreetMap-bidragsgivare</string>
+
+    <!-- Gauge -->
+    <string name="gauge_unknown">Okänt</string>
+    <string name="gauge_of">%1$d av %2$d</string>
+
+    <!-- Ride: end reasons -->
+    <string name="ride_end_24h">24 timmar uppnådda</string>
+    <string name="ride_end_bike_gone">motorcykeln borta</string>
+    <string name="ride_end_switched_off">motorcykeln avstängd</string>
+    <string name="ride_end_bridge_stopped">KawaNav stoppat</string>
+    <string name="ride_end_battery">telefonens batteri svagt</string>
+    <string name="ride_end_by_hand">avslutad för hand</string>
+    <plurals name="ride_bend_shifted_gears">
+        <item quantity="one">växlade ner %1$d steg</item>
+        <item quantity="other">växlade ner %1$d steg</item>
+    </plurals>
+    <plurals name="ride_recorded_value">
+        <item quantity="one">%1$s, %2$d mätpunkt</item>
+        <item quantity="other">%1$s, %2$d mätpunkter</item>
+    </plurals>
+</resources>

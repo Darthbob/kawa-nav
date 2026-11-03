@@ -58,7 +58,7 @@ public final class FuelLog {
         public String describe() {
             StringBuilder sb = new StringBuilder();
             sb.append(litres == litres ? String.format(java.util.Locale.ROOT, "%.1f L", litres) : "? L");
-            if (estimated) sb.append(" (estimated)");
+            if (estimated) sb.append(" (").append(Lang.t(R.string.fuel_estimated)).append(')');
             if (odoKm == odoKm) sb.append(String.format(java.util.Locale.ROOT, " · %,.0f km", odoKm));
             return sb.toString();
         }

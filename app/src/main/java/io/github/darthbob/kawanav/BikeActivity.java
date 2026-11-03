@@ -101,6 +101,96 @@ public class BikeActivity extends KawaActivity {
     /** The dash's values, under the range and the fuel gauge (Rideology's "Basic information"). */
     static final String BASIC = "Basic information";
 
+    /**
+     * The groups and labels of {@link #rows} are English inside (the icons and the colours go by them) and
+     * shown in the app's language.
+     */
+    private static final java.util.Map<String, Integer> SHOWN = new java.util.HashMap<>();
+
+    static {
+        SHOWN.put("Basic information", R.string.bike_row_basic_information);
+        SHOWN.put("Engine", R.string.bike_row_engine);
+        SHOWN.put("Suspension", R.string.bike_row_suspension);
+        SHOWN.put("Maintenance", R.string.bike_row_maintenance);
+        SHOWN.put("Riding modes", R.string.bike_row_riding_modes);
+        SHOWN.put("Dash", R.string.bike_row_dash);
+        SHOWN.put("Odometer", R.string.bike_row_odometer);
+        SHOWN.put("Trip A", R.string.bike_row_trip_a);
+        SHOWN.put("Trip B", R.string.bike_row_trip_b);
+        SHOWN.put("Average fuel economy", R.string.bike_row_average_fuel_economy);
+        SHOWN.put("Fuel consumption", R.string.bike_row_fuel_consumption);
+        SHOWN.put("Average speed", R.string.bike_row_average_speed);
+        SHOWN.put("Total time", R.string.bike_row_total_time);
+        SHOWN.put("Outside temperature", R.string.bike_row_outside_temperature);
+        SHOWN.put("Max lean left", R.string.bike_row_max_lean_left);
+        SHOWN.put("Max lean right", R.string.bike_row_max_lean_right);
+        SHOWN.put("Fuel used in total", R.string.bike_row_fuel_used_in_total);
+        SHOWN.put("Battery (engine control unit)", R.string.bike_row_battery_engine_control_unit);
+        SHOWN.put("Battery (dash)", R.string.bike_row_battery_dash);
+        SHOWN.put("Distance in total", R.string.bike_row_distance_in_total);
+        SHOWN.put("Speed", R.string.bike_row_speed);
+        SHOWN.put("Engine speed", R.string.bike_row_engine_speed);
+        SHOWN.put("Gear", R.string.bike_row_gear);
+        SHOWN.put("Throttle", R.string.bike_row_throttle);
+        SHOWN.put("Lean angle", R.string.bike_row_lean_angle);
+        SHOWN.put("Acceleration", R.string.bike_row_acceleration);
+        SHOWN.put("Front brake (unverified)", R.string.bike_row_front_brake_unverified);
+        SHOWN.put("Traction control reading (unverified)", R.string.bike_row_traction_control_reading_unverified);
+        SHOWN.put("ABS", R.string.bike_row_abs);
+        SHOWN.put("Wheelie", R.string.bike_row_wheelie);
+        SHOWN.put("Cruise control", R.string.bike_row_cruise_control);
+        SHOWN.put("Torque asked by the throttle", R.string.bike_row_torque_asked_by_the_throttle);
+        SHOWN.put("Torque the engine control asks for", R.string.bike_row_torque_the_engine_control_asks_for);
+        SHOWN.put("Torque from the engine", R.string.bike_row_torque_from_the_engine);
+        SHOWN.put("Front brake master (unverified)", R.string.bike_row_front_brake_master_unverified);
+        SHOWN.put("Rear brake master (unverified)", R.string.bike_row_rear_brake_master_unverified);
+        SHOWN.put("Rear brake caliper (unverified)", R.string.bike_row_rear_brake_caliper_unverified);
+        SHOWN.put("ABS working", R.string.bike_row_abs_working);
+        SHOWN.put("ABS switching", R.string.bike_row_abs_switching);
+        SHOWN.put("Fuel use now", R.string.bike_row_fuel_use_now);
+        SHOWN.put("Fuel economy now", R.string.bike_row_fuel_economy_now);
+        SHOWN.put("Coolant temperature", R.string.bike_row_coolant_temperature);
+        SHOWN.put("Oil temperature", R.string.bike_row_oil_temperature);
+        SHOWN.put("Intake air temperature", R.string.bike_row_intake_air_temperature);
+        SHOWN.put("Front tyre", R.string.bike_row_front_tyre);
+        SHOWN.put("Rear tyre", R.string.bike_row_rear_tyre);
+        SHOWN.put("Front travel", R.string.bike_row_front_travel);
+        SHOWN.put("Rear travel", R.string.bike_row_rear_travel);
+        SHOWN.put("Acceleration (forward, + = accelerating)", R.string.bike_row_acceleration_forward_accelerating);
+        SHOWN.put("Acceleration (sideways)", R.string.bike_row_acceleration_sideways);
+        SHOWN.put("Acceleration (up)", R.string.bike_row_acceleration_up);
+        SHOWN.put("Yaw rate (+ = turning right)", R.string.bike_row_yaw_rate_turning_right);
+        SHOWN.put("Roll rate (+ = rolling right)", R.string.bike_row_roll_rate_rolling_right);
+        SHOWN.put("Pitch rate", R.string.bike_row_pitch_rate);
+        SHOWN.put("Front wheel speed (filtered)", R.string.bike_row_front_wheel_speed_filtered);
+        SHOWN.put("Rear wheel speed (filtered)", R.string.bike_row_rear_wheel_speed_filtered);
+        SHOWN.put("Traction control level", R.string.bike_row_traction_control_level);
+        SHOWN.put("Quick shifter", R.string.bike_row_quick_shifter);
+        SHOWN.put("Wheelie (suspension unit)", R.string.bike_row_wheelie_suspension_unit);
+        SHOWN.put("Damping now", R.string.bike_row_damping_now);
+        SHOWN.put("Where the suspension stands", R.string.bike_row_where_the_suspension_stands);
+        SHOWN.put("Riding mode", R.string.bike_row_riding_mode);
+        SHOWN.put("Power mode", R.string.bike_row_power_mode);
+        SHOWN.put("KTRC", R.string.bike_row_ktrc);
+        SHOWN.put("Quickshifter (KQS)", R.string.bike_row_quickshifter_kqs);
+        SHOWN.put("Engine brake (KEBC)", R.string.bike_row_engine_brake_kebc);
+        SHOWN.put("Suspension mode (KECS)", R.string.bike_row_suspension_mode_kecs);
+        SHOWN.put("KECS preload", R.string.bike_row_kecs_preload);
+        SHOWN.put("KECS load adjustment", R.string.bike_row_kecs_load_adjustment);
+        SHOWN.put("Front compression", R.string.bike_row_front_compression);
+        SHOWN.put("Front rebound", R.string.bike_row_front_rebound);
+        SHOWN.put("Rear compression", R.string.bike_row_rear_compression);
+        SHOWN.put("Rear rebound", R.string.bike_row_rear_rebound);
+        SHOWN.put("Clock (when read)", R.string.bike_row_clock_when_read);
+        SHOWN.put("Shift lamp", R.string.bike_row_shift_lamp);
+    }
+
+    /** A group or label of {@link #rows} as shown. */
+    static String shown(String english) {
+        Integer id = SHOWN.get(english);
+        return id == null ? english : Lang.t(id);
+    }
+
     /** Row labels shown now; the sections are only rebuilt when they change (keeps the scroll position). */
     private List<String> shownLabels = new ArrayList<>();
     private final List<Figure> valueViews = new ArrayList<>();
@@ -128,9 +218,9 @@ public class BikeActivity extends KawaActivity {
         night = isNight();
         LinearLayout root = column();
         root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
-        root.addView(headerBar("Your bike", null, headerAction(R.drawable.ic_refresh, "Read the values again", v -> {
+        root.addView(headerBar(Lang.t(R.string.bike_title), null, headerAction(R.drawable.ic_refresh, Lang.t(R.string.bike_read_again), v -> {
             boolean asked = BridgeService.read(BikeFrames.VEHICLE_INFO);
-            android.widget.Toast.makeText(this, asked ? "Asked the bike for its values" : "The bike is not connected",
+            android.widget.Toast.makeText(this, asked ? Lang.t(R.string.bike_asked) : Lang.t(R.string.bike_not_connected),
                     android.widget.Toast.LENGTH_SHORT).show();
         })));
         root.addView(rangeCard());
@@ -142,8 +232,7 @@ public class BikeActivity extends KawaActivity {
         root.addView(settingsCard());
         root.addView(lampCard());
         root.addView(parkedCard());
-        TextView note = note("Values as the bike reported them when it was last connected. Tap the VIN to show "
-                + "all of it.");
+        TextView note = note(Lang.t(R.string.bike_values_note));
         note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE5), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
         setContentView(tabPage(TAB_BIKE, root));
@@ -200,8 +289,8 @@ public class BikeActivity extends KawaActivity {
     /** The gauge in words: "4 bars", "1 bar", "Reserve" (the last bar blinking); null when not read. */
     static String fuelWords(int bars) {
         if (bars < 0) return null;
-        if (bars == BikeFrames.VehicleInfo.FUEL_RESERVE) return "Reserve";
-        return bars + (bars == 1 ? " bar" : " bars");
+        if (bars == BikeFrames.VehicleInfo.FUEL_RESERVE) return Lang.t(R.string.bike_fuel_reserve);
+        return Lang.plural(R.plurals.bike_fuel_bars, bars);
     }
 
     @Override
@@ -231,18 +320,13 @@ public class BikeActivity extends KawaActivity {
      */
     private LinearLayout settingsCard() {
         LinearLayout section = column();
-        section.addView(sectionHeader(R.drawable.ic_sliders, "Ride settings"));
+        section.addView(sectionHeader(R.drawable.ic_sliders, Lang.t(R.string.bike_ride_settings)));
         LinearLayout c = group();
-        c.addView(secondary("Writes riding mode, power, KTRC and KQS to the bike, like Rideology's tuning "
-                + "screen, and a name for them if you give one. They always go together in one write: the "
-                + "ones you leave as they are go as the bike has them. Sport, Road and Rain set power and "
-                + "KTRC to their own values, as in Rideology; change either and the mode becomes Rider, which "
-                + "keeps yours. Saved as a profile, they are on the phone to be picked and sent again. The "
-                + "bike must be standing still, in neutral and with the throttle closed."));
+        c.addView(secondary(Lang.t(R.string.bike_ride_settings_note)));
         profiles = SettingsProfiles.parse(prefs.getString(Hub.KEY_SETTINGS_PROFILES, ""));
         profileSpinner = spinner(profileNames(), 0);
         watchProfiles();
-        addRow(c, settingRowWith("Profile", profileSpinner));
+        addRow(c, settingRowWith(Lang.t(R.string.bike_profile), profileSpinner));
         modeSpinner = spinner(java.util.Arrays.copyOf(SettingsWrite.MODES, SettingsWrite.WRITABLE_MODES), 0);
         modeNote = secondary("");
         powerSpinner = spinner(SettingsWrite.POWER, 0);
@@ -270,47 +354,45 @@ public class BikeActivity extends KawaActivity {
         }));
         kqsSpinner.setOnItemSelectedListener(onSelect(pos -> refreshSettingMarks()));
         c.addView(modeNote);
-        addRow(c, settingRowWith("Riding mode", modeChanged, modeSpinner));
+        addRow(c, settingRowWith(Lang.t(R.string.bike_row_riding_mode), modeChanged, modeSpinner));
         c.addView(presetNote);
         // power and KTRC belong to the riding mode: indented under it, with where they come from
         presetLine = secondary("");
         presetLine.setPadding(0, dp(Ui.SPACE1), 0, 0);
         LinearLayout byMode = column();
         byMode.addView(presetLine);
-        byMode.addView(settingRowWith("Power", powerChanged, powerSpinner));
-        addRow(byMode, settingRowWith("KTRC", ktrcChanged, ktrcSpinner));
+        byMode.addView(settingRowWith(Lang.t(R.string.bike_power), powerChanged, powerSpinner));
+        addRow(byMode, settingRowWith(Lang.t(R.string.bike_row_ktrc), ktrcChanged, ktrcSpinner));
         c.addView(indented(byMode));
-        TextView apart = secondary("Not part of the riding mode");
+        TextView apart = secondary(Lang.t(R.string.bike_not_in_mode));
         apart.setPadding(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE1));
         addRow(c, apart);
-        c.addView(settingRowWith("KQS", kqsChanged, kqsSpinner));
+        c.addView(settingRowWith(Lang.t(R.string.bike_kqs), kqsChanged, kqsSpinner));
         settingsName = new android.widget.EditText(this);
         settingsName.setSingleLine(true);
         settingsName.setTextSize(15);
         settingsName.setTextColor(Ui.ink(night));
-        settingsName.setHint("Name (optional)");
+        settingsName.setHint(Lang.t(R.string.bike_name_hint));
         settingsName.setText(prefs.getString(Hub.KEY_SETTINGS_NAME, ""));
         LinearLayout nameRow = settingRow();
-        nameRow.addView(itemTitle("Name"), weight());
+        nameRow.addView(itemTitle(Lang.t(R.string.bike_name)), weight());
         nameRow.addView(settingsName, controlWidth());
         addRow(c, nameRow);
-        c.addView(secondary("Up to " + SettingsWrite.NAME_BYTES + " bytes, sent with the settings as Rideology "
-                + "sends the title of a setting, and the name a profile is saved under. Whether the dash shows "
-                + "it anywhere is not known yet."));
+        c.addView(secondary(Lang.t(R.string.bike_name_note, SettingsWrite.NAME_BYTES)));
         LinearLayout profileButtons = row();
         profileButtons.setPadding(0, dp(Ui.SPACE2), 0, 0);
         LinearLayout.LayoutParams first = weight();
         first.rightMargin = dp(Ui.SPACE2);
-        profileButtons.addView(secondaryButton("Save as profile", v -> saveProfile()), first);
-        profileDelete = secondaryButton("Delete profile", v -> deleteProfile());
+        profileButtons.addView(secondaryButton(Lang.t(R.string.bike_save_profile), v -> saveProfile()), first);
+        profileDelete = secondaryButton(Lang.t(R.string.bike_delete_profile), v -> deleteProfile());
         profileDelete.setEnabled(false);
         profileButtons.addView(profileDelete, weight());
         c.addView(profileButtons);
         settingsStatus = secondary("");
         settingsStatus.setPadding(0, dp(Ui.SPACE2), 0, dp(10));
         c.addView(settingsStatus);
-        c.addView(secondaryButton("Back to the bike's values", v -> fillFromBike(Hub.bike.settings)), matchWrap());
-        settingsSend = primaryButton("Send to the bike", v -> confirmSend());
+        c.addView(secondaryButton(Lang.t(R.string.bike_back_to_bike), v -> fillFromBike(Hub.bike.settings)), matchWrap());
+        settingsSend = primaryButton(Lang.t(R.string.bike_send), v -> confirmSend());
         c.addView(settingsSend, matchWrap());
         section.addView(c);
         section.setVisibility(View.GONE);
@@ -350,7 +432,7 @@ public class BikeActivity extends KawaActivity {
     }
 
     private TextView changedPill() {
-        TextView t = pill("changed", (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accentText(night));
+        TextView t = pill(Lang.t(R.string.bike_changed), (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accentText(night));
         t.setVisibility(View.GONE);
         return t;
     }
@@ -442,7 +524,7 @@ public class BikeActivity extends KawaActivity {
     /** "None", then the profiles' names: the picker's choices. */
     private String[] profileNames() {
         String[] names = new String[profiles.size() + 1];
-        names[0] = "None";
+        names[0] = Lang.t(R.string.bike_none);
         for (int i = 0; i < profiles.size(); i++) names[i + 1] = profiles.get(i).name;
         return names;
     }
@@ -455,7 +537,7 @@ public class BikeActivity extends KawaActivity {
             SettingsProfiles.Profile p = profiles.get(pos - 1);
             settingsPrefilled = true; // the bike's values, coming in later, must not overwrite the profile
             if (!fillPickers(p.choice())) {
-                toast("This bike has no " + SettingsWrite.MODES[p.mode - 1] + ": the riding mode was left as it was");
+                toast(Lang.t(R.string.bike_profile_no_mode, SettingsWrite.MODES[p.mode - 1]));
             }
             settingsName.setText(p.name);
             refreshSettingMarks();
@@ -466,7 +548,7 @@ public class BikeActivity extends KawaActivity {
     private void saveProfile() {
         String name = SettingsProfiles.clean(settingsName.getText().toString());
         if (name.isEmpty()) {
-            toast("Give the profile a name first, in the Name field");
+            toast(Lang.t(R.string.bike_profile_name_first));
             return;
         }
         SettingsWrite.Choice now = picked();
@@ -476,21 +558,21 @@ public class BikeActivity extends KawaActivity {
             return;
         }
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Replace the profile \"" + name + "\"?")
-                .setMessage("It is saved on the phone with the values the pickers show now.")
-                .setPositiveButton("Replace", (d, w) -> storeProfile(p))
-                .setNegativeButton("Cancel", null)
+                .setTitle(Lang.t(R.string.bike_profile_replace_title, name))
+                .setMessage(Lang.t(R.string.bike_profile_replace_message))
+                .setPositiveButton(Lang.t(R.string.bike_replace), (d, w) -> storeProfile(p))
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
     private void storeProfile(SettingsProfiles.Profile p) {
         List<SettingsProfiles.Profile> next = SettingsProfiles.put(profiles, p);
         if (next == null) {
-            toast("Up to " + SettingsProfiles.MAX + " profiles: delete one first");
+            toast(Lang.t(R.string.bike_profiles_full, SettingsProfiles.MAX));
             return;
         }
         setProfiles(next, p.name);
-        toast("Saved \"" + p.name + "\" on the phone");
+        toast(Lang.t(R.string.bike_profile_saved, p.name));
     }
 
     private void deleteProfile() {
@@ -498,10 +580,10 @@ public class BikeActivity extends KawaActivity {
         if (pos <= 0 || pos > profiles.size()) return;
         String name = profiles.get(pos - 1).name;
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Delete the profile \"" + name + "\"?")
-                .setMessage("It is only removed from the phone: the bike keeps the settings it has.")
-                .setPositiveButton("Delete", (d, w) -> setProfiles(SettingsProfiles.remove(profiles, name), null))
-                .setNegativeButton("Cancel", null)
+                .setTitle(Lang.t(R.string.bike_profile_delete_title, name))
+                .setMessage(Lang.t(R.string.bike_profile_delete_message))
+                .setPositiveButton(Lang.t(R.string.common_delete), (d, w) -> setProfiles(SettingsProfiles.remove(profiles, name), null))
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
@@ -566,11 +648,9 @@ public class BikeActivity extends KawaActivity {
         int kebcNow = s != null && s.kebc >= 0 ? s.kebc : 0;
         String lines = String.join("\n", SettingsWrite.summary(SettingsWrite.Choice.of(s), picked(), kebcNow, name));
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Send settings to the bike?")
-                .setMessage("All of these go to the bike in one write:\n\n" + lines + "\n\nThe bike must stand "
-                        + "still, be in neutral and have the throttle closed. KawaNav re-checks this before "
-                        + "sending and reads the settings back afterwards.")
-                .setPositiveButton("Send", (d, w) -> {
+                .setTitle(Lang.t(R.string.bike_send_title))
+                .setMessage(Lang.t(R.string.bike_send_message, lines))
+                .setPositiveButton(Lang.t(R.string.bike_send_button), (d, w) -> {
                     prefs.edit().putString(Hub.KEY_SETTINGS_NAME, name).apply();
                     // spinner positions start at 0, the bike's numbers at 1; KEBC goes back as the bike has it
                     BikeFrames.VehicleSettings now2 = Hub.bike.settings;
@@ -579,11 +659,11 @@ public class BikeActivity extends KawaActivity {
                             powerSpinner.getSelectedItemPosition() + 1, ktrcSpinner.getSelectedItemPosition(),
                             kqsSpinner.getSelectedItemPosition() + 1, kebc, name);
                     if (problem != null) {
-                        BridgeService.noteSettings("Not sent: " + problem);
+                        BridgeService.noteSettings(Lang.t(R.string.bike_not_sent, problem));
                         settingsStatus.setText(BridgeService.settingsOutcome);
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
@@ -593,18 +673,17 @@ public class BikeActivity extends KawaActivity {
      */
     private LinearLayout lampCard() {
         LinearLayout section = column();
-        section.addView(sectionHeader(R.drawable.ic_clock, "Dash shift lamp"));
+        section.addView(sectionHeader(R.drawable.ic_clock, Lang.t(R.string.bike_shift_lamp)));
         LinearLayout c = group();
-        c.addView(secondary("Writes only the shift lamp; the dash clock stays as it is. The bike must be "
-                + "connected (it does not have to be standing still)."));
-        lampStatusSpinner = spinner(new String[]{"Off"}, 0);
-        lampRpmSpinner = spinner(new String[]{"3,000 rpm"}, 0);
-        addRow(c, settingRowWith("Lights up", lampStatusSpinner));
-        addRow(c, settingRowWith("At", lampRpmSpinner));
+        c.addView(secondary(Lang.t(R.string.bike_shift_lamp_note)));
+        lampStatusSpinner = spinner(new String[]{Lang.t(R.string.common_off)}, 0);
+        lampRpmSpinner = spinner(new String[]{Lang.t(R.string.unit_rpm, 3000)}, 0);
+        addRow(c, settingRowWith(Lang.t(R.string.bike_lights_up), lampStatusSpinner));
+        addRow(c, settingRowWith(Lang.t(R.string.bike_at), lampRpmSpinner));
         lampStatusText = secondary("");
         lampStatusText.setPadding(0, dp(Ui.SPACE2), 0, dp(10));
         c.addView(lampStatusText);
-        lampSend = primaryButton("Send to the dash", v -> confirmShiftLamp());
+        lampSend = primaryButton(Lang.t(R.string.bike_send_dash), v -> confirmShiftLamp());
         c.addView(lampSend, matchWrap());
         section.addView(c);
         section.setVisibility(View.GONE);
@@ -619,7 +698,7 @@ public class BikeActivity extends KawaActivity {
         int levels = Math.max(1, caps.shiftLampMax - caps.shiftLampMin + 1);
         String[] rpm = new String[levels];
         for (int i = 0; i < levels; i++) {
-            rpm[i] = String.format(Locale.ROOT, "%,d rpm", SettingsWrite.lampRpm(caps.shiftLampMin + i));
+            rpm[i] = Lang.t(R.string.unit_rpm, SettingsWrite.lampRpm(caps.shiftLampMin + i));
         }
         lampRpmSpinner.setAdapter(new android.widget.ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, rpm));
@@ -641,30 +720,29 @@ public class BikeActivity extends KawaActivity {
         int status = lampStatusSpinner.getSelectedItemPosition();
         int level = lampMinLevel + lampRpmSpinner.getSelectedItemPosition();
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Send the shift lamp to the dash?")
-                .setMessage("The dash will light its shift lamp at "
-                        + String.format(Locale.ROOT, "%,d rpm", SettingsWrite.lampRpm(level))
-                        + (status == 0 ? ", or not at all." : ", in the mode " + lampStatusSpinner.getSelectedItem() + "."))
-                .setPositiveButton("Send", (d, w) -> {
+                .setTitle(Lang.t(R.string.bike_lamp_send_title))
+                .setMessage(status == 0 ? Lang.t(R.string.bike_lamp_message_off, SettingsWrite.lampRpm(level))
+                        : Lang.t(R.string.bike_lamp_message, SettingsWrite.lampRpm(level), lampStatusSpinner.getSelectedItem()))
+                .setPositiveButton(Lang.t(R.string.bike_send_button), (d, w) -> {
                     String problem = BridgeService.writeShiftLamp(status, level);
                     if (problem != null) {
-                        BridgeService.noteLamp("Not sent: " + problem);
+                        BridgeService.noteLamp(Lang.t(R.string.bike_not_sent, problem));
                         lampStatusText.setText(BridgeService.lampOutcome);
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
     private LinearLayout parkedCard() {
         LinearLayout section = column();
-        section.addView(sectionHeader(R.drawable.ic_pin, "Parked"));
+        section.addView(sectionHeader(R.drawable.ic_pin, Lang.t(R.string.bike_parked)));
         LinearLayout c = group();
         parkedText = secondary("");
         c.addView(parkedText);
         LinearLayout buttons = row();
         buttons.setPadding(0, dp(10), 0, dp(12));
-        parkedNavigate = primaryButton("Walk to the bike", v -> navigateToBike());
+        parkedNavigate = primaryButton(Lang.t(R.string.main_walk), v -> navigateToBike());
         buttons.addView(parkedNavigate, weight());
         c.addView(buttons);
         section.addView(c);
@@ -677,11 +755,11 @@ public class BikeActivity extends KawaActivity {
         LinearLayout c = card();
         LinearLayout head = row();
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.addView(iconTitle(R.drawable.ic_fuel, cardTitle("Refuels")), weight());
+        head.addView(iconTitle(R.drawable.ic_fuel, cardTitle(Lang.t(R.string.bike_refuels))), weight());
         c.addView(head);
         fuelLine = secondary("");
         c.addView(fuelLine);
-        View row = listRow(R.drawable.ic_fuel, "Refuel diary", "Litres, odometer and what the bike used between fills",
+        View row = listRow(R.drawable.ic_fuel, Lang.t(R.string.bike_refuel_diary), Lang.t(R.string.bike_refuel_diary_sub),
                 null, true, v -> startActivity(new Intent(this, FuelActivity.class)));
         c.addView(row);
         return c;
@@ -703,30 +781,30 @@ public class BikeActivity extends KawaActivity {
             if (d.due()) due.add(d.reminder.item);
         }
         if (!due.isEmpty()) {
-            maintenanceLine.setText("Due: " + String.join(", ", due));
+            maintenanceLine.setText(Lang.t(R.string.bike_maintenance_due, String.join(", ", due)));
             return;
         }
         if (entries.isEmpty()) {
-            maintenanceLine.setText("Nothing logged: keep a record of the work the dash cannot see.");
+            maintenanceLine.setText(Lang.t(R.string.bike_maintenance_none));
             return;
         }
         MaintenanceLog.Entry last = entries.get(entries.size() - 1);
         BikeFrames.VehicleInfo info = Hub.bike.info;
         double km = MaintenanceLog.kmSince(entries, last.item, info != null ? info.odometerKm : Double.NaN);
         maintenanceLine.setText(last.describe()
-                + (km == km ? String.format(Locale.ROOT, " · %,.0f km ago", km) : ""));
+                + (km == km ? " · " + Lang.t(R.string.bike_km_ago, km) : ""));
     }
 
     private LinearLayout maintenanceCard() {
         LinearLayout c = card();
         LinearLayout head = row();
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.addView(iconTitle(R.drawable.ic_list, cardTitle("Maintenance")), weight());
+        head.addView(iconTitle(R.drawable.ic_list, cardTitle(Lang.t(R.string.bike_row_maintenance))), weight());
         c.addView(head);
         maintenanceLine = secondary("");
         c.addView(maintenanceLine);
-        c.addView(listRow(R.drawable.ic_list, "Maintenance log",
-                "What you had done, when and at what odometer", null, true,
+        c.addView(listRow(R.drawable.ic_list, Lang.t(R.string.bike_maintenance_log),
+                Lang.t(R.string.bike_maintenance_log_sub), null, true,
                 v -> startActivity(new Intent(this, MaintenanceActivity.class))));
         return c;
     }
@@ -734,12 +812,12 @@ public class BikeActivity extends KawaActivity {
     private void updateFuelLine() {
         java.util.List<FuelLog.Entry> entries = Hub.fuelEntries;
         if (entries.isEmpty()) {
-            fuelLine.setText("Nothing recorded yet: fill up with the app connected and it is noticed.");
+            fuelLine.setText(Lang.t(R.string.bike_fuel_none));
             return;
         }
         FuelLog.Entry last = entries.get(entries.size() - 1);
         double per100 = entries.size() > 1 ? FuelLog.consumptionLPer100(entries.get(entries.size() - 2), last) : Double.NaN;
-        fuelLine.setText("Last fill " + last.describe()
+        fuelLine.setText(Lang.t(R.string.bike_last_fill, last.describe())
                 + (per100 == per100 ? String.format(Locale.ROOT, " · %.1f L/100 km", per100) : ""));
     }
 
@@ -751,7 +829,7 @@ public class BikeActivity extends KawaActivity {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, uri));
         } catch (android.content.ActivityNotFoundException e) {
-            android.widget.Toast.makeText(this, "No maps app found", android.widget.Toast.LENGTH_SHORT).show();
+            android.widget.Toast.makeText(this, Lang.t(R.string.main_no_maps_app), android.widget.Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -764,22 +842,22 @@ public class BikeActivity extends KawaActivity {
         title.setText(name(b, prefs.getString(Hub.KEY_BIKE_NAME, null)));
         vin.setText(vinText(b, vinShown));
         vin.setVisibility(b.model != null && b.model.vin != null ? View.VISIBLE : View.GONE);
-        updated.setText(Hub.bikeConnected ? "Connected · values update while the bike is on" : lastRead(b, now));
+        updated.setText(Hub.bikeConnected ? Lang.t(R.string.bike_connected_updating) : lastRead(b, now));
         BikeFrames.VehicleInfo info = b.info;
         if (info != null && info.rangeKm >= 0) {
-            range.figure.set(info.rangeKm + " km");
-            range.caption.setText("Remaining range");
+            range.figure.set(Lang.t(R.string.unit_km, info.rangeKm));
+            range.caption.setText(Lang.t(R.string.bike_remaining_range));
         } else {
             range.figure.set("–");
-            range.caption.setText(info == null ? "Remaining range: not read yet" : "Remaining range");
+            range.caption.setText(info == null ? Lang.t(R.string.bike_remaining_range_unread) : Lang.t(R.string.bike_remaining_range));
         }
         int bars = info == null ? -1 : info.fuelBars;
         fuel.set(Math.max(0, bars), fuelSegments(bars));
         fuel.setReserve(bars == BikeFrames.VehicleInfo.FUEL_RESERVE);
-        String lowFuel = info != null && info.lowFuel == 1 ? " · Low fuel" : "";
-        fuelText.setText((bars < 0 ? "Fuel –" : fuelWords(bars)) + lowFuel);
+        String lowFuel = info != null && info.lowFuel == 1 ? " · " + Lang.t(R.string.bike_low_fuel) : "";
+        fuelText.setText((bars < 0 ? Lang.t(R.string.bike_fuel_unknown) : fuelWords(bars)) + lowFuel);
         double v = info == null ? Double.NaN : battery(info);
-        battery.setText(Double.isNaN(v) ? "Battery –" : String.format(Locale.ROOT, "Battery %.1f V", v));
+        battery.setText(Double.isNaN(v) ? Lang.t(R.string.bike_battery_unknown) : Lang.t(R.string.bike_battery, v));
 
         List<String[]> rows = rows(b, now, prefs.getInt(Hub.KEY_FUEL_UNIT, FuelEconomy.DEFAULT));
         List<String> labels = new ArrayList<>();
@@ -801,11 +879,11 @@ public class BikeActivity extends KawaActivity {
                 fillLampChoices(caps);
             }
             String onDash = b.general != null && b.general.shiftLampRpm() > 0
-                    ? String.format(Locale.ROOT, "On the dash now: %s, %,d rpm",
+                    ? Lang.t(R.string.bike_lamp_on_dash,
                     SettingsWrite.lampStatusNames(caps.shiftLampMode)[Math.max(0,
                             Math.min(b.general.shiftLampStatus, SettingsWrite.lampStatusNames(caps.shiftLampMode).length - 1))],
                     b.general.shiftLampRpm())
-                    : "Not read yet: switch the ignition on with KawaNav running";
+                    : Lang.t(R.string.bike_lamp_not_read);
             lampStatusText.setText(SettingsWrite.status(BridgeService.settingsJob, BridgeService.lampOutcome,
                     now - BridgeService.lampOutcomeAt, onDash));
         }
@@ -815,11 +893,10 @@ public class BikeActivity extends KawaActivity {
         if (canWrite) {
             int modes = SettingsWrite.modeCount(b.tuning);
             modeNote.setText(modes > SettingsWrite.WRITABLE_MODES
-                    ? "This bike reports 7 riding modes: Rider 2-4 are in the list."
+                    ? Lang.t(R.string.bike_modes_seven)
                     : b.tuning == null || !b.tuning.valid
-                    ? "How many riding modes the bike has is not known yet (no ready 0x47 answer): the list "
-                            + "offers the four every bike has."
-                    : "This bike reports 4 riding modes, so the list stops at Rider.");
+                    ? Lang.t(R.string.bike_modes_unknown)
+                    : Lang.t(R.string.bike_modes_four));
             if (modeSpinner.getAdapter() == null || modeSpinner.getAdapter().getCount() != modes) {
                 int was = modeSpinner.getSelectedItemPosition();
                 // the rider's pick is kept by the clamp; only a first fill comes from the bike, and the new
@@ -833,7 +910,7 @@ public class BikeActivity extends KawaActivity {
             if (s != null && !settingsPrefilled) fillFromBike(s); // once, from what the bike reported
             refreshSettingMarks();
             // the same checks the write makes, so "Ready" is only shown when a write would go out
-            String blocked = !Hub.bikeConnected ? "the bike is not connected"
+            String blocked = !Hub.bikeConnected ? Lang.t(R.string.bike_not_connected_reason)
                     : SettingsWrite.blockedBecause(b.live, now - b.liveAt, b.tuning);
             settingsStatus.setText(SettingsWrite.status(BridgeService.settingsJob, BridgeService.settingsOutcome,
                     now - BridgeService.settingsOutcomeAt, SettingsWrite.readiness(blocked)));
@@ -842,8 +919,8 @@ public class BikeActivity extends KawaActivity {
         BikeData.Place p = b.parked;
         parkedCard.setVisibility(p != null ? View.VISIBLE : View.GONE);
         if (p != null) {
-            parkedText.setText(String.format(Locale.ROOT, "%s, %s · position within about %.0f m",
-                    Hub.bikeConnected ? "Last parked" : "Parked",
+            parkedText.setText(Lang.t(R.string.bike_parked_text,
+                    Hub.bikeConnected ? Lang.t(R.string.bike_last_parked) : Lang.t(R.string.bike_parked),
                     java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                             .format(new java.util.Date(p.at)), Math.max(5, p.accuracyM)));
         }
@@ -854,8 +931,8 @@ public class BikeActivity extends KawaActivity {
         sections.removeAllViews();
         valueViews.clear();
         if (rows.isEmpty()) {
-            sections.addView(emptyState("No values yet",
-                    "Start KawaNav and switch on the ignition: the bike sends its values once connected."));
+            sections.addView(emptyState(Lang.t(R.string.bike_no_values),
+                    Lang.t(R.string.bike_no_values_sub)));
             return;
         }
         String section = null;
@@ -864,10 +941,9 @@ public class BikeActivity extends KawaActivity {
             if (!r[0].equals(section)) {
                 section = r[0];
                 LinearLayout container = column();
-                container.addView(sectionHeader(sectionIcon(section), section));
+                container.addView(sectionHeader(sectionIcon(section), shown(section)));
                 if (section.startsWith("Riding modes")) {
-                    TextView n = note("Names come from Rideology; the number the bike sent is in brackets. "
-                            + "Shown only where the bike says it has the setting.");
+                    TextView n = note(Lang.t(R.string.bike_modes_note));
                     n.setPadding(dp(Ui.SPACE1), 0, dp(Ui.SPACE1), dp(Ui.SPACE2));
                     container.addView(n);
                 }
@@ -875,7 +951,7 @@ public class BikeActivity extends KawaActivity {
                 container.addView(group);
                 sections.addView(container);
             }
-            ValueRow line = valueRow(rowIcon(r[1]), r[1], r[2]);
+            ValueRow line = valueRow(rowIcon(r[1]), shown(r[1]), r[2]);
             // temperatures and the live engine values in the second value colour, like Rideology's cyan
             if ("Engine".equals(section)) line.figure.color(Ui.highlight(night));
             addRow(group, line.view);
@@ -888,26 +964,26 @@ public class BikeActivity extends KawaActivity {
     /** The bike's Bluetooth name ("Kawasaki-ZR900S" as "Kawasaki ZR900S"), else its model code. */
     static String name(BikeData b, String bluetoothName) {
         if (bluetoothName != null && !bluetoothName.isEmpty()) return bluetoothName.replace('-', ' ');
-        return b.model == null ? "Your bike" : "Kawasaki " + b.model.model;
+        return b.model == null ? Lang.t(R.string.bike_title) : "Kawasaki " + b.model.model;
     }
 
     static String vinText(BikeData b, boolean full) {
         if (b.model == null || b.model.vin == null) return "";
-        return "VIN " + (full ? b.model.vin : BikeData.maskedVin(b.model.vin));
+        return Lang.t(R.string.bike_vin, full ? b.model.vin : BikeData.maskedVin(b.model.vin));
     }
 
     /** "Read 5 min ago" for the newest stored value, or a hint when nothing was read yet. */
     static String lastRead(BikeData b, long now) {
         long at = Math.max(b.infoAt, Math.max(b.settingsAt, b.extAt));
-        if (at == 0) return "Not read yet: values appear once the bike is connected";
-        return "Read " + ago(at, now);
+        if (at == 0) return Lang.t(R.string.bike_not_read);
+        return Lang.t(R.string.bike_read_ago, ago(at, now));
     }
 
     static String ago(long at, long now) {
         long s = Math.max(0, (now - at) / 1000);
-        if (s < 60) return "just now";
-        if (s < 3600) return s / 60 + " min ago";
-        if (s < 48 * 3600) return s / 3600 + " h ago";
+        if (s < 60) return Lang.t(R.string.bike_ago_now);
+        if (s < 3600) return Lang.t(R.string.bike_ago_min, s / 60);
+        if (s < 48 * 3600) return Lang.t(R.string.bike_ago_h, s / 3600);
         return java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(new java.util.Date(at));
     }
 
@@ -916,9 +992,9 @@ public class BikeActivity extends KawaActivity {
         BikeFrames.VehicleInfo i = b.info;
         if (i == null) return "";
         List<String> parts = new ArrayList<>();
-        if (i.odometerKm >= 0) parts.add(String.format(Locale.ROOT, "%,d km", i.odometerKm));
-        if (i.fuelBars >= 0) parts.add("fuel " + fuelWords(i.fuelBars).toLowerCase(Locale.ROOT));
-        if (i.rangeKm >= 0) parts.add("range " + i.rangeKm + " km");
+        if (i.odometerKm >= 0) parts.add(Lang.t(R.string.unit_km_grouped, i.odometerKm));
+        if (i.fuelBars >= 0) parts.add(Lang.t(R.string.bike_summary_fuel, fuelWords(i.fuelBars)));
+        if (i.rangeKm >= 0) parts.add(Lang.t(R.string.bike_summary_range, i.rangeKm));
         double v = battery(i);
         if (!Double.isNaN(v)) parts.add(String.format(Locale.ROOT, "%.1f V", v));
         return String.join(" · ", parts);
@@ -965,7 +1041,7 @@ public class BikeActivity extends KawaActivity {
             if (live) {
                 BikeFrames.Telemetry t = b.live;
                 add(r, s, "Speed", t.speedKmh, "%.0f km/h");
-                if (t.rpm >= 0) r.add(new String[]{s, "Engine speed", t.rpm + " rpm"});
+                if (t.rpm >= 0) r.add(new String[]{s, "Engine speed", Lang.t(R.string.unit_rpm, t.rpm)});
                 if (t.gear >= 0) r.add(new String[]{s, "Gear", t.gear == 0 ? "N" : String.valueOf(t.gear)});
                 add(r, s, "Throttle", t.throttlePct, "%.0f %%");
                 add(r, s, "Lean angle", t.leanDeg, "%.0f°");
@@ -976,36 +1052,37 @@ public class BikeActivity extends KawaActivity {
                     // what these nibbles report is not established (PROTOCOL.md): the numbers stand, the
                     // meaning does not, so no "working / not working" claim
                     r.add(new String[]{s, "Traction control reading (unverified)",
-                            "high " + Math.max(0, t.tcsHigh) + " / low " + Math.max(0, t.tcsLow)});
+                            Lang.t(R.string.bike_value_tcs, Math.max(0, t.tcsHigh), Math.max(0, t.tcsLow))});
                 }
                 if (t.abs >= 0) r.add(new String[]{s, "ABS", absText(t.abs)});
                 if (t.wheelie > 0) {
-                    r.add(new String[]{s, "Wheelie", Double.isNaN(t.wheelieDeg) ? "yes"
-                            : String.format(Locale.ROOT, "yes, %.0f°", t.wheelieDeg)});
+                    r.add(new String[]{s, "Wheelie", Double.isNaN(t.wheelieDeg) ? Lang.t(R.string.common_yes)
+                            : Lang.t(R.string.bike_value_wheelie, t.wheelieDeg)});
                 }
                 if (t.cruiseOn >= 0) {
                     // byte 88 is Rideology's wheel-speed setting, not a cruise speed: it is not shown here
                     r.add(new String[]{s, "Cruise control", t.cruiseOn == 1
-                            ? (t.cruiseMode > 0 ? "on, mode " + t.cruiseMode : "on") : "off"});
+                            ? (t.cruiseMode > 0 ? Lang.t(R.string.bike_value_cruise_mode, t.cruiseMode) : Lang.t(R.string.common_on))
+                            : Lang.t(R.string.common_off_lower)});
                 }
                 // torque in the bike's own unit: the numbers compare with each other, not with a spec sheet
-                if (t.riderTorque >= 0) r.add(new String[]{s, "Torque asked by the throttle", t.riderTorque + " (bike units)"});
-                if (t.engineTorqueRequest >= 0) r.add(new String[]{s, "Torque the engine control asks for", t.engineTorqueRequest + " (bike units)"});
-                if (t.engineTorque >= 0) r.add(new String[]{s, "Torque from the engine", t.engineTorque + " (bike units)"});
+                if (t.riderTorque >= 0) r.add(new String[]{s, "Torque asked by the throttle", Lang.t(R.string.bike_value_bike_units, t.riderTorque)});
+                if (t.engineTorqueRequest >= 0) r.add(new String[]{s, "Torque the engine control asks for", Lang.t(R.string.bike_value_bike_units, t.engineTorqueRequest)});
+                if (t.engineTorque >= 0) r.add(new String[]{s, "Torque from the engine", Lang.t(R.string.bike_value_bike_units, t.engineTorque)});
                 // brake pressures: the masters are raw, the caliper scaling comes from Rideology
                 if (t.brakeFrontMaster >= 0) r.add(new String[]{s, "Front brake master (unverified)", String.valueOf(t.brakeFrontMaster)});
                 if (t.brakeRearMaster >= 0) r.add(new String[]{s, "Rear brake master (unverified)", String.valueOf(t.brakeRearMaster)});
                 if (t.brakeRearCaliper >= 0) r.add(new String[]{s, "Rear brake caliper (unverified)", String.valueOf(t.brakeRearCaliper)});
                 if (t.absTarget >= 0 || t.absIndicator >= 0) {
-                    r.add(new String[]{s, "ABS working", "target " + t.absTarget + ", indicator " + t.absIndicator});
+                    r.add(new String[]{s, "ABS working", Lang.t(R.string.bike_value_abs_working, t.absTarget, t.absIndicator)});
                 }
                 if (t.absSwitching >= 0 && t.absSwitching != 0) {
                     r.add(new String[]{s, "ABS switching", String.valueOf(t.absSwitching)});
                 }
             }
             if (ext) {
-                add(r, s, "Fuel use now", b.ext.fuelRate, "%.2f (dash units)");
-                add(r, s, "Fuel economy now", b.ext.instantFuel, "%.1f (dash units)");
+                add(r, s, "Fuel use now", b.ext.fuelRate, Lang.t(R.string.bike_value_dash_units_2));
+                add(r, s, "Fuel economy now", b.ext.instantFuel, Lang.t(R.string.bike_value_dash_units_1));
                 add(r, s, "Coolant temperature", b.ext.waterC, "%.0f °C");
                 add(r, s, "Oil temperature", b.ext.oilC, "%.0f °C");
                 add(r, s, "Intake air temperature", b.ext.intakeC, "%.0f °C");
@@ -1036,17 +1113,16 @@ public class BikeActivity extends KawaActivity {
                 r.add(new String[]{s, "Traction control level", m0.tcsLevelHigh + " / " + m0.tcsLevelLow});
             }
             if (m0.kqsDown >= 0 || m0.kqsUp >= 0) {
-                r.add(new String[]{s, "Quick shifter", "down " + m0.kqsDown + ", up " + m0.kqsUp});
+                r.add(new String[]{s, "Quick shifter", Lang.t(R.string.bike_value_kqs, m0.kqsDown, m0.kqsUp)});
             }
-            if (m0.wheelieFlag > 0) r.add(new String[]{s, "Wheelie (suspension unit)", "yes"});
+            if (m0.wheelieFlag > 0) r.add(new String[]{s, "Wheelie (suspension unit)", Lang.t(R.string.common_yes)});
         }
         if (live && b.live.damping >= 0) {
             BikeFrames.Telemetry t = b.live;
             r.add(new String[]{"Suspension", "Damping now", level(t.damping)});
             if (t.suspCalibration >= 0) {
                 r.add(new String[]{"Suspension", "Where the suspension stands",
-                        "calibration " + t.suspCalibration + ", status " + t.suspStatus
-                                + ", control unit " + t.suspEcu});
+                        Lang.t(R.string.bike_value_suspension, t.suspCalibration, t.suspStatus, t.suspEcu)});
             }
         }
         if (b.service != null) {
@@ -1054,7 +1130,7 @@ public class BikeActivity extends KawaActivity {
             double odo = b.info != null && b.info.odometerKm >= 0 ? b.info.odometerKm : Double.NaN;
             for (int k = 0; k < 3; k++) {
                 String due = MaintenanceLog.due(b.service.reminders[k], odo, df);
-                if (due != null) r.add(new String[]{"Maintenance", BikeFrames.ServiceIndicator.NAMES[k], due});
+                if (due != null) r.add(new String[]{"Maintenance", BikeFrames.ServiceIndicator.names()[k], due});
             }
         }
         BikeFrames.VehicleSettings v = b.settings;
@@ -1083,19 +1159,19 @@ public class BikeActivity extends KawaActivity {
                 r.add(new String[]{s, "Clock (when read)", String.format(Locale.ROOT, "%02d:%02d", g.hour, g.minute)
                         + (g.day > 0 && g.month > 0 && g.year > 0 ? String.format(Locale.ROOT, ", %d.%d.%d", g.day, g.month, g.year) : "")});
             }
-            if (g.shiftLampRpm() > 0) r.add(new String[]{s, "Shift lamp", String.format(Locale.ROOT, "%,d rpm", g.shiftLampRpm())});
+            if (g.shiftLampRpm() > 0) r.add(new String[]{s, "Shift lamp", Lang.t(R.string.unit_rpm, g.shiftLampRpm())});
         }
         return r;
     }
 
     /** The ABS state bits of 0x4A byte 37 in words (Rideology's split: qe/b.java). */
     static String absText(int abs) {
-        if ((abs & 0x0C) != 0) return "fault";
-        if ((abs & 0x10) != 0) return "inspection mode";
-        if ((abs & 0x03) == 0x03) return "acting front and rear";
-        if ((abs & 0x01) != 0) return "acting front";
-        if ((abs & 0x02) != 0) return "acting rear";
-        return "ready";
+        if ((abs & 0x0C) != 0) return Lang.t(R.string.bike_abs_fault);
+        if ((abs & 0x10) != 0) return Lang.t(R.string.bike_abs_inspection);
+        if ((abs & 0x03) == 0x03) return Lang.t(R.string.bike_abs_both);
+        if ((abs & 0x01) != 0) return Lang.t(R.string.bike_abs_front);
+        if ((abs & 0x02) != 0) return Lang.t(R.string.bike_abs_rear);
+        return Lang.t(R.string.bike_abs_ready);
     }
 
     /** A damping level the bike reports; Rideology's scale for it is not known yet, so the number stands. */

@@ -83,7 +83,7 @@ public final class RoundTrip {
             }
             stops.add(new double[]{r.lat, r.lon});
             if (stops.size() < 3) {
-                lastError = new Router.NoRouteException("no roads around the start for a round trip");
+                lastError = new Router.NoRouteException(Lang.t(R.string.route_no_roads_round));
                 factor *= 1.3; // a smaller shape may reach roads
                 continue;
             }
@@ -101,7 +101,7 @@ public final class RoundTrip {
             if (Math.abs(ratio - 1) <= TOLERANCE) break;
             factor *= ratio; // too long: shrink the shape, too short: widen it
         }
-        if (best == null) throw lastError != null ? lastError : new Router.NoRouteException("no round trip found");
+        if (best == null) throw lastError != null ? lastError : new Router.NoRouteException(Lang.t(R.string.route_no_round));
         return best;
     }
 

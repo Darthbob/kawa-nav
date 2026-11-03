@@ -36,16 +36,16 @@ public class RideEndTest {
     @Test
     public void anUnknownChoiceIsTheDefault() {
         assertEquals(RideEnd.afterMs(RideEnd.DEFAULT, 0), RideEnd.afterMs(-1, 0));
-        assertEquals(RideEnd.afterMs(RideEnd.DEFAULT, 0), RideEnd.afterMs(RideEnd.LABELS.length, 0));
-        assertEquals("At once", RideEnd.LABELS[RideEnd.DEFAULT]);
+        assertEquals(RideEnd.afterMs(RideEnd.DEFAULT, 0), RideEnd.afterMs(RideEnd.labels().length, 0));
+        assertEquals("At once", RideEnd.labels()[RideEnd.DEFAULT]);
     }
 
     @Test
     public void everyChoiceHasItsTime() {
         long previous = 0;
-        for (int i = 0; i < RideEnd.LABELS.length; i++) {
+        for (int i = 0; i < RideEnd.labels().length; i++) {
             long after = RideEnd.afterMs(i, 0);
-            assertTrue(RideEnd.LABELS[i], after > previous);
+            assertTrue(RideEnd.labels()[i], after > previous);
             previous = after;
         }
     }

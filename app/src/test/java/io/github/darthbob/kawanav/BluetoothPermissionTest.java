@@ -16,18 +16,18 @@ public class BluetoothPermissionTest {
 
     @Test
     public void theHintNamesWhatTheRiderHasToAllow() {
-        assertFalse(Hub.BLUETOOTH_HINT, Hub.BLUETOOTH_HINT == null || Hub.BLUETOOTH_HINT.isEmpty());
-        assertTrue(Hub.BLUETOOTH_HINT, Hub.BLUETOOTH_HINT.contains("Bluetooth"));
+        assertFalse(Hub.bluetoothHint(), Hub.bluetoothHint() == null || Hub.bluetoothHint().isEmpty());
+        assertTrue(Hub.bluetoothHint(), Hub.bluetoothHint().contains("Bluetooth"));
         assertTrue("the rider has to know where to look",
-                Hub.BLUETOOTH_HINT.contains("Nearby devices"));
+                Hub.bluetoothHint().contains("Nearby devices"));
         assertTrue("and it has to say KawaNav is the one asking",
-                Hub.BLUETOOTH_HINT.contains("KawaNav"));
+                Hub.bluetoothHint().contains("KawaNav"));
     }
 
     @Test
     public void theHintStaysASingleLine() {
         // it is written into the log and into Hub.bikeHint, which is shown as one line of the dash card
-        assertFalse(Hub.BLUETOOTH_HINT, Hub.BLUETOOTH_HINT.contains("\n"));
-        assertTrue(Hub.BLUETOOTH_HINT.length() < 200);
+        assertFalse(Hub.bluetoothHint(), Hub.bluetoothHint().contains("\n"));
+        assertTrue(Hub.bluetoothHint().length() < 200);
     }
 }

@@ -216,7 +216,7 @@ public final class RouteMapView extends View {
                 return true;
             }
         });
-        setContentDescription("Map. Drag to move, pinch to zoom, tap to choose a place.");
+        setContentDescription(Lang.t(R.string.map_description));
     }
 
     public void setListener(Listener l) {
@@ -733,7 +733,7 @@ public final class RouteMapView extends View {
             }
         }
         canvas.restore();
-        String c = tiles != null && !missing ? "© OpenStreetMap contributors" : "Roads © OpenStreetMap contributors";
+        String c = tiles != null && !missing ? "© OpenStreetMap contributors" : Lang.t(R.string.map_roads_credit);
         canvas.drawText(c, getWidth() - getPaddingRight() - credit.measureText(c) - density * 6,
                 getHeight() - getPaddingBottom() - density * 6, credit);
     }

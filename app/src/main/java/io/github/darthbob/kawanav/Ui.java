@@ -28,9 +28,12 @@ public final class Ui {
     // The choice is the app's own night mode, kept by Android: every screen, dialog and system bar
     // follows it, and the open screens are recreated when it changes.
 
-    /** Settings → Appearance → Theme, {@link Hub#KEY_THEME}: an index into {@link #THEME_LABELS}. */
+    /** Settings → Appearance → Theme, {@link Hub#KEY_THEME}: an index into {@link #themeLabels}. */
     public static final int THEME_SYSTEM = 0, THEME_LIGHT = 1, THEME_DARK = 2;
-    public static final String[] THEME_LABELS = {"Like the phone", "Light", "Dark"};
+
+    public static String[] themeLabels() {
+        return new String[]{Lang.t(R.string.theme_system), Lang.t(R.string.theme_light), Lang.t(R.string.theme_dark)};
+    }
 
     /** Makes the app light or dark, or lets it follow the phone again. */
     public static void applyTheme(Context c, int theme) {

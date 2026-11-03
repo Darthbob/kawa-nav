@@ -1,0 +1,1189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the translation work in 1.4.0; edit this file directly. Every language has
+     every text of res/values/strings.xml (StringsTest, lint MissingTranslation). -->
+<resources>
+
+    <!-- Settings: explanations -->
+    <string name="settings_cameras_info">Z danych map offline: telefon go pokazuje, a wyświetlacz motocykla dostaje odległość. Pobierz region ponownie, jeśli został pobrany przed tą wersją. Ostrzeżenia o fotoradarach podczas jazdy są w niektórych krajach zabronione (Niemcy, Francja, Szwajcaria)</string>
+    <string name="settings_curves_info">Kąt to całkowita zmiana kierunku na całym zakręcie: 90° to zakręt pod kątem prostym, 180° to agrafka. Zakręt musi być też dość ciasny; długie, szerokie łuki autostrad się nie liczą.\n\nTylko ciasne: od 45°, promień do ~170 m. Tylko zakręty, przed którymi naprawdę trzeba hamować.\n\nNormalne: od 30°, promień do ~250 m.\n\nTakże łagodne: od 20°, promień do ~350 m. Dwa zakręty w tę samą stronę tuż po sobie mogą się połączyć w jeden.\n\nWszystkie powyżej 15°: od 16°, promień do ~570 m. Wszystko oprócz najłagodniejszych łuków; zakręty tuż po sobie zostają osobno. Zalecane.\n\nStrzałka na wyświetlaczu motocykla:\n• Łagodny: poniżej 55° i promień ponad 60 m\n• Normalny: 55° lub więcej albo ciaśniejszy niż 60 m\n• Ostry: 100° lub więcej albo ciaśniejszy niż 30 m\n• Agrafka (strzałka zawracania): 150° lub więcej i ciaśniejsza niż 35 m</string>
+    <string name="settings_curve_sound_info">KawaNav mówi, jaki to zakręt i w którą stronę, np. „Ostry zakręt w lewo” albo „Agrafka w prawo”, około 6 sekund przed początkiem zakrętu przy twojej prędkości: od 50 m przed nim przy wolnej jeździe do 300 m przy szybkiej. Każdy zakręt raz i nic poniżej 10 km/h. Twoja prędkość to prędkość motocykla, gdy jest połączony, bez opóźnienia GPS; bez motocykla prędkość z GPS.\n\nRodzaje to te ze strzałki na wyświetlaczu motocykla (zob. „Które zakręty się liczą”):\n• Tylko agrafki\n• Ostre i agrafki\n• Wszystkie zakręty: także normalne i łagodne\n\n„Także gdy za szybko” dodaje zakręty, do których jedziesz za szybko na swoje tempo, z „zwolnij”; działa też, gdy ta opcja jest wyłączona.\n\nZakręt zaczynający się w ciągu 80 m od końca zapowiedzianego jest nazywany razem z nim: „Agrafka w lewo, potem ostry zakręt w prawo”. Nie jest powtarzany osobno, chyba że jedziesz do niego za szybko.\n\nDziała z nawigacją i bez niej, cokolwiek pokazuje wyświetlacz. Podczas nawigacji zakręt tuż przed następnym manewrem Map zostaje dla głosu Map. Wymaga pobranych dróg, tak jak zakręty na wyświetlaczu. Głos to syntezator mowy telefonu, w języku KawaNav (Ustawienia → Wygląd → Język).</string>
+    <string name="common_off">Wył.</string>
+    <string name="settings_pace_relaxed">Spokojne</string>
+    <string name="settings_pace_normal">Normalne</string>
+    <string name="settings_pace_sporty">Sportowe</string>
+    <string name="settings_pace_fast">Szybkie</string>
+    <string name="settings_pace_from_rides">Z moich przejazdów</string>
+    <string name="settings_pace_info_intro">Twoje tempo to to, jak mocno przechylasz się w zakręcie. Z promienia zakrętu w danych mapy wynika prędkość, z jaką byś go pokonał:</string>
+    <string name="settings_pace_info_line">%1$s (%2$.0f°): %3$.0f km/h przy promieniu 30 m, %4$.0f km/h przy 100 m</string>
+    <string name="settings_pace_info_rides">Z moich przejazdów: przechył, jaki zwykle osiągasz w zakręcie w ostatnich %1$d przejazdach, gdy jest w nich %2$d zakrętów; do tego czasu Normalne. Zakręt liczy się od %3$.0f km/h i %4$d° przechyłu. Wymaga przejazdów nagranych z połączonym motocyklem i jest liczone od nowa przy każdym starcie KawaNav</string>
+    <string name="settings_pace_info_too_fast">Jeśli jedziesz do zakrętu o ponad %1$.0f%% szybciej, słyszysz go z „zwolnij” („Zakręt w lewo, zwolnij”), gdy łagodne hamowanie ledwo by wystarczyło: około 0,3 g, po %2$.1f s na usłyszenie i reakcję. Jeśli już wystarczająco zwalniasz, nic nie jest mówione.\n\nKażdy rodzaj zakrętu, także przy wyłączonych „Mówionych ostrzeżeniach o zakrętach”, o ile liczy się w „Które zakręty się liczą”. Promień z mapy jest przybliżony, a szeroki tor jazdy sprawia, że zakręt jest szerszy niż droga: prędkości są ostrożne.</string>
+    <plurals name="settings_pace_usual">
+        <item quantity="one">Zwykle przechylasz się w zakręcie o %1$.0f°: %2$d zakrętów w ostatnim %3$d przejeździe</item>
+        <item quantity="few">Zwykle przechylasz się w zakręcie o %1$.0f°: %2$d zakrętów w ostatnich %3$d przejazdach</item>
+        <item quantity="many">Zwykle przechylasz się w zakręcie o %1$.0f°: %2$d zakrętów w ostatnich %3$d przejazdach</item>
+        <item quantity="other">Zwykle przechylasz się w zakręcie o %1$.0f°: %2$d zakrętów w ostatnich %3$d przejazdach</item>
+    </plurals>
+    <string name="settings_pace_counting">%1$d z %2$d potrzebnych zakrętów w dotychczasowych przejazdach: do tego czasu Normalne</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ustawienia</string>
+    <string name="settings_section_autostart">Automatyczny start</string>
+    <string name="settings_section_road">W drodze</string>
+    <string name="settings_section_navigation">Nawigacja</string>
+    <string name="settings_section_dash">Ikony i zegar wyświetlacza</string>
+    <string name="settings_section_recording">Nagrywanie przejazdów</string>
+    <string name="settings_section_maps">Mapy offline</string>
+    <string name="settings_section_appearance">Wygląd</string>
+    <string name="settings_section_about">Informacje</string>
+    <string name="settings_autostart_bike">Gdy motocykl zostanie włączony</string>
+    <string name="settings_autostart_helmet">Gdy połączy się mój kask</string>
+    <string name="settings_autostart_helmet_sub">Interkom łączy się sam po włączeniu. Gdy jest połączony, wyświetlacz motocykla pokazuje ikonę słuchawek</string>
+    <string name="settings_helmet_saved">Zapisany</string>
+    <string name="settings_route_planner">Planer tras</string>
+    <string name="settings_route_planner_sub">Z A do B albo pętla, w pobranych regionach</string>
+    <string name="settings_roads">Drogi</string>
+    <string name="settings_roads_sub">Czego szuka planer, jeśli tam tego nie zmienisz</string>
+    <string name="settings_roads_fastest">Najszybsza</string>
+    <string name="settings_roads_curvy">Kręta</string>
+    <string name="settings_roads_extra_curvy">Bardzo kręta</string>
+    <string name="settings_avoid_motorways">Unikaj autostrad</string>
+    <string name="settings_avoid_motorways_sub">Tylko gdy nie ma innej drogi</string>
+    <string name="settings_avoid_tolls">Unikaj opłat</string>
+    <string name="settings_avoid_tolls_sub">Płatne drogi tylko wtedy, gdy nie ma innej drogi</string>
+    <string name="settings_avoid_gravel">Unikaj szutru</string>
+    <string name="settings_avoid_gravel_sub">Drogi nieutwardzone tylko wtedy, gdy nie ma innej drogi</string>
+    <string name="settings_maps">Wskazówki Map Google</string>
+    <string name="settings_maps_sub">Gdy Mapy nawigują, wyświetlacz motocykla pokazuje ich wskazówki</string>
+    <string name="settings_free_mode">Pokazuj nadchodzące zakręty</string>
+    <string name="settings_free_mode_sub">Bez nawigacji wyświetlacz motocykla pokazuje następny zakręt drogi, którą jedziesz</string>
+    <string name="settings_nav_curves">Ostrzeżenia o zakrętach podczas nawigacji</string>
+    <string name="settings_nav_curves_sub">Pokazywane do 300 m przed zakrętem, między wskazówkami Map</string>
+    <string name="settings_nav_curves_sharp">Tylko ostre</string>
+    <string name="settings_nav_curves_all">Wszystkie</string>
+    <string name="settings_curve_sound">Mówione ostrzeżenia o zakrętach</string>
+    <string name="settings_curve_sound_sub">Mówione w kasku kilka sekund przed zakrętem</string>
+    <string name="settings_curve_sound_hairpins">Tylko agrafki</string>
+    <string name="settings_curve_sound_sharp">Ostre i agrafki</string>
+    <string name="settings_curve_sound_all">Wszystkie zakręty</string>
+    <string name="settings_pace">Także gdy za szybko</string>
+    <string name="settings_pace_sub">Każdy zakręt, z „zwolnij”, gdy jedziesz do niego szybciej, niż pozwala twoje tempo</string>
+    <string name="settings_headset_only">Mów tylko przez słuchawki</string>
+    <string name="settings_headset_only_sub">Cicho, dopóki nie są połączone słuchawki Bluetooth lub przewodowe, żeby telefon sam nie mówił</string>
+    <string name="settings_beeps">Sygnały zamiast słów</string>
+    <string name="settings_beeps_sub">W uchu po stronie zakrętu: jeden sygnał dla zakrętu, dwa dla ostrego, trzy dla agrafki, wyżej i szybciej, gdy za szybko</string>
+    <string name="settings_hear_sample">Posłuchaj ostrzeżenia o zakręcie</string>
+    <string name="settings_play">Odtwórz</string>
+    <string name="settings_curves">Które zakręty się liczą</string>
+    <string name="settings_curves_sub">Jak bardzo zakręt musi skręcać, żeby był pokazany</string>
+    <string name="settings_curves_tight">Tylko ciasne</string>
+    <string name="settings_curves_gentle">Także łagodne</string>
+    <string name="settings_curves_all">Wszystkie powyżej 15°</string>
+    <string name="settings_lookahead">Wyprzedzenie</string>
+    <string name="settings_lookahead_sub">Jak daleko szukać następnego zakrętu</string>
+    <string name="settings_imperial">Odległości w stopach</string>
+    <string name="settings_imperial_sub">Zamiast metrów</string>
+    <string name="settings_fuel_unit">Zużycie paliwa</string>
+    <string name="settings_fuel_unit_sub">Jednostka średniego i chwilowego zużycia paliwa motocykla</string>
+    <string name="settings_left_hand">Ruch lewostronny</string>
+    <string name="settings_left_hand_sub">Wielka Brytania, Irlandia…: ronda zgodnie z ruchem wskazówek zegara</string>
+    <string name="settings_battery_warnings">Ostrzeżenia o akumulatorze</string>
+    <string name="settings_battery_warnings_sub">Gdy akumulator 12 V motocykla jest słaby albo silnik pracuje, a akumulator się nie ładuje</string>
+    <string name="settings_clutch">Ostrzeżenie o sprzęgle</string>
+    <string name="settings_clutch_sub">Po nagranym przejeździe, gdy silnik przy więcej niż jednym mocnym przyspieszaniu wyprzedzał tylne koło: sprzęgło może się ślizgać</string>
+    <string name="settings_cold_rpm">Zimny silnik: obroty</string>
+    <string name="settings_cold_rpm_sub">Ostrzeżenie pojawia się powyżej tych obrotów</string>
+    <string name="settings_cold_warm">Zimny silnik: ciepły od</string>
+    <string name="settings_cold_warm_sub">Temperatura płynu chłodzącego, od której silnik uznaje się za ciepły</string>
+    <string name="settings_cameras">Ostrzeżenia o fotoradarach</string>
+    <string name="settings_camera_warn">Ostrzegaj przed fotoradarem</string>
+    <string name="settings_camera_warn_sub">Jak daleko przed nim pojawia się ostrzeżenie</string>
+    <string name="settings_camera_voice">Mów o fotoradarach</string>
+    <string name="settings_camera_voice_sub">Przy włączonych ostrzeżeniach o fotoradarach każdy fotoradar jest też mówiony w kasku, gdy przychodzi jego ostrzeżenie („Przed tobą fotoradar, ograniczenie 50”), a przy sygnałach słychać dwutonową syrenę, zupełnie inną niż sygnały zakrętu. Tak jak ostrzeżenia o zakrętach, tylko przez słuchawki, chyba że to wyłączysz</string>
+    <string name="settings_ignore_caps">Wysyłaj strzałki i ikony mimo to</string>
+    <string name="settings_ignore_caps_sub">Wyświetlacz mówi, czy w ogóle ma wskazówki skrętu i ikony stanu, a KawaNav mu wierzy, tak jak Rideology: czego, jak mówi, nie umie pokazać, nie jest wysyłane. Włącz to, jeśli strzałki lub ikony wcześniej działały, a przestały: niektóre wyświetlacze odpowiadają błędnie.</string>
+    <string name="settings_phone_battery">Bateria telefonu</string>
+    <string name="settings_phone_battery_sub">Wyświetlacz motocykla pokazuje baterię telefonu (4 kreski) i czy się ładuje</string>
+    <string name="settings_clock">Ustawiaj zegar wyświetlacza z telefonu</string>
+    <string name="settings_clock_sub">Raz na połączenie, tak jak Rideology. Zostawia kontrolkę zmiany biegu tak, jak jest ustawiona w motocyklu</string>
+    <string name="settings_dash_calls">Ikona połączenia na wyświetlaczu</string>
+    <string name="settings_dash_calls_sub">Ikona, gdy przychodzi połączenie; wymaga dostępu do powiadomień. Nie są wysyłane numery ani nazwy</string>
+    <string name="settings_dash_mail">Ikona poczty i wiadomości na wyświetlaczu</string>
+    <string name="settings_dash_mail_sub">Ikona, gdy przychodzi e-mail lub wiadomość (Gmail, Wiadomości, LINE…); wymaga dostępu do powiadomień</string>
+    <string name="settings_ride_auto">Nagrywaj samo</string>
+    <string name="settings_ride_auto_sub">Gdy tylko motocykl jest połączony i jedzie</string>
+    <string name="settings_ride_end">Zakończ przejazd</string>
+    <string name="settings_ride_end_sub">Gdy motocykl zostanie wyłączony: od razu albo kilka minut później, żeby postój na tankowanie został w tym samym przejeździe</string>
+    <string name="settings_ride_map">Mapa pod śladem</string>
+    <string name="settings_ride_map_sub">Mapa OpenStreetMap za śladem przejazdu. Mapa jest pobierana z openstreetmap.org dla oglądanego obszaru i przez jakiś czas przechowywana w telefonie</string>
+    <string name="settings_rides">Nagrane przejazdy</string>
+    <string name="settings_rides_sub">Wszystko, co nagrałeś, ze śladem i wykresami</string>
+    <string name="settings_maps_intro">Zakręty, planer tras i nawigacja działają tylko tam, gdzie drogi są pobrane. Pobierz regiony, w których jeździsz, przez Wi-Fi. Regiony się sumują: np. teraz Bawaria, później Tyrol.</string>
+    <string name="settings_maps_credit">Dane dróg © współtwórcy OpenStreetMap (ODbL)</string>
+    <string name="settings_download_region">Pobierz region</string>
+    <string name="settings_region_hint">Szukaj regionu: Małopolska, Tyrol, Szwajcaria…</string>
+    <string name="settings_download">Pobierz</string>
+    <string name="settings_update">Aktualizuj</string>
+    <string name="common_delete">Usuń</string>
+    <string name="common_cancel">Anuluj</string>
+    <string name="settings_other_roads">Inne drogi</string>
+    <string name="settings_delete_region_message">Jego drogi zostaną usunięte z telefonu. Drogi, które obejmuje też inny pobrany region, zostają.</string>
+    <string name="settings_delete_other_title">Usunąć inne drogi?</string>
+    <string name="settings_delete_other_message">Drogi z wcześniejszych pobrań, które nie należą do żadnego regionu z listy, zostaną usunięte.</string>
+    <string name="settings_regions_offline">Lista regionów niedostępna. Czy jesteś online?</string>
+    <string name="settings_pick_region">Wybierz region z listy</string>
+    <string name="settings_mobile_data">Dane komórkowe</string>
+    <string name="settings_export_log">Eksportuj dziennik</string>
+    <string name="settings_export_log_sub">Kopiuje dziennik KawaNav do Download/KawaNav, do wysłania ze zgłoszeniem problemu. Zawiera wskazówki Map Google z nazwami ulic, adres Bluetooth motocykla i nazwę kasku: przeczytaj go, zanim go udostępnisz</string>
+
+    <!-- Settings: with values -->
+    <string name="settings_nav_voice">Mówiona nawigacja</string>
+    <string name="settings_nav_voice_sub">Wskazówki skrętu w kasku, w języku KawaNav</string>
+    <string name="unit_m">%1$d m</string>
+    <string name="settings_hear_sample_sub">Odtwarza teraz ostrzeżenie o ostrym zakręcie w lewo („%1$s” albo jego sygnały), żeby ustawić głośność w kasku</string>
+    <string name="settings_cold_engine">Ostrzeżenie o zimnym silniku</string>
+    <string name="settings_cold_engine_sub">„%1$s” w kasku, gdy kręcisz silnik powyżej ustawionych niżej obrotów, zanim płyn chłodzący osiągnie ustawioną niżej temperaturę</string>
+    <string name="settings_dash_no_icons">Wyświetlacz twojego motocykla podaje, że nie pokazuje ikon stanu</string>
+    <string name="settings_dash_no_clock">Wyświetlacz twojego motocykla podaje, że telefon nie może ustawiać jego zegara</string>
+    <string name="main_riding_notice">KawaNav to pomoc w jeździe, a nie system bezpieczeństwa. Wskazówki i zakręty mogą przyjść za późno, nie przyjść wcale albo być błędne. Zawsze jedź według tego, co widzisz na drodze, i patrz na nią.</string>
+    <string name="main_affiliation_notice">KawaNav to niezależny projekt, niepowiązany z Kawasaki ani Google i niepopierany przez nie.</string>
+    <string name="settings_about_data">Dane dróg © współtwórcy OpenStreetMap, dostępne na licencji Open Database License (ODbL), pobrane z Geofabrik.</string>
+    <string name="settings_about_licence">KawaNav © 2026 Darthbob i jackyes. Wolne oprogramowanie na licencji GNU General Public License v3, bez żadnej gwarancji. Kod źródłowy: github.com/Darthbob/kawa-nav</string>
+    <string name="settings_about_version">Wersja %1$s</string>
+    <string name="settings_log_none">Brak dziennika do eksportu</string>
+    <plurals name="settings_log_files">
+        <item quantity="one">%1$d plik w Download/KawaNav</item>
+        <item quantity="few">%1$d pliki w Download/KawaNav</item>
+        <item quantity="many">%1$d plików w Download/KawaNav</item>
+        <item quantity="other">%1$d plików w Download/KawaNav</item>
+    </plurals>
+    <string name="settings_autostart_on_for">Włączone dla %1$s</string>
+    <string name="settings_autostart_set_up_sub">Skonfiguruj raz przy motocyklu, zapłon włączony, Rideology zamknięte</string>
+    <string name="settings_autostart_turn_off">Wyłącz</string>
+    <string name="settings_autostart_set_up">Skonfiguruj</string>
+    <string name="settings_free_mode_active">Aktywne</string>
+    <string name="settings_regions_none">Nie pobrano jeszcze żadnych regionów</string>
+    <string name="settings_regions_stored">Pobrano · %1$.0f MB</string>
+    <string name="settings_region_checking">Szukanie nowszych danych…</string>
+    <string name="settings_region_check_failed">Nie udało się poszukać nowszych danych (offline?)</string>
+    <string name="settings_region_newer">Nowsze dane dostępne z %1$s</string>
+    <string name="settings_region_up_to_date">Aktualne</string>
+    <string name="settings_region_data">Dane z %1$s · %2$.0f MB</string>
+    <string name="settings_region_no_cameras">W tych danych nie ma jeszcze fotoradarów: pobierz region ponownie</string>
+    <string name="settings_region_no_routing">Brak jeszcze danych do planowania tras: pobierz region ponownie</string>
+    <string name="settings_other_roads_sub">%1$.0f MB z wcześniejszych pobrań, poza regionami</string>
+    <string name="settings_region_checking_size">%1$s: sprawdzanie rozmiaru…</string>
+    <string name="settings_region_size">%1$s: %2$.0f MB do pobrania, ok. %3$.0f MB zapisane z danymi do planowania tras\nPotrzeba %4$.1f GB wolnego miejsca podczas konwersji (wolne: %5$.1f GB)</string>
+    <string name="settings_mobile_data_message">Nie jesteś w sieci Wi-Fi. Plik dla %1$s może mieć kilkaset MB. Pobrać mimo to?</string>
+    <string name="settings_delete_region_title">Usunąć %1$s?</string>
+    <string name="settings_language">Język</string>
+    <string name="settings_language_sub">Teksty aplikacji i jej głos. Domyślny systemu: język telefonu, jeśli KawaNav go ma, w przeciwnym razie angielski</string>
+    <string name="settings_language_system">Domyślny systemu</string>
+    <string name="settings_theme">Motyw</string>
+    <string name="settings_theme_sub">Biały lub czarny, z limonkową zielenią. Jak telefon: zgodnie z trybem ciemnym telefonu</string>
+
+    <!-- Settings -->
+    <string name="settings_pace_looking">Przeglądanie twoich przejazdów…</string>
+
+    <!-- Theme -->
+    <string name="theme_system">Jak telefon</string>
+    <string name="theme_light">Jasny</string>
+    <string name="theme_dark">Ciemny</string>
+
+    <!-- Units -->
+    <string name="unit_rpm">%1$,d obr./min</string>
+
+    <!-- Language -->
+    <string name="lang_code">pl</string>
+
+    <!-- Home -->
+    <string name="main_notice_title">Zanim ruszysz</string>
+    <string name="main_notice_ok">Rozumiem</string>
+    <string name="main_maps_access_title">Odczyt wskazówek Map Google</string>
+    <string name="main_maps_access_message">Żeby pokazać wskazówki Map na wyświetlaczu, KawaNav odczytuje powiadomienie nawigacji Map.\n\nNa następnym ekranie włącz „KawaNav”.</string>
+    <string name="common_continue">Dalej</string>
+    <string name="main_not_now">Nie teraz</string>
+    <string name="main_restricted_steps">KawaNav zainstalowano z pobranego pliku, więc Android chroni to ustawienie. Odblokuj je raz:\n\n1. „Wypróbuj przełącznik”: dotknij raz KawaNav i jego wyszarzonego przełącznika. Android odmówi, ale dzięki temu pojawi się krok 2.\n2. „Otwórz informacje o aplikacji”: dotknij ⋮ w prawym górnym rogu, potem „Zezwól na ustawienia z ograniczonym dostępem” i potwierdź.\n3. Z powrotem w KawaNav dotknij „Otwórz” przy wskazówkach Map Google: przełącznik teraz działa.</string>
+    <string name="main_restricted_shot">Informacje o aplikacji z otwartym menu: Zezwól na ustawienia z ograniczonym dostępem</string>
+    <string name="main_restricted_title">Przełącznik wyszarzony?</string>
+    <string name="main_open_app_info">Otwórz informacje o aplikacji</string>
+    <string name="main_try_switch">Wypróbuj przełącznik</string>
+    <string name="common_close">Zamknij</string>
+    <string name="main_my_vehicle">Mój pojazd</string>
+    <string name="main_menu">Menu</string>
+    <string name="main_camera_sub">Z danych map offline</string>
+    <string name="main_on_dash">Teraz na wyświetlaczu</string>
+    <string name="main_pause">Pauza</string>
+    <string name="main_stop_ride">Zakończ przejazd</string>
+    <string name="main_range">Zasięg</string>
+    <string name="main_fuel">Paliwo</string>
+    <string name="main_odometer">Licznik</string>
+    <string name="main_walk">Idź do motocykla</string>
+    <string name="main_dash_icons">Ikony wyświetlacza</string>
+    <string name="main_no_parked">Brak jeszcze miejsca parkowania: jest zapisywane, gdy połączenie z motocyklem zostanie utracone</string>
+    <string name="main_no_maps_app">Nie znaleziono aplikacji z mapami</string>
+    <string name="main_stopped_by_hand">Zatrzymano ręcznie: automatyczny start czeka, aż motocykl zostanie wyłączony (twoje urządzenie Bluetooth i tak go uruchamia). Start łączy teraz.</string>
+    <string name="main_start_hint">Uruchom przed jazdą albo pozwól KawaNav startować samemu (Ustawienia).</string>
+    <string name="main_nothing_to_show">Nic do pokazania</string>
+    <string name="main_nothing_sent">Nic nie wysłano do motocykla</string>
+    <string name="main_maps_starting">Mapy Google się uruchamiają…</string>
+    <string name="main_waiting_gps">Czekanie na GPS</string>
+    <string name="main_start_maps_or_curves">Uruchom nawigację w Mapach Google albo włącz nadchodzące zakręty</string>
+    <string name="main_turn_on_maps_or_curves">Włącz wskazówki Map Google albo nadchodzące zakręty</string>
+    <string name="main_from_maps">Z Map Google</string>
+    <string name="main_from_camera">Fotoradar z danych map offline</string>
+    <string name="main_from_curves">Zakręt przed tobą na twojej drodze</string>
+    <string name="main_stop_kawanav">Zatrzymaj KawaNav</string>
+    <string name="main_start_kawanav">Uruchom KawaNav</string>
+    <string name="main_ride_paused">● Przejazd wstrzymany</string>
+    <string name="main_ride_recording">● Nagrywanie przejazdu</string>
+    <string name="main_chip_connected">Połączono</string>
+    <string name="main_bike_values_hint">Licznik, paliwo, temperatury, serwis i tryby jazdy pojawią się, gdy motocykl zostanie połączony</string>
+    <string name="main_banner_sub">Dla najlepszych wrażeń na motocyklu:</string>
+    <string name="main_perms">Zezwól na Bluetooth, lokalizację i powiadomienia</string>
+    <string name="main_perms_sub">Żeby rozmawiać z motocyklem i znajdować zakręty przed tobą</string>
+    <string name="main_allow">Zezwól</string>
+    <string name="main_bluetooth">Włącz Bluetooth</string>
+    <string name="main_bluetooth_sub">KawaNav nie dotrze do motocykla, dopóki jest wyłączony</string>
+    <string name="main_turn_on">Włącz</string>
+    <string name="main_gps">Włącz lokalizację</string>
+    <string name="main_gps_sub">Nadchodzące zakręty wymagają GPS</string>
+    <string name="main_open">Otwórz</string>
+    <string name="main_access">Zezwól na odczyt wskazówek Map Google</string>
+    <string name="main_access_sub_file">Włącz „KawaNav” na liście, która się otworzy. Wyszarzone? Dotknij, aby uzyskać pomoc</string>
+    <string name="main_access_sub">Włącz „KawaNav” na liście, która się otworzy</string>
+    <string name="main_battery">Zezwól na nieograniczone użycie baterii</string>
+    <string name="main_battery_sub">Żeby Android nie zatrzymywał KawaNav w twojej kieszeni</string>
+    <string name="main_bg_location">Ustaw lokalizację na „Zezwalaj zawsze”</string>
+    <string name="main_bg_location_sub">Dla zakrętów po automatycznym starcie</string>
+    <string name="main_update_stops">\n\nKawaNav zatrzymuje się na czas aktualizacji. Uruchom go potem ponownie.</string>
+    <string name="main_later">Później</string>
+    <string name="main_skip_version">Pomiń tę wersję</string>
+    <string name="main_allow_installs">Zezwól na instalowanie aktualizacji</string>
+    <string name="main_allow_installs_message">Android zapyta raz, czy KawaNav może instalować aplikacje.\n\nNa następnym ekranie włącz „Zezwalaj z tego źródła”, a potem wróć.</string>
+    <string name="main_update_failed">Pobieranie aktualizacji nie powiodło się. Czy jesteś online?</string>
+
+    <!-- Home: with values -->
+    <string name="bridge_no_paired">Nie znaleziono sparowanego Kawasaki</string>
+    <string name="main_chip_not_supported">Nieobsługiwany</string>
+    <string name="main_chip_not_paired">Niesparowany</string>
+    <string name="main_chip_searching">Wyszukiwanie</string>
+    <string name="unit_km">%1$d km</string>
+    <string name="unit_km_grouped">%1$,d km</string>
+    <string name="main_fuel_bars">Paliwo · %1$s</string>
+    <plurals name="main_banner_title">
+        <item quantity="one">%1$d ustawienie wymaga twojej uwagi</item>
+        <item quantity="few">%1$d ustawienia wymagają twojej uwagi</item>
+        <item quantity="many">%1$d ustawień wymaga twojej uwagi</item>
+        <item quantity="other">%1$d ustawień wymaga twojej uwagi</item>
+    </plurals>
+    <string name="main_pair_hint">Zapłon włączony i Rideology zamknięte, potem wybierz swój motocykl</string>
+    <string name="main_pair">Sparuj swój motocykl</string>
+    <string name="main_pair_button">Sparuj</string>
+    <string name="turn_straight">Prosto</string>
+    <string name="turn_left">Skręć w lewo</string>
+    <string name="turn_right">Skręć w prawo</string>
+    <string name="turn_sharp_left">Ostro w lewo</string>
+    <string name="turn_sharp_right">Ostro w prawo</string>
+    <string name="turn_slight_left">Lekko w lewo</string>
+    <string name="turn_slight_right">Lekko w prawo</string>
+    <string name="turn_u_left">Zawracanie w lewo</string>
+    <string name="turn_u_right">Zawracanie w prawo</string>
+    <string name="turn_fork_left">Rozwidlenie, trzymaj się lewej</string>
+    <string name="turn_fork_right">Rozwidlenie, trzymaj się prawej</string>
+    <string name="turn_fork_middle">Rozwidlenie, trzymaj się środka</string>
+    <string name="turn_ramp_left">Wjazd po lewej</string>
+    <string name="turn_ramp_right">Wjazd po prawej</string>
+    <string name="turn_exit_left">Zjazd po lewej</string>
+    <string name="turn_exit_right">Zjazd po prawej</string>
+    <string name="turn_merge_left">Włącz się z lewej</string>
+    <string name="turn_merge_right">Włącz się z prawej</string>
+    <string name="turn_roundabout">Rondo, zjazd %1$d</string>
+    <string name="turn_departure">Start</string>
+    <string name="turn_destination">Cel</string>
+    <string name="turn_waypoint">Punkt pośredni %1$d</string>
+    <string name="main_update_title">Dostępna jest wersja KawaNav %1$s</string>
+    <string name="main_update_downloading">Pobieranie KawaNav %1$s</string>
+
+    <!-- Bike tab: rows -->
+    <string name="bike_row_basic_information">Podstawowe informacje</string>
+    <string name="bike_row_engine">Silnik</string>
+    <string name="bike_row_suspension">Zawieszenie</string>
+    <string name="bike_row_maintenance">Serwis</string>
+    <string name="bike_row_riding_modes">Tryby jazdy</string>
+    <string name="bike_row_dash">Wyświetlacz</string>
+    <string name="bike_row_odometer">Licznik</string>
+    <string name="bike_row_trip_a">Trip A</string>
+    <string name="bike_row_trip_b">Trip B</string>
+    <string name="bike_row_average_fuel_economy">Średnie zużycie paliwa</string>
+    <string name="bike_row_fuel_consumption">Zużycie paliwa</string>
+    <string name="bike_row_average_speed">Średnia prędkość</string>
+    <string name="bike_row_total_time">Łączny czas</string>
+    <string name="bike_row_outside_temperature">Temperatura zewnętrzna</string>
+    <string name="bike_row_max_lean_left">Maks. przechył w lewo</string>
+    <string name="bike_row_max_lean_right">Maks. przechył w prawo</string>
+    <string name="bike_row_fuel_used_in_total">Zużyte paliwo łącznie</string>
+    <string name="bike_row_battery_engine_control_unit">Akumulator (sterownik silnika)</string>
+    <string name="bike_row_battery_dash">Akumulator (wyświetlacz)</string>
+    <string name="bike_row_distance_in_total">Łączny dystans</string>
+    <string name="bike_row_speed">Prędkość</string>
+    <string name="bike_row_engine_speed">Obroty silnika</string>
+    <string name="bike_row_gear">Bieg</string>
+    <string name="bike_row_throttle">Gaz</string>
+    <string name="bike_row_lean_angle">Kąt przechyłu</string>
+    <string name="bike_row_acceleration">Przyspieszenie</string>
+    <string name="bike_row_front_brake_unverified">Przedni hamulec (niesprawdzone)</string>
+    <string name="bike_row_traction_control_reading_unverified">Odczyt kontroli trakcji (niesprawdzone)</string>
+    <string name="bike_row_abs">ABS</string>
+    <string name="bike_row_wheelie">Wheelie</string>
+    <string name="bike_row_cruise_control">Tempomat</string>
+    <string name="bike_row_torque_asked_by_the_throttle">Moment żądany przez manetkę gazu</string>
+    <string name="bike_row_torque_the_engine_control_asks_for">Moment żądany przez sterownik</string>
+    <string name="bike_row_torque_from_the_engine">Moment silnika</string>
+    <string name="bike_row_front_brake_master_unverified">Pompa przedniego hamulca (niesprawdzone)</string>
+    <string name="bike_row_rear_brake_master_unverified">Pompa tylnego hamulca (niesprawdzone)</string>
+    <string name="bike_row_rear_brake_caliper_unverified">Zacisk tylnego hamulca (niesprawdzone)</string>
+    <string name="bike_row_abs_working">Działanie ABS</string>
+    <string name="bike_row_abs_switching">Przełączanie ABS</string>
+    <string name="bike_row_fuel_use_now">Zużycie teraz</string>
+    <string name="bike_row_fuel_economy_now">Wydajność teraz</string>
+    <string name="bike_row_coolant_temperature">Temperatura płynu chłodzącego</string>
+    <string name="bike_row_oil_temperature">Temperatura oleju</string>
+    <string name="bike_row_intake_air_temperature">Temperatura powietrza dolotowego</string>
+    <string name="bike_row_front_tyre">Przednia opona</string>
+    <string name="bike_row_rear_tyre">Tylna opona</string>
+    <string name="bike_row_front_travel">Skok przedniego zawieszenia</string>
+    <string name="bike_row_rear_travel">Skok tylnego zawieszenia</string>
+    <string name="bike_row_acceleration_forward_accelerating">Przyspieszenie (wzdłużne, + = przyspieszanie)</string>
+    <string name="bike_row_acceleration_sideways">Przyspieszenie (boczne)</string>
+    <string name="bike_row_acceleration_up">Przyspieszenie (pionowe)</string>
+    <string name="bike_row_yaw_rate_turning_right">Prędkość odchylenia (+ = skręt w prawo)</string>
+    <string name="bike_row_roll_rate_rolling_right">Prędkość przechylania (+ = przechył w prawo)</string>
+    <string name="bike_row_pitch_rate">Prędkość pochylania</string>
+    <string name="bike_row_front_wheel_speed_filtered">Prędkość przedniego koła (filtrowana)</string>
+    <string name="bike_row_rear_wheel_speed_filtered">Prędkość tylnego koła (filtrowana)</string>
+    <string name="bike_row_traction_control_level">Poziom kontroli trakcji</string>
+    <string name="bike_row_quick_shifter">Quickshifter</string>
+    <string name="bike_row_wheelie_suspension_unit">Wheelie (sterownik zawieszenia)</string>
+    <string name="bike_row_damping_now">Tłumienie teraz</string>
+    <string name="bike_row_where_the_suspension_stands">Stan zawieszenia</string>
+    <string name="bike_row_riding_mode">Tryb jazdy</string>
+    <string name="bike_row_power_mode">Tryb mocy</string>
+    <string name="bike_row_ktrc">KTRC</string>
+    <string name="bike_row_quickshifter_kqs">Quickshifter (KQS)</string>
+    <string name="bike_row_engine_brake_kebc">Hamowanie silnikiem (KEBC)</string>
+    <string name="bike_row_suspension_mode_kecs">Tryb zawieszenia (KECS)</string>
+    <string name="bike_row_kecs_preload">Napięcie wstępne KECS</string>
+    <string name="bike_row_kecs_load_adjustment">Dostosowanie do obciążenia KECS</string>
+    <string name="bike_row_front_compression">Kompresja przód</string>
+    <string name="bike_row_front_rebound">Odbicie przód</string>
+    <string name="bike_row_rear_compression">Kompresja tył</string>
+    <string name="bike_row_rear_rebound">Odbicie tył</string>
+    <string name="bike_row_clock_when_read">Zegar (przy odczycie)</string>
+    <string name="bike_row_shift_lamp">Kontrolka zmiany biegu</string>
+
+    <!-- Bike tab: values -->
+    <string name="bike_value_tcs">wysoki %1$d / niski %2$d</string>
+    <string name="common_yes">tak</string>
+    <string name="bike_value_wheelie">tak, %1$.0f°</string>
+    <string name="bike_value_cruise_mode">wł., tryb %1$d</string>
+    <string name="common_on">wł.</string>
+    <string name="common_off_lower">wył.</string>
+    <string name="bike_value_bike_units">%1$d (jednostki motocykla)</string>
+    <string name="bike_value_abs_working">cel %1$d, wskaźnik %2$d</string>
+    <string name="bike_value_dash_units_2">%1$.2f (jednostki wyświetlacza)</string>
+    <string name="bike_value_dash_units_1">%1$.1f (jednostki wyświetlacza)</string>
+    <string name="bike_value_kqs">w dół %1$d, w górę %2$d</string>
+    <string name="bike_value_suspension">kalibracja %1$d, stan %2$d, sterownik %3$d</string>
+    <string name="bike_abs_fault">usterka</string>
+    <string name="bike_abs_inspection">tryb kontroli</string>
+    <string name="bike_abs_both">działa z przodu i z tyłu</string>
+    <string name="bike_abs_front">działa z przodu</string>
+    <string name="bike_abs_rear">działa z tyłu</string>
+    <string name="bike_abs_ready">gotowy</string>
+    <string name="bike_ago_now">przed chwilą</string>
+    <string name="bike_ago_min">%1$d min temu</string>
+    <string name="bike_ago_h">%1$d godz. temu</string>
+    <string name="bike_not_read">Jeszcze nie odczytano: wartości pojawią się, gdy motocykl zostanie połączony</string>
+    <string name="bike_read_ago">Odczytano %1$s</string>
+    <string name="bike_title">Twój motocykl</string>
+    <string name="bike_summary_fuel">paliwo %1$s</string>
+    <string name="bike_summary_range">zasięg %1$d km</string>
+    <string name="bike_fuel_reserve">Rezerwa</string>
+    <plurals name="bike_fuel_bars">
+        <item quantity="one">%1$d kreska</item>
+        <item quantity="few">%1$d kreski</item>
+        <item quantity="many">%1$d kresek</item>
+        <item quantity="other">%1$d kresek</item>
+    </plurals>
+    <string name="bike_low_fuel">Mało paliwa</string>
+    <string name="bike_fuel_unknown">Paliwo –</string>
+    <string name="bike_battery_unknown">Akumulator –</string>
+    <string name="bike_battery">Akumulator %1$.1f V</string>
+    <string name="bike_lamp_on_dash">Teraz na wyświetlaczu: %1$s, %2$,d obr./min</string>
+    <string name="bike_not_connected_reason">motocykl nie jest połączony</string>
+    <string name="bike_parked_text">%1$s, %2$s · pozycja z dokładnością ok. %3$.0f m</string>
+    <string name="bike_last_parked">Ostatnio zaparkowany</string>
+    <string name="bike_parked">Zaparkowany</string>
+    <string name="bike_maintenance_due">Do zrobienia: %1$s</string>
+    <string name="bike_last_fill">Ostatnie tankowanie %1$s</string>
+    <string name="bike_vin">VIN %1$s</string>
+
+    <!-- Bike tab: with values -->
+    <string name="bike_profiles_full">Najwyżej %1$d profili: najpierw usuń jeden</string>
+    <string name="bike_profile_saved">Zapisano „%1$s” w telefonie</string>
+    <string name="bike_profile_no_mode">Ten motocykl nie ma trybu %1$s: tryb jazdy pozostał bez zmian</string>
+    <string name="bike_profile_replace_title">Zastąpić profil „%1$s”?</string>
+    <string name="bike_profile_delete_title">Usunąć profil „%1$s”?</string>
+    <string name="bike_name_note">Do %1$d bajtów, wysyłane z ustawieniami tak, jak Rideology wysyła tytuł ustawienia, oraz nazwa, pod którą zapisuje się profil. Nie wiadomo jeszcze, czy wyświetlacz pokazuje ją gdziekolwiek.</string>
+    <string name="bike_send_message">Wszystko to trafi do motocykla w jednym zapisie:\n\n%1$s\n\nMotocykl musi stać, być na luzie, a gaz musi być zamknięty. KawaNav sprawdza to ponownie przed wysłaniem i potem odczytuje ustawienia.</string>
+    <string name="bike_not_sent">Nie wysłano: %1$s</string>
+    <string name="bike_lamp_message_off">Wyświetlacz zapali kontrolkę zmiany biegu przy %1$,d obr./min albo wcale.</string>
+    <string name="bike_lamp_message">Wyświetlacz zapali kontrolkę zmiany biegu przy %1$,d obr./min, w trybie %2$s.</string>
+    <string name="bike_km_ago">%1$,.0f km temu</string>
+
+    <!-- Bike tab -->
+    <string name="bike_read_again">Odczytaj wartości ponownie</string>
+    <string name="bike_asked">Poproszono motocykl o wartości</string>
+    <string name="bike_not_connected">Motocykl nie jest połączony</string>
+    <string name="bike_values_note">Wartości podane przez motocykl przy ostatnim połączeniu. Dotknij VIN, aby pokazać go w całości.</string>
+    <string name="bike_ride_settings">Ustawienia jazdy</string>
+    <string name="bike_ride_settings_note">Zapisuje w motocyklu tryb jazdy, moc, KTRC i KQS, tak jak ekran ustawień Rideology, oraz nazwę, jeśli ją podasz. Zawsze idą razem w jednym zapisie: te, których nie zmieniasz, idą tak, jak ma je motocykl. Sport, Road i Rain ustawiają moc i KTRC na własne wartości, jak w Rideology; zmień którąś z nich, a tryb zmieni się na Rider, który zachowuje twoje. Zapisane jako profil, zostają w telefonie do wybrania i ponownego wysłania. Motocykl musi stać, być na luzie, a gaz musi być zamknięty.</string>
+    <string name="bike_profile">Profil</string>
+    <string name="bike_power">Moc</string>
+    <string name="bike_not_in_mode">Nie jest częścią trybu jazdy</string>
+    <string name="bike_kqs">KQS</string>
+    <string name="bike_name_hint">Nazwa (opcjonalnie)</string>
+    <string name="bike_name">Nazwa</string>
+    <string name="bike_save_profile">Zapisz jako profil</string>
+    <string name="bike_delete_profile">Usuń profil</string>
+    <string name="bike_back_to_bike">Wróć do wartości motocykla</string>
+    <string name="bike_send">Wyślij do motocykla</string>
+    <string name="bike_changed">zmienione</string>
+    <string name="bike_none">Brak</string>
+    <string name="bike_profile_name_first">Najpierw nadaj profilowi nazwę w polu Nazwa</string>
+    <string name="bike_profile_replace_message">Zostanie zapisany w telefonie z wartościami, które teraz pokazują listy.</string>
+    <string name="bike_replace">Zastąp</string>
+    <string name="bike_profile_delete_message">Zostanie usunięty tylko z telefonu: motocykl zachowa swoje ustawienia.</string>
+    <string name="bike_send_title">Wysłać ustawienia do motocykla?</string>
+    <string name="bike_send_button">Wyślij</string>
+    <string name="bike_shift_lamp">Kontrolka zmiany biegu wyświetlacza</string>
+    <string name="bike_shift_lamp_note">Zapisuje tylko kontrolkę zmiany biegu; zegar wyświetlacza zostaje bez zmian. Motocykl musi być połączony (nie musi stać).</string>
+    <string name="bike_lights_up">Świeci</string>
+    <string name="bike_at">Przy</string>
+    <string name="bike_send_dash">Wyślij do wyświetlacza</string>
+    <string name="bike_lamp_send_title">Wysłać kontrolkę zmiany biegu do wyświetlacza?</string>
+    <string name="bike_lamp_not_read">Jeszcze nie odczytano: włącz zapłon, gdy KawaNav działa</string>
+    <string name="bike_refuels">Tankowania</string>
+    <string name="bike_refuel_diary">Dziennik tankowań</string>
+    <string name="bike_refuel_diary_sub">Litry, licznik i ile motocykl zużył między tankowaniami</string>
+    <string name="bike_maintenance_none">Nic nie zapisano: notuj prace, których wyświetlacz nie widzi.</string>
+    <string name="bike_maintenance_log">Książka serwisowa</string>
+    <string name="bike_maintenance_log_sub">Co zlecałeś zrobić, kiedy i przy jakim przebiegu</string>
+    <string name="bike_fuel_none">Jeszcze nic nie nagrano: zatankuj z połączoną aplikacją, a zostanie to zauważone.</string>
+    <string name="bike_connected_updating">Połączono · wartości aktualizują się, gdy motocykl jest włączony</string>
+    <string name="bike_remaining_range">Pozostały zasięg</string>
+    <string name="bike_remaining_range_unread">Pozostały zasięg: jeszcze nie odczytano</string>
+    <string name="bike_modes_seven">Ten motocykl zgłasza 7 trybów jazdy: Rider 2–4 są na liście.</string>
+    <string name="bike_modes_unknown">Nie wiadomo jeszcze, ile trybów jazdy ma motocykl (brak gotowej odpowiedzi na 0x47): lista zawiera cztery, które ma każdy motocykl.</string>
+    <string name="bike_modes_four">Ten motocykl zgłasza 4 tryby jazdy, więc lista kończy się na Rider.</string>
+    <string name="bike_no_values">Brak jeszcze wartości</string>
+    <string name="bike_no_values_sub">Uruchom KawaNav i włącz zapłon: motocykl wyśle swoje wartości po połączeniu.</string>
+    <string name="bike_modes_note">Nazwy pochodzą z Rideology; liczba wysłana przez motocykl jest w nawiasie. Pokazywane tylko tam, gdzie motocykl podaje, że ma dane ustawienie.</string>
+
+    <!-- Route planner: with values -->
+    <string name="planner_shape_any">Dowolny kształt</string>
+    <string name="planner_shape_triangle">Trójkąt</string>
+    <string name="planner_shape_square">Kwadrat</string>
+    <string name="planner_shape_pentagon">Pięciokąt</string>
+    <string name="planner_shape_circle">Okrąg</string>
+    <string name="planner_my_position">Moja pozycja</string>
+    <string name="planner_saved_round_trip">pętla</string>
+    <string name="planner_legend_straight">prosta</string>
+    <string name="planner_legend_sweeping">szerokie łuki</string>
+    <string name="planner_legend_winding">kręta</string>
+    <string name="planner_legend_very_winding">bardzo kręta</string>
+    <string name="planner_data_unreadable">Dane tras nieczytelne: pobierz region ponownie (%1$s)</string>
+    <string name="planner_direction_any">Dowolny kierunek: dotknij mapy, aby wskazać kierunek</string>
+    <string name="planner_direction_towards">W kierunku %1$s</string>
+    <string name="planner_point_description">%1$s: %2$s. Dotknij, aby wybrać inne miejsce.</string>
+    <string name="planner_start">Start</string>
+    <string name="planner_destination">Cel</string>
+    <string name="planner_via_number">Punkt pośredni %1$d</string>
+    <string name="planner_near">W pobliżu %1$s</string>
+    <string name="planner_round_trip_start">Start pętli</string>
+    <string name="planner_new_via">Nowy punkt pośredni</string>
+    <string name="planner_search_failed">Wyszukiwanie nie powiodło się (%1$s): dotknij zamiast tego mapy.</string>
+    <string name="planner_favourite_saved">„%1$s” jest teraz ulubionym: pojawia się pierwszy w wyszukiwaniu.</string>
+    <string name="planner_avoid_motorways">autostrady</string>
+    <string name="planner_avoid_tolls">opłaty</string>
+    <string name="planner_avoid_gravel">szuter</string>
+    <string name="planner_avoiding_nothing">Niczego nie unika</string>
+    <string name="planner_avoiding">Unika: %1$s</string>
+    <string name="planner_list_and">%1$s i %2$s</string>
+    <string name="planner_shorter">Krótsza niż żądane %1$s: za mało dróg w okolicy.</string>
+    <string name="planner_longer">Dłuższa niż żądane %1$s: brak bliższego dopasowania na okolicznych drogach.</string>
+    <string name="planner_no_route_why">Brak trasy: %1$s. Punkty muszą leżeć w pobranym regionie.</string>
+    <string name="planner_winding_share">%1$d%% krętej</string>
+    <string name="planner_tile_no_route">brak trasy</string>
+    <string name="planner_tile_tap">dotknij, aby zaplanować</string>
+    <string name="planner_round_trip_name">Pętla %1$s z %2$s</string>
+    <string name="planner_route_saved">Zapisano jako „%1$s”: otwórz ją przyciskiem listy u góry.</string>
+    <string name="planner_saving_failed_why">Zapisywanie nie powiodło się: %1$s</string>
+    <string name="planner_renaming_failed">Zmiana nazwy nie powiodła się: %1$s</string>
+    <string name="planner_delete_route_title">Usunąć „%1$s”?</string>
+    <string name="planner_share">Udostępnij %1$s</string>
+    <string name="planner_gpx_saved">Zapisano %1$s w Download/KawaNav</string>
+
+    <!-- Route planner -->
+    <string name="planner_saved_routes">Zapisane trasy</string>
+    <string name="planner_map_downloading">Mapa wciąż się pobiera</string>
+    <string name="planner_map_downloading_text">Planer tras działa, gdy pobierany region będzie gotowy: Mapy offline pokazują, jak daleko jest pobieranie.</string>
+    <string name="planner_update_maps">Zaktualizuj mapy</string>
+    <string name="planner_update_maps_text">Twoje regiony pobrano starszą wersją KawaNav i nie mają jeszcze danych do planowania tras. Pobierz je jeszcze raz w Mapach offline (Aktualizuj): dojdą dane do planowania tras, mniej więcej tyle miejsca, ile region zajmuje teraz.</string>
+    <string name="planner_download_first">Najpierw pobierz mapę</string>
+    <string name="planner_download_first_text">KawaNav planuje trasy w telefonie, z mapy regionu pobranego raz (OpenStreetMap, najlepiej przez Wi-Fi). Pobierz w Mapach offline region, w którym jeździsz, np. Małopolskę albo Tyrol. Wtedy działają tam planer tras, nawigacja i ostrzeżenia o zakrętach, także bez danych komórkowych.</string>
+    <string name="common_back">Wstecz</string>
+    <string name="planner_no_data">Brak jeszcze danych tras: pobierz region w Ustawieniach, Mapy offline. Regiony pobrane starszą wersją KawaNav trzeba pobrać jeszcze raz.</string>
+    <string name="planner_a_to_b">Z A do B</string>
+    <string name="planner_round_trip">Pętla</string>
+    <string name="planner_via">Punkt pośredni</string>
+    <string name="planner_reverse">Odwróć</string>
+    <string name="planner_length">Długość</string>
+    <string name="planner_length_description">Długość pętli</string>
+    <string name="planner_any_direction">Dowolny kierunek</string>
+    <string name="planner_another">Inna</string>
+    <string name="planner_options">Opcje</string>
+    <string name="planner_start_navigation">Rozpocznij nawigację</string>
+    <string name="planner_save_route">Zapisz trasę</string>
+    <string name="planner_save_gpx">Zapisz jako GPX</string>
+    <string name="planner_dest_hint">Cel: dotknij mapy lub wyszukaj</string>
+    <string name="planner_remove">Usuń</string>
+    <string name="planner_via_here">Punkt pośredni tutaj</string>
+    <string name="planner_dest_here">Cel tutaj</string>
+    <string name="planner_start_here">Start tutaj</string>
+    <string name="planner_use_position">Użyj mojej pozycji</string>
+    <string name="planner_remove_corner">Usuń ten narożnik</string>
+    <string name="planner_save_favourite">Zapisz jako ulubione</string>
+    <string name="planner_choose_dest">Najpierw wybierz cel.</string>
+    <string name="planner_finding">Ustalanie twojej pozycji…</string>
+    <string name="planner_finding_long_press">Ustalanie twojej pozycji… Możesz też przytrzymać mapę, aby ustawić start.</string>
+    <string name="planner_search_hint">Szukaj miejsca (online)</string>
+    <string name="planner_search">Szukaj</string>
+    <string name="planner_favourites_hint">Przytrzymaj ulubione, aby zmienić nazwę lub je usunąć.</string>
+    <string name="planner_favourites_empty">Tutaj pojawią się ulubione miejsca i ostatnie cele.</string>
+    <string name="planner_no_search">Ten telefon nie ma wyszukiwania miejsc: dotknij zamiast tego mapy.</string>
+    <string name="planner_searching">Wyszukiwanie…</string>
+    <string name="planner_nothing_found">Nic nie znaleziono. Dotknij zamiast tego mapy.</string>
+    <string name="planner_rename">Zmień nazwę</string>
+    <string name="planner_remove_favourite">Usuń z ulubionych</string>
+    <string name="planner_save">Zapisz</string>
+    <string name="planner_shape_title">Kształt pętli</string>
+    <string name="planner_options_note">Kręta woli kręte drogi i omija miejscowości; bardzo kręta robi długie objazdy dla zakrętów. Trasy są liczone w telefonie z pobranych regionów OpenStreetMap (Ustawienia, Mapy offline).</string>
+    <string name="planner_route_options">Opcje trasy</string>
+    <string name="planner_done">Gotowe</string>
+    <string name="planner_opening">Otwieranie danych tras…</string>
+    <string name="planner_finding_or_start">Ustalanie twojej pozycji… albo dotknij Start, aby ją wybrać.</string>
+    <string name="planner_tap_or_search">Dotknij mapy lub wyszukaj cel.</string>
+    <string name="planner_same_place">Start i cel to to samo miejsce.</string>
+    <string name="planner_planning">Planowanie trasy…</string>
+    <string name="planner_finding_or_long_press">Ustalanie twojej pozycji… albo przytrzymaj mapę dla startu.</string>
+    <string name="planner_planning_round_trip">Planowanie pętli…</string>
+    <string name="planner_no_saved">Brak jeszcze zapisanych tras: zaplanuj jedną i dotknij gwiazdki, aby ją zachować.</string>
+    <string name="common_ok">OK</string>
+    <string name="planner_saved_routes_edit">Zapisane trasy (przytrzymaj, aby edytować)</string>
+    <string name="planner_saving_failed">Zapisywanie nie powiodło się</string>
+
+    <!-- Ride: with values -->
+    <string name="ride_distance_caption">Dystans · %1$s</string>
+    <string name="ride_ended">zakończono: %1$s</string>
+    <string name="ride_colours">Kolory odpowiadają wykresowi: %1$s od niebieskiego (%2$s lub mniej) do czerwonego (%3$s lub więcej)%4$s.</string>
+    <string name="ride_colours_line">linia %1$s</string>
+    <string name="ride_colours_none">Ten przejazd nie ma wartości „%1$s” tam, gdzie ma pozycję: ślad jest szary.</string>
+    <string name="ride_track_note">Zielona kropka to start; powiększenie wykresu przyciemnia resztę przejazdu. Zsuń palce albo dotknij mapy dwa razy, aby powiększyć, przeciągnij, aby się przesunąć.</string>
+    <string name="ride_chart_missing">ten przejazd nie ma wartości „%1$s”</string>
+    <string name="ride_chart_hint">Dotknij linii, aby zobaczyć sekundę; zsuń palce lub dotknij dwa razy, aby powiększyć</string>
+    <string name="ride_chart_marks">znaczniki u dołu: kontrola trakcji (pomarańczowe), ABS (czerwone)</string>
+    <string name="ride_bends_none">brak</string>
+    <plurals name="ride_bends">
+        <item quantity="one">%1$d zakręt</item>
+        <item quantity="few">%1$d zakręty</item>
+        <item quantity="many">%1$d zakrętów</item>
+        <item quantity="other">%1$d zakrętów</item>
+    </plurals>
+    <string name="ride_bend_title">%1$s · %2$s · %3$.0f° przy %4$.0f km/h</string>
+    <string name="ride_left">w lewo</string>
+    <string name="ride_right">w prawo</string>
+    <string name="ride_bend_line">%1$.0f → %2$.0f km/h · promień %3$.0f m</string>
+    <string name="ride_bend_throttle">gaz %1$.0f %% w szczycie</string>
+    <string name="ride_bend_braking">hamowanie w szczycie</string>
+    <string name="ride_bend_snap">gaz gwałtownie otwarty</string>
+    <string name="ride_bend_shifted">redukcja biegu</string>
+    <string name="ride_grip_note">Każda kropka to sekunda jazdy: na boki z przechyłu, w przód i w tył ze zmiany prędkości. Najmocniejsze hamowanie %1$.2f g, najmocniejsze przyspieszenie %2$.2f g, najbardziej w bok %3$.2f g.</string>
+    <string name="ride_economy">%1$.1f L/100 km na %2$,.1f km</string>
+    <string name="ride_economy_estimated">oszacowane z chwilowego zużycia: ten motocykl nie wysyła licznika paliwa</string>
+    <string name="ride_legend">Najniższa, średnia i najwyższa wartość z sekund, w których motocykl ją wysłał.</string>
+    <string name="ride_legend_extremes">Najniższa, średnia i najwyższa wartość z sekund, w których motocykl ją wysłał; tam, gdzie średnia nic nie mówi (prędkości obrotu, poślizg), od najniższej do najwyższej.</string>
+    <string name="ride_legend_economy">Średnie zużycie to dystans podzielony przez spalone litry.</string>
+    <string name="ride_distance_odo_gps">Dystans: licznik / GPS</string>
+    <string name="ride_recorded">Nagrano</string>
+    <string name="ride_seconds_recorded">Nagrane sekundy</string>
+    <string name="ride_seconds_value">%1$d z %2$d (%3$.0f %%)</string>
+    <string name="ride_preview_gps">%1$d s, ze śladem GPS</string>
+    <string name="ride_preview_no_gps">%1$d s, bez śladu GPS</string>
+    <string name="ride_range_to">%1$s do %2$s</string>
+    <string name="ride_neutral">Na luzie</string>
+    <string name="ride_in_gear">Na biegu %1$d</string>
+    <string name="ride_gear_changes">Zmiany biegów</string>
+    <string name="ride_up_down">%1$d w górę, %2$d w dół</string>
+    <string name="ride_with_kqs">Z quickshifterem</string>
+    <string name="ride_clutch_slipping">może się ślizgać: %1$d s przy %2$d przyspieszeniach</string>
+    <string name="ride_clutch_holds_once">trzyma (%1$d s wysoko przy jednym przyspieszeniu)</string>
+    <string name="ride_clutch_holds">trzyma</string>
+    <string name="ride_clutch">Sprzęgło pod obciążeniem</string>
+    <string name="ride_engine_gear">Silnik względem biegu</string>
+    <string name="ride_engine_gear_value">%1$+.1f %% typowo, %2$+.1f %% najwyżej, przez %3$s</string>
+    <string name="ride_never">nigdy</string>
+    <string name="ride_min_s">%1$d min %2$02d s</string>
+    <string name="ride_s">%1$d s</string>
+    <string name="ride_up_to">do %1$s</string>
+
+    <!-- Ride -->
+    <string name="ride_rename">Zmień nazwę przejazdu</string>
+    <string name="ride_not_found">Nie znaleziono przejazdu</string>
+    <string name="ride_track">Ślad</string>
+    <string name="ride_fit">Pokaż cały przejazd</string>
+    <string name="ride_osm">© współtwórcy OpenStreetMap</string>
+    <string name="ride_values">Wartości</string>
+    <string name="ride_fit_chart">Pokaż cały przejazd na wykresie</string>
+    <string name="ride_bends_title">Zakręty</string>
+    <string name="ride_grip_description">Przyczepność wykorzystana w przejeździe: przyspieszenie boczne i wzdłużne w każdej sekundzie</string>
+    <string name="ride_the_bends">Zakręty</string>
+    <string name="ride_bends_how">Zakręt to dwie sekundy lub więcej przechyłu w tę samą stronę o ponad 10°; jego szczyt to sekunda największego przechyłu. Promień to ten, który dają prędkość i przechył w równym zakręcie. Hamowanie w szczycie: gaz zamknięty, a motocykl zwalnia tam o ponad 0,1 g. Dotknij zakrętu, aby zobaczyć go na śladzie i wykresie.</string>
+    <string name="ride_typical_lean">Typowy przechył</string>
+    <string name="ride_typical_apex">Typowa prędkość w szczycie</string>
+    <string name="ride_out_in">Wyjście względem wejścia</string>
+    <string name="ride_left_right">Lewo / prawo</string>
+    <string name="ride_braking_apex">Hamowanie w szczycie</string>
+    <string name="ride_snap">Gaz gwałtownie otwarty w przechyle</string>
+    <string name="ride_downshift">Redukcja w przechyle</string>
+    <string name="ride_summary">Podsumowanie</string>
+    <string name="ride_time">Czas</string>
+    <string name="ride_average">Średnio</string>
+    <string name="ride_top_speed">Prędkość maks.</string>
+    <string name="ride_max_lean">Maks. przechył</string>
+    <string name="ride_max_rpm">Maks. obroty</string>
+    <string name="ride_fuel_used">Zużyte paliwo</string>
+    <string name="ride_phone_only">Nagrano tylko telefonem: brak wartości z motocykla.</string>
+    <string name="ride_no_gps">Nagrano bez GPS: brak śladu i wysokości.</string>
+    <string name="ride_tcs">Kontrola trakcji</string>
+    <string name="ride_abs">ABS</string>
+    <string name="ride_cruise">Tempomat</string>
+    <string name="ride_wheelie">Przednie koło w górze</string>
+    <string name="ride_keep_share">Zachowaj lub udostępnij</string>
+    <string name="ride_export_csv">Eksportuj CSV</string>
+    <string name="ride_export_gpx">Eksportuj GPX</string>
+    <string name="ride_export_full">CSV (wszystkie wartości)</string>
+    <string name="ride_export_raw">Surowy plik</string>
+    <string name="ride_export_note">CSV ma kolumny Rideology, więc istniejące narzędzia mogą odczytać przejazd. „CSV (wszystkie wartości)” ma każdą wartość, którą nagrywa KawaNav, każdą w osobnej kolumnie — tę samą tabelę, którą prowadzi aplikacja i którą daje też „Surowy plik”, we własnym formacie aplikacji. GPX to ślad dla programów z mapami. Wszystkie trafiają do Download/KawaNav.</string>
+    <string name="ride_recording_title">Ten przejazd jest właśnie nagrywany</string>
+    <string name="ride_recording_message">Najpierw zakończ przejazd (przyciskiem nagrywania na ekranie Start), potem go usuń.</string>
+    <string name="ride_delete_title">Usunąć ten przejazd?</string>
+    <string name="ride_delete_message">Nagrany przejazd i jego ślad zostaną usunięte z telefonu.</string>
+    <string name="ride_export_failed">Eksport nie powiódł się</string>
+
+    <!-- Ride: names -->
+    <string name="ride_name_engine_speed">Obroty silnika</string>
+    <string name="ride_name_throttle">Gaz</string>
+    <string name="ride_name_torque_asked_by_the_throttle">Moment żądany przez manetkę gazu</string>
+    <string name="ride_name_bike_units">jednostki motocykla</string>
+    <string name="ride_name_torque_the_engine_control_asks_for">Moment żądany przez sterownik</string>
+    <string name="ride_name_torque_from_the_engine">Moment silnika</string>
+    <string name="ride_name_fuel_use">Zużycie paliwa</string>
+    <string name="ride_name_dash_units">jednostki wyświetlacza</string>
+    <string name="ride_name_fuel_economy_instant">Zużycie paliwa, chwilowe</string>
+    <string name="ride_name_front_suspension">Przednie zawieszenie</string>
+    <string name="ride_name_rear_suspension">Tylne zawieszenie</string>
+    <string name="ride_name_front_suspension_speed_unverified">Prędkość przedniego zawieszenia (niesprawdzone)</string>
+    <string name="ride_name_rear_suspension_speed_unverified">Prędkość tylnego zawieszenia (niesprawdzone)</string>
+    <string name="ride_name_acceleration">Przyspieszenie</string>
+    <string name="ride_name_acceleration_forward">Przyspieszenie, wzdłużne</string>
+    <string name="ride_name_acceleration_sideways">Przyspieszenie, boczne</string>
+    <string name="ride_name_acceleration_up">Przyspieszenie, pionowe</string>
+    <string name="ride_name_lean_angle_either_side">Kąt przechyłu, w obie strony</string>
+    <string name="ride_name_roll_rate">Prędkość przechylania</string>
+    <string name="ride_name_yaw_rate">Prędkość odchylenia</string>
+    <string name="ride_name_pitch_rate">Prędkość pochylania</string>
+    <string name="ride_name_front_wheel_filtered">Przednie koło (filtrowane)</string>
+    <string name="ride_name_rear_wheel_filtered">Tylne koło (filtrowane)</string>
+    <string name="ride_name_wheelie_angle">Kąt wheelie</string>
+    <string name="ride_name_front_tyre">Przednia opona</string>
+    <string name="ride_name_rear_tyre">Tylna opona</string>
+    <string name="ride_name_front_brake">Przedni hamulec</string>
+    <string name="ride_name_front_brake_master_unverified">Pompa przedniego hamulca (niesprawdzone)</string>
+    <string name="ride_name_raw">surowe</string>
+    <string name="ride_name_rear_brake_master_unverified">Pompa tylnego hamulca (niesprawdzone)</string>
+    <string name="ride_name_rear_brake_caliper_unverified">Zacisk tylnego hamulca (niesprawdzone)</string>
+    <string name="ride_name_rear_wheel_slip">Poślizg tylnego koła</string>
+    <string name="ride_name_battery">Akumulator</string>
+    <string name="ride_name_coolant">Płyn chłodzący</string>
+    <string name="ride_name_oil">Olej</string>
+    <string name="ride_name_intake_air">Powietrze dolotowe</string>
+    <string name="ride_name_outside">Na zewnątrz</string>
+    <string name="ride_name_speed_gps">Prędkość (GPS)</string>
+    <string name="ride_name_gps_accuracy">Dokładność GPS</string>
+    <string name="ride_name_altitude">Wysokość</string>
+    <string name="ride_name_speed">Prędkość</string>
+    <string name="ride_name_engine">Silnik</string>
+    <string name="ride_name_torque">Moment obrotowy</string>
+    <string name="ride_name_throttle_line">manetka</string>
+    <string name="ride_name_control_line">sterownik</string>
+    <string name="ride_name_engine_line">silnik</string>
+    <string name="ride_name_gear">Bieg</string>
+    <string name="ride_name_lean_angle">Kąt przechyłu</string>
+    <string name="ride_name_oil_temperature">Temperatura oleju</string>
+    <string name="ride_name_fuel_economy">Zużycie paliwa</string>
+    <string name="ride_name_outside_temperature">Temperatura zewnętrzna</string>
+    <string name="ride_name_chassis_and_suspension">Podwozie i zawieszenie</string>
+    <string name="ride_name_brakes_and_electronics">Hamulce i elektronika</string>
+    <string name="ride_name_temperatures">Temperatury</string>
+    <string name="ride_name_data_quality">Jakość danych</string>
+
+    <!-- Rides: with values -->
+    <plurals name="rides_totals">
+        <item quantity="one">%1$d przejazd · %2$s w tym tygodniu · łącznie %3$.0f km</item>
+        <item quantity="few">%1$d przejazdy · %2$s w tym tygodniu · łącznie %3$.0f km</item>
+        <item quantity="many">%1$d przejazdów · %2$s w tym tygodniu · łącznie %3$.0f km</item>
+        <item quantity="other">%1$d przejazdów · %2$s w tym tygodniu · łącznie %3$.0f km</item>
+    </plurals>
+    <string name="rides_fastest">Najszybciej: %1$.0f km/h dnia %2$s</string>
+    <string name="rides_most_lean">Największy przechył: %1$.0f° w lewo, %2$.0f° w prawo dnia %3$s</string>
+    <string name="rides_longest">Najdłuższy przejazd: %1$.0f km dnia %2$s</string>
+    <string name="rides_hottest">Najgorętszy silnik: %1$.0f °C dnia %2$s</string>
+    <string name="rides_hardest_braking">Najmocniejsze hamowanie: %1$.2f g dnia %2$s</string>
+    <string name="rides_most_suspension">Największy skok zawieszenia: %1$.1f mm dnia %2$s</string>
+    <string name="rides_altogether">Łącznie %1$,.0f km w %2$s</string>
+    <string name="rides_in_tcs">%1$s w kontroli trakcji</string>
+    <string name="rides_in_abs">%1$s w ABS</string>
+    <string name="rides_wheel_up">%1$s z przednim kołem w górze</string>
+    <plurals name="rides_year">
+        <item quantity="one">%1$d: %2$,.0f km · %3$d przejazd</item>
+        <item quantity="few">%1$d: %2$,.0f km · %3$d przejazdy</item>
+        <item quantity="many">%1$d: %2$,.0f km · %3$d przejazdów</item>
+        <item quantity="other">%1$d: %2$,.0f km · %3$d przejazdów</item>
+    </plurals>
+    <string name="rides_recording_now">nagrywany teraz</string>
+    <string name="rides_recovered">odzyskany po ponownym uruchomieniu</string>
+    <string name="rides_track_lost">ślad utracony</string>
+    <string name="rides_max_speed">maks. %1$.0f km/h</string>
+    <string name="rides_no_gps">bez śladu GPS</string>
+
+    <!-- Rides -->
+    <string name="rides_title">Dziennik jazdy</string>
+    <string name="rides_note">Przejazdy są przechowywane tylko w telefonie. Nic nie jest nigdzie wysyłane.</string>
+    <string name="rides_this_week">W tym tygodniu</string>
+    <string name="rides_this_month">W tym miesiącu</string>
+    <string name="rides_this_year">W tym roku</string>
+    <string name="rides_first">Nagraj swój pierwszy przejazd</string>
+    <string name="rides_first_sub">Dotknij okrągłego przycisku poniżej przed jazdą. Wartości motocykla (prędkość, silnik, bieg, gaz, przechył, temperatury) i ślad telefonu są zapisywane w telefonie raz na sekundę, dopóki motocykl jest połączony.</string>
+    <string name="rides_records">Rekordy</string>
+
+    <!-- Refuels -->
+    <string name="fuel_note">Motocykl nie podaje, ile paliwa wlano: podaje wskaźnik, zasięg i łącznie spalone paliwo. Tankowania są wyliczane ze skoku wskaźnika, gdy motocykl stoi; litry to szacunek, dopóki ich nie poprawisz.</string>
+    <string name="fuel_tank">Zbiornik</string>
+    <string name="fuel_tank_note">Ile mieści pełny zbiornik, aby przeliczyć wskaźnik na litry. Liczba jest w instrukcji twojego motocykla.</string>
+    <string name="fuel_change">Zmień</string>
+    <string name="fuel_tank_capacity">Pojemność zbiornika w litrach</string>
+    <string name="fuel_add">Dodaj tankowanie</string>
+    <string name="fuel_add_note">Dla tankowania, którego aplikacja nie zauważyła: motocykl był wyłączony albo wskaźnik się nie ruszył.</string>
+    <string name="fuel_add_by_hand">Dodaj ręcznie</string>
+    <string name="fuel_litres_added">Dolane litry</string>
+    <string name="fuel_added_by_hand">dodane ręcznie</string>
+    <string name="fuel_unreadable">Nie udało się odczytać dziennika tankowań</string>
+    <string name="fuel_unreadable_sub">Plik jest zachowany jako fuel.json.bad i nic nie jest w nim nadpisywane: tankowania dodane teraz trafią do nowego pliku.</string>
+    <string name="fuel_none">Brak jeszcze tankowań</string>
+    <string name="fuel_none_sub">Gdy stoisz przy dystrybutorze z połączoną aplikacją, tankowanie zostanie zauważone samo.</string>
+    <string name="fuel_litres_hint">litry</string>
+    <string name="fuel_note_hint">notatka (gdzie, ile zapłaciłeś…)</string>
+    <string name="fuel_delete_title">Usunąć to tankowanie?</string>
+
+    <!-- Refuels: with values -->
+    <string name="fuel_since_last">%1$.1f L/100 km od ostatniego tankowania</string>
+    <string name="fuel_first">Pierwsze tankowanie w dzienniku</string>
+    <string name="fuel_litres_unknown">Litry nieznane: dotknij, aby je wpisać</string>
+    <plurals name="fuel_count">
+        <item quantity="one">%1$d tankowanie</item>
+        <item quantity="few">%1$d tankowania</item>
+        <item quantity="many">%1$d tankowań</item>
+        <item quantity="other">%1$d tankowań</item>
+    </plurals>
+    <string name="fuel_total">%1$,.1f L łącznie</string>
+
+    <!-- Refuels -->
+    <string name="fuel_estimated">szacunkowo</string>
+
+    <!-- Maintenance: log -->
+    <string name="maint_oil_change">Wymiana oleju</string>
+    <string name="maint_oil_filter">Filtr oleju</string>
+    <string name="maint_air_filter">Filtr powietrza</string>
+    <string name="maint_chain">Łańcuch</string>
+    <string name="maint_tyres">Opony</string>
+    <string name="maint_brake_pads">Klocki hamulcowe</string>
+    <string name="maint_brake_fluid">Płyn hamulcowy</string>
+    <string name="maint_coolant">Płyn chłodzący</string>
+    <string name="maint_spark_plugs">Świece zapłonowe</string>
+    <string name="maint_valves">Luz zaworowy</string>
+    <string name="maint_battery">Akumulator</string>
+    <string name="maint_other">Inne</string>
+    <string name="maint_or">%1$s lub %2$s</string>
+    <plurals name="maint_months">
+        <item quantity="one">%1$d miesiąc</item>
+        <item quantity="few">%1$d miesiące</item>
+        <item quantity="many">%1$d miesięcy</item>
+        <item quantity="other">%1$d miesięcy</item>
+    </plurals>
+    <string name="maint_every">co %1$s</string>
+    <string name="maint_never_logged">nigdy nie zapisano: zapisz raz, aby zacząć liczyć</string>
+    <string name="maint_km_over">%1$,.0f km po terminie</string>
+    <string name="maint_since">od %1$s</string>
+    <string name="maint_due">do zrobienia: %1$s</string>
+    <string name="maint_in_km">za %1$,.0f km</string>
+    <string name="maint_by">do %1$s</string>
+    <string name="maint_wait_odometer">kilometry liczą się, gdy motocykl wyśle stan licznika</string>
+    <string name="maint_log_odometer">zapisz stan licznika razem z pracą, aby liczyć kilometry</string>
+    <string name="maint_at_km">przy %1$,d km</string>
+    <string name="maint_km_left">zostało %1$,d km</string>
+    <string name="maint_km_overdue">%1$,d km po terminie</string>
+    <string name="maint_due_now">do zrobienia teraz</string>
+    <string name="maint_in_km_whole">za %1$,d km</string>
+    <string name="maint_at_km_whole">przy %1$,.0f km</string>
+    <string name="maint_service_kawasaki">Przegląd Kawasaki</string>
+    <string name="maint_service_rider">Przypomnienie kierowcy</string>
+
+    <!-- Maintenance -->
+    <string name="maint_note">Przechowywane tylko w telefonie. „Wyświetlacz podaje” pochodzi z samego wyświetlacza; twoje przypomnienia i to, co tu zapiszesz, to twój własny zapis wykonanych prac.</string>
+    <string name="maint_dash_says">Wyświetlacz podaje</string>
+    <string name="maint_your_reminders">Twoje przypomnienia</string>
+    <string name="maint_reminders_empty">Jak często praca jest do zrobienia, licząc od ostatniego wpisu tutaj: łańcuch co 1000 km, olej co rok. Powiadomienie poinformuje, gdy coś będzie do zrobienia.</string>
+    <string name="maint_add_reminder">Dodaj przypomnienie</string>
+    <string name="maint_other_dots">Inne…</string>
+    <string name="maint_remind_me">Przypomnij mi o</string>
+    <string name="maint_what_due">co jest do zrobienia</string>
+    <string name="maint_next">Dalej</string>
+    <string name="maint_every_km">co … km (puste: nie według km)</string>
+    <string name="maint_every_months">co … miesięcy (puste: nie według daty)</string>
+    <string name="maint_counted">Liczone od ostatniego wpisu, co nastąpi pierwsze.</string>
+    <string name="maint_add_job">Dodaj pracę</string>
+    <string name="maint_add_job_sub">Co zrobiłeś, kiedy i przy jakim przebiegu.</string>
+    <string name="maint_odometer_hint">stan licznika w km</string>
+    <string name="maint_note_hint">co zrobiono, ile kosztowało…</string>
+    <string name="maint_what_done">co zrobiono</string>
+    <string name="maint_note_short">notatka</string>
+    <string name="maint_delete_title">Usunąć ten wpis?</string>
+
+    <!-- Maintenance: with values -->
+    <string name="maint_odometer_now">Licznik teraz: %1$,.0f km</string>
+    <string name="maint_soon">wkrótce: %1$s</string>
+    <string name="maint_nothing_yet">Jeszcze nic nie zapisano</string>
+    <plurals name="maint_entries">
+        <item quantity="one">%1$d wpis</item>
+        <item quantity="few">%1$d wpisy</item>
+        <item quantity="many">%1$d wpisów</item>
+        <item quantity="other">%1$d wpisów</item>
+    </plurals>
+    <plurals name="maint_days_ago">
+        <item quantity="one">%1$d dzień temu</item>
+        <item quantity="few">%1$d dni temu</item>
+        <item quantity="many">%1$d dni temu</item>
+        <item quantity="other">%1$d dni temu</item>
+    </plurals>
+    <string name="maint_no_odometer">brak licznika</string>
+
+    <!-- Navigation: with values -->
+    <string name="nav_remaining">zostało %1$s · %2$s · przyjazd %3$s</string>
+    <string name="nav_refuel">Zasięg %1$s, do celu %2$s: zatankuj po drodze</string>
+    <string name="nav_limit_description">Ograniczenie prędkości %1$s</string>
+    <string name="nav_next_winding">Następne %1$s · %2$d%% krętej</string>
+    <string name="nav_done">%1$s w %2$s</string>
+    <string name="nav_moving_average">%1$.0f %2$s średnio w ruchu</string>
+    <string name="nav_skip_via">Pomiń punkt pośredni %1$d</string>
+
+    <!-- Navigation -->
+    <string name="nav_no_gps">Brak sygnału GPS: czekanie na twoją pozycję</string>
+    <string name="nav_overview">Przegląd</string>
+    <string name="nav_stop">Zatrzymaj</string>
+    <string name="nav_turns_ahead_description">Nadchodzące skręty i punkty pośrednie</string>
+    <string name="nav_north_up">Północ u góry</string>
+    <string name="nav_heading_up">Kierunek jazdy u góry</string>
+    <string name="nav_heading_up_description">Mapa obraca się z twoim kierunkiem: dotknij dla północy u góry</string>
+    <string name="nav_north_up_description">Północ jest u góry: dotknij, aby mapa obracała się z twoim kierunkiem</string>
+    <string name="nav_follow">Śledź mnie</string>
+    <string name="nav_tap_again">Dotknij ponownie</string>
+    <string name="nav_close_description">Zamknij nawigację</string>
+    <string name="nav_tap_again_description">Dotknij ponownie, aby zatrzymać nawigację</string>
+    <string name="nav_stop_description">Zatrzymaj nawigację</string>
+    <string name="nav_voice_on">Głos włączony: dotknij, aby wyłączyć</string>
+    <string name="nav_voice_off">Głos wyłączony: dotknij, aby włączyć</string>
+    <string name="nav_no_headset">Brak połączonych słuchawek: KawaNav mówi tylko przez słuchawki (Ustawienia)</string>
+    <string name="nav_starting">Uruchamianie…</string>
+    <string name="nav_stopped">Nawigacja zatrzymana</string>
+    <string name="nav_turns_ahead">Nadchodzące skręty</string>
+
+    <!-- Battery: with values -->
+    <plurals name="battery_summary">
+        <item quantity="one">%1$d odczyt · ostatni %2$.1f V · najniższy %3$.1f V</item>
+        <item quantity="few">%1$d odczyty · ostatni %2$.1f V · najniższy %3$.1f V</item>
+        <item quantity="many">%1$d odczytów · ostatni %2$.1f V · najniższy %3$.1f V</item>
+        <item quantity="other">%1$d odczytów · ostatni %2$.1f V · najniższy %3$.1f V</item>
+    </plurals>
+    <string name="battery_declining">Akumulator stracił %1$.1f V w zapisanym okresie: może się już kończyć.</string>
+    <string name="battery_low">Przy %1$.1f V ten odczyt jest niski: naładuj go albo oddaj akumulator do sprawdzenia.</string>
+    <string name="battery_since_first">%1$+.1f V od pierwszego</string>
+
+    <!-- Battery -->
+    <string name="battery_title">Akumulator 12 V</string>
+    <string name="battery_note">Odczyt jest wykonywany za każdym razem, gdy aplikacja łączy się przy wyłączonym silniku: to, co akumulator robi w spoczynku, zdradza jego wiek. Odczyt poniżej 12,4 V w ciepły dzień albo spadek z miesiąca na miesiąc wart jest uwagi.</string>
+    <string name="battery_at_rest">Napięcie spoczynkowe</string>
+    <string name="battery_unreadable">Nie udało się odczytać dziennika akumulatora</string>
+    <string name="battery_unreadable_sub">Plik jest zachowany jako battery.json.bad i nic nie jest w nim nadpisywane.</string>
+    <string name="battery_none">Brak jeszcze odczytów</string>
+    <string name="battery_nothing">Jeszcze nic nie nagrano</string>
+    <string name="battery_nothing_sub">Połącz się z motocyklem przy wyłączonym silniku, a zostanie wykonany pierwszy odczyt.</string>
+    <string name="battery_fine">Jak dotąd brak niepokojącego spadku.</string>
+
+    <!-- Tabs and record button: with values -->
+    <string name="tab_selected">%1$s, wybrane</string>
+    <string name="record_not_started">Nie uruchomiono: %1$s</string>
+    <string name="section_open">%1$s, otwarte</string>
+    <string name="section_closed">%1$s, zamknięte</string>
+
+    <!-- Tabs and record button -->
+    <string name="tab_home">Start</string>
+    <string name="tab_bike">Motocykl</string>
+    <string name="tab_rides">Przejazdy</string>
+    <string name="record_idle">Nagraj przejazd</string>
+    <string name="record_paused">Przejazd wstrzymany: kontynuuj lub zakończ</string>
+    <string name="record_recording">Nagrywanie: wstrzymaj lub zakończ</string>
+    <string name="main_ride_recording_plain">Nagrywanie przejazdu</string>
+    <string name="record_starting">Uruchamianie KawaNav i nagrywanie przejazdu</string>
+    <string name="record_paused_title">Przejazd wstrzymany</string>
+    <string name="common_what_options">Co oznaczają opcje?</string>
+    <string name="bg_location_title">Lokalizacja: „Zezwalaj zawsze”</string>
+    <string name="bg_location_message">Automatyczny start uruchamia KawaNav, gdy telefon jest zablokowany w kieszeni. Żeby wtedy pokazywać ostrzeżenia o zakrętach, KawaNav potrzebuje GPS w tle.\n\nNa następnym ekranie wybierz „Zezwalaj zawsze”.\n\nBez tego strzałki Map Google nadal działają, ale ostrzeżenia o zakrętach zaczną się dopiero po otwarciu KawaNav.</string>
+
+    <!-- Service: with values -->
+    <string name="bridge_not_taken">Nie przyjęto: motocykl odpowiedział: %1$s.</string>
+    <string name="bridge_read_back_differs">Wysłano, ale motocykl odczytuje tryb %1$d, moc %2$d, KTRC %3$d, KQS %4$d (swoje własne numery), a nie to, co wysłano. Sprawdź wyświetlacz.</string>
+    <string name="bridge_lamp_levels">wyświetlacz przyjmuje poziomy od %1$d do %2$d</string>
+    <string name="bridge_lamp_refused">Nie przyjęto: wyświetlacz odrzucił (wynik %1$d).</string>
+    <string name="bridge_looking_for">Szukanie: %1$s…</string>
+    <string name="bridge_connected_to">Połączono z: %1$s</string>
+    <string name="bridge_the_bike">motocykl</string>
+    <string name="bridge_output_not_connected">%1$s (motocykl niepołączony)</string>
+    <string name="bridge_battery_down">Akumulator słabnie</string>
+    <string name="bridge_battery_down_text">Akumulator 12 V stracił %1$.1f V w zapisanym okresie: oddaj go do sprawdzenia, zanim cię gdzieś zostawi.</string>
+    <plurals name="bridge_maintenance_due">
+        <item quantity="one">%1$d praca serwisowa do zrobienia</item>
+        <item quantity="few">%1$d prace serwisowe do zrobienia</item>
+        <item quantity="many">%1$d prac serwisowych do zrobienia</item>
+        <item quantity="other">%1$d prac serwisowych do zrobienia</item>
+    </plurals>
+    <string name="bridge_clutch_text">Przy %1$d mocnych przyspieszeniach w tym przejeździe silnik kręcił się nawet o %2$.1f%% wyżej, niż wynika z biegu i prędkości: sprzęgło może się ślizgać. Oddaj je do sprawdzenia.</string>
+    <string name="bridge_curves_paused">Wykrywanie zakrętów wstrzymane: dotknij, aby otworzyć KawaNav</string>
+    <string name="bridge_refuel">Zapisano tankowanie</string>
+    <string name="bridge_refuel_text">%1$s — popraw litry, jeśli są błędne.</string>
+
+    <!-- Service -->
+    <string name="bridge_busy">motocykl odpowiada jeszcze na inne zapytanie, spróbuj ponownie</string>
+    <string name="bridge_sending">Wysyłanie…</string>
+    <string name="bridge_no_answer">Brak odpowiedzi motocykla: według KawaNav nic nie zostało zmienione. Sprawdź wyświetlacz.</string>
+    <string name="bridge_applying">Wyświetlacz to stosuje…</string>
+    <string name="bridge_reading_back">Odczytywanie ustawień…</string>
+    <string name="bridge_not_read_back">Wysłano, ale nie udało się odczytać ustawień: sprawdź wyświetlacz.</string>
+    <string name="bridge_done">Gotowe: motocykl odczytuje to, co wysłano.</string>
+    <string name="bridge_lamp_not_supported">ten wyświetlacz nie przyjmuje ustawień kontrolki zmiany biegu</string>
+    <string name="bridge_sending_lamp">Wysyłanie kontrolki zmiany biegu…</string>
+    <string name="bridge_lamp_no_answer">Brak odpowiedzi wyświetlacza: sprawdź go.</string>
+    <string name="bridge_lamp_taken">Przyjęto przez wyświetlacz: sprawdź jego kontrolkę zmiany biegu.</string>
+    <string name="bridge_channel_connection">Połączenie z motocyklem</string>
+    <string name="bridge_channel_warnings">Ostrzeżenia</string>
+    <string name="bridge_channel_rides">Przejazdy i tankowania</string>
+    <string name="bridge_not_running">Nie działa</string>
+    <string name="bridge_bluetooth_not_allowed">Bluetooth niedozwolony</string>
+    <string name="bridge_pair_hint">Sparuj motocykl raz: „Sparuj swój motocykl” na pomarańczowym pasku (zapłon włączony).</string>
+    <string name="bridge_several">Z tym telefonem sparowano kilka Kawasaki. Skonfiguruj „Automatyczny start” ze swoim, stojąc obok z włączonym zapłonem, żeby KawaNav wiedział, którym; albo usuń drugi w ustawieniach Bluetooth.</string>
+    <string name="bridge_ignition">Włącz zapłon. Rideology musi być zamknięte: motocykl rozmawia naraz tylko z jedną aplikacją.</string>
+    <string name="bridge_no_turn_by_turn">Wyświetlacz tego motocykla zgłasza brak wskazówek skrętu, więc strzałki i zakręty nie są do niego wysyłane. Jeśli wcześniej działały, włącz „Wysyłaj strzałki i ikony mimo to” w Ustawieniach.</string>
+    <string name="bridge_no_status_icons">Wyświetlacz tego motocykla zgłasza brak ikon stanu, więc ikony połączeń, poczty i telefonu nie są do niego wysyłane. „Wysyłaj strzałki i ikony mimo to” w Ustawieniach to pomija.</string>
+    <string name="bridge_reconnecting">Utracono połączenie, ponowne łączenie…</string>
+    <string name="bridge_older_dash">Starszy wyświetlacz Kawasaki: nieobsługiwany</string>
+    <string name="bridge_waiting_bike">Czekanie na motocykl (GPS wyłączony)</string>
+    <string name="bridge_camera_source">Z danych map offline KawaNav</string>
+    <string name="bridge_clutch_title">Sprzęgło może się ślizgać</string>
+
+    <!-- Service -->
+    <string name="bridge_older_dash_hint">Ten wyświetlacz używa protokołu Kawasaki sprzed BLE5: nie może pokazywać wskazówek, a KawaNav nie może się z nim porozumieć.</string>
+    <string name="bridge_older_dash_several">Sparowano kilka Kawasaki: skonfiguruj „Automatyczny start” z tym, którym jeździsz.</string>
+
+    <!-- Hub -->
+    <string name="hub_bluetooth_hint">KawaNav nie może używać Bluetooth: otwórz KawaNav i zezwól na „Urządzenia w pobliżu”.</string>
+
+    <!-- Speed cameras -->
+    <string name="camera_red_light">Kamera na czerwone światło</string>
+    <string name="camera_average">Odcinkowy pomiar prędkości</string>
+    <string name="camera_speed">Fotoradar</string>
+    <string name="camera_ahead">Przed tobą: %1$s</string>
+    <string name="camera_limit">%1$s, ograniczenie %2$d</string>
+    <string name="camera_in">%1$s za %2$s</string>
+
+    <!-- Curves -->
+    <string name="curves_no_roads">Brak dróg offline: pobierz region w Mapach offline</string>
+    <string name="curves_loading">Wczytywanie dróg…</string>
+    <string name="curves_no_roads_here">Brak tu dróg offline: pobierz ten region w Mapach offline</string>
+    <string name="curves_waiting_movement">Czekanie na ruch, aby poznać kierunek</string>
+    <string name="curves_no_road">Nie na znanej drodze</string>
+    <string name="curves_gps_off">GPS jest wyłączony</string>
+
+    <!-- Pairing -->
+    <string name="pair_looking">Szukanie motocykla: zapłon włączony, Rideology zamknięte…</string>
+    <string name="pair_failed">Parowanie nie powiodło się: zapłon włączony, Rideology zamknięte, potem spróbuj ponownie</string>
+    <string name="pair_pairing">Parowanie… potwierdź w telefonie (i na wyświetlaczu), jeśli pojawi się prośba</string>
+    <string name="pair_could_not_start">Nie udało się rozpocząć parowania: włącz zapłon i spróbuj ponownie</string>
+    <string name="pair_no_bike">Nie wybrano motocykla: zapłon włączony, Rideology zamknięte, potem spróbuj ponownie</string>
+
+    <!-- Offline maps: with values -->
+    <string name="offline_failed">Niepowodzenie: %1$s</string>
+    <string name="offline_too_large">region za duży dla tego telefonu, wybierz mniejszy</string>
+    <string name="offline_downloading">%1$s: pobieranie %2$.0f / %3$.0f MB</string>
+    <string name="offline_no_space">za mało wolnego miejsca: %1$s potrzebuje ok. %2$.1f GB, wolne: %3$.1f GB</string>
+    <string name="offline_cameras">%1$s: zapisywanie fotoradarów…</string>
+    <string name="offline_done">Gotowe: %1$s, %2$d dróg w %3$d kafelkach (+%4$d kafelków brzegowych), %5$d fotoradarów, %6$d skrzyżowań do nawigacji · %7$.1f MB · %8$d s</string>
+
+    <!-- Offline maps -->
+    <string name="offline_channel">Pobieranie dróg offline</string>
+    <string name="offline_stopped">Zatrzymane przez Androida: pobieranie może trwać tylko określony czas. Uruchom je ponownie.</string>
+    <string name="offline_cancelled">Anulowano (pobieranie wznowi się, gdy uruchomisz je ponownie)</string>
+    <string name="offline_loading_list">Wczytywanie listy regionów…</string>
+    <string name="offline_title">Drogi offline KawaNav</string>
+
+    <!-- Navigation -->
+    <string name="nav_starting_navigation">Uruchamianie nawigacji…</string>
+    <string name="nav_notification_title">Nawigacja KawaNav</string>
+
+    <!-- Updates -->
+    <string name="update_failed">Aktualizacja nie powiodła się</string>
+    <string name="update_failed_why">Aktualizacja nie powiodła się: %1$s</string>
+
+    <!-- Updates -->
+    <string name="update_no_changes">Brak listy zmian dla tej wersji.</string>
+    <string name="update_not_signed">Aktualizacja nie powiodła się: ten KawaNav nie jest podpisany tak jak wydanie (wersja debug?)</string>
+
+    <!-- Ride settings -->
+    <string name="write_no_data">brak aktualnych danych z motocykla: nie wyłączaj go</string>
+    <string name="write_stand_still">motocykl musi stać</string>
+    <string name="write_neutral">motocykl musi być na luzie</string>
+    <string name="write_throttle">gaz musi być zamknięty</string>
+    <string name="write_no_config">motocykl nie podał, jakie ustawienia przyjmuje</string>
+    <string name="write_no_settings">ten motocykl nie przyjmuje ustawień jazdy</string>
+
+    <!-- Ride settings: with values -->
+    <string name="write_bad_mode">trybu jazdy %1$d motocykl nie oferuje</string>
+    <string name="write_bad_power">trybu mocy %1$d motocykl nie oferuje</string>
+    <string name="write_bad_ktrc">poziomu KTRC %1$d nie można zapisać</string>
+    <string name="write_bad_kqs">wartość quickshiftera %1$d to ani OFF, ani ON</string>
+    <string name="write_bad_kebc">wartości hamowania silnikiem %1$d motocykl nie oferuje</string>
+    <string name="write_your_own">Własne: %1$s</string>
+    <string name="write_preset">%1$s: moc %2$s, KTRC %3$s</string>
+    <string name="write_bike_other">(motocykl ma inne wartości)</string>
+    <string name="write_rider_note">%1$s ma moc %2$s i KTRC %3$s, więc przy innych wartościach tryb jazdy to teraz Rider, który zachowuje twoje.</string>
+    <string name="write_kebc_line">Hamowanie silnikiem: %1$s (tak jak w motocyklu)</string>
+    <string name="write_name_none">Nazwa: brak</string>
+    <string name="write_name">Nazwa: „%1$s”</string>
+    <string name="write_lamp_on">Wł.</string>
+    <string name="write_lamp_tacho">Obrotomierz</string>
+    <string name="write_lamp_led_tacho">LED + obrotomierz</string>
+    <string name="write_ready">Gotowe</string>
+    <string name="write_not_ready">Niegotowe: %1$s</string>
+    <string name="write_accepted">przyjęto</string>
+    <string name="write_applying">wyświetlacz to stosuje; poczekaj, aż skończy</string>
+    <string name="write_rejected">odrzucono (wynik %1$02X)</string>
+
+    <!-- Warnings: with values -->
+    <string name="alert_fuel_low_range">Według wyświetlacza zostało %1$d km zasięgu: zatankuj wkrótce</string>
+    <string name="alert_not_charging_text">%1$.1f V przy pracującym silniku: sprawdź układ ładowania</string>
+    <string name="alert_battery_low_text">%1$.1f V: motocykl może następnym razem nie zapalić</string>
+    <string name="alert_tyre_now">Teraz %1$.2f bar: zatrzymaj się i sprawdź</string>
+
+    <!-- Warnings -->
+    <string name="alert_tyre_front">Przednia opona traci ciśnienie</string>
+    <string name="alert_tyre_rear">Tylna opona traci ciśnienie</string>
+    <string name="alert_sensor_front">Słaba bateria czujnika przedniej opony</string>
+    <string name="alert_sensor_front_text">Czujnik ciśnienia w przednim kole potrzebuje nowej baterii</string>
+    <string name="alert_sensor_rear">Słaba bateria czujnika tylnej opony</string>
+    <string name="alert_sensor_rear_text">Czujnik ciśnienia w tylnym kole potrzebuje nowej baterii</string>
+    <string name="alert_abs">ABS zgłasza usterkę</string>
+    <string name="alert_abs_text">ABS może nie działać: sprawdź kontrolkę na wyświetlaczu i oddaj motocykl do sprawdzenia</string>
+    <string name="alert_fuel_low">Mało paliwa</string>
+    <string name="alert_fuel_low_text">Wyświetlacz zgłasza niski poziom paliwa: zatankuj wkrótce</string>
+    <string name="alert_not_charging">Akumulator się nie ładuje</string>
+    <string name="alert_battery_low">Akumulator jest słaby</string>
+    <string name="alert_check">Zatrzymaj się i sprawdź</string>
+
+    <!-- Routing -->
+    <string name="route_no_road_start">brak drogi w pobliżu startu</string>
+    <string name="route_no_road_dest">brak drogi w pobliżu celu</string>
+    <string name="route_too_long">trasa za długa dla wyszukiwania w tym telefonie</string>
+    <string name="route_no_connection">żadna droga nie łączy tych punktów</string>
+
+    <!-- Routing -->
+    <string name="route_no_road_via">brak drogi w pobliżu punktu pośredniego %1$d</string>
+
+    <!-- Routing -->
+    <string name="route_no_roads_round">brak dróg wokół startu dla pętli</string>
+    <string name="route_no_round">nie znaleziono pętli</string>
+
+    <!-- Recording -->
+    <string name="record_no_space">za mało wolnego miejsca w telefonie</string>
+
+    <!-- Recording -->
+    <string name="ride_end_at_once">Od razu</string>
+    <string name="ride_end_5">Po 5 min</string>
+    <string name="ride_end_15">Po 15 min</string>
+
+    <!-- Ride -->
+    <string name="bends_most_lean">Największy przechył</string>
+    <string name="bends_fastest">Najszybsze</string>
+    <string name="bends_best_exit">Najlepsze wyjście</string>
+    <string name="bends_speed_lost">Największa utrata prędkości</string>
+    <string name="bends_ride_order">W kolejności przejazdu</string>
+
+    <!-- Maps -->
+    <string name="map_track_description">Ślad przejazdu na mapie. Zsuń palce, aby powiększyć, przeciągnij, aby się przesunąć.</string>
+
+    <!-- Maps -->
+    <string name="map_description">Mapa. Przeciągnij, aby się przesunąć, zsuń palce, aby powiększyć, dotknij, aby wybrać miejsce.</string>
+    <string name="map_roads_credit">Drogi © współtwórcy OpenStreetMap</string>
+
+    <!-- Gauge -->
+    <string name="gauge_unknown">Nieznane</string>
+    <string name="gauge_of">%1$d z %2$d</string>
+
+    <!-- Ride: end reasons -->
+    <string name="ride_end_24h">osiągnięto 24 godziny</string>
+    <string name="ride_end_bike_gone">motocykl poza zasięgiem</string>
+    <string name="ride_end_switched_off">motocykl wyłączony</string>
+    <string name="ride_end_bridge_stopped">KawaNav zatrzymany</string>
+    <string name="ride_end_battery">słaba bateria telefonu</string>
+    <string name="ride_end_by_hand">zakończono ręcznie</string>
+    <plurals name="ride_bend_shifted_gears">
+        <item quantity="one">redukcja o %1$d bieg</item>
+        <item quantity="few">redukcja o %1$d biegi</item>
+        <item quantity="many">redukcja o %1$d biegów</item>
+        <item quantity="other">redukcja o %1$d biegów</item>
+    </plurals>
+    <plurals name="ride_recorded_value">
+        <item quantity="one">%1$s, %2$d próbka</item>
+        <item quantity="few">%1$s, %2$d próbki</item>
+        <item quantity="many">%1$s, %2$d próbek</item>
+        <item quantity="other">%1$s, %2$d próbek</item>
+    </plurals>
+</resources>

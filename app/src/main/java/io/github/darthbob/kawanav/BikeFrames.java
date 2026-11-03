@@ -989,7 +989,11 @@ public final class BikeFrames {
     /** 0x1E: the maintenance reminders: Kawasaki service, the rider's own, oil change. */
     public static final class ServiceIndicator extends Frame {
         public static final int KAWASAKI = 0, RIDER = 1, OIL = 2;
-        public static final String[] NAMES = {"Kawasaki service", "Rider setting", "Oil change"};
+        /** The three reminders' names, in the app's language. */
+        public static String[] names() {
+            return new String[]{Lang.t(R.string.maint_service_kawasaki), Lang.t(R.string.maint_service_rider),
+                    Lang.t(R.string.maint_oil_change)};
+        }
 
         /** One reminder: due date and/or distance; -1 where not set. */
         public static final class Reminder {

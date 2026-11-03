@@ -55,7 +55,8 @@ public class SegmentBar extends View {
     }
 
     private void describe() {
-        setContentDescription(reserve ? "Reserve" : filled < 0 ? "Not known" : filled + " of " + count);
+        setContentDescription(reserve ? Lang.t(R.string.bike_fuel_reserve) : filled < 0 ? Lang.t(R.string.gauge_unknown)
+                : Lang.t(R.string.gauge_of, filled, count));
     }
 
     private void blinking(boolean on) {

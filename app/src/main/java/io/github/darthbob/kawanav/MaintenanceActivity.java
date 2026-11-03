@@ -36,7 +36,7 @@ public class MaintenanceActivity extends KawaActivity {
 
         LinearLayout root = column();
         root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
-        root.addView(headerBar("Maintenance", v -> finish(), null));
+        root.addView(headerBar(Lang.t(R.string.bike_row_maintenance), v -> finish(), null));
         summary = secondary("");
         summary.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE2), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(summary);
@@ -47,8 +47,7 @@ public class MaintenanceActivity extends KawaActivity {
         list = column();
         root.addView(list);
         root.addView(addCard());
-        TextView note = note("Kept on the phone only. \"The dash says\" comes from the dash itself; your "
-                + "reminders and what you write here are your own record of the work done.");
+        TextView note = note(Lang.t(R.string.maint_note));
         note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE4), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
         setContentView(page(root));
@@ -78,10 +77,10 @@ public class MaintenanceActivity extends KawaActivity {
         List<String> due = MaintenanceLog.dueFromDash(Hub.bike.service, odo);
         if (due.isEmpty()) return;
         LinearLayout c = card();
-        c.addView(iconTitle(R.drawable.ic_clock, cardTitle("The dash says")));
+        c.addView(iconTitle(R.drawable.ic_clock, cardTitle(Lang.t(R.string.maint_dash_says))));
         for (String line : due) c.addView(secondary(line));
         if (odo == odo) {
-            c.addView(secondary(String.format(Locale.ROOT, "Odometer now: %,.0f km", odo)));
+            c.addView(secondary(Lang.t(R.string.maint_odometer_now, odo)));
         }
         dashCard.addView(c);
     }
@@ -90,22 +89,21 @@ public class MaintenanceActivity extends KawaActivity {
     private void updateReminders() {
         remindersCard.removeAllViews();
         LinearLayout c = card();
-        c.addView(iconTitle(R.drawable.ic_bell, cardTitle("Your reminders")));
+        c.addView(iconTitle(R.drawable.ic_bell, cardTitle(Lang.t(R.string.maint_your_reminders))));
         List<MaintenanceLog.Reminder> reminders = reminders();
         if (reminders.isEmpty()) {
-            c.addView(secondary("How often a job is due, from the last time it is logged here: the chain every "
-                    + "1,000 km, the oil every year. A notification says when one is due."));
+            c.addView(secondary(Lang.t(R.string.maint_reminders_empty)));
         }
         DateFormat df = DateFormat.getDateInstance(DateFormat.MEDIUM);
         for (MaintenanceLog.Due d : MaintenanceLog.due(entries, reminders, odometer(), System.currentTimeMillis())) {
             String state = d.describe(df);
-            if (d.soon()) state = "soon: " + state;
+            if (d.soon()) state = Lang.t(R.string.maint_soon, state);
             c.addView(listRow(d.due() ? R.drawable.ic_alert : R.drawable.ic_bell, d.reminder.item,
                     d.reminder.interval(), state, true, v -> editReminder(d.reminder.item, d.reminder)));
         }
         LinearLayout buttons = row();
         buttons.setPadding(0, dp(Ui.SPACE2), 0, 0);
-        buttons.addView(secondaryButton("Add a reminder", v -> pickReminder()), weight());
+        buttons.addView(secondaryButton(Lang.t(R.string.maint_add_reminder), v -> pickReminder()), weight());
         c.addView(buttons);
         remindersCard.addView(c);
     }
@@ -123,15 +121,16 @@ public class MaintenanceActivity extends KawaActivity {
     /** Which job: the list's, then the ones logged under a name of their own, then one typed now. */
     private void pickReminder() {
         List<String> names = new java.util.ArrayList<>();
-        for (String item : MaintenanceLog.ITEMS) if (!item.equals("Other")) names.add(item);
+        String[] items = MaintenanceLog.items();
+        for (int i = 0; i < items.length - 1; i++) names.add(items[i]); // all but "Other"
         for (MaintenanceLog.Entry e : entries) {
             boolean known = false;
             for (String n : names) known |= n.equalsIgnoreCase(e.item);
             if (!known) names.add(e.item);
         }
-        names.add("Other…");
+        names.add(Lang.t(R.string.maint_other_dots));
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Remind me of")
+                .setTitle(Lang.t(R.string.maint_remind_me))
                 .setItems(names.toArray(new String[0]), (d, which) -> {
                     if (which < names.size() - 1) {
                         String item = names.get(which);
@@ -140,25 +139,25 @@ public class MaintenanceActivity extends KawaActivity {
                         nameReminder();
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
     private void nameReminder() {
         EditText name = new EditText(this);
         name.setSingleLine(true);
-        name.setHint("what is due");
+        name.setHint(Lang.t(R.string.maint_what_due));
         LinearLayout box = column();
         box.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE2), dp(Ui.SPACE4), 0);
         box.addView(name);
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Remind me of")
+                .setTitle(Lang.t(R.string.maint_remind_me))
                 .setView(box)
-                .setPositiveButton("Next", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.maint_next), (d, w) -> {
                     String item = name.getText().toString().trim();
                     if (!item.isEmpty()) editReminder(item, MaintenanceLog.reminderFor(reminders(), item));
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
@@ -166,26 +165,26 @@ public class MaintenanceActivity extends KawaActivity {
     private void editReminder(String item, MaintenanceLog.Reminder current) {
         EditText km = new EditText(this);
         km.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        km.setHint("every … km (empty: not by km)");
+        km.setHint(Lang.t(R.string.maint_every_km));
         EditText months = new EditText(this);
         months.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        months.setHint("every … months (empty: not by date)");
+        months.setHint(Lang.t(R.string.maint_every_months));
         if (current != null) {
             if (current.km > 0) km.setText(String.valueOf(current.km));
             if (current.months > 0) months.setText(String.valueOf(current.months));
         }
         LinearLayout box = column();
         box.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE2), dp(Ui.SPACE4), 0);
-        box.addView(secondary("Counted from the last time it is logged, whichever comes first."));
+        box.addView(secondary(Lang.t(R.string.maint_counted)));
         box.addView(km);
         box.addView(months);
         android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this)
                 .setTitle(item)
                 .setView(box)
-                .setPositiveButton("Save", (d, w) -> saveReminder(item,
+                .setPositiveButton(Lang.t(R.string.planner_save), (d, w) -> saveReminder(item,
                         new MaintenanceLog.Reminder(item, whole(km), whole(months))))
-                .setNegativeButton("Cancel", null);
-        if (current != null) b.setNeutralButton("Remove", (d, w) -> saveReminder(item, null));
+                .setNegativeButton(Lang.t(R.string.common_cancel), null);
+        if (current != null) b.setNeutralButton(Lang.t(R.string.planner_remove), (d, w) -> saveReminder(item, null));
         b.show();
     }
 
@@ -214,14 +213,15 @@ public class MaintenanceActivity extends KawaActivity {
 
     private View addCard() {
         LinearLayout c = card();
-        c.addView(cardTitle("Add a job"));
-        c.addView(secondary("What you did, when, and at what odometer."));
+        c.addView(cardTitle(Lang.t(R.string.maint_add_job)));
+        c.addView(secondary(Lang.t(R.string.maint_add_job_sub)));
         LinearLayout buttons = row();
         buttons.setPadding(0, dp(Ui.SPACE2), 0, 0);
-        for (int i = 0; i < MaintenanceLog.ITEMS.length; i += 2) {
+        String[] items = MaintenanceLog.items();
+        for (int i = 0; i < items.length; i += 2) {
             LinearLayout line = row();
-            for (int k = i; k < Math.min(i + 2, MaintenanceLog.ITEMS.length); k++) {
-                String item = MaintenanceLog.ITEMS[k];
+            for (int k = i; k < Math.min(i + 2, items.length); k++) {
+                String item = items[k];
                 Button b = button(item, v -> add(item));
                 b.setTextSize(13);
                 b.setTextColor(Ui.accentText(night));
@@ -240,9 +240,9 @@ public class MaintenanceActivity extends KawaActivity {
         EditText odoInput = new EditText(this);
         odoInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
         if (odo == odo) odoInput.setText(String.format(Locale.ROOT, "%.0f", odo));
-        odoInput.setHint("odometer in km");
+        odoInput.setHint(Lang.t(R.string.maint_odometer_hint));
         EditText noteInput = new EditText(this);
-        noteInput.setHint("what was done, what it cost…");
+        noteInput.setHint(Lang.t(R.string.maint_note_hint));
         LinearLayout box = column();
         box.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE2), dp(Ui.SPACE4), 0);
         box.addView(dateRow(day));
@@ -250,13 +250,13 @@ public class MaintenanceActivity extends KawaActivity {
         box.addView(noteInput);
         EditText whatInput = new EditText(this);
         whatInput.setSingleLine(true);
-        whatInput.setText(item.equals("Other") ? "" : item);
-        whatInput.setHint("what was done");
+        whatInput.setText(item.equals(Lang.t(R.string.maint_other)) ? "" : item);
+        whatInput.setHint(Lang.t(R.string.maint_what_done));
         box.addView(whatInput, 0);
         new android.app.AlertDialog.Builder(this)
                 .setTitle(item)
                 .setView(box)
-                .setPositiveButton("Save", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.planner_save), (d, w) -> {
                     String what = whatInput.getText().toString().trim();
                     MaintenanceLog.Entry e = new MaintenanceLog.Entry();
                     e.at = day[0];
@@ -267,14 +267,14 @@ public class MaintenanceActivity extends KawaActivity {
                     entries.add(e);
                     save();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
     private void edit(MaintenanceLog.Entry e) {
         EditText noteInput = new EditText(this);
         noteInput.setSingleLine(true);
-        noteInput.setHint("note");
+        noteInput.setHint(Lang.t(R.string.maint_note_short));
         noteInput.setText(e.note);
         LinearLayout box = column();
         box.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE2), dp(Ui.SPACE4), 0);
@@ -282,26 +282,26 @@ public class MaintenanceActivity extends KawaActivity {
         new android.app.AlertDialog.Builder(this)
                 .setTitle(e.describe())
                 .setView(box)
-                .setPositiveButton("Save", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.planner_save), (d, w) -> {
                     for (MaintenanceLog.Entry x : entries) {
                         if (x == e) x.note = noteInput.getText().toString().trim();
                     }
                     save();
                 })
-                .setNeutralButton("Delete", (d, w) -> confirmDelete(e))
-                .setNegativeButton("Cancel", null)
+                .setNeutralButton(Lang.t(R.string.common_delete), (d, w) -> confirmDelete(e))
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
     private void confirmDelete(MaintenanceLog.Entry e) {
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Delete this entry?")
+                .setTitle(Lang.t(R.string.maint_delete_title))
                 .setMessage(e.describe())
-                .setPositiveButton("Delete", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.common_delete), (d, w) -> {
                     entries.remove(e);
                     save();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
@@ -315,8 +315,7 @@ public class MaintenanceActivity extends KawaActivity {
     private void refresh() {
         updateDash();
         updateReminders();
-        summary.setText(entries.isEmpty() ? "Nothing logged yet"
-                : entries.size() + (entries.size() == 1 ? " entry" : " entries"));
+        summary.setText(entries.isEmpty() ? Lang.t(R.string.maint_nothing_yet) : Lang.plural(R.plurals.maint_entries, entries.size()));
         list.removeAllViews();
         DateFormat df = DateFormat.getDateInstance(DateFormat.MEDIUM);
         BikeFrames.VehicleInfo info = Hub.bike.info;
@@ -327,13 +326,13 @@ public class MaintenanceActivity extends KawaActivity {
             StringBuilder line = new StringBuilder(e.note);
             if (since == since) {
                 if (line.length() > 0) line.append(" · ");
-                line.append(String.format(Locale.ROOT, "%,.0f km ago", since));
+                line.append(Lang.t(R.string.bike_km_ago, since));
             }
             long days = (System.currentTimeMillis() - e.at) / (24 * 60 * 60_000L);
             String when = df.format(new java.util.Date(e.at));
-            if (days > 0) when += " (" + days + (days == 1 ? " day ago)" : " days ago)");
+            if (days > 0) when += " (" + Lang.plural(R.plurals.maint_days_ago, (int) days) + ")";
             View row = listRow(R.drawable.ic_list, e.item, when + " · "
-                    + (e.odoKm == e.odoKm ? String.format(Locale.ROOT, "%,.0f km", e.odoKm) : "no odometer"),
+                    + (e.odoKm == e.odoKm ? String.format(Locale.ROOT, "%,.0f km", e.odoKm) : Lang.t(R.string.maint_no_odometer)),
                     line.length() == 0 ? null : line.toString(), false, v -> edit(e));
             row.setOnLongClickListener(v -> {
                 confirmDelete(e);

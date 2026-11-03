@@ -145,7 +145,7 @@ public class NavActivity extends KawaActivity {
         // under it, while they last: the GPS signal lost, a speed camera ahead
         LinearLayout upper = column();
         upper.addView(top, matchWrap());
-        gpsBanner = banner("No GPS signal: waiting for your position", Ui.dangerFill(night), 0xFFFFFFFF);
+        gpsBanner = banner(Lang.t(R.string.nav_no_gps), Ui.dangerFill(night), 0xFFFFFFFF);
         upper.addView(gpsBanner);
         cameraBanner = banner("", Ui.warnFill(), Ui.bannerInk());
         upper.addView(cameraBanner);
@@ -157,7 +157,7 @@ public class NavActivity extends KawaActivity {
         frame.addView(upper, tlp);
 
         LinearLayout bottom = row();
-        followButton = neutralButton("Overview", v -> {
+        followButton = neutralButton(Lang.t(R.string.nav_overview), v -> {
             if (map.following()) {
                 map.fitRoute();
             } else {
@@ -174,7 +174,7 @@ public class NavActivity extends KawaActivity {
             turnLabel(up);
         });
         // one tap with a glove must not end the navigation: the first tap asks for a second one
-        stopButton = destructiveButton("Stop", v -> {
+        stopButton = destructiveButton(Lang.t(R.string.nav_stop), v -> {
             if (arrived == null && !stopArmed) {
                 stopArmed = true;
                 stopLabel();
@@ -223,7 +223,7 @@ public class NavActivity extends KawaActivity {
         road.setGravity(Gravity.END);
         road.setPadding(dp(Ui.SPACE3), 0, 0, 0);
         infoRow.addView(road, weight());
-        infoRow.addView(headerAction(R.drawable.ic_list, "Turns ahead and waypoints", v -> showTurns()),
+        infoRow.addView(headerAction(R.drawable.ic_list, Lang.t(R.string.nav_turns_ahead_description), v -> showTurns()),
                 new LinearLayout.LayoutParams(dp(Ui.TOUCH_MIN), dp(Ui.TOUCH_MIN)));
         curvesRow = row();
         curvesRow.setPadding(0, dp(Ui.SPACE1), dp(Ui.SPACE2), dp(Ui.SPACE1));
@@ -278,33 +278,33 @@ public class NavActivity extends KawaActivity {
 
     /** The button offers the other way of turning the map. */
     private void turnLabel(boolean headingUp) {
-        turnButton.setText(headingUp ? "North up" : "Heading up");
-        turnButton.setContentDescription(headingUp ? "The map turns with your direction: tap for north up"
-                : "North is up: tap to turn the map with your direction");
+        turnButton.setText(headingUp ? Lang.t(R.string.nav_north_up) : Lang.t(R.string.nav_heading_up));
+        turnButton.setContentDescription(headingUp ? Lang.t(R.string.nav_heading_up_description)
+                : Lang.t(R.string.nav_north_up_description));
     }
 
     /** The button offers what the map is not doing: the whole route while following, else following. */
     private void followLabel() {
-        String s = map.following() ? "Overview" : "Follow me";
+        String s = map.following() ? Lang.t(R.string.nav_overview) : Lang.t(R.string.nav_follow);
         if (!s.contentEquals(followButton.getText())) followButton.setText(s);
     }
 
     private void stopLabel() {
-        stopButton.setText(arrived != null ? "Close" : stopArmed ? "Tap again" : "Stop");
-        stopButton.setContentDescription(arrived != null ? "Close the navigation"
-                : stopArmed ? "Tap again to stop the navigation" : "Stop the navigation");
+        stopButton.setText(arrived != null ? Lang.t(R.string.common_close) : stopArmed ? Lang.t(R.string.nav_tap_again) : Lang.t(R.string.nav_stop));
+        stopButton.setContentDescription(arrived != null ? Lang.t(R.string.nav_close_description)
+                : stopArmed ? Lang.t(R.string.nav_tap_again_description) : Lang.t(R.string.nav_stop_description));
     }
 
     private void voiceLabel(boolean on) {
         voiceButton.setImageResource(on ? R.drawable.ic_volume : R.drawable.ic_volume_off);
         voiceButton.setColorFilter(on ? Ui.accentText(night) : Ui.inkSecondary(night));
-        voiceButton.setContentDescription(on ? "Voice on: tap to turn it off" : "Voice off: tap to turn it on");
+        voiceButton.setContentDescription(on ? Lang.t(R.string.nav_voice_on) : Lang.t(R.string.nav_voice_off));
     }
 
     /** True when the voice can be heard now; else a toast says why not. */
     private boolean audible() {
         if (!prefs.getBoolean(Hub.KEY_CURVE_SOUND_HEADSET, true) || CurveSound.headsetConnected(this)) return true;
-        Toast.makeText(this, "No headset connected: KawaNav only speaks through a headset (Settings)",
+        Toast.makeText(this, Lang.t(R.string.nav_no_headset),
                 Toast.LENGTH_LONG).show();
         return false;
     }
@@ -379,7 +379,7 @@ public class NavActivity extends KawaActivity {
         if (nav == null) {
             arrow.setTurn(KawaProtocol.TURN_NONE);
             distance.set("–");
-            action.setText(NavService.running() ? "Starting…" : "Navigation stopped");
+            action.setText(NavService.running() ? Lang.t(R.string.nav_starting) : Lang.t(R.string.nav_stopped));
             remaining.setText("");
             return;
         }
@@ -397,7 +397,7 @@ public class NavActivity extends KawaActivity {
         }
         long etaMs = System.currentTimeMillis() + (long) (nav.remainingS * 1000);
         String eta = new java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(new java.util.Date(etaMs));
-        remaining.setText(String.format(Locale.ROOT, "%s left · %s · arrival %s", NavText.shown(nav.remainingM, imperial),
+        remaining.setText(Lang.t(R.string.nav_remaining, NavText.shown(nav.remainingM, imperial),
                 NavText.duration(nav.remainingS), eta));
     }
 
@@ -421,8 +421,8 @@ public class NavActivity extends KawaActivity {
                 && bike.rangeKm < nav.remainingM / 1000 + RANGE_SPARE_KM;
         rangeBanner.setVisibility(low ? View.VISIBLE : View.GONE);
         if (low) {
-            String s = "Range " + NavText.shown(bike.rangeKm * 1000.0, imperial) + ", "
-                    + NavText.shown(nav.remainingM, imperial) + " to go: refuel on the way";
+            String s = Lang.t(R.string.nav_refuel, NavText.shown(bike.rangeKm * 1000.0, imperial),
+                    NavText.shown(nav.remainingM, imperial));
             if (!s.contentEquals(rangeBanner.getText())) rangeBanner.setText(s);
         }
     }
@@ -432,7 +432,7 @@ public class NavActivity extends KawaActivity {
         Hub.Nav nav = Hub.nav;
         if (nav == null || nav.maneuvers == null) return;
         boolean imperial = prefs.getBoolean(Hub.KEY_IMPERIAL, false);
-        NavText text = NavText.phone();
+        NavText text = NavText.current();
         LinearLayout list = column();
         list.setPadding(dp(Ui.SPACE5), dp(Ui.SPACE2), dp(Ui.SPACE5), dp(Ui.SPACE2));
         int via = 0;
@@ -454,11 +454,11 @@ public class NavActivity extends KawaActivity {
         android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         scroll.addView(list);
         android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this)
-                .setTitle("Turns ahead")
+                .setTitle(Lang.t(R.string.nav_turns_ahead))
                 .setView(scroll)
-                .setNegativeButton("Close", null);
+                .setNegativeButton(Lang.t(R.string.common_close), null);
         // a via point the rider does not want any more: the route goes on to the next point
-        if (via > 0) b.setPositiveButton("Skip waypoint " + via, (d, w) -> NavService.skipVia(this));
+        if (via > 0) b.setPositiveButton(Lang.t(R.string.nav_skip_via, via), (d, w) -> NavService.skipVia(this));
         b.show();
     }
 
@@ -473,7 +473,7 @@ public class NavActivity extends KawaActivity {
         if (nav.limitKmh > 0) {
             // OpenStreetMap's limits are in km/h here; in mph they were set in steps of 5
             limit.setText(String.valueOf(imperial ? Math.round(nav.limitKmh / 1.609344 / 5) * 5 : nav.limitKmh));
-            limit.setContentDescription("Speed limit " + limit.getText() + (imperial ? " mph" : " km/h"));
+            limit.setContentDescription(Lang.t(R.string.nav_limit_description, limit.getText()) + (imperial ? " mph" : " km/h"));
         }
         if (!nav.road.contentEquals(road.getText())) road.setText(nav.road);
         java.util.List<double[]> c = nav.curves;
@@ -481,7 +481,7 @@ public class NavActivity extends KawaActivity {
         curvesRow.setVisibility(span >= 1000 ? View.VISIBLE : View.GONE);
         if (span >= 1000) {
             curves.set(c, span);
-            curvesLabel.setText(String.format(Locale.ROOT, "Next %s · %d%% winding", NavText.shown(span, imperial),
+            curvesLabel.setText(Lang.t(R.string.nav_next_winding, NavText.shown(span, imperial),
                     Math.round(Navigator.windingShare(c) * 100)));
         }
     }
@@ -497,10 +497,10 @@ public class NavActivity extends KawaActivity {
         showInfo(null, null, imperial);
         map.setProgress(0, null);
         action.setText(done.text);
-        String s = NavText.shown(done.riddenM, imperial) + " in " + NavText.duration(done.elapsedMs / 1000.0);
+        String s = Lang.t(R.string.nav_done, NavText.shown(done.riddenM, imperial), NavText.duration(done.elapsedMs / 1000.0));
         if (done.movingMs >= 60_000) {
             double kmh = done.riddenM / (done.movingMs / 1000.0) * (imperial ? 2.236936 : 3.6);
-            s += String.format(Locale.ROOT, " · %.0f %s moving average", kmh, imperial ? "mph" : "km/h");
+            s += " · " + Lang.t(R.string.nav_moving_average, kmh, imperial ? "mph" : "km/h");
         }
         remaining.setText(s);
         main.removeCallbacks(disarm);

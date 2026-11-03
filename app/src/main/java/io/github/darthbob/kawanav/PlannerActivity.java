@@ -59,12 +59,19 @@ public class PlannerActivity extends KawaActivity {
     private static final String KEY_MODE = "planner_mode";
     private static final String KEY_RT_KM = "planner_rt_km";
     private static final String KEY_RT_SHAPE = "planner_rt_shape";
-    private static final String[] SHAPES = {"Any shape", "Triangle", "Square", "Pentagon", "Circle"};
-    private static final String[] PROFILES = {"Fastest", "Curvy", "Extra curvy"};
+    private static String[] shapes() {
+        return new String[]{Lang.t(R.string.planner_shape_any), Lang.t(R.string.planner_shape_triangle),
+                Lang.t(R.string.planner_shape_square), Lang.t(R.string.planner_shape_pentagon),
+                Lang.t(R.string.planner_shape_circle)};
+    }
+
+    private static String[] profiles() {
+        return new String[]{Lang.t(R.string.settings_roads_fastest), Lang.t(R.string.settings_roads_curvy),
+                Lang.t(R.string.settings_roads_extra_curvy)};
+    }
     private static final int RT_MIN_KM = 20, RT_MAX_KM = 400, RT_STEP_KM = 10;
     /** Changes come in bursts (a drag, the length bar): the route is planned once they stop. */
     private static final long PLAN_DELAY_MS = 250;
-    private static final String MY_POSITION = "My position";
     private static final int MATCH = ViewGroup.LayoutParams.MATCH_PARENT, WRAP = ViewGroup.LayoutParams.WRAP_CONTENT;
 
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -139,11 +146,11 @@ public class PlannerActivity extends KawaActivity {
 
         // the bar and the position button float over the map
         topBox = column();
-        bar = headerBar("Route planner", v -> finish(), headerAction(R.drawable.ic_list, "Saved routes", v -> savedRoutes()));
+        bar = headerBar(Lang.t(R.string.settings_route_planner), v -> finish(), headerAction(R.drawable.ic_list, Lang.t(R.string.planner_saved_routes), v -> savedRoutes()));
         bar.setBackground(rounded(Ui.surface(night), dp(Ui.RADIUS_GROUP)));
         bar.setElevation(dp(2));
         topBox.addView(bar, new LinearLayout.LayoutParams(MATCH, WRAP));
-        ImageView locate = headerAction(R.drawable.ic_pin, MY_POSITION, v -> toMyPosition());
+        ImageView locate = headerAction(R.drawable.ic_pin, Lang.t(R.string.planner_my_position), v -> toMyPosition());
         GradientDrawable oval = new GradientDrawable();
         oval.setShape(GradientDrawable.OVAL);
         oval.setColor(Ui.surface(night));
@@ -209,7 +216,7 @@ public class PlannerActivity extends KawaActivity {
                     schedule();
                 });
             } catch (Exception e) {
-                main.post(() -> status.setText("Routing data unreadable: download the region again (" + e.getMessage() + ")"));
+                main.post(() -> status.setText(Lang.t(R.string.planner_data_unreadable, e.getMessage())));
             }
         });
     }
@@ -258,46 +265,39 @@ public class PlannerActivity extends KawaActivity {
         if (state == RoutingData.READY) return false;
         String title, text;
         if (Hub.offlineRunning) {
-            title = "Map still downloading";
-            text = "The route planner works once the region being downloaded is ready: Offline maps shows how far "
-                    + "it is.";
+            title = Lang.t(R.string.planner_map_downloading);
+            text = Lang.t(R.string.planner_map_downloading_text);
         } else if (state == RoutingData.OLD_REGIONS) {
-            title = "Update your maps";
-            text = "Your regions were downloaded with an older KawaNav and have no route planning data yet. Download "
-                    + "them once more under Offline maps (Update): that adds the route planning data, about as much "
-                    + "storage again as the region takes now.";
+            title = Lang.t(R.string.planner_update_maps);
+            text = Lang.t(R.string.planner_update_maps_text);
         } else {
-            title = "Download a map first";
-            text = "KawaNav plans routes on the phone, from the map of a region you download once (OpenStreetMap, "
-                    + "preferably over Wi-Fi). Download the region you ride in under Offline maps, e.g. Bayern or "
-                    + "Tirol. Then the route planner, the navigation and the curve warnings work there, also "
-                    + "without mobile data.";
+            title = Lang.t(R.string.planner_download_first);
+            text = Lang.t(R.string.planner_download_first_text);
         }
         Logger.log("Planner: no routing data (" + title + ")");
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(text)
                 .setCancelable(false)
-                .setPositiveButton("Offline maps", (d, which) -> {
+                .setPositiveButton(Lang.t(R.string.settings_section_maps), (d, which) -> {
                     openTab(TAB_SETTINGS, "maps");
                     finish();
                 })
-                .setNegativeButton("Back", (d, which) -> finish())
+                .setNegativeButton(Lang.t(R.string.common_back), (d, which) -> finish())
                 .show();
         return true;
     }
 
     private static String noDataText() {
-        return "No routing data yet: download a region under Settings, Offline maps. Regions downloaded with an older "
-                + "KawaNav have to be downloaded once more.";
+        return Lang.t(R.string.planner_no_data);
     }
 
     // ------------------------------------------------------------------ the panel
 
     private void buildPanel(LinearLayout content) {
         LinearLayout modes = row();
-        modeAb = small(button("A to B", v -> setMode(false)));
-        modeRt = small(button("Round trip", v -> setMode(true)));
+        modeAb = small(button(Lang.t(R.string.planner_a_to_b), v -> setMode(false)));
+        modeRt = small(button(Lang.t(R.string.planner_round_trip), v -> setMode(true)));
         LinearLayout.LayoutParams half = weight();
         half.rightMargin = dp(Ui.SPACE2);
         modes.addView(modeAb, half);
@@ -309,23 +309,23 @@ public class PlannerActivity extends KawaActivity {
         content.addView(pointList);
 
         abBox = row();
-        abBox.addView(chip("Via point", R.drawable.ic_pin, v -> {
+        abBox.addView(chip(Lang.t(R.string.planner_via), R.drawable.ic_pin, v -> {
             if (w.dest == null) pickFor(RouteMapView.DEST, 0);
             else pickFor(RouteMapView.VIA, -1);
         }), chipGap());
-        abBox.addView(chip("Reverse", R.drawable.ic_swap, v -> reverse()), chipGap());
+        abBox.addView(chip(Lang.t(R.string.planner_reverse), R.drawable.ic_swap, v -> reverse()), chipGap());
         content.addView(abBox);
 
         rtBox = column();
         LinearLayout lengthRow = row();
-        lengthRow.addView(itemTitle("Length"), weight());
+        lengthRow.addView(itemTitle(Lang.t(R.string.planner_length)), weight());
         kmText = value("");
         lengthRow.addView(kmText);
         rtBox.addView(lengthRow);
         kmBar = new SeekBar(this);
         kmBar.setMax((RT_MAX_KM - RT_MIN_KM) / RT_STEP_KM);
         kmBar.setProgress((rtKm() - RT_MIN_KM) / RT_STEP_KM);
-        kmBar.setContentDescription("Length of the round trip");
+        kmBar.setContentDescription(Lang.t(R.string.planner_length_description));
         kmBar.setProgressTintList(ColorStateList.valueOf(Ui.accent(night)));
         kmBar.setThumbTintList(ColorStateList.valueOf(Ui.accent(night)));
         kmText.setText(kmLabel(rtKm()));
@@ -352,7 +352,7 @@ public class PlannerActivity extends KawaActivity {
         dirRow.setMinimumHeight(dp(40));
         dirText = secondary("");
         dirRow.addView(dirText, weight());
-        dirClear = cross("Any direction", v -> {
+        dirClear = cross(Lang.t(R.string.planner_any_direction), v -> {
             w.towards = null;
             w.newLoop();
             changed();
@@ -361,9 +361,9 @@ public class PlannerActivity extends KawaActivity {
         rtBox.addView(dirRow);
         LinearLayout rtChips = row();
         shapeButton = chip("", R.drawable.ic_route, v -> chooseShape());
-        shapeButton.setText(SHAPES[rtShape()]);
+        shapeButton.setText(shapes()[rtShape()]);
         rtChips.addView(shapeButton, chipGap());
-        rtChips.addView(chip("Another one", R.drawable.ic_refresh, v -> {
+        rtChips.addView(chip(Lang.t(R.string.planner_another), R.drawable.ic_refresh, v -> {
             w.seed++;
             w.newLoop();
             fitNext = true;
@@ -394,7 +394,7 @@ public class PlannerActivity extends KawaActivity {
         options.setMinimumHeight(dp(Ui.TOUCH_MIN));
         options.addView(icon(R.drawable.ic_sliders, true), iconGap());
         LinearLayout ot = column();
-        ot.addView(itemTitle("Options"));
+        ot.addView(itemTitle(Lang.t(R.string.planner_options)));
         optionsText = secondary("");
         ot.addView(optionsText);
         options.addView(ot, weight());
@@ -408,10 +408,10 @@ public class PlannerActivity extends KawaActivity {
         content.addView(status);
 
         LinearLayout actions = row();
-        startButton = primaryButton("Start navigation", v -> startNavigation());
+        startButton = primaryButton(Lang.t(R.string.planner_start_navigation), v -> startNavigation());
         actions.addView(startButton, weight());
-        actions.addView(square(R.drawable.ic_star, "Save the route", v -> saveRoute()), squareGap());
-        actions.addView(square(R.drawable.ic_share, "Save as GPX", v -> saveGpx()), squareGap());
+        actions.addView(square(R.drawable.ic_star, Lang.t(R.string.planner_save_route), v -> saveRoute()), squareGap());
+        actions.addView(square(R.drawable.ic_share, Lang.t(R.string.planner_save_gpx), v -> saveGpx()), squareGap());
         content.addView(actions);
     }
 
@@ -478,7 +478,8 @@ public class PlannerActivity extends KawaActivity {
     private View legend() {
         LinearLayout r = row();
         r.setPadding(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE1));
-        String[] names = {"straight", "sweeping", "winding", "very winding"};
+        String[] names = {Lang.t(R.string.planner_legend_straight), Lang.t(R.string.planner_legend_sweeping),
+                Lang.t(R.string.planner_legend_winding), Lang.t(R.string.planner_legend_very_winding)};
         for (int i = 0; i < 4; i++) {
             View sw = new View(this);
             sw.setBackgroundColor(RouteMapView.LEVEL_COLOURS[i]);
@@ -534,7 +535,7 @@ public class PlannerActivity extends KawaActivity {
         slots.clear();
         List<double[]> pts = new ArrayList<>();
         List<Integer> kinds = new ArrayList<>();
-        pointList.addView(pointRow(RouteMapView.START, 0, w.start != null ? w.start.name : MY_POSITION, false,
+        pointList.addView(pointRow(RouteMapView.START, 0, w.start != null ? w.start.name : Lang.t(R.string.planner_my_position), false,
                 v -> pickFor(RouteMapView.START, 0), w.start == null ? null : v -> {
                     w.start = null;
                     if (w.roundTrip && !w.cornersEdited) w.newLoop();
@@ -552,7 +553,7 @@ public class PlannerActivity extends KawaActivity {
                 }));
                 mark(pts, kinds, v.latLon(), RouteMapView.VIA, i);
             }
-            pointList.addView(pointRow(RouteMapView.DEST, 0, w.dest != null ? w.dest.name : "Destination: tap the map or search",
+            pointList.addView(pointRow(RouteMapView.DEST, 0, w.dest != null ? w.dest.name : Lang.t(R.string.planner_dest_hint),
                     w.dest == null, v -> pickFor(RouteMapView.DEST, 0), w.dest == null ? null : v -> {
                         w.removeDest();
                         changed();
@@ -561,8 +562,8 @@ public class PlannerActivity extends KawaActivity {
             map.setDirection(null, null);
         } else {
             for (int i = 0; i < w.corners.size(); i++) mark(pts, kinds, w.corners.get(i).latLon(), RouteMapView.CORNER, i);
-            dirText.setText(w.towards == null ? "Any direction: tap the map to point the way"
-                    : "Heading towards " + w.towards.name);
+            dirText.setText(w.towards == null ? Lang.t(R.string.planner_direction_any)
+                    : Lang.t(R.string.planner_direction_towards, w.towards.name));
             dirClear.setVisibility(w.towards == null ? View.GONE : View.VISIBLE);
             map.setDirection(w.towards != null ? s : null, w.towards != null ? w.towards.latLon() : null);
         }
@@ -604,10 +605,11 @@ public class PlannerActivity extends KawaActivity {
         t.setSingleLine(true);
         t.setEllipsize(TextUtils.TruncateAt.END);
         if (missing) t.setTextColor(Ui.inkMuted(night));
-        t.setContentDescription((kind == RouteMapView.START ? "Start: " : kind == RouteMapView.DEST ? "Destination: "
-                : "Via point " + number + ": ") + name + ". Tap to choose another place.");
+        t.setContentDescription(Lang.t(R.string.planner_point_description, kind == RouteMapView.START
+                ? Lang.t(R.string.planner_start) : kind == RouteMapView.DEST ? Lang.t(R.string.planner_destination)
+                : Lang.t(R.string.planner_via_number, number), name));
         r.addView(t, weight());
-        if (remove != null) r.addView(cross("Remove", remove));
+        if (remove != null) r.addView(cross(Lang.t(R.string.planner_remove), remove));
         r.setBackground(new RippleDrawable(ColorStateList.valueOf(Ui.rippleOnPlain(night)), null, null));
         r.setOnClickListener(choose);
         return r;
@@ -625,7 +627,7 @@ public class PlannerActivity extends KawaActivity {
             changed();
         } else {
             new AlertDialog.Builder(this)
-                    .setItems(new String[]{"Via point here", "Destination here", "Start here"}, (d, which) -> {
+                    .setItems(new String[]{Lang.t(R.string.planner_via_here), Lang.t(R.string.planner_dest_here), Lang.t(R.string.planner_start_here)}, (d, which) -> {
                         Waypoints.Point p = point(lat, lon);
                         if (which == 0) w.insertVia(p, here());
                         else if (which == 1) w.dest = p;
@@ -681,7 +683,7 @@ public class PlannerActivity extends KawaActivity {
             case RouteMapView.START:
                 p = w.start;
                 if (p != null) {
-                    items.add("Use my position");
+                    items.add(Lang.t(R.string.planner_use_position));
                     acts.add(() -> {
                         w.start = null;
                         if (w.roundTrip && !w.cornersEdited) w.newLoop();
@@ -691,7 +693,7 @@ public class PlannerActivity extends KawaActivity {
                 break;
             case RouteMapView.VIA:
                 p = w.vias.get(s[1]);
-                items.add("Remove");
+                items.add(Lang.t(R.string.planner_remove));
                 acts.add(() -> {
                     w.vias.remove(s[1]);
                     changed();
@@ -699,7 +701,7 @@ public class PlannerActivity extends KawaActivity {
                 break;
             case RouteMapView.DEST:
                 p = w.dest;
-                items.add("Remove");
+                items.add(Lang.t(R.string.planner_remove));
                 acts.add(() -> {
                     w.removeDest();
                     changed();
@@ -708,7 +710,7 @@ public class PlannerActivity extends KawaActivity {
             default:
                 p = w.corners.get(s[1]);
                 if (w.corners.size() > 1) {
-                    items.add("Remove this corner");
+                    items.add(Lang.t(R.string.planner_remove_corner));
                     acts.add(() -> {
                         w.corners.remove(s[1]);
                         w.cornersEdited = true;
@@ -720,20 +722,20 @@ public class PlannerActivity extends KawaActivity {
         double[] here = here();
         Waypoints.Point fav = p != null ? p : here == null ? null : new Waypoints.Point(here[0], here[1], roadName(here[0], here[1]));
         if (fav != null) {
-            items.add("Save as favourite");
+            items.add(Lang.t(R.string.planner_save_favourite));
             acts.add(() -> askFavourite(fav));
         }
         if (items.isEmpty()) return;
         new AlertDialog.Builder(this)
-                .setTitle(p != null ? p.name : MY_POSITION)
+                .setTitle(p != null ? p.name : Lang.t(R.string.planner_my_position))
                 .setItems(items.toArray(new String[0]), (d, which) -> acts.get(which).run())
                 .show();
     }
 
     private void reverse() {
         double[] h = here();
-        if (!w.reverse(h, h == null ? MY_POSITION : roadName(h[0], h[1]))) {
-            status.setText(w.dest == null ? "Choose a destination first." : "Finding your position…");
+        if (!w.reverse(h, h == null ? Lang.t(R.string.planner_my_position) : roadName(h[0], h[1]))) {
+            status.setText(w.dest == null ? Lang.t(R.string.planner_choose_dest) : Lang.t(R.string.planner_finding));
             return;
         }
         fitNext = true;
@@ -784,7 +786,7 @@ public class PlannerActivity extends KawaActivity {
             if (s != null) {
                 String name = g.name(s.edge), ref = g.ref(s.edge);
                 String road = name.isEmpty() ? ref : ref.isEmpty() || name.contains(ref) ? name : name + " (" + ref + ")";
-                return s.distance > 300 ? "Near " + road : road;
+                return s.distance > 300 ? Lang.t(R.string.planner_near, road) : road;
             }
         }
         return String.format(Locale.ROOT, "%.4f, %.4f", lat, lon);
@@ -867,7 +869,7 @@ public class PlannerActivity extends KawaActivity {
         }
         double[] h = here();
         if (h != null) map.center(h[0], h[1], 13);
-        else status.setText("Finding your position… You can also long-press the map for a start.");
+        else status.setText(Lang.t(R.string.planner_finding_long_press));
         askPosition(true);
     }
 
@@ -875,8 +877,9 @@ public class PlannerActivity extends KawaActivity {
 
     /** Chooses a place for the start, a via point ({@code index}; -1: a new one) or the destination. */
     private void pickFor(int kind, int index) {
-        String title = kind == RouteMapView.START ? (w.roundTrip ? "Round trip start" : "Start")
-                : kind == RouteMapView.DEST ? "Destination" : index < 0 ? "New via point" : "Via point " + (index + 1);
+        String title = kind == RouteMapView.START ? (w.roundTrip ? Lang.t(R.string.planner_round_trip_start) : Lang.t(R.string.planner_start))
+                : kind == RouteMapView.DEST ? Lang.t(R.string.planner_destination) : index < 0 ? Lang.t(R.string.planner_new_via)
+                : Lang.t(R.string.planner_via_number, index + 1);
         pick(title, kind == RouteMapView.START, place -> {
             Waypoints.Point p = place == null ? null : point(place);
             if (kind == RouteMapView.START) {
@@ -903,13 +906,13 @@ public class PlannerActivity extends KawaActivity {
         box.setPadding(dp(Ui.SPACE5), dp(Ui.SPACE2), dp(Ui.SPACE5), 0);
         LinearLayout r = row();
         EditText field = new EditText(this);
-        field.setHint("Search a place (online)");
+        field.setHint(Lang.t(R.string.planner_search_hint));
         field.setSingleLine(true);
         field.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         field.setTextColor(Ui.ink(night));
         field.setHintTextColor(Ui.inkMuted(night));
         r.addView(field, weight());
-        Button go = secondaryButton("Search", null);
+        Button go = secondaryButton(Lang.t(R.string.planner_search), null);
         LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(WRAP, WRAP);
         glp.leftMargin = dp(Ui.SPACE2);
         r.addView(go, glp);
@@ -932,7 +935,7 @@ public class PlannerActivity extends KawaActivity {
             sources.clear();
             if (offerMyPosition) {
                 entries.add(null);
-                labels.add("⌖  " + MY_POSITION);
+                labels.add("⌖  " + Lang.t(R.string.planner_my_position));
                 sources.add(0);
             }
             for (Places.Place f : Places.favourites(prefs)) {
@@ -946,11 +949,11 @@ public class PlannerActivity extends KawaActivity {
                 sources.add(2);
             }
             adapter.notifyDataSetChanged();
-            info.setText(sources.contains(1) || sources.contains(2) ? "Long-press a favourite to rename or remove it."
-                    : "Your favourite places and recent destinations show here.");
+            info.setText(sources.contains(1) || sources.contains(2) ? Lang.t(R.string.planner_favourites_hint)
+                    : Lang.t(R.string.planner_favourites_empty));
         };
         known.run();
-        AlertDialog d = new AlertDialog.Builder(this).setTitle(title).setView(box).setNegativeButton("Cancel", null).create();
+        AlertDialog d = new AlertDialog.Builder(this).setTitle(title).setView(box).setNegativeButton(Lang.t(R.string.common_cancel), null).create();
         list.setOnItemClickListener((parent, v, pos, id) -> {
             Places.Place p = entries.get(pos);
             if (p != null && sources.get(pos) == 3) Places.addRecent(prefs, p);
@@ -969,10 +972,10 @@ public class PlannerActivity extends KawaActivity {
                 return;
             }
             if (!Geocoder.isPresent()) {
-                info.setText("This phone has no place search: tap the map instead.");
+                info.setText(Lang.t(R.string.planner_no_search));
                 return;
             }
-            info.setText("Searching…");
+            info.setText(Lang.t(R.string.planner_searching));
             new Geocoder(this, Locale.getDefault()).getFromLocationName(q, 8, new Geocoder.GeocodeListener() {
                 @Override
                 public void onGeocode(List<Address> found) {
@@ -980,7 +983,7 @@ public class PlannerActivity extends KawaActivity {
                         if (!d.isShowing()) return;
                         List<Places.Place> l = places(found);
                         if (l.isEmpty()) {
-                            info.setText("Nothing found. Tap the map instead.");
+                            info.setText(Lang.t(R.string.planner_nothing_found));
                             return;
                         }
                         entries.clear();
@@ -999,7 +1002,7 @@ public class PlannerActivity extends KawaActivity {
                 @Override
                 public void onError(String message) {
                     Logger.log("Planner: place search failed: " + message);
-                    main.post(() -> info.setText("Search failed (" + message + "): tap the map instead."));
+                    main.post(() -> info.setText(Lang.t(R.string.planner_search_failed, message)));
                 }
             });
         };
@@ -1032,9 +1035,9 @@ public class PlannerActivity extends KawaActivity {
     private void favouriteMenu(Places.Place f, Runnable after) {
         new AlertDialog.Builder(this)
                 .setTitle(f.name)
-                .setItems(new String[]{"Rename", "Remove from favourites"}, (d, which) -> {
+                .setItems(new String[]{Lang.t(R.string.planner_rename), Lang.t(R.string.planner_remove_favourite)}, (d, which) -> {
                     if (which == 0) {
-                        askName("Rename", f.name, name -> {
+                        askName(Lang.t(R.string.planner_rename), f.name, name -> {
                             replaceFavourite(f, new Places.Place(name, f.lat, f.lon));
                             after.run();
                         });
@@ -1060,9 +1063,9 @@ public class PlannerActivity extends KawaActivity {
     }
 
     private void askFavourite(Waypoints.Point p) {
-        askName("Save as favourite", p.name, name -> {
+        askName(Lang.t(R.string.planner_save_favourite), p.name, name -> {
             Places.addFavourite(prefs, new Places.Place(name, p.lat, p.lon));
-            status.setText("“" + name + "” is now a favourite: it comes first in the search.");
+            status.setText(Lang.t(R.string.planner_favourite_saved, name));
         });
     }
 
@@ -1078,11 +1081,11 @@ public class PlannerActivity extends KawaActivity {
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setView(box)
-                .setPositiveButton("Save", (d, which) -> {
+                .setPositiveButton(Lang.t(R.string.planner_save), (d, which) -> {
                     String name = field.getText().toString().trim();
                     ok.accept(name.isEmpty() ? before : name);
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
@@ -1094,7 +1097,7 @@ public class PlannerActivity extends KawaActivity {
     }
 
     private int rtShape() {
-        return Math.max(0, Math.min(SHAPES.length - 1, prefs.getInt(KEY_RT_SHAPE, 0)));
+        return Math.max(0, Math.min(shapes().length - 1, prefs.getInt(KEY_RT_SHAPE, 0)));
     }
 
     private String kmLabel(int km) {
@@ -1112,12 +1115,12 @@ public class PlannerActivity extends KawaActivity {
 
     private void chooseShape() {
         new AlertDialog.Builder(this)
-                .setTitle("Shape of the round trip")
-                .setSingleChoiceItems(SHAPES, rtShape(), (d, which) -> {
+                .setTitle(Lang.t(R.string.planner_shape_title))
+                .setSingleChoiceItems(shapes(), rtShape(), (d, which) -> {
                     d.dismiss();
                     if (which == rtShape()) return;
                     prefs.edit().putInt(KEY_RT_SHAPE, which).apply();
-                    shapeButton.setText(SHAPES[which]);
+                    shapeButton.setText(shapes()[which]);
                     w.newLoop();
                     fitNext = true;
                     changed();
@@ -1128,17 +1131,16 @@ public class PlannerActivity extends KawaActivity {
     private void options() {
         LinearLayout box = column();
         box.setPadding(dp(Ui.SPACE5), dp(Ui.SPACE2), dp(Ui.SPACE5), 0);
-        addRow(box, switchRow("Avoid motorways", "Only when there is no other way", Hub.KEY_NAV_AVOID_MOTORWAYS, false,
+        addRow(box, switchRow(Lang.t(R.string.settings_avoid_motorways), Lang.t(R.string.settings_avoid_motorways_sub), Hub.KEY_NAV_AVOID_MOTORWAYS, false,
                 on -> optionsChanged()));
-        addRow(box, switchRow("Avoid tolls", "Toll roads only when there is no other way", Hub.KEY_NAV_AVOID_TOLLS, false,
+        addRow(box, switchRow(Lang.t(R.string.settings_avoid_tolls), Lang.t(R.string.settings_avoid_tolls_sub), Hub.KEY_NAV_AVOID_TOLLS, false,
                 on -> optionsChanged()));
-        addRow(box, switchRow("Avoid gravel", "Unpaved roads only when there is no other way", Hub.KEY_NAV_AVOID_UNPAVED, true,
+        addRow(box, switchRow(Lang.t(R.string.settings_avoid_gravel), Lang.t(R.string.settings_avoid_gravel_sub), Hub.KEY_NAV_AVOID_UNPAVED, true,
                 on -> optionsChanged()));
-        TextView n = note("Curvy prefers winding roads and avoids towns; extra curvy takes long detours for bends. "
-                + "Routes are computed on the phone from the downloaded OpenStreetMap regions (Settings, Offline maps).");
+        TextView n = note(Lang.t(R.string.planner_options_note));
         n.setPadding(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
         box.addView(n);
-        new AlertDialog.Builder(this).setTitle("Route options").setView(box).setPositiveButton("Done", null).show();
+        new AlertDialog.Builder(this).setTitle(Lang.t(R.string.planner_route_options)).setView(box).setPositiveButton(Lang.t(R.string.planner_done), null).show();
     }
 
     private void optionsChanged() {
@@ -1149,13 +1151,14 @@ public class PlannerActivity extends KawaActivity {
 
     private void showOptions() {
         List<String> avoided = new ArrayList<>();
-        if (prefs.getBoolean(Hub.KEY_NAV_AVOID_MOTORWAYS, false)) avoided.add("motorways");
-        if (prefs.getBoolean(Hub.KEY_NAV_AVOID_TOLLS, false)) avoided.add("tolls");
-        if (prefs.getBoolean(Hub.KEY_NAV_AVOID_UNPAVED, true)) avoided.add("gravel");
+        if (prefs.getBoolean(Hub.KEY_NAV_AVOID_MOTORWAYS, false)) avoided.add(Lang.t(R.string.planner_avoid_motorways));
+        if (prefs.getBoolean(Hub.KEY_NAV_AVOID_TOLLS, false)) avoided.add(Lang.t(R.string.planner_avoid_tolls));
+        if (prefs.getBoolean(Hub.KEY_NAV_AVOID_UNPAVED, true)) avoided.add(Lang.t(R.string.planner_avoid_gravel));
         String s;
-        if (avoided.isEmpty()) s = "Avoiding nothing";
-        else if (avoided.size() == 1) s = "Avoiding " + avoided.get(0);
-        else s = "Avoiding " + String.join(", ", avoided.subList(0, avoided.size() - 1)) + " and " + avoided.get(avoided.size() - 1);
+        if (avoided.isEmpty()) s = Lang.t(R.string.planner_avoiding_nothing);
+        else if (avoided.size() == 1) s = Lang.t(R.string.planner_avoiding, avoided.get(0));
+        else s = Lang.t(R.string.planner_avoiding, Lang.t(R.string.planner_list_and,
+                String.join(", ", avoided.subList(0, avoided.size() - 1)), avoided.get(avoided.size() - 1)));
         optionsText.setText(s);
     }
 
@@ -1180,7 +1183,7 @@ public class PlannerActivity extends KawaActivity {
     private void plan() {
         RouteGraph g = graph;
         if (g == null) {
-            status.setText("Opening the routing data…");
+            status.setText(Lang.t(R.string.planner_opening));
             return;
         }
         if (g.isEmpty()) {
@@ -1196,18 +1199,18 @@ public class PlannerActivity extends KawaActivity {
             List<double[]> pts = w.forRouter(here);
             if (pts == null) {
                 show(null);
-                status.setText(w.start == null && here == null ? "Finding your position… or tap Start to choose one."
-                        : "Tap the map or search for a destination.");
+                status.setText(w.start == null && here == null ? Lang.t(R.string.planner_finding_or_start)
+                        : Lang.t(R.string.planner_tap_or_search));
                 return;
             }
             double[] a = pts.get(0), b = pts.get(1);
             if (pts.size() == 2 && Ride.distanceM(a[0], a[1], b[0], b[1]) < 50) {
                 show(null);
-                status.setText("The start and the destination are the same place.");
+                status.setText(Lang.t(R.string.planner_same_place));
                 return;
             }
             planning = gen;
-            status.setText("Planning the route…");
+            status.setText(Lang.t(R.string.planner_planning));
             int first = chosen.kind.ordinal();
             worker.execute(() -> {
                 // the chosen kind first, then the other two to compare
@@ -1240,7 +1243,7 @@ public class PlannerActivity extends KawaActivity {
             double[] s = w.start != null ? w.start.latLon() : here;
             if (s == null) {
                 show(null);
-                status.setText("Finding your position… or long-press the map for the start.");
+                status.setText(Lang.t(R.string.planner_finding_or_long_press));
                 return;
             }
             List<double[]> loop = w.cornersEdited && !w.corners.isEmpty() ? w.forLoop(here) : null;
@@ -1250,7 +1253,7 @@ public class PlannerActivity extends KawaActivity {
             long seed = w.seed;
             int k = chosen.kind.ordinal();
             planning = gen;
-            status.setText("Planning a round trip…");
+            status.setText(Lang.t(R.string.planner_planning_round_trip));
             worker.execute(() -> {
                 long t0 = System.currentTimeMillis();
                 Route r = null;
@@ -1313,9 +1316,9 @@ public class PlannerActivity extends KawaActivity {
             double asked = rtKm() * 1000.0;
             String km = kmLabel(rtKm());
             if (r.length < asked * (1 - RoundTrip.TOLERANCE)) {
-                status.setText("Shorter than the " + km + " asked: not enough roads around for more.");
+                status.setText(Lang.t(R.string.planner_shorter, km));
             } else if (r.length > asked * (1 + RoundTrip.TOLERANCE)) {
-                status.setText("Longer than the " + km + " asked: no closer fit on the roads around.");
+                status.setText(Lang.t(R.string.planner_longer, km));
             }
         }
         showTiles();
@@ -1328,7 +1331,7 @@ public class PlannerActivity extends KawaActivity {
             show(routes[k]);
         } else if (errors[k] != null) {
             show(null);
-            status.setText("No route: " + errors[k] + ". Points must lie in a downloaded region.");
+            status.setText(Lang.t(R.string.planner_no_route_why, errors[k]));
         }
     }
 
@@ -1354,7 +1357,7 @@ public class PlannerActivity extends KawaActivity {
             return;
         }
         if (routes[k] != null || errors[k] != null) showKind(k);
-        else if (planning == generation.get()) status.setText("Planning the route…"); // shown when it is ready
+        else if (planning == generation.get()) status.setText(Lang.t(R.string.planner_planning)); // shown when it is ready
         else schedule();
         showTiles();
     }
@@ -1365,11 +1368,11 @@ public class PlannerActivity extends KawaActivity {
         for (int k = 0; k < 3; k++) {
             Route r = routes[k];
             String line;
-            if (r != null) line = distance(r) + " · " + duration(r) + "\n" + Math.round(100 * r.windingShare()) + "% winding";
-            else if (errors[k] != null) line = "no route\n";
-            else if (w.roundTrip && k != sel) line = "tap to plan\n";
+            if (r != null) line = distance(r) + " · " + duration(r) + "\n" + Lang.t(R.string.planner_winding_share, Math.round(100 * r.windingShare()));
+            else if (errors[k] != null) line = Lang.t(R.string.planner_tile_no_route) + "\n";
+            else if (w.roundTrip && k != sel) line = Lang.t(R.string.planner_tile_tap) + "\n";
             else line = "…\n";
-            SpannableStringBuilder sb = new SpannableStringBuilder(PROFILES[k]);
+            SpannableStringBuilder sb = new SpannableStringBuilder(profiles()[k]);
             sb.setSpan(new StyleSpan(Typeface.BOLD), 0, sb.length(), 0);
             sb.append('\n').append(line);
             tiles[k].setText(sb);
@@ -1420,18 +1423,18 @@ public class PlannerActivity extends KawaActivity {
         if (i == 0 || (r.roundTrip && i == last)) {
             return w.start != null ? w.start.name : roadName(r.asked.get(0)[0], r.asked.get(0)[1]);
         }
-        if (i == last) return w.dest != null ? w.dest.name : "Destination";
+        if (i == last) return w.dest != null ? w.dest.name : Lang.t(R.string.planner_destination);
         List<Waypoints.Point> between = r.roundTrip ? w.corners : w.vias;
-        return i - 1 < between.size() ? between.get(i - 1).name : "Via point " + i;
+        return i - 1 < between.size() ? between.get(i - 1).name : Lang.t(R.string.planner_via_number, i);
     }
 
     private void saveRoute() {
         Route r = route;
         if (r == null) return;
         String start = askedName(r, 0);
-        String name = r.roundTrip ? String.format(Locale.ROOT, "Round trip %s from %s", distance(r), start)
+        String name = r.roundTrip ? Lang.t(R.string.planner_round_trip_name, distance(r), start)
                 : start + " → " + askedName(r, r.asked.size() - 1);
-        askName("Save the route", name, chosen -> {
+        askName(Lang.t(R.string.planner_save_route), name, chosen -> {
             SavedRoutes.Saved s = new SavedRoutes.Saved();
             s.name = chosen;
             s.created = System.currentTimeMillis();
@@ -1448,9 +1451,9 @@ public class PlannerActivity extends KawaActivity {
             try {
                 SavedRoutes.save(routesDir(), s);
                 Logger.log("Planner: saved the route " + chosen);
-                status.setText("Saved as “" + chosen + "”: open it with the list button at the top.");
+                status.setText(Lang.t(R.string.planner_route_saved, chosen));
             } catch (IOException e) {
-                status.setText("Saving failed: " + e.getMessage());
+                status.setText(Lang.t(R.string.planner_saving_failed_why, e.getMessage()));
             }
         });
     }
@@ -1459,9 +1462,9 @@ public class PlannerActivity extends KawaActivity {
         List<SavedRoutes.Saved> l = SavedRoutes.list(routesDir());
         if (l.isEmpty()) {
             new AlertDialog.Builder(this)
-                    .setTitle("Saved routes")
-                    .setMessage("No saved routes yet: plan one and tap the star to keep it.")
-                    .setPositiveButton("OK", null)
+                    .setTitle(Lang.t(R.string.planner_saved_routes))
+                    .setMessage(Lang.t(R.string.planner_no_saved))
+                    .setPositiveButton(Lang.t(R.string.common_ok), null)
                     .show();
             return;
         }
@@ -1471,13 +1474,14 @@ public class PlannerActivity extends KawaActivity {
         for (int i = 0; i < items.length; i++) {
             SavedRoutes.Saved s = l.get(i);
             String len = imperial ? String.format(Locale.ROOT, "%.0f mi", s.km / 1.609344) : String.format(Locale.ROOT, "%.0f km", s.km);
-            items[i] = s.name + "\n" + len + " · " + PROFILES[s.kind.ordinal()] + (s.roundTrip ? " round trip" : "")
+            items[i] = s.name + "\n" + len + " · " + profiles()[s.kind.ordinal()]
+                    + (s.roundTrip ? " " + Lang.t(R.string.planner_saved_round_trip) : "")
                     + " · " + date.format(new java.util.Date(s.created));
         }
         AlertDialog d = new AlertDialog.Builder(this)
-                .setTitle("Saved routes (long-press to edit)")
+                .setTitle(Lang.t(R.string.planner_saved_routes_edit))
                 .setItems(items, (x, which) -> load(l.get(which)))
-                .setNegativeButton("Close", null)
+                .setNegativeButton(Lang.t(R.string.common_close), null)
                 .create();
         d.show();
         d.getListView().setOnItemLongClickListener((parent, v, pos, id) -> {
@@ -1490,25 +1494,25 @@ public class PlannerActivity extends KawaActivity {
     private void savedMenu(SavedRoutes.Saved s) {
         new AlertDialog.Builder(this)
                 .setTitle(s.name)
-                .setItems(new String[]{"Rename", "Delete"}, (d, which) -> {
+                .setItems(new String[]{Lang.t(R.string.planner_rename), Lang.t(R.string.common_delete)}, (d, which) -> {
                     if (which == 0) {
-                        askName("Rename", s.name, name -> {
+                        askName(Lang.t(R.string.planner_rename), s.name, name -> {
                             s.name = name;
                             try {
                                 SavedRoutes.save(routesDir(), s);
                             } catch (IOException e) {
-                                status.setText("Renaming failed: " + e.getMessage());
+                                status.setText(Lang.t(R.string.planner_renaming_failed, e.getMessage()));
                             }
                             savedRoutes();
                         });
                     } else {
                         new AlertDialog.Builder(this)
-                                .setTitle("Delete “" + s.name + "”?")
-                                .setPositiveButton("Delete", (x, y) -> {
+                                .setTitle(Lang.t(R.string.planner_delete_route_title, s.name))
+                                .setPositiveButton(Lang.t(R.string.common_delete), (x, y) -> {
                                     SavedRoutes.delete(s);
                                     savedRoutes();
                                 })
-                                .setNegativeButton("Cancel", null)
+                                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                                 .show();
                     }
                 })
@@ -1549,22 +1553,22 @@ public class PlannerActivity extends KawaActivity {
         v.put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "Download/KawaNav");
         Uri uri = getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
         if (uri == null) {
-            status.setText("Saving failed");
+            status.setText(Lang.t(R.string.planner_saving_failed));
             return;
         }
         try (java.io.OutputStream out = getContentResolver().openOutputStream(uri)) {
             out.write(bytes);
         } catch (java.io.IOException e) {
-            status.setText("Saving failed: " + e.getMessage());
+            status.setText(Lang.t(R.string.planner_saving_failed_why, e.getMessage()));
             return;
         }
         Logger.log("Planner: saved " + name);
         Intent share = new Intent(Intent.ACTION_SEND).setType("application/gpx+xml")
                 .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
-            startActivity(Intent.createChooser(share, "Share " + name));
+            startActivity(Intent.createChooser(share, Lang.t(R.string.planner_share, name)));
         } catch (android.content.ActivityNotFoundException e) {
-            status.setText(name + " saved to Download/KawaNav");
+            status.setText(Lang.t(R.string.planner_gpx_saved, name));
         }
     }
 }

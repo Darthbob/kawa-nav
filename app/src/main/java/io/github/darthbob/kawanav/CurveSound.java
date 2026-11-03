@@ -60,7 +60,7 @@ final class CurveSound {
             return;
         }
         // the phrases are in the phone's language when NavText has it, else English
-        Locale lang = NavText.phone().locale();
+        Locale lang = NavText.current().locale();
         if (tts.setLanguage(lang) < TextToSpeech.LANG_AVAILABLE) {
             Logger.log("Curve voice: no " + lang.getDisplayLanguage(Locale.ENGLISH) + " voice installed, using the phone's default");
         }

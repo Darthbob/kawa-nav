@@ -85,7 +85,7 @@ public final class RideRecorder implements android.location.LocationListener {
     /** Starts a ride; the reason why it could not be started, or null. */
     public String start(boolean manual) {
         if (state != IDLE) return "a ride is already running";
-        if (context.getFilesDir().getUsableSpace() < MIN_FREE_BYTES) return "not enough free space on the phone";
+        if (context.getFilesDir().getUsableSpace() < MIN_FREE_BYTES) return Lang.t(R.string.record_no_space);
         ride = new Ride();
         ride.id = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.ROOT).format(new java.util.Date());
         ride.name = Ride.defaultName(System.currentTimeMillis());
@@ -124,7 +124,7 @@ public final class RideRecorder implements android.location.LocationListener {
      */
     public String adopt(Ride r) {
         if (state != IDLE) return "a ride is already running";
-        if (context.getFilesDir().getUsableSpace() < MIN_FREE_BYTES) return "not enough free space on the phone";
+        if (context.getFilesDir().getUsableSpace() < MIN_FREE_BYTES) return Lang.t(R.string.record_no_space);
         ride = r;
         ride.state = "recording";
         ride.endReason = "";

@@ -55,24 +55,24 @@ public final class BikeAlerts {
         BikeFrames.LogExt ext = b.ext;
         if (ext != null && now - b.extAt <= FRESH_MS && ext.tpmsWarnings > 0) {
             int w = ext.tpmsWarnings;
-            if ((w & 1) != 0) out.add(new Alert("tpms_front", "Front tyre is losing pressure", tyre(ext.tyreFrontKpa)));
-            if ((w & 2) != 0) out.add(new Alert("tpms_rear", "Rear tyre is losing pressure", tyre(ext.tyreRearKpa)));
-            if ((w & 4) != 0) out.add(new Alert("tpms_front_sensor", "Front tyre sensor battery is low",
-                    "The pressure sensor in the front wheel needs a new battery"));
-            if ((w & 8) != 0) out.add(new Alert("tpms_rear_sensor", "Rear tyre sensor battery is low",
-                    "The pressure sensor in the rear wheel needs a new battery"));
+            if ((w & 1) != 0) out.add(new Alert("tpms_front", Lang.t(R.string.alert_tyre_front), tyre(ext.tyreFrontKpa)));
+            if ((w & 2) != 0) out.add(new Alert("tpms_rear", Lang.t(R.string.alert_tyre_rear), tyre(ext.tyreRearKpa)));
+            if ((w & 4) != 0) out.add(new Alert("tpms_front_sensor", Lang.t(R.string.alert_sensor_front),
+                    Lang.t(R.string.alert_sensor_front_text)));
+            if ((w & 8) != 0) out.add(new Alert("tpms_rear_sensor", Lang.t(R.string.alert_sensor_rear),
+                    Lang.t(R.string.alert_sensor_rear_text)));
         }
         BikeFrames.Telemetry live = b.live;
         boolean liveFresh = live != null && now - b.liveAt <= FRESH_MS;
         if (liveFresh && live.abs >= 0 && (live.abs & 0x0C) != 0) {
-            out.add(new Alert("abs_error", "ABS reports a fault",
-                    "The ABS may not work: check the warning lamp on the dash and have the bike looked at"));
+            out.add(new Alert("abs_error", Lang.t(R.string.alert_abs),
+                    Lang.t(R.string.alert_abs_text)));
         }
         BikeFrames.VehicleInfo info = b.info;
         if (info != null && now - b.infoAt <= FRESH_MS && info.lowFuel == 1) {
-            out.add(new Alert("fuel_low", "Fuel is low", info.rangeKm >= 0
-                    ? String.format(Locale.ROOT, "%d km of range left on the dash: fill up soon", info.rangeKm)
-                    : "The dash reports a low fuel level: fill up soon"));
+            out.add(new Alert("fuel_low", Lang.t(R.string.alert_fuel_low), info.rangeKm >= 0
+                    ? Lang.t(R.string.alert_fuel_low_range, info.rangeKm)
+                    : Lang.t(R.string.alert_fuel_low_text)));
         }
         // a reading taken before the engine last started or stopped belongs to the other state: judged
         // against this one's threshold, the 11.5 V read before a start became "not being charged" at
@@ -82,11 +82,11 @@ public final class BikeAlerts {
             boolean running = liveFresh && running(live);
             double v = lowVoltage(info, running ? NOT_CHARGING_V : LOW_BATTERY_V);
             if (v == v && running) {
-                out.add(new Alert("battery_charging", "Battery is not being charged",
-                        String.format(Locale.ROOT, "%.1f V with the engine running: check the charging system", v)));
+                out.add(new Alert("battery_charging", Lang.t(R.string.alert_not_charging),
+                        Lang.t(R.string.alert_not_charging_text, v)));
             } else if (v == v) {
-                out.add(new Alert("battery_low", "Battery is low",
-                        String.format(Locale.ROOT, "%.1f V: the bike may not start next time", v)));
+                out.add(new Alert("battery_low", Lang.t(R.string.alert_battery_low),
+                        Lang.t(R.string.alert_battery_low_text, v)));
             }
         }
         return out;
@@ -150,8 +150,8 @@ public final class BikeAlerts {
     }
 
     private static String tyre(double kpa) {
-        return kpa == kpa ? String.format(Locale.ROOT, "%.2f bar now: stop and check it", kpa / 100.0)
-                : "Stop and check it";
+        return kpa == kpa ? Lang.t(R.string.alert_tyre_now, kpa / 100.0)
+                : Lang.t(R.string.alert_check);
     }
 
     /**

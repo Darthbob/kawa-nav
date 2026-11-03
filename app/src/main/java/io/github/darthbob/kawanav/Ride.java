@@ -115,6 +115,83 @@ public final class Ride {
             BRAKES = "Brakes and electronics", TEMPERATURES = "Temperatures", QUALITY = "Data quality";
 
     /**
+     * The sections, value labels, chart titles and the bike's own units are English inside (exports and the
+     * code go by them) and shown in the app's language.
+     */
+    private static final java.util.Map<String, Integer> SHOWN = new java.util.HashMap<>();
+
+    static {
+        // why a ride ended, as the recorder writes it into the ride
+        SHOWN.put("24 hours reached", R.string.ride_end_24h);
+        SHOWN.put("bike gone", R.string.ride_end_bike_gone);
+        SHOWN.put("bike switched off", R.string.ride_end_switched_off);
+        SHOWN.put("bridge stopped", R.string.ride_end_bridge_stopped);
+        SHOWN.put("phone battery low", R.string.ride_end_battery);
+        SHOWN.put("stopped by hand", R.string.ride_end_by_hand);
+        SHOWN.put("Engine speed", R.string.ride_name_engine_speed);
+        SHOWN.put("Throttle", R.string.ride_name_throttle);
+        SHOWN.put("Torque asked by the throttle", R.string.ride_name_torque_asked_by_the_throttle);
+        SHOWN.put("bike units", R.string.ride_name_bike_units);
+        SHOWN.put("Torque the engine control asks for", R.string.ride_name_torque_the_engine_control_asks_for);
+        SHOWN.put("Torque from the engine", R.string.ride_name_torque_from_the_engine);
+        SHOWN.put("Fuel use", R.string.ride_name_fuel_use);
+        SHOWN.put("dash units", R.string.ride_name_dash_units);
+        SHOWN.put("Fuel economy, instant", R.string.ride_name_fuel_economy_instant);
+        SHOWN.put("Front suspension", R.string.ride_name_front_suspension);
+        SHOWN.put("Rear suspension", R.string.ride_name_rear_suspension);
+        SHOWN.put("Front suspension speed (unverified)", R.string.ride_name_front_suspension_speed_unverified);
+        SHOWN.put("Rear suspension speed (unverified)", R.string.ride_name_rear_suspension_speed_unverified);
+        SHOWN.put("Acceleration", R.string.ride_name_acceleration);
+        SHOWN.put("Acceleration, forward", R.string.ride_name_acceleration_forward);
+        SHOWN.put("Acceleration, sideways", R.string.ride_name_acceleration_sideways);
+        SHOWN.put("Acceleration, up", R.string.ride_name_acceleration_up);
+        SHOWN.put("Lean angle, either side", R.string.ride_name_lean_angle_either_side);
+        SHOWN.put("Roll rate", R.string.ride_name_roll_rate);
+        SHOWN.put("Yaw rate", R.string.ride_name_yaw_rate);
+        SHOWN.put("Pitch rate", R.string.ride_name_pitch_rate);
+        SHOWN.put("Front wheel (filtered)", R.string.ride_name_front_wheel_filtered);
+        SHOWN.put("Rear wheel (filtered)", R.string.ride_name_rear_wheel_filtered);
+        SHOWN.put("Wheelie angle", R.string.ride_name_wheelie_angle);
+        SHOWN.put("Front tyre", R.string.ride_name_front_tyre);
+        SHOWN.put("Rear tyre", R.string.ride_name_rear_tyre);
+        SHOWN.put("Front brake", R.string.ride_name_front_brake);
+        SHOWN.put("Front brake master (unverified)", R.string.ride_name_front_brake_master_unverified);
+        SHOWN.put("raw", R.string.ride_name_raw);
+        SHOWN.put("Rear brake master (unverified)", R.string.ride_name_rear_brake_master_unverified);
+        SHOWN.put("Rear brake caliper (unverified)", R.string.ride_name_rear_brake_caliper_unverified);
+        SHOWN.put("Rear wheel slip", R.string.ride_name_rear_wheel_slip);
+        SHOWN.put("Battery", R.string.ride_name_battery);
+        SHOWN.put("Coolant", R.string.ride_name_coolant);
+        SHOWN.put("Oil", R.string.ride_name_oil);
+        SHOWN.put("Intake air", R.string.ride_name_intake_air);
+        SHOWN.put("Outside", R.string.ride_name_outside);
+        SHOWN.put("Speed (GPS)", R.string.ride_name_speed_gps);
+        SHOWN.put("GPS accuracy", R.string.ride_name_gps_accuracy);
+        SHOWN.put("Altitude", R.string.ride_name_altitude);
+        SHOWN.put("Speed", R.string.ride_name_speed);
+        SHOWN.put("Engine", R.string.ride_name_engine);
+        SHOWN.put("Torque", R.string.ride_name_torque);
+        SHOWN.put("throttle", R.string.ride_name_throttle_line);
+        SHOWN.put("control", R.string.ride_name_control_line);
+        SHOWN.put("engine", R.string.ride_name_engine_line);
+        SHOWN.put("Gear", R.string.ride_name_gear);
+        SHOWN.put("Lean angle", R.string.ride_name_lean_angle);
+        SHOWN.put("Oil temperature", R.string.ride_name_oil_temperature);
+        SHOWN.put("Fuel economy", R.string.ride_name_fuel_economy);
+        SHOWN.put("Outside temperature", R.string.ride_name_outside_temperature);
+        SHOWN.put("Chassis and suspension", R.string.ride_name_chassis_and_suspension);
+        SHOWN.put("Brakes and electronics", R.string.ride_name_brakes_and_electronics);
+        SHOWN.put("Temperatures", R.string.ride_name_temperatures);
+        SHOWN.put("Data quality", R.string.ride_name_data_quality);
+    }
+
+    /** A section, label, chart title or unit as shown. */
+    public static String shown(String english) {
+        Integer id = SHOWN.get(english);
+        return id == null ? english : Lang.t(id);
+    }
+
+    /**
      * One value over the whole ride: the lowest, the average and the highest of every recorded second, and
      * how many seconds had it at all. A value the bike never sent keeps n == 0 and is left out of the
      * screen, so a ride without, say, a suspension unit shows no suspension rather than a row of zeroes.

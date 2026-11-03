@@ -117,7 +117,7 @@ public final class TrackView extends View {
                 return true;
             }
         });
-        setContentDescription("The ride's track on a map. Pinch to zoom, drag to move.");
+        setContentDescription(Lang.t(R.string.map_track_description));
     }
 
     /** The ride to draw; {@code marked} (a sample index) gets a dot, -1 for none. */

@@ -151,11 +151,11 @@ public final class SettingsWrite {
      * A 0 or a value off the end would be a setting the bike never offered.
      */
     public static String invalid(int modes, int mode, int power, int ktrcLevel, int kqs, int kebc) {
-        if (mode < 1 || mode > modes) return "riding mode " + mode + " is not one the bike offers";
-        if (power < 1 || power > POWER.length) return "power mode " + power + " is not one the bike offers";
-        if (ktrcLevel < 0 || ktrcLevel >= KTRC.length) return "KTRC level " + ktrcLevel + " cannot be written";
-        if (kqs < 1 || kqs > ON_OFF.length) return "quickshifter value " + kqs + " is not OFF or ON";
-        if (kebc < 0 || kebc > KEBC.length) return "engine brake value " + kebc + " is not one the bike offers";
+        if (mode < 1 || mode > modes) return Lang.t(R.string.write_bad_mode, mode);
+        if (power < 1 || power > POWER.length) return Lang.t(R.string.write_bad_power, power);
+        if (ktrcLevel < 0 || ktrcLevel >= KTRC.length) return Lang.t(R.string.write_bad_ktrc, ktrcLevel);
+        if (kqs < 1 || kqs > ON_OFF.length) return Lang.t(R.string.write_bad_kqs, kqs);
+        if (kebc < 0 || kebc > KEBC.length) return Lang.t(R.string.write_bad_kebc, kebc);
         return null;
     }
 
@@ -195,17 +195,16 @@ public final class SettingsWrite {
     public static String presetLine(int mode, int power, int ktrcLevel) {
         if (mode < 1 || mode > MODES.length) return "";
         int[] p = preset(mode);
-        if (p == null) return "Your own: " + MODES[mode - 1];
-        String own = MODES[mode - 1] + ": " + POWER[p[0] - 1] + " power, KTRC " + KTRC[p[1]];
-        return leavesPreset(mode, power, ktrcLevel) ? own + " (the bike has other values)" : own;
+        if (p == null) return Lang.t(R.string.write_your_own, MODES[mode - 1]);
+        String own = Lang.t(R.string.write_preset, MODES[mode - 1], POWER[p[0] - 1], KTRC[p[1]]);
+        return leavesPreset(mode, power, ktrcLevel) ? own + " " + Lang.t(R.string.write_bike_other) : own;
     }
 
     /** Why the riding mode became Rider, after {@code fromMode}'s power or KTRC was changed. */
     public static String riderNote(int fromMode) {
         int[] p = preset(fromMode);
         if (p == null) return "";
-        return MODES[fromMode - 1] + " comes with " + POWER[p[0] - 1] + " power and KTRC " + KTRC[p[1]]
-                + ", so with other values the riding mode is now Rider, which keeps your own.";
+        return Lang.t(R.string.write_rider_note, MODES[fromMode - 1], POWER[p[0] - 1], KTRC[p[1]]);
     }
 
     /**
@@ -242,12 +241,12 @@ public final class SettingsWrite {
      */
     public static java.util.List<String> summary(Choice bike, Choice picked, int kebc, String name) {
         java.util.List<String> out = new java.util.ArrayList<>();
-        out.add(line("Riding mode", MODES, bike == null ? -1 : bike.mode - 1, picked.mode - 1));
-        out.add(line("Power", POWER, bike == null ? -1 : bike.power - 1, picked.power - 1));
+        out.add(line(Lang.t(R.string.bike_row_riding_mode), MODES, bike == null ? -1 : bike.mode - 1, picked.mode - 1));
+        out.add(line(Lang.t(R.string.bike_power), POWER, bike == null ? -1 : bike.power - 1, picked.power - 1));
         out.add(line("KTRC", KTRC, bike == null ? -1 : bike.ktrcLevel, picked.ktrcLevel));
         out.add(line("KQS", ON_OFF, bike == null ? -1 : bike.kqs - 1, picked.kqs - 1));
-        if (kebc > 0) out.add("Engine brake: " + nameAt(KEBC, kebc - 1) + " (as the bike has it)");
-        out.add(name == null || name.isEmpty() ? "Name: none" : "Name: \"" + name + "\"");
+        if (kebc > 0) out.add(Lang.t(R.string.write_kebc_line, nameAt(KEBC, kebc - 1)));
+        out.add(name == null || name.isEmpty() ? Lang.t(R.string.write_name_none) : Lang.t(R.string.write_name, name));
         return out;
     }
 
@@ -275,8 +274,8 @@ public final class SettingsWrite {
 
     /** The shift-lamp kinds the meter offers: four when it has a tachometer and an LED, two otherwise. */
     public static String[] lampStatusNames(int shiftLampMode) {
-        return shiftLampMode == 3 ? new String[]{"Off", "On"}
-                : new String[]{"Off", "Tachometer", "LED", "LED + tachometer"};
+        return shiftLampMode == 3 ? new String[]{Lang.t(R.string.common_off), Lang.t(R.string.write_lamp_on)}
+                : new String[]{Lang.t(R.string.common_off), Lang.t(R.string.write_lamp_tacho), "LED", Lang.t(R.string.write_lamp_led_tacho)};
     }
 
     /** The result of a write answer (byte 7 of the 0x48 reply), or -1 when the frame is not one. */
@@ -287,12 +286,12 @@ public final class SettingsWrite {
 
     /** Why a write may not be sent now, or null when it may. {@code liveAge} is the age of the last riding data. */
     public static String blockedBecause(BikeFrames.Telemetry live, long liveAgeMs, BikeFrames.TuningConfig cfg) {
-        if (live == null || liveAgeMs > 3000) return "no current data from the bike: keep it switched on";
-        if (live.speedKmh != live.speedKmh || live.speedKmh > 0.5) return "the bike must stand still";
-        if (live.gear != 0) return "the bike must be in neutral";
-        if (live.throttlePct != live.throttlePct || live.throttlePct > 2) return "the throttle must be closed";
-        if (cfg == null) return "the bike did not say which settings it takes";
-        if (!cfg.supported(BikeFrames.TuningConfig.RIDING_MODE)) return "this bike takes no ride settings";
+        if (live == null || liveAgeMs > 3000) return Lang.t(R.string.write_no_data);
+        if (live.speedKmh != live.speedKmh || live.speedKmh > 0.5) return Lang.t(R.string.write_stand_still);
+        if (live.gear != 0) return Lang.t(R.string.write_neutral);
+        if (live.throttlePct != live.throttlePct || live.throttlePct > 2) return Lang.t(R.string.write_throttle);
+        if (cfg == null) return Lang.t(R.string.write_no_config);
+        if (!cfg.supported(BikeFrames.TuningConfig.RIDING_MODE)) return Lang.t(R.string.write_no_settings);
         return null;
     }
 
@@ -312,15 +311,15 @@ public final class SettingsWrite {
 
     /** "Ready", or why a ride-settings write would not be sent now ({@code blocked} from {@link #blockedBecause}). */
     public static String readiness(String blocked) {
-        return blocked == null ? "Ready" : "Not ready: " + blocked;
+        return blocked == null ? Lang.t(R.string.write_ready) : Lang.t(R.string.write_not_ready, blocked);
     }
 
     /** Debug text for a result code. */
     public static String describeResult(int result) {
         switch (result) {
-            case RESULT_OK: return "accepted";
-            case RESULT_WAIT: return "the meter is applying it; waiting for it to finish";
-            default: return String.format(Locale.ROOT, "rejected (result %02X)", result);
+            case RESULT_OK: return Lang.t(R.string.write_accepted);
+            case RESULT_WAIT: return Lang.t(R.string.write_applying);
+            default: return Lang.t(R.string.write_rejected, result);
         }
     }
 }

@@ -44,8 +44,8 @@ public class OfflineService extends Service {
         super.onCreate();
         Logger.init(this);
         getSystemService(NotificationManager.class).createNotificationChannel(
-                new NotificationChannel(CHANNEL, "Offline road download", NotificationManager.IMPORTANCE_LOW));
-        startForeground(NOTIFICATION_ID, notification("Starting…"), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+                new NotificationChannel(CHANNEL, Lang.t(R.string.offline_channel), NotificationManager.IMPORTANCE_LOW));
+        startForeground(NOTIFICATION_ID, notification(Lang.t(R.string.nav_starting)), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
     }
 
     @Override
@@ -63,12 +63,12 @@ public class OfflineService extends Service {
             try {
                 runRegion(region);
             } catch (PbfImporter.CancelledException e) {
-                status(timedOut ? "Stopped by Android: a download may only run so long. Start it again."
-                        : "Cancelled (the download resumes when you start it again)");
+                status(timedOut ? Lang.t(R.string.offline_stopped)
+                        : Lang.t(R.string.offline_cancelled));
                 Logger.log(timedOut ? "Offline download stopped by the system (foreground service timeout)"
                         : "Offline download cancelled");
             } catch (Throwable e) {
-                status("Failed: " + (e instanceof OutOfMemoryError ? "region too large for this phone, pick a smaller one" : e.getMessage()));
+                status(Lang.t(R.string.offline_failed, e instanceof OutOfMemoryError ? Lang.t(R.string.offline_too_large) : e.getMessage()));
                 Logger.log("Offline download failed: " + e);
             } finally {
                 if (wl.isHeld()) wl.release();
@@ -111,7 +111,7 @@ public class OfflineService extends Service {
 
     private void runRegion(String id) throws Exception {
         Geofabrik.Region r = null;
-        status("Loading the region list…");
+        status(Lang.t(R.string.offline_loading_list));
         for (Geofabrik.Region x : Geofabrik.regions(this)) if (x.id.equals(id)) r = x;
         if (r == null) throw new Exception("unknown region " + id);
         String label = r.name;
@@ -126,7 +126,7 @@ public class OfflineService extends Service {
         Geofabrik.Progress progress = new Geofabrik.Progress() {
             @Override
             public void bytes(long done, long total) {
-                status(String.format(Locale.ROOT, "%s: downloading %.0f / %.0f MB", label, done / 1e6, total / 1e6));
+                status(Lang.t(R.string.offline_downloading, label, done / 1e6, total / 1e6));
             }
 
             @Override
@@ -143,7 +143,7 @@ public class OfflineService extends Service {
         long free = dir.getUsableSpace() + (pbf.exists() ? pbf.length() : 0)
                 + new File(pbf.getPath() + ".part").length();
         if (size > 0 && free < size * 1.25 + 500e6) {
-            throw new Exception(String.format(Locale.ROOT, "not enough free storage: %s needs about %.1f GB, %.1f GB free",
+            throw new Exception(Lang.t(R.string.offline_no_space,
                     label, (size * 1.25 + 500e6) / 1e9, free / 1e9));
         }
         long t0 = System.currentTimeMillis();
@@ -187,14 +187,13 @@ public class OfflineService extends Service {
         }
         if (!cancel) {
             // speed cameras, from the same extract: a few small tiles, only where there is one
-            status(label + ": storing speed cameras…");
+            status(Lang.t(R.string.offline_cameras, label));
             int[] hz = hazardStore.write(polygon, importer.cameras());
             cameras = hz[0];
         }
         OfflineRegions regions = new OfflineRegions(this, store, hazardStore);
         regions.save(id, r.label(), r.pbfUrl, dataDate, tiles, !cancel, hazardTiles);
-        String msg = String.format(Locale.ROOT,
-                "Done: %s, %d roads in %d tiles (+%d border tiles), %d speed cameras, %d junctions for navigation · %.1f MB · %d s",
+        String msg = Lang.t(R.string.offline_done,
                 label, res[0], res[1], res[2], cameras, importer.graphSize()[0], regions.bytes(tiles) / 1e6,
                 (System.currentTimeMillis() - t1) / 1000);
         status(msg);
@@ -209,7 +208,7 @@ public class OfflineService extends Service {
     private Notification notification(String text) {
         return new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle("KawaNav offline roads")
+                .setContentTitle(Lang.t(R.string.offline_title))
                 .setContentText(text)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)

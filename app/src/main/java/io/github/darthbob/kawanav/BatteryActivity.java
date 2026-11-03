@@ -33,7 +33,7 @@ public class BatteryActivity extends KawaActivity {
 
         LinearLayout root = column();
         root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
-        root.addView(headerBar("12 V battery", v -> finish(), null));
+        root.addView(headerBar(Lang.t(R.string.battery_title), v -> finish(), null));
         summary = secondary("");
         summary.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE2), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(summary);
@@ -43,9 +43,7 @@ public class BatteryActivity extends KawaActivity {
         root.addView(chartCard());
         list = column();
         root.addView(list);
-        TextView note = note("One reading is taken each time the app connects with the engine off: what a "
-                + "battery does at rest is what tells its age. A reading below 12.4 V on a warm day, or "
-                + "falling from month to month, is worth a look.");
+        TextView note = note(Lang.t(R.string.battery_note));
         note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE4), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
         setContentView(page(root));
@@ -60,7 +58,7 @@ public class BatteryActivity extends KawaActivity {
 
     private View chartCard() {
         LinearLayout c = card();
-        c.addView(cardTitle("Voltage at rest"));
+        c.addView(cardTitle(Lang.t(R.string.battery_at_rest)));
         ChartView chart = new ChartView(this);
         chart.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(160)));
@@ -78,33 +76,30 @@ public class BatteryActivity extends KawaActivity {
             verdict.setText("");
             chart.set(new ArrayList<>(), ChartView.Series.BATTERY, null);
             list.removeAllViews();
-            list.addView(emptyState("The battery log could not be read",
-                    "The file is kept as battery.json.bad and nothing is written over it."));
+            list.addView(emptyState(Lang.t(R.string.battery_unreadable),
+                    Lang.t(R.string.battery_unreadable_sub)));
             return;
         }
         if (readings.isEmpty()) {
-            summary.setText("No readings yet");
+            summary.setText(Lang.t(R.string.battery_none));
             verdict.setText("");
             list.removeAllViews();
-            list.addView(emptyState("Nothing recorded yet",
-                    "Connect to the bike with the engine off and the first reading is taken."));
+            list.addView(emptyState(Lang.t(R.string.battery_nothing),
+                    Lang.t(R.string.battery_nothing_sub)));
             return;
         }
         double[] range = BatteryLog.range(readings);
         BatteryLog.Reading last = readings.get(readings.size() - 1);
-        summary.setText(String.format(Locale.ROOT, "%d readings · last %.1f V · lowest %.1f V",
-                readings.size(), last.volts, range[0]));
+        summary.setText(Lang.plural(R.plurals.battery_summary, readings.size(), readings.size(), last.volts, range[0]));
         double decline = BatteryLog.decline(readings);
         if (BatteryLog.declining(readings)) {
-            verdict.setText(String.format(Locale.ROOT,
-                    "The battery has lost %.1f V over the time logged: it may be on its way out.", decline));
+            verdict.setText(Lang.t(R.string.battery_declining, decline));
             verdict.setTextColor(Ui.warn(night));
         } else if (last.volts < 12.0) {
-            verdict.setText(String.format(Locale.ROOT,
-                    "At %.1f V this reading is low: charge it, or have the battery checked.", last.volts));
+            verdict.setText(Lang.t(R.string.battery_low, last.volts));
             verdict.setTextColor(Ui.warn(night));
         } else {
-            verdict.setText("No decline worth worrying about so far.");
+            verdict.setText(Lang.t(R.string.battery_fine));
             verdict.setTextColor(Ui.ink(night));
         }
         ChartView.Series series = ChartView.Series.BATTERY;
@@ -124,7 +119,7 @@ public class BatteryActivity extends KawaActivity {
         for (int i = readings.size() - 1; i >= 0 && i >= readings.size() - 20; i--) {
             BatteryLog.Reading r = readings.get(i);
             String line = String.format(Locale.ROOT, "%.1f V", r.volts)
-                    + (i > 0 ? String.format(Locale.ROOT, " · %+.1f V since the first", r.volts - readings.get(0).volts) : "");
+                    + (i > 0 ? " · " + Lang.t(R.string.battery_since_first, r.volts - readings.get(0).volts) : "");
             list.addView(listRow(R.drawable.ic_battery, df.format(new java.util.Date(r.at)), line, null, false, null));
         }
     }

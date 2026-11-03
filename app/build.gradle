@@ -43,8 +43,9 @@ android {
 
     // Lint: a new warning fails the build (CI runs lintDebug; assembleRelease runs lintVitalRelease).
     // The warnings the code had when this was switched on are in lint-baseline.xml: fix them when
-    // touching that code, and delete the entry from the baseline. The UI is in English by design,
-    // built in code without string resources, so the translation checks are off.
+    // touching that code, and delete the entry from the baseline. The texts are string resources in
+    // every language (Lang); a text set in code is a developer's (logs, debug tools), so those two checks
+    // are off. MissingTranslation stays on: a language without a text fails the build.
     lint {
         warningsAsErrors = true
         abortOnError = true

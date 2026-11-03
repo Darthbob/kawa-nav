@@ -310,7 +310,7 @@ public final class ChartView extends View {
 
     /** "Yaw rate +3.2", "Torque 40 / 38 / 36": the series at one second, for the line under the chart. */
     static String describe(RideTsv.Sample s, Series series) {
-        StringBuilder sb = new StringBuilder(series.title).append(' ');
+        StringBuilder sb = new StringBuilder(Ride.shown(series.title)).append(' ');
         String f = "%." + series.decimals + "f";
         for (int l = 0; l < series.lineCount(); l++) {
             if (l > 0) sb.append(" / ");

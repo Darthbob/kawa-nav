@@ -37,7 +37,7 @@ public class FuelActivity extends KawaActivity {
 
         LinearLayout root = column();
         root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
-        root.addView(headerBar("Refuels", v -> finish(), null));
+        root.addView(headerBar(Lang.t(R.string.bike_refuels), v -> finish(), null));
         summary = secondary("");
         summary.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE2), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(summary);
@@ -47,9 +47,7 @@ public class FuelActivity extends KawaActivity {
         list = column();
         root.addView(list);
         root.addView(addCard());
-        TextView note = note("The bike does not report how much fuel goes in: it reports the gauge, the range "
-                + "and the fuel it has burned in total. Refuels are worked out from the gauge jumping up while "
-                + "the bike stands still; the litres are an estimate until you correct them.");
+        TextView note = note(Lang.t(R.string.fuel_note));
         note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE4), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
         setContentView(page(root));
@@ -84,14 +82,13 @@ public class FuelActivity extends KawaActivity {
         LinearLayout c = card();
         LinearLayout head = row();
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        head.addView(iconTitle(R.drawable.ic_fuel, cardTitle("Tank")), weight());
+        head.addView(iconTitle(R.drawable.ic_fuel, cardTitle(Lang.t(R.string.fuel_tank))), weight());
         TextView value = number(16);
         value.setText(String.format(Locale.ROOT, "%.1f L", tankL()));
         head.addView(value);
         c.addView(head);
-        c.addView(secondary("What a full tank holds, for turning the gauge into litres. Your bike's manual "
-                + "has the number."));
-        Button set = neutralButton("Change", v -> askNumber("Tank capacity in litres", tankL(), 1, 40, "%.1f",
+        c.addView(secondary(Lang.t(R.string.fuel_tank_note)));
+        Button set = neutralButton(Lang.t(R.string.fuel_change), v -> askNumber(Lang.t(R.string.fuel_tank_capacity), tankL(), 1, 40, "%.1f",
                 litres -> {
                     prefs.edit().putFloat(FuelLog.KEY_TANK_L, (float) litres).apply();
                     recreate();
@@ -105,9 +102,9 @@ public class FuelActivity extends KawaActivity {
 
     private View addCard() {
         LinearLayout c = card();
-        c.addView(cardTitle("Add a refuel"));
-        c.addView(secondary("For a fill the app did not see: the bike was off, or the gauge did not move."));
-        Button add = button("Add by hand", v -> askNumber("Litres added", Double.NaN, 0, 40, "%.1f", litres -> {
+        c.addView(cardTitle(Lang.t(R.string.fuel_add)));
+        c.addView(secondary(Lang.t(R.string.fuel_add_note)));
+        Button add = button(Lang.t(R.string.fuel_add_by_hand), v -> askNumber(Lang.t(R.string.fuel_litres_added), Double.NaN, 0, 40, "%.1f", litres -> {
             if (litres != litres) return;                 // nothing typed: no entry
             FuelLog.Entry e = new FuelLog.Entry();
             e.at = System.currentTimeMillis();
@@ -115,7 +112,7 @@ public class FuelActivity extends KawaActivity {
             double odo = info != null ? info.odometerKm : Double.NaN;
             e.odoKm = odo >= 0 ? odo : Double.NaN;        // -1 is "the bike has no odometer"
             e.litres = litres;
-            e.note = "added by hand";
+            e.note = Lang.t(R.string.fuel_added_by_hand);
             save(e, true);
         }));
         LinearLayout buttons = row();
@@ -131,9 +128,8 @@ public class FuelActivity extends KawaActivity {
             list.removeAllViews();
             empty.removeAllViews();
             empty.setVisibility(View.VISIBLE);
-            empty.addView(emptyState("The refuel log could not be read",
-                    "The file is kept as fuel.json.bad and nothing is written over it: fills you add now are "
-                            + "kept in a new file."));
+            empty.addView(emptyState(Lang.t(R.string.fuel_unreadable),
+                    Lang.t(R.string.fuel_unreadable_sub)));
             return;
         }
         // the card below says "No refuels yet": the line on top would only repeat it
@@ -141,8 +137,8 @@ public class FuelActivity extends KawaActivity {
         empty.setVisibility(entries.isEmpty() ? View.VISIBLE : View.GONE);
         if (entries.isEmpty()) {
             empty.removeAllViews();
-            empty.addView(emptyState("No refuels yet",
-                    "Standing at the pump with the app connected, a fill is noticed by itself."));
+            empty.addView(emptyState(Lang.t(R.string.fuel_none),
+                    Lang.t(R.string.fuel_none_sub)));
         }
         list.removeAllViews();
         FuelLog.Entry previous = null;
@@ -150,8 +146,8 @@ public class FuelActivity extends KawaActivity {
         for (FuelLog.Entry e : entries) {
             double per100 = FuelLog.consumptionLPer100(previous, e);
             String line2 = per100 == per100
-                    ? String.format(Locale.ROOT, "%.1f L/100 km since the last fill", per100)
-                    : (previous == null ? "First fill in the log" : "Litres not known: tap to fill them in");
+                    ? Lang.t(R.string.fuel_since_last, per100)
+                    : (previous == null ? Lang.t(R.string.fuel_first) : Lang.t(R.string.fuel_litres_unknown));
             String line1 = e.describe() + (e.note.isEmpty() ? "" : " · " + e.note);
             View row = listRow(R.drawable.ic_fuel, df.format(new java.util.Date(e.at)), line1, line2, true,
                     v -> edit(e));
@@ -175,8 +171,8 @@ public class FuelActivity extends KawaActivity {
         }
         FuelLog.Entry first = entries.get(0), last = entries.get(entries.size() - 1);
         StringBuilder sb = new StringBuilder();
-        sb.append(entries.size()).append(entries.size() == 1 ? " refuel" : " refuels");
-        if (any) sb.append(String.format(Locale.ROOT, " · %,.1f L in total", litres));
+        sb.append(Lang.plural(R.plurals.fuel_count, entries.size()));
+        if (any) sb.append(" · ").append(Lang.t(R.string.fuel_total, litres));
         if (first.odoKm == first.odoKm && last.odoKm == last.odoKm && last.odoKm > first.odoKm) {
             sb.append(String.format(Locale.ROOT, " · %,.0f km", last.odoKm - first.odoKm));
         }
@@ -188,39 +184,39 @@ public class FuelActivity extends KawaActivity {
         EditText input = new EditText(this);
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
         if (e.litres == e.litres) input.setText(String.format(Locale.ROOT, "%.1f", e.litres));
-        input.setHint("litres");
+        input.setHint(Lang.t(R.string.fuel_litres_hint));
         LinearLayout box = column();
         box.setPadding(dp(Ui.SPACE4), dp(Ui.SPACE2), dp(Ui.SPACE4), 0);
         box.addView(input);
         EditText noteInput = new EditText(this);
         noteInput.setSingleLine(true);
-        noteInput.setHint("note (where, what you paid…)");
+        noteInput.setHint(Lang.t(R.string.fuel_note_hint));
         noteInput.setText(e.note);
         box.addView(noteInput);
         new android.app.AlertDialog.Builder(this)
                 .setTitle(e.describe())
                 .setView(box)
-                .setPositiveButton("Save", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.planner_save), (d, w) -> {
                     double typed = parse(input.getText().toString(), e.litres);
                     if (typed != e.litres) e.estimated = false;   // the rider's own figure now
                     e.litres = typed;
                     e.note = noteInput.getText().toString().trim();
                     save(e, false);
                 })
-                .setNeutralButton("Delete", (d, w) -> confirmDelete(e))
-                .setNegativeButton("Cancel", null)
+                .setNeutralButton(Lang.t(R.string.common_delete), (d, w) -> confirmDelete(e))
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
     private void confirmDelete(FuelLog.Entry e) {
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Delete this refuel?")
+                .setTitle(Lang.t(R.string.fuel_delete_title))
                 .setMessage(e.describe())
-                .setPositiveButton("Delete", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.common_delete), (d, w) -> {
                     entries.removeIf(x -> x.at == e.at && x.litres == e.litres);
                     saveAll();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 

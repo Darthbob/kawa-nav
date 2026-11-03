@@ -3,6 +3,7 @@
     {
       "version": "1.4.0",
       "changes": [
+        "KawaNav speaks your language: English, German, Italian, French, Spanish, Dutch, Portuguese, Polish or Swedish, on every screen and in the voice. It follows the phone's language, or the one picked under Settings, Appearance, Language",
         "Settings, Appearance: the app can stay light or dark whatever the phone's dark mode is (Theme: Like the phone, Light or Dark)",
         "The light theme is green instead of violet",
         "Refuel diary: a fill from reserve (the last bar blinking) is recorded too",
