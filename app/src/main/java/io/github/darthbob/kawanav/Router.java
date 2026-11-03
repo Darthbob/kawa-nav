@@ -100,8 +100,8 @@ public final class Router {
             double[] p = r.points.get(i);
             RouteGraph.Snap s = snap(p[0], p[1], r.profile, r.snapDistance);
             if (s == null) {
-                throw new NoRouteException(i == 0 ? "no road near the start" : i == r.points.size() - 1
-                        ? "no road near the destination" : "no road near via point " + i);
+                throw new NoRouteException(i == 0 ? Lang.t(R.string.route_no_road_start) : i == r.points.size() - 1
+                        ? Lang.t(R.string.route_no_road_dest) : Lang.t(R.string.route_no_road_via, i));
             }
             snaps.add(s);
         }
@@ -196,7 +196,7 @@ public final class Router {
             double gc = labels.cost[slot];
             if (key > gc + hFactor * dist(g.to(s), to) + 1e-6) continue; // stale entry
             if (++pops % 4096 == 0 && r.cancel != null && r.cancel.cancelled()) throw new CancelledException();
-            if (labels.size > MAX_STATES) throw new NoRouteException("route too long for this phone's search");
+            if (labels.size > MAX_STATES) throw new NoRouteException(Lang.t(R.string.route_too_long));
 
             int u = g.to(s);
             int inBearing = g.endBearing(s);
@@ -234,7 +234,7 @@ public final class Router {
                 }
             }
         }
-        if (bestFinal < 0) throw new NoRouteException("no road connects these points");
+        if (bestFinal < 0) throw new NoRouteException(Lang.t(R.string.route_no_connection));
 
         List<Integer> chain = new ArrayList<>();
         chain.add(bestFinal);

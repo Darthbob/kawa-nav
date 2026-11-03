@@ -47,9 +47,15 @@ public final class Hub {
             this.alert = alert;
         }
 
+        /** For the log: "Curve: Left in 300 m". */
         public String describe() {
             String name = turn >= 0 && turn < KawaProtocol.TURN_NAMES.length ? KawaProtocol.TURN_NAMES[turn] : "?";
             return source + ": " + name + (distanceM >= 0 ? " in " + distanceM + " m" : "");
+        }
+
+        /** For the notification, in the app's language: "Turn left · 300 m". */
+        public String shown() {
+            return MainActivity.turnName(turn) + (distanceM >= 0 ? " · " + Lang.t(R.string.unit_m, distanceM) : "");
         }
     }
 
@@ -278,13 +284,15 @@ public final class Hub {
     public static final String KEY_SETTINGS_PROFILES = "settings_profiles";
     /** Start recording by itself when the bike is moving (off by default). */
     public static final String KEY_RIDE_AUTO = "ride_auto";
-    /** When a ride ends after the bike is switched off: an index into {@link RideEnd#LABELS}. */
+    /** When a ride ends after the bike is switched off: an index into {@link RideEnd#labels}. */
     public static final String KEY_RIDE_END = "ride_end";
     /**
      * OpenStreetMap's map under a recorded ride's track (on unless turned off). The map pictures come from
      * openstreetmap.org, which then sees the area looked at: the one thing about a ride that leaves the phone.
      */
     public static final String KEY_RIDE_MAP = "ride_map";
+    /** Light or dark: {@link Ui#THEME_SYSTEM} (default, like the phone), THEME_LIGHT or THEME_DARK. */
+    public static final String KEY_THEME = "theme";
     /** Set while the bridge is being started only because a ride was asked for. */
     public static final String KEY_RIDE_WANTED = "ride_wanted";
     /** Ride state ({@link RideRecorder#IDLE}, RECORDING, PAUSED) and its "3.4 km · 12 min" text, for the UI. */
@@ -376,8 +384,9 @@ public final class Hub {
     }
 
     /** What the app says when the Bluetooth permission is missing: it cannot talk to the bike. */
-    public static final String BLUETOOTH_HINT =
-            "KawaNav is not allowed to use Bluetooth: open KawaNav and allow \"Nearby devices\".";
+    public static String bluetoothHint() {
+        return Lang.t(R.string.hub_bluetooth_hint);
+    }
 
     /**
      * Extras that only a debug build acts on. {@link MainActivity} is exported, so a release build must

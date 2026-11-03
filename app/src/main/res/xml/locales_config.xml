@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's languages (Lang.CODES), for Android's per-app language: Settings → Apps → KawaNav → Language.
+     English is the default (res/values), the others have their res/values-xx. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="de" />
+    <locale android:name="it" />
+    <locale android:name="fr" />
+    <locale android:name="es" />
+    <locale android:name="nl" />
+    <locale android:name="pt" />
+    <locale android:name="pl" />
+    <locale android:name="sv" />
+</locale-config>

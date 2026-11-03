@@ -116,7 +116,7 @@ public class FieldTestsActivity extends KawaActivity {
         Runnable show = () -> {
             long at = doneAt(t);
             status.setText(at > 0 ? "Done " + DateFormat.getDateInstance(DateFormat.SHORT).format(new Date(at)) : "To do");
-            status.setTextColor(at > 0 ? Ui.accent(night) : Ui.inkSecondary(night));
+            status.setTextColor(at > 0 ? Ui.accentText(night) : Ui.inkSecondary(night));
             status.setPadding(dp(Ui.SPACE2), 0, 0, 0);
             done.setText(at > 0 ? "Mark as still to do" : "Mark done");
         };

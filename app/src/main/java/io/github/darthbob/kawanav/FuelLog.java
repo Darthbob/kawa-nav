@@ -12,7 +12,10 @@ import java.util.List;
 public final class FuelLog {
     /** Litres the tank holds when the rider has not said otherwise (see {@link #KEY_TANK_L}). */
     public static final double DEFAULT_TANK_L = 15.0;
-    /** Bars a full gauge is drawn with, for turning a bar jump into litres. */
+    /**
+     * Bars a full gauge is drawn with, for turning a bar jump into litres. The meter sends 0 to 6: 0 is
+     * reserve, the last bar blinking.
+     */
     public static final int FULL_BARS = 6;
     /** Refuelling happens standing still, below this speed. */
     public static final double STILL_KMH = 5;
@@ -55,7 +58,7 @@ public final class FuelLog {
         public String describe() {
             StringBuilder sb = new StringBuilder();
             sb.append(litres == litres ? String.format(java.util.Locale.ROOT, "%.1f L", litres) : "? L");
-            if (estimated) sb.append(" (estimated)");
+            if (estimated) sb.append(" (").append(Lang.t(R.string.fuel_estimated)).append(')');
             if (odoKm == odoKm) sb.append(String.format(java.util.Locale.ROOT, " · %,.0f km", odoKm));
             return sb.toString();
         }
@@ -104,8 +107,8 @@ public final class FuelLog {
             // only where the gauge has stopped moving: at the pump it climbs a bar at a time, and logging
             // each step would give one refuel per step, each with a fraction of the fuel that went in
             boolean settled = now - changedAt >= DWELL_MS;
-            boolean barsUp = jumped(baseBars, barsNow, MIN_BARS);
-            boolean rangeUp = jumped(baseRangeKm, range, MIN_RANGE_KM);
+            boolean barsUp = jumped(baseBars, barsNow, MIN_BARS, true);
+            boolean rangeUp = jumped(baseRangeKm, range, MIN_RANGE_KM, false);
             Entry e = null;
             if (settled && (barsUp || rangeUp) && !sameFill(now, odo)) {
                 e = new Entry();
@@ -144,10 +147,13 @@ public final class FuelLog {
             return !(odo == odo && odoKm == odoKm && odo > odoKm);
         }
 
-        /** A reading that went up by at least {@code min}; an empty one is the dash waking up, not a fill. */
-        private static boolean jumped(double before, double after, int min) {
+        /**
+         * A reading that went up by at least {@code min}. A range of 0 is the dash waking up, not a fill;
+         * a gauge at 0 is reserve, the tank nearly empty ({@code zeroIsReal}).
+         */
+        private static boolean jumped(double before, double after, int min, boolean zeroIsReal) {
             if (before != before || after != after) return false;
-            if (before <= 0) return false;
+            if (before < 0 || before == 0 && !zeroIsReal) return false;
             return after - before >= min;
         }
 

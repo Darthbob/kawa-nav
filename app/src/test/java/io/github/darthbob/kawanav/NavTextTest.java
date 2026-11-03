@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-/** The phrases in English, Italian and German. */
+/** The phrases in the app's languages. */
 public class NavTextTest {
 
     private static Instructions.Maneuver m(Instructions.Kind kind, int side, int number, String road) {
@@ -18,7 +18,8 @@ public class NavTextTest {
         assertEquals("Tra 300 metri, svolta a sinistra in Via Roma", NavText.of("it").spoken(left, 310, false));
         assertEquals("In 300 Metern links abbiegen auf Via Roma", NavText.of("de").spoken(left, 310, false));
         assertEquals("Turn left onto Via Roma", NavText.of("en").spoken(left, 20, false));
-        assertEquals("fr falls back to English", "Turn left onto Via Roma", NavText.of("fr").action(left));
+        assertEquals("a language the app does not have falls back to English", "Turn left onto Via Roma",
+                NavText.of("cs").action(left));
     }
 
     @Test
@@ -100,5 +101,36 @@ public class NavTextTest {
         assertEquals("Rotlichtblitzer voraus", NavText.of("de").camera("red_light", 0));
         // the English curve phrase matches the one the warnings always said
         for (int t = 1; t <= 8; t++) assertEquals(CurveAlerts.phrase(t), NavText.of("en").curve(t));
+    }
+
+    @Test
+    public void theOtherLanguages() {
+        Instructions.Maneuver left = m(Instructions.Kind.TURN, -1, 0, "Rue de Rivoli");
+        assertEquals("Dans 300 mètres, tournez à gauche sur Rue de Rivoli", NavText.of("fr").spoken(left, 310, false));
+        assertEquals("En 300 metros, gira a la izquierda hacia Rue de Rivoli", NavText.of("es").spoken(left, 310, false));
+        assertEquals("Over 300 meter, sla linksaf naar Rue de Rivoli", NavText.of("nl").spoken(left, 310, false));
+        assertEquals("Em 300 metros, vire à esquerda na Rue de Rivoli", NavText.of("pt").spoken(left, 310, false));
+        assertEquals("Za 300 metrów, skręć w lewo na Rue de Rivoli", NavText.of("pl").spoken(left, 310, false));
+        assertEquals("Om 300 meter, sväng vänster in på Rue de Rivoli", NavText.of("sv").spoken(left, 310, false));
+        Instructions.Maneuver rb = m(Instructions.Kind.ROUNDABOUT, 0, 3, "");
+        assertEquals("Au rond-point, prenez la troisième sortie", NavText.of("fr").action(rb));
+        assertEquals("Na rondzie zjedź trzecim zjazdem", NavText.of("pl").action(rb));
+        assertEquals("Je hebt tussenstop 2 bereikt", NavText.of("nl").action(m(Instructions.Kind.VIA, 0, 2, "")));
+        assertEquals("Virage serré à gauche, ralentissez, puis virage à droite", NavText.of("fr").curveWarning(3, true, 2));
+        assertEquals("Agrafka w prawo", NavText.of("pl").curve(8));
+        assertEquals("Fartkamera framöver, gräns 70", NavText.of("sv").camera("fixed", 70));
+    }
+
+    @Test
+    public void pluralFormsOfDistances() {
+        NavText pl = NavText.of("pl"), fr = NavText.of("fr");
+        assertEquals("1 kilometr", pl.distance(1020, false));
+        assertEquals("2 kilometry", pl.distance(2000, false));
+        assertEquals("5 kilometrów", pl.distance(5000, false));
+        assertEquals("12 kilometrów", pl.distance(12_000, false));
+        assertEquals("1,5 kilometra", pl.distance(1530, false));
+        assertEquals("1,5 kilomètre", fr.distance(1530, false));
+        assertEquals("2 kilomètres", fr.distance(2000, false));
+        assertEquals("1 milla", NavText.of("es").distance(1609, true));
     }
 }

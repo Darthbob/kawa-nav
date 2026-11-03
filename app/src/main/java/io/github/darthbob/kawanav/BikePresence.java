@@ -106,7 +106,7 @@ public class BikePresence extends CompanionDeviceService {
         // the user may have revoked "Nearby devices" while the association stays: starting the bridge
         // would throw SecurityException on the first Bluetooth call, on the main thread
         if (!Hub.bluetoothAllowed(this)) {
-            Logger.log("Autostart: bike seen (" + how + "), but " + Hub.BLUETOOTH_HINT);
+            Logger.log("Autostart: bike seen (" + how + "), but " + Hub.bluetoothHint());
             return;
         }
         Logger.log("Autostart: bike seen (" + how + "), starting the bridge");
@@ -170,7 +170,7 @@ public class BikePresence extends CompanionDeviceService {
         if (info != null) {
             bond(a, info);
         } else {
-            Hub.pairStatus = "Looking for the bike: ignition on, Rideology closed…";
+            Hub.pairStatus = Lang.t(R.string.pair_looking);
             associate(a, null, true);
         }
     }
@@ -196,7 +196,7 @@ public class BikePresence extends CompanionDeviceService {
                     paired(ctx, b);
                     unregisterBondReceiver(ctx);
                 } else if (state == BluetoothDevice.BOND_NONE) {
-                    Hub.pairStatus = "Pairing failed: ignition on, Rideology closed, then try again";
+                    Hub.pairStatus = Lang.t(R.string.pair_failed);
                     Logger.log("Pairing with " + d.getAddress() + " failed or was declined");
                     unregisterBondReceiver(ctx);
                 }
@@ -207,9 +207,9 @@ public class BikePresence extends CompanionDeviceService {
                 Context.RECEIVER_EXPORTED);
         Logger.log("Pairing with " + info.getDisplayName() + " (" + d.getAddress() + ")…");
         if (d.createBond()) {
-            Hub.pairStatus = "Pairing… confirm on the phone (and the dash) if asked";
+            Hub.pairStatus = Lang.t(R.string.pair_pairing);
         } else {
-            Hub.pairStatus = "Pairing could not start: ignition on, then try again";
+            Hub.pairStatus = Lang.t(R.string.pair_could_not_start);
             Logger.log("Pairing could not start (createBond refused)");
             unregisterBondReceiver(c); // no bond event will ever come: do not keep the receiver
         }
@@ -272,7 +272,7 @@ public class BikePresence extends CompanionDeviceService {
             @Override
             public void onFailure(CharSequence error) {
                 Logger.log("Autostart: setup failed: " + error);
-                if (thenPair) Hub.pairStatus = "No bike selected: ignition on, Rideology closed, then try again";
+                if (thenPair) Hub.pairStatus = Lang.t(R.string.pair_no_bike);
             }
         });
     }

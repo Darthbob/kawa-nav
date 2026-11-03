@@ -43,13 +43,18 @@ public final class Geofabrik {
 
         /** The region border, next to the extract: .../bayern-latest.osm.pbf -> .../bayern.poly */
         public String polyUrl() {
-            return pbfUrl.replace("-latest.osm.pbf", ".poly");
+            return Geofabrik.polyUrl(pbfUrl);
         }
 
         /** "Oberbayern (Bayern)" */
         public String label() {
             return parentName.isEmpty() ? name : name + " (" + parentName + ")";
         }
+    }
+
+    /** The region border next to an extract's URL. */
+    public static String polyUrl(String pbfUrl) {
+        return pbfUrl.replace("-latest.osm.pbf", ".poly");
     }
 
     public interface Progress {

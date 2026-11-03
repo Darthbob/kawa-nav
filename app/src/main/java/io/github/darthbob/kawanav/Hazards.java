@@ -88,9 +88,9 @@ public final class Hazards {
     /** What the dash and the app call the camera: "Speed camera", "Red-light camera"… */
     public static String name(Camera c) {
         switch (c.type) {
-            case "red_light": return "Red-light camera";
-            case "average_speed": return "Average-speed section";
-            default: return "Speed camera";
+            case "red_light": return Lang.t(R.string.camera_red_light);
+            case "average_speed": return Lang.t(R.string.camera_average);
+            default: return Lang.t(R.string.camera_speed);
         }
     }
 
@@ -99,13 +99,13 @@ public final class Hazards {
      * ahead, limit 50". No distance: it is said when the warning comes, and the dash shows the distance.
      */
     public static String spoken(Camera c) {
-        String s = name(c) + " ahead";
-        return c.maxspeed > 0 ? s + ", limit " + c.maxspeed : s;
+        String s = Lang.t(R.string.camera_ahead, name(c));
+        return c.maxspeed > 0 ? Lang.t(R.string.camera_limit, s, c.maxspeed) : s;
     }
 
     /** "Speed camera in 350 m" or "Speed camera in 350 m (50 km/h)". */
     public static String describe(Camera c, double distanceM) {
-        String s = name(c) + " in " + (distanceM >= 1000
+        String s = Lang.t(R.string.camera_in, name(c), distanceM >= 1000
                 ? String.format(Locale.ROOT, "%.1f km", distanceM / 1000)
                 : Math.round(distanceM / 10) * 10 + " m");
         return c.maxspeed > 0 ? s + " (" + c.maxspeed + " km/h)" : s;

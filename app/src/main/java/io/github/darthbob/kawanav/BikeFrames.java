@@ -404,8 +404,10 @@ public final class BikeFrames {
                 fuelConsumption;
         /** Odometer in km (whole km). */
         public final int odometerKm;
-        /** Fuel gauge bars as on the dash. */
+        /** Fuel gauge bars as on the dash: 1 to 6, or {@link #FUEL_RESERVE}. */
         public final int fuelBars;
+        /** The gauge on reserve: the dash shows its last bar blinking orange (Rideology blinks it too). */
+        public static final int FUEL_RESERVE = 0;
         public final int avgSpeedKmh, rangeSymbol, rangeKm, totalTime;
         /** The largest lean of the trip the meter shows, degrees each way; -1 when the bike has none. */
         public final int maxLeanLeft, maxLeanRight;
@@ -987,7 +989,11 @@ public final class BikeFrames {
     /** 0x1E: the maintenance reminders: Kawasaki service, the rider's own, oil change. */
     public static final class ServiceIndicator extends Frame {
         public static final int KAWASAKI = 0, RIDER = 1, OIL = 2;
-        public static final String[] NAMES = {"Kawasaki service", "Rider setting", "Oil change"};
+        /** The three reminders' names, in the app's language. */
+        public static String[] names() {
+            return new String[]{Lang.t(R.string.maint_service_kawasaki), Lang.t(R.string.maint_service_rider),
+                    Lang.t(R.string.maint_oil_change)};
+        }
 
         /** One reminder: due date and/or distance; -1 where not set. */
         public static final class Reminder {

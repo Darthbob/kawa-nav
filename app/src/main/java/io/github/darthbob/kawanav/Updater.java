@@ -79,14 +79,14 @@ public final class Updater {
                 String version = v.getString("version");
                 if (compare(version, BuildConfig.VERSION_NAME) <= 0 || compare(version, upTo) > 0) continue;
                 if (sb.length() > 0) sb.append("\n\n");
-                sb.append("Version ").append(version);
+                sb.append(Lang.t(R.string.settings_about_version, version));
                 JSONArray list = v.getJSONArray("changes");
                 for (int k = 0; k < list.length(); k++) sb.append("\n• ").append(list.getString(k));
             }
         } catch (Exception e) {
             Logger.log("Changelog not available: " + e);
         }
-        return sb.length() > 0 ? sb.toString() : "No list of changes for this version.";
+        return sb.length() > 0 ? sb.toString() : Lang.t(R.string.update_no_changes);
     }
 
     /** Version names compared by their numbers: 0.10 &gt; 0.9 &gt; 0.4.1 &gt; 0.4. */
@@ -166,8 +166,8 @@ public final class Updater {
             if (status == PackageInstaller.STATUS_FAILURE_ABORTED) return; // the user tapped Cancel
             Toast.makeText(c, status == PackageInstaller.STATUS_FAILURE_CONFLICT
                             || status == PackageInstaller.STATUS_FAILURE_INCOMPATIBLE
-                            ? "Update failed: this KawaNav is not signed like the release (debug build?)"
-                            : "Update failed" + (msg == null ? "" : ": " + msg),
+                            ? Lang.t(R.string.update_not_signed)
+                            : msg == null ? Lang.t(R.string.update_failed) : Lang.t(R.string.update_failed_why, msg),
                     Toast.LENGTH_LONG).show();
         }
     }

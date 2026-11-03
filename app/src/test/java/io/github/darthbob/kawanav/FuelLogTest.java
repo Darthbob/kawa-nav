@@ -177,4 +177,13 @@ public class FuelLogTest {
         assertEquals(100, out.get(0).at);
         assertEquals(200, out.get(1).at);
     }
+
+    @Test
+    public void aFillFromReserveCounts() {
+        FuelLog.Detector d = new FuelLog.Detector();
+        holds(d, 0, -1, 12345, 1000);                // reserve: the last bar blinks, no range shown
+        FuelLog.Entry e = holds(d, 6, 280, 12345, 40_000);
+        assertNotNull(e);
+        assertEquals(0, e.barsBefore, 1e-9);
+    }
 }

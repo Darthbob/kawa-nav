@@ -9,8 +9,22 @@ import java.util.List;
  */
 public final class MaintenanceLog {
     /** The jobs the list offers; anything else can be typed. */
-    public static final String[] ITEMS = {"Oil change", "Oil filter", "Air filter", "Chain", "Tyres",
-            "Brake pads", "Brake fluid", "Coolant", "Spark plugs", "Valve clearance", "Battery", "Other"};
+    /** The jobs to pick from, in the app's language (an entry keeps the name it was logged under); the last is "Other". */
+    public static String[] items() {
+        int[] ids = {R.string.maint_oil_change, R.string.maint_oil_filter, R.string.maint_air_filter, R.string.maint_chain,
+                R.string.maint_tyres, R.string.maint_brake_pads, R.string.maint_brake_fluid, R.string.maint_coolant,
+                R.string.maint_spark_plugs, R.string.maint_valves, R.string.maint_battery, R.string.maint_other};
+        String[] out = new String[ids.length];
+        for (int i = 0; i < ids.length; i++) out[i] = Lang.t(ids[i]);
+        return out;
+    }
+
+    /** "a or b or c", in the app's language. */
+    static String or(List<String> parts) {
+        String s = parts.get(0);
+        for (int i = 1; i < parts.size(); i++) s = Lang.t(R.string.maint_or, s, parts.get(i));
+        return s;
+    }
 
     /** One job done. */
     public static final class Entry implements Comparable<Entry> {
@@ -78,9 +92,9 @@ public final class MaintenanceLog {
         /** "every 1,000 km", "every 12 months", "every 6,000 km or 12 months". */
         public String interval() {
             List<String> parts = new ArrayList<>();
-            if (km > 0) parts.add(String.format(java.util.Locale.ROOT, "%,d km", km));
-            if (months > 0) parts.add(months + (months == 1 ? " month" : " months"));
-            return "every " + String.join(" or ", parts);
+            if (km > 0) parts.add(Lang.t(R.string.unit_km_grouped, km));
+            if (months > 0) parts.add(Lang.plural(R.plurals.maint_months, months));
+            return Lang.t(R.string.maint_every, or(parts));
         }
     }
 
@@ -158,19 +172,18 @@ public final class MaintenanceLog {
 
         /** "due: 120 km over", "in 230 km or by 3 Mar 2027", "log it once to start counting". */
         public String describe(java.text.DateFormat df) {
-            if (never) return "never logged: log it once to start counting";
+            if (never) return Lang.t(R.string.maint_never_logged);
             List<String> parts = new ArrayList<>();
             boolean byKm = kmLeft == kmLeft, byDate = dueAt > 0;
             if (due()) {
-                if (byKm && kmLeft <= 0) parts.add(String.format(java.util.Locale.ROOT, "%,.0f km over", -kmLeft));
-                if (byDate && now >= dueAt) parts.add("since " + df.format(new java.util.Date(dueAt)));
-                return "due: " + String.join(", ", parts);
+                if (byKm && kmLeft <= 0) parts.add(Lang.t(R.string.maint_km_over, -kmLeft));
+                if (byDate && now >= dueAt) parts.add(Lang.t(R.string.maint_since, df.format(new java.util.Date(dueAt))));
+                return Lang.t(R.string.maint_due, String.join(", ", parts));
             }
-            if (byKm) parts.add(String.format(java.util.Locale.ROOT, "in %,.0f km", kmLeft));
-            if (byDate) parts.add("by " + df.format(new java.util.Date(dueAt)));
-            if (!parts.isEmpty()) return String.join(" or ", parts);
-            return odoLogged ? "the kilometres count once the bike has sent its odometer"
-                    : "log the odometer with the job to count the kilometres";
+            if (byKm) parts.add(Lang.t(R.string.maint_in_km, kmLeft));
+            if (byDate) parts.add(Lang.t(R.string.maint_by, df.format(new java.util.Date(dueAt))));
+            if (!parts.isEmpty()) return or(parts);
+            return odoLogged ? Lang.t(R.string.maint_wait_odometer) : Lang.t(R.string.maint_log_odometer);
         }
     }
 
@@ -226,7 +239,7 @@ public final class MaintenanceLog {
         java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
         for (int k = 0; k < service.reminders.length; k++) {
             String due = due(service.reminders[k], odoKm, df);
-            if (due != null) out.add(BikeFrames.ServiceIndicator.NAMES[k] + ": " + due);
+            if (due != null) out.add(BikeFrames.ServiceIndicator.names()[k] + ": " + due);
         }
         return out;
     }
@@ -243,20 +256,20 @@ public final class MaintenanceLog {
      */
     static String due(BikeFrames.ServiceIndicator.Reminder m, double odoKm, java.text.DateFormat df) {
         if (!m.supported) return null;
-        if (!m.on()) return "off";
+        if (!m.on()) return Lang.t(R.string.common_off_lower);
         List<String> due = new ArrayList<>();
         if (m.distanceKm >= 0) {
             String km;
             if (m.kind == BikeFrames.ServiceIndicator.KAWASAKI) {
-                km = String.format(java.util.Locale.ROOT, "at %,d km", m.distanceKm);
+                km = Lang.t(R.string.maint_at_km, m.distanceKm);
                 if (odoKm >= 0) {
                     long left = Math.round(m.distanceKm - odoKm);
-                    km += left > 0 ? String.format(java.util.Locale.ROOT, " (%,d km left)", left)
-                            : left < 0 ? String.format(java.util.Locale.ROOT, " (%,d km overdue)", -left) : " (due now)";
+                    km += " (" + (left > 0 ? Lang.t(R.string.maint_km_left, left)
+                            : left < 0 ? Lang.t(R.string.maint_km_overdue, -left) : Lang.t(R.string.maint_due_now)) + ")";
                 }
             } else {
-                km = String.format(java.util.Locale.ROOT, "in %,d km", m.distanceKm);
-                if (odoKm >= 0) km += String.format(java.util.Locale.ROOT, " (at %,.0f km)", odoKm + m.distanceKm);
+                km = Lang.t(R.string.maint_in_km_whole, m.distanceKm);
+                if (odoKm >= 0) km += " (" + Lang.t(R.string.maint_at_km_whole, odoKm + m.distanceKm) + ")";
             }
             due.add(km);
         }
@@ -264,8 +277,8 @@ public final class MaintenanceLog {
             java.util.Calendar cal = java.util.Calendar.getInstance();
             cal.clear();
             cal.set(m.year, m.month - 1, m.day);
-            due.add("by " + df.format(cal.getTime()));
+            due.add(Lang.t(R.string.maint_by, df.format(cal.getTime())));
         }
-        return due.isEmpty() ? null : String.join(" or ", due);
+        return due.isEmpty() ? null : or(due);
     }
 }

@@ -75,10 +75,6 @@ public class MainActivity extends KawaActivity {
     // first start: walks through every permission once (see continueSetup)
     private static final String KEY_SETUP_STEP = "setup_step";
     private static final String KEY_NOTICE_SEEN = "riding_notice_seen";
-    static final String RIDING_NOTICE = "KawaNav is a riding aid, not a safety system. Directions and curves can "
-            + "be late, missing or wrong. Always ride by what you see on the road and keep your eyes on it.";
-    static final String AFFILIATION_NOTICE = "KawaNav is an independent project, not affiliated with or endorsed "
-            + "by Kawasaki or Google.";
     private static final int SETUP_STEPS = 4;
     private boolean setupWaiting;  // a permission dialog or settings screen of the guide is open
     private boolean setupDialog;   // an explanation dialog of the guide is showing
@@ -299,9 +295,9 @@ public class MainActivity extends KawaActivity {
         if (!prefs.getBoolean(KEY_NOTICE_SEEN, false)) {
             setupDialog = true;
             new AlertDialog.Builder(this)
-                    .setTitle("Before you ride")
-                    .setMessage(RIDING_NOTICE + "\n\n" + AFFILIATION_NOTICE)
-                    .setPositiveButton("Understood", (d, w) -> {
+                    .setTitle(Lang.t(R.string.main_notice_title))
+                    .setMessage(Lang.t(R.string.main_riding_notice) + "\n\n" + Lang.t(R.string.main_affiliation_notice))
+                    .setPositiveButton(Lang.t(R.string.main_notice_ok), (d, w) -> {
                         prefs.edit().putBoolean(KEY_NOTICE_SEEN, true).apply();
                         setupDialog = false;
                         continueSetup();
@@ -371,15 +367,14 @@ public class MainActivity extends KawaActivity {
             case 2:
                 setupDialog = true;
                 new AlertDialog.Builder(this)
-                        .setTitle("Read Google Maps directions")
-                        .setMessage("To show Maps' directions on the dash, KawaNav reads Maps' navigation "
-                                + "notification.\n\nOn the next screen, turn on \"KawaNav\".")
-                        .setPositiveButton("Continue", (d, w) -> {
+                        .setTitle(Lang.t(R.string.main_maps_access_title))
+                        .setMessage(Lang.t(R.string.main_maps_access_message))
+                        .setPositiveButton(Lang.t(R.string.common_continue), (d, w) -> {
                             setupDialog = false;
                             setupWaiting = true;
                             openListenerSettings();
                         })
-                        .setNegativeButton("Not now", (d, w) -> {
+                        .setNegativeButton(Lang.t(R.string.main_not_now), (d, w) -> {
                             setupDialog = false;
                             setupStepDone();
                         })
@@ -418,16 +413,11 @@ public class MainActivity extends KawaActivity {
         setupDialog = true; // the first-start guide waits for this dialog
         LinearLayout c = column();
         c.setPadding(dp(24), dp(8), dp(24), 0);
-        c.addView(itemTitle("KawaNav was installed from a downloaded file, so Android protects this setting. "
-                + "Unlock it once:\n\n"
-                + "1. \"Try the switch\": tap KawaNav and its greyed-out switch once. Android refuses, "
-                + "but this makes step 2 appear.\n"
-                + "2. \"Open app info\": tap ⋮ at the top right, then \"Allow restricted settings\" and confirm.\n"
-                + "3. Back in KawaNav, tap \"Open\" for Google Maps directions: the switch works now."));
+        c.addView(itemTitle(Lang.t(R.string.main_restricted_steps)));
         android.widget.ImageView shot = new android.widget.ImageView(this);
         shot.setImageResource(R.drawable.restricted_settings_help);
         shot.setAdjustViewBounds(true);
-        shot.setContentDescription("App info with the menu open: Allow restricted settings");
+        shot.setContentDescription(Lang.t(R.string.main_restricted_shot));
         LinearLayout.LayoutParams lp = matchWrap();
         lp.setMargins(0, dp(14), 0, 0);
         c.addView(shot, lp);
@@ -435,17 +425,17 @@ public class MainActivity extends KawaActivity {
         scroll.addView(c);
         boolean[] leaving = {false};
         new AlertDialog.Builder(this)
-                .setTitle("Switch greyed out?")
+                .setTitle(Lang.t(R.string.main_restricted_title))
                 .setView(scroll)
-                .setPositiveButton("Open app info", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.main_open_app_info), (d, w) -> {
                     leaving[0] = true; // the guide goes on when KawaNav is back (onResume)
                     openAppSettings();
                 })
-                .setNeutralButton("Try the switch", (d, w) -> {
+                .setNeutralButton(Lang.t(R.string.main_try_switch), (d, w) -> {
                     leaving[0] = true;
                     openListenerSettings();
                 })
-                .setNegativeButton("Close", null)
+                .setNegativeButton(Lang.t(R.string.common_close), null)
                 .setOnDismissListener(d -> {
                     setupDialog = false;
                     if (!leaving[0]) continueSetup();
@@ -490,9 +480,9 @@ public class MainActivity extends KawaActivity {
         root.addView(cameraWarning());
         root.addView(dashPanel());
         root.addView(rideStrip());
-        root.addView(sectionHeader(R.drawable.ic_moto, "My vehicle"));
+        root.addView(sectionHeader(R.drawable.ic_moto, Lang.t(R.string.main_my_vehicle)));
         root.addView(vehicleCard());
-        root.addView(sectionHeader(R.drawable.ic_grid, "Menu"));
+        root.addView(sectionHeader(R.drawable.ic_grid, Lang.t(R.string.main_menu)));
         root.addView(menu());
         return tabPage(TAB_HOME, root);
     }
@@ -540,7 +530,7 @@ public class MainActivity extends KawaActivity {
         cameraText.setTextColor(Ui.bannerInk());
         cameraText.setTextSize(16);
         t.addView(cameraText);
-        TextView sub = secondary("From the offline map data");
+        TextView sub = secondary(Lang.t(R.string.main_camera_sub));
         sub.setTextColor(Ui.bannerInk());
         t.addView(sub);
         r.addView(t, weight());
@@ -558,14 +548,14 @@ public class MainActivity extends KawaActivity {
      */
     private LinearLayout dashPanel() {
         LinearLayout c = panel();
-        TextView label = secondary("On the dash now");
+        TextView label = secondary(Lang.t(R.string.main_on_dash));
         c.addView(label);
         LinearLayout meter = row();
         meter.setPadding(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
         meterArrow = text(52, true);
         meterArrow.setGravity(Gravity.CENTER);
         meterArrow.setMinWidth(dp(68));
-        meterArrow.setTextColor(Ui.accent(night));
+        meterArrow.setTextColor(Ui.accentText(night));
         meter.addView(meterArrow);
         LinearLayout mt = column();
         meterTextBlock = mt;
@@ -599,14 +589,14 @@ public class MainActivity extends KawaActivity {
         rideStatus.setPadding(0, dp(Ui.SPACE1), 0, dp(Ui.SPACE2));
         c.addView(rideStatus);
         LinearLayout buttons = row();
-        ridePauseButton = secondaryButton("Pause", v -> {
+        ridePauseButton = secondaryButton(Lang.t(R.string.main_pause), v -> {
             BridgeService.toggleRidePause();
             handler.postDelayed(this::updateUi, 300);
         });
         buttons.addView(ridePauseButton, weight());
         View gap = new View(this);
         buttons.addView(gap, new LinearLayout.LayoutParams(dp(Ui.SPACE2), 1));
-        buttons.addView(neutralButton("Stop ride", v -> {
+        buttons.addView(neutralButton(Lang.t(R.string.main_stop_ride), v -> {
             BridgeService.stopRide();
             handler.postDelayed(this::updateUi, 300);
         }), weight());
@@ -637,19 +627,19 @@ public class MainActivity extends KawaActivity {
         LinearLayout range = column();
         bikeRange = figure(28, Gravity.START);
         range.addView(bikeRange.view);
-        range.addView(note("Range"));
+        range.addView(note(Lang.t(R.string.main_range)));
         bikeStats.addView(range, weight());
         LinearLayout fuel = column();
         bikeFuel = new SegmentBar(this);
         fuel.addView(bikeFuel, new LinearLayout.LayoutParams(dp(96), dp(14)));
-        bikeFuelText = note("Fuel");
+        bikeFuelText = note(Lang.t(R.string.main_fuel));
         bikeFuelText.setPadding(0, dp(Ui.SPACE2), 0, 0);
         fuel.addView(bikeFuelText);
         bikeStats.addView(fuel, weight());
         LinearLayout odo = column();
         bikeOdometer = figure(22, Gravity.START);
         odo.addView(bikeOdometer.view);
-        odo.addView(note("Odometer"));
+        odo.addView(note(Lang.t(R.string.main_odometer)));
         bikeStats.addView(odo, weight());
         c.addView(bikeStats);
         c.setOnClickListener(v -> openTab(TAB_BIKE, null));
@@ -659,21 +649,21 @@ public class MainActivity extends KawaActivity {
     /** Rideology's tile menu: the places a rider goes to now and then. */
     private View menu() {
         return statGrid(3,
-                menuTile(R.drawable.ic_route, NavService.running() ? "Navigation" : "Route planner",
+                menuTile(R.drawable.ic_route, NavService.running() ? Lang.t(R.string.settings_section_navigation) : Lang.t(R.string.settings_route_planner),
                         v -> startActivity(new Intent(this, NavService.running() ? NavActivity.class : PlannerActivity.class))),
-                menuTile(R.drawable.ic_list, "Recorded rides", v -> openTab(TAB_RIDES, null)),
-                menuTile(R.drawable.ic_pin, "Walk to the bike", v -> walkToBike()),
-                menuTile(R.drawable.ic_map, "Offline maps", v -> openTab(TAB_SETTINGS, "maps")),
-                menuTile(R.drawable.ic_power, "Start automatically", v -> openTab(TAB_SETTINGS, "autostart")),
-                menuTile(R.drawable.ic_road, "On the road", v -> openTab(TAB_SETTINGS, "road")),
-                menuTile(R.drawable.ic_bell, "Dash icons", v -> openTab(TAB_SETTINGS, "dash")));
+                menuTile(R.drawable.ic_list, Lang.t(R.string.settings_rides), v -> openTab(TAB_RIDES, null)),
+                menuTile(R.drawable.ic_pin, Lang.t(R.string.main_walk), v -> walkToBike()),
+                menuTile(R.drawable.ic_map, Lang.t(R.string.settings_section_maps), v -> openTab(TAB_SETTINGS, "maps")),
+                menuTile(R.drawable.ic_power, Lang.t(R.string.settings_section_autostart), v -> openTab(TAB_SETTINGS, "autostart")),
+                menuTile(R.drawable.ic_road, Lang.t(R.string.settings_section_road), v -> openTab(TAB_SETTINGS, "road")),
+                menuTile(R.drawable.ic_bell, Lang.t(R.string.main_dash_icons), v -> openTab(TAB_SETTINGS, "dash")));
     }
 
     /** Opens Maps on foot to where the bike was parked (where the link to it was lost). */
     private void walkToBike() {
         BikeData.Place p = Hub.bike.parked;
         if (p == null) {
-            android.widget.Toast.makeText(this, "No parked position yet: it is saved when the link to the bike is lost",
+            android.widget.Toast.makeText(this, Lang.t(R.string.main_no_parked),
                     android.widget.Toast.LENGTH_LONG).show();
             return;
         }
@@ -682,7 +672,7 @@ public class MainActivity extends KawaActivity {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, uri));
         } catch (android.content.ActivityNotFoundException e) {
-            android.widget.Toast.makeText(this, "No maps app found", android.widget.Toast.LENGTH_SHORT).show();
+            android.widget.Toast.makeText(this, Lang.t(R.string.main_no_maps_app), android.widget.Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -692,16 +682,16 @@ public class MainActivity extends KawaActivity {
         String chip;
         int chipInk;
         if (!Hub.serviceRunning) {
-            chip = "Off";
+            chip = Lang.t(R.string.common_off);
             chipInk = Ui.inkSecondary(night);
             boolean autostart = BikePresence.enabled(this) || prefs.getString(Hub.KEY_HELMET, null) != null;
             statusHint.setText(autostart && Hub.autostartPaused(this)
-                    ? "Stopped by hand: the automatic start waits until the bike is switched off (your Bluetooth "
-                    + "device still starts it). Start connects now."
-                    : "Start before the ride, or let KawaNav start by itself (Settings).");
+                    ? Lang.t(R.string.main_stopped_by_hand)
+                    : Lang.t(R.string.main_start_hint));
         } else {
-            boolean noBike = Hub.bikeStatus.startsWith("No paired");
-            chip = Hub.bikeConnected ? "Connected" : Hub.bikeOlderDash ? "Not supported" : noBike ? "Not paired" : "Searching";
+            boolean noBike = Hub.bikeStatus.equals(Lang.t(R.string.bridge_no_paired));
+            chip = Hub.bikeConnected ? Lang.t(R.string.main_chip_connected) : Hub.bikeOlderDash ? Lang.t(R.string.main_chip_not_supported)
+                    : noBike ? Lang.t(R.string.main_chip_not_paired) : Lang.t(R.string.main_chip_searching);
             chipInk = Hub.bikeConnected ? Ui.ok(night) : noBike || Hub.bikeOlderDash ? Ui.danger(night) : Ui.warn(night);
             statusHint.setText(Hub.bikeStatus + (Hub.bikeHint.isEmpty() ? "" : "\n" + Hub.bikeHint));
         }
@@ -728,13 +718,13 @@ public class MainActivity extends KawaActivity {
         if (!Hub.serviceRunning || out == null) {
             meterArrow.setVisibility(View.GONE);
             meterDistance.view.setVisibility(View.GONE);
-            meterText.setText(Hub.serviceRunning ? "Nothing to show" : "Nothing sent to the bike");
+            meterText.setText(Hub.serviceRunning ? Lang.t(R.string.main_nothing_to_show) : Lang.t(R.string.main_nothing_sent));
             boolean maps = Hub.mapsEnabled(this);
             meterSource.setText(!Hub.serviceRunning ? ""
-                    : maps && Hub.maps != null ? "Google Maps is starting…"
-                    : Hub.freeMode(this) ? (Hub.curveStatus.contains("·") ? "Waiting for GPS" : Hub.curveStatus)
-                    : maps ? "Start navigation in Google Maps, or turn on upcoming curves"
-                    : "Turn on Google Maps directions or upcoming curves");
+                    : maps && Hub.maps != null ? Lang.t(R.string.main_maps_starting)
+                    : Hub.freeMode(this) ? (Hub.curveStatus.contains("·") ? Lang.t(R.string.main_waiting_gps) : Hub.curveStatus)
+                    : maps ? Lang.t(R.string.main_start_maps_or_curves)
+                    : Lang.t(R.string.main_turn_on_maps_or_curves));
         } else {
             meterArrow.setVisibility(View.VISIBLE);
             meterArrow.setText(arrow(out.turn));
@@ -742,14 +732,14 @@ public class MainActivity extends KawaActivity {
             meterDistance.view.setVisibility(dist ? View.VISIBLE : View.GONE);
             if (dist) meterDistance.set(distance(out.distanceM));
             meterText.setText(turnName(out.turn));
-            meterSource.setText("Maps".equals(out.source) ? "From Google Maps"
-                    : "Camera".equals(out.source) ? "Speed camera from the offline map data"
-                    : "Curve ahead on your road");
+            meterSource.setText("Maps".equals(out.source) ? Lang.t(R.string.main_from_maps)
+                    : "Camera".equals(out.source) ? Lang.t(R.string.main_from_camera)
+                    : Lang.t(R.string.main_from_curves));
         }
         meterSource.setVisibility(meterSource.getText().length() > 0 ? View.VISIBLE : View.GONE);
         // the text sits next to the arrow, or flush left when there is none
         meterTextBlock.setPadding(meterArrow.getVisibility() == View.VISIBLE ? dp(Ui.SPACE3) : 0, 0, 0, 0);
-        startButton.setText(Hub.serviceRunning ? "Stop KawaNav" : "Start KawaNav");
+        startButton.setText(Hub.serviceRunning ? Lang.t(R.string.main_stop_kawanav) : Lang.t(R.string.main_start_kawanav));
         if (Hub.serviceRunning) neutral(startButton);
         else primary(startButton);
 
@@ -758,10 +748,10 @@ public class MainActivity extends KawaActivity {
         rideStrip.setVisibility(recording ? View.VISIBLE : View.GONE);
         if (recording) {
             boolean paused = Hub.rideState == RideRecorder.PAUSED;
-            rideTitle.setText(paused ? "● Ride paused" : "● Recording the ride");
+            rideTitle.setText(paused ? Lang.t(R.string.main_ride_paused) : Lang.t(R.string.main_ride_recording));
             rideTitle.setTextColor(paused ? Ui.warn(night) : Ui.recording());
             rideStatus.setText(Hub.rideText);
-            ridePauseButton.setText(paused ? "Continue" : "Pause");
+            ridePauseButton.setText(paused ? Lang.t(R.string.common_continue) : Lang.t(R.string.main_pause));
         }
 
         // --- bike
@@ -770,13 +760,15 @@ public class MainActivity extends KawaActivity {
         BikeFrames.VehicleInfo info = b.info;
         bikeStats.setVisibility(info != null ? View.VISIBLE : View.GONE);
         if (info != null) {
-            bikeRange.set(info.rangeKm >= 0 ? info.rangeKm + " km" : "–");
-            bikeOdometer.set(info.odometerKm >= 0 ? String.format(Locale.ROOT, "%,d km", info.odometerKm) : "–");
+            bikeRange.set(info.rangeKm >= 0 ? Lang.t(R.string.unit_km, info.rangeKm) : "–");
+            bikeOdometer.set(info.odometerKm >= 0 ? Lang.t(R.string.unit_km_grouped, info.odometerKm) : "–");
             bikeFuel.set(info.fuelBars, BikeActivity.fuelSegments(info.fuelBars));
-            bikeFuelText.setText(info.fuelBars >= 0 ? "Fuel · " + info.fuelBars + (info.fuelBars == 1 ? " bar" : " bars") : "Fuel");
+            bikeFuel.setReserve(info.fuelBars == BikeFrames.VehicleInfo.FUEL_RESERVE);
+            bikeFuelText.setText(info.fuelBars >= 0 ? Lang.t(R.string.main_fuel_bars, BikeActivity.fuelWords(info.fuelBars))
+                    : Lang.t(R.string.main_fuel));
         }
-        bikeUpdated.setText(Hub.bikeConnected && info != null ? "Connected"
-                : info == null ? "Odometer, fuel, temperatures, maintenance and riding modes appear once the bike is connected"
+        bikeUpdated.setText(Hub.bikeConnected && info != null ? Lang.t(R.string.main_chip_connected)
+                : info == null ? Lang.t(R.string.main_bike_values_hint)
                 : BikeActivity.lastRead(b, System.currentTimeMillis()));
 
         // --- banner: what still keeps KawaNav from working fully. The checks behind it are binder
@@ -802,14 +794,14 @@ public class MainActivity extends KawaActivity {
         missing += show(permRow, !permsOk);
         missing += show(bluetoothRow, permsOk && !btEnabled);
         missing += show(pairRow, permsOk && btEnabled && !pairedOk);
-        pairSub.setText(Hub.pairStatus.isEmpty() ? PAIR_HINT : Hub.pairStatus);
+        pairSub.setText(Hub.pairStatus.isEmpty() ? Lang.t(R.string.main_pair_hint) : Hub.pairStatus);
         missing += show(gpsRow, curves && !locationOn);
         boolean dashAlerts = prefs.getBoolean(Hub.KEY_DASH_CALLS, false) || prefs.getBoolean(Hub.KEY_DASH_MAIL, false);
         missing += show(accessRow, (Hub.mapsEnabled(this) || dashAlerts) && !notifAccess);
         missing += show(batteryRow, !batteryOk);
         missing += show(bgLocRow, curves && anyAuto && !backgroundLocation);
         banner.setVisibility(missing > 0 ? View.VISIBLE : View.GONE);
-        bannerTitle.setText(missing == 1 ? "1 setting needs your attention" : missing + " settings need your attention");
+        bannerTitle.setText(Lang.plural(R.plurals.main_banner_title, missing));
     }
 
     /** Shows the banner row when needed; 1 if shown. */
@@ -841,24 +833,24 @@ public class MainActivity extends KawaActivity {
         banner.addView(bannerHead);
         TextView sub = text(13, false);
         sub.setTextColor(Ui.bannerInk());
-        sub.setText("For the best experience on the bike:");
+        sub.setText(Lang.t(R.string.main_banner_sub));
         banner.addView(sub);
-        permRow = bannerRow("Allow Bluetooth, location and notifications",
-                "To talk to the bike and find the curves ahead", "Allow", v -> requestMissingPermissions());
-        bluetoothRow = bannerRow("Turn on Bluetooth", "KawaNav cannot reach the bike while it is off", "Turn on",
+        permRow = bannerRow(Lang.t(R.string.main_perms),
+                Lang.t(R.string.main_perms_sub), Lang.t(R.string.main_allow), v -> requestMissingPermissions());
+        bluetoothRow = bannerRow(Lang.t(R.string.main_bluetooth), Lang.t(R.string.main_bluetooth_sub), Lang.t(R.string.main_turn_on),
                 v -> enableBluetooth());
-        pairRow = bannerRow("Pair your bike", PAIR_HINT, "Pair", v -> pairBike());
+        pairRow = bannerRow(Lang.t(R.string.main_pair), Lang.t(R.string.main_pair_hint), Lang.t(R.string.main_pair_button), v -> pairBike());
         pairSub = (TextView) pairRow.getTag();
-        gpsRow = bannerRow("Turn on location", "Upcoming curves need GPS", "Open",
+        gpsRow = bannerRow(Lang.t(R.string.main_gps), Lang.t(R.string.main_gps_sub), Lang.t(R.string.main_open),
                 v -> startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)));
-        accessRow = bannerRow("Allow reading Google Maps directions", installedFromFile()
-                        ? "Turn on \"KawaNav\" in the list that opens. Greyed out? Tap for help"
-                        : "Turn on \"KawaNav\" in the list that opens",
-                "Open", v -> openListenerSettings());
-        batteryRow = bannerRow("Allow unrestricted battery use", "So Android does not stop KawaNav in your pocket",
-                "Allow", v -> requestBatteryExemption());
-        bgLocRow = bannerRow("Set location to \"Allow all the time\"", "For curves after an automatic start",
-                "Allow", v -> askBackgroundLocation());
+        accessRow = bannerRow(Lang.t(R.string.main_access), installedFromFile()
+                        ? Lang.t(R.string.main_access_sub_file)
+                        : Lang.t(R.string.main_access_sub),
+                Lang.t(R.string.main_open), v -> openListenerSettings());
+        batteryRow = bannerRow(Lang.t(R.string.main_battery), Lang.t(R.string.main_battery_sub),
+                Lang.t(R.string.main_allow), v -> requestBatteryExemption());
+        bgLocRow = bannerRow(Lang.t(R.string.main_bg_location), Lang.t(R.string.main_bg_location_sub),
+                Lang.t(R.string.main_allow), v -> askBackgroundLocation());
         for (View r : new View[]{permRow, bluetoothRow, pairRow, gpsRow, accessRow, batteryRow, bgLocRow}) banner.addView(r);
         return banner;
     }
@@ -897,7 +889,6 @@ public class MainActivity extends KawaActivity {
         return r;
     }
 
-    private static final String PAIR_HINT = "Ignition on and Rideology closed, then pick your bike";
 
     /** Pairs the phone with the bike (and sets up autostart), see {@link BikePresence#pair}. */
     /**
@@ -927,10 +918,22 @@ public class MainActivity extends KawaActivity {
         return m >= 1000 ? String.format(Locale.ROOT, "%.1f km", m / 1000.0) : m + " m";
     }
 
+    /** The arrows of {@link KawaProtocol#TURN_NAMES} in words, 0-17. */
+    private static final int[] TURN_TEXTS = {R.string.turn_straight, R.string.turn_left, R.string.turn_right,
+            R.string.turn_sharp_left, R.string.turn_sharp_right, R.string.turn_slight_left, R.string.turn_slight_right,
+            R.string.turn_u_left, R.string.turn_u_right, R.string.turn_fork_left, R.string.turn_fork_right,
+            R.string.turn_fork_middle, R.string.turn_ramp_left, R.string.turn_ramp_right, R.string.turn_exit_left,
+            R.string.turn_exit_right, R.string.turn_merge_left, R.string.turn_merge_right};
+
+    /** The arrow on the dash in words, for the screen (the log keeps {@link KawaProtocol#TURN_NAMES}). */
     static String turnName(int turn) {
-        if (turn >= 18 && turn <= 29) return "Roundabout, exit " + (turn - 17);
-        if (turn >= 30 && turn <= 41) return "Roundabout, exit " + (turn - 29);
-        return turn >= 0 && turn < KawaProtocol.TURN_NAMES.length ? KawaProtocol.TURN_NAMES[turn] : "?";
+        if (turn >= 18 && turn <= 29) return Lang.t(R.string.turn_roundabout, turn - 17);
+        if (turn >= 30 && turn <= 41) return Lang.t(R.string.turn_roundabout, turn - 29);
+        if (turn >= 0 && turn < TURN_TEXTS.length) return Lang.t(TURN_TEXTS[turn]);
+        if (turn == 42) return Lang.t(R.string.turn_departure);
+        if (turn == 43) return Lang.t(R.string.turn_destination);
+        if (turn >= 44 && turn <= 55) return Lang.t(R.string.turn_waypoint, turn - 43);
+        return "?";
     }
 
     /** A symbol close to the meter's arrow. */
@@ -987,12 +990,12 @@ public class MainActivity extends KawaActivity {
         if (setupDialog || setupWaiting || prefs.getInt(KEY_SETUP_STEP, 0) < SETUP_STEPS) return;
         Logger.log("Update " + r.version + " offered");
         new AlertDialog.Builder(this)
-                .setTitle("KawaNav " + r.version + " is available")
+                .setTitle(Lang.t(R.string.main_update_title, r.version))
                 .setMessage(r.changes + (Hub.serviceRunning
-                        ? "\n\nKawaNav stops while updating. Start it again afterwards." : ""))
-                .setPositiveButton("Update", (d, w) -> installUpdate(r))
-                .setNeutralButton("Later", null)
-                .setNegativeButton("Skip this version", (d, w) -> {
+                        ? Lang.t(R.string.main_update_stops) : ""))
+                .setPositiveButton(Lang.t(R.string.settings_update), (d, w) -> installUpdate(r))
+                .setNeutralButton(Lang.t(R.string.main_later), null)
+                .setNegativeButton(Lang.t(R.string.main_skip_version), (d, w) -> {
                     prefs.edit().putString(KEY_UPDATE_SKIPPED, r.version).apply();
                     Logger.log("Update " + r.version + " skipped");
                 })
@@ -1004,15 +1007,14 @@ public class MainActivity extends KawaActivity {
         if (isFinishing() || isDestroyed()) return;
         if (!getPackageManager().canRequestPackageInstalls()) {
             new AlertDialog.Builder(this)
-                    .setTitle("Allow installing updates")
-                    .setMessage("Android asks once whether KawaNav may install apps.\n\n"
-                            + "On the next screen, turn on \"Allow from this source\", then go back.")
-                    .setPositiveButton("Continue", (d, w) -> {
+                    .setTitle(Lang.t(R.string.main_allow_installs))
+                    .setMessage(Lang.t(R.string.main_allow_installs_message))
+                    .setPositiveButton(Lang.t(R.string.common_continue), (d, w) -> {
                         pendingUpdate = r;
                         startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                                 android.net.Uri.parse("package:" + getPackageName())));
                     })
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(Lang.t(R.string.common_cancel), null)
                     .show();
             return;
         }
@@ -1023,7 +1025,7 @@ public class MainActivity extends KawaActivity {
         c.setPadding(dp(24), dp(12), dp(24), 0);
         c.addView(bar, matchWrap());
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Downloading KawaNav " + r.version)
+                .setTitle(Lang.t(R.string.main_update_downloading, r.version))
                 .setView(c)
                 .setCancelable(false)
                 .show();
@@ -1039,7 +1041,7 @@ public class MainActivity extends KawaActivity {
                 });
             } catch (Exception e) {
                 Logger.log("Update download failed: " + e);
-                failed = "Update download failed. Are you online?";
+                failed = Lang.t(R.string.main_update_failed);
             }
             String msg = failed;
             runOnUiThread(() -> {

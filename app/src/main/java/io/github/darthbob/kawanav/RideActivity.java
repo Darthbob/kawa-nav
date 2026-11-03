@@ -68,7 +68,7 @@ public class RideActivity extends KawaActivity {
         LinearLayout root = column();
         root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
         LinearLayout header = headerBar("", v -> finish(),
-                headerAction(R.drawable.ic_edit, "Rename this ride", v -> rename()));
+                headerAction(R.drawable.ic_edit, Lang.t(R.string.ride_rename), v -> rename()));
         title = header.findViewWithTag("title");
         root.addView(header);
         LinearLayout top = card();
@@ -109,16 +109,16 @@ public class RideActivity extends KawaActivity {
                 ride = r;
                 samples = s;
                 if (r == null) {
-                    title.setText("Ride not found");
+                    title.setText(Lang.t(R.string.ride_not_found));
                     distance.view.setVisibility(View.GONE);
                     return;
                 }
                 distance.figure.set(r.distance());
-                distance.caption.setText("Distance · " + r.duration());
+                distance.caption.setText(Lang.t(R.string.ride_distance_caption, r.duration()));
                 title.setText(r.name.isEmpty() ? Ride.defaultName(r.start) : r.name);
                 when.setText(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.FULL,
                         java.text.DateFormat.SHORT).format(new java.util.Date(r.start))
-                        + (r.endReason.isEmpty() ? "" : " · ended: " + r.endReason));
+                        + (r.endReason.isEmpty() ? "" : " · " + Lang.t(R.string.ride_ended, Ride.shown(r.endReason))));
                 showSummary(r);
                 // a track needs at least two positions, else there is nothing to draw
                 long gpsPoints = samples.stream().filter(RideTsv.Sample::hasGps).count();
@@ -138,8 +138,8 @@ public class RideActivity extends KawaActivity {
         LinearLayout c = card();
         track = new TrackView(this);
         LinearLayout head = row();
-        head.addView(iconTitle(R.drawable.ic_route, cardTitle("Track")), weight());
-        head.addView(headerAction(R.drawable.ic_fit, "Show the whole ride", v -> track.fit()),
+        head.addView(iconTitle(R.drawable.ic_route, cardTitle(Lang.t(R.string.ride_track))), weight());
+        head.addView(headerAction(R.drawable.ic_fit, Lang.t(R.string.ride_fit), v -> track.fit()),
                 new LinearLayout.LayoutParams(dp(Ui.TOUCH_MIN), dp(Ui.TOUCH_MIN)));
         c.addView(head);
         GradientDrawable well = new GradientDrawable();
@@ -173,20 +173,19 @@ public class RideActivity extends KawaActivity {
         double lo = track.low(), hi = track.high();
         String f = "%." + series.decimals + "f";
         String unit = series.unit.isEmpty() ? "" : " " + series.unit;
+        String title = Ride.shown(series.title).toLowerCase(Locale.getDefault());
         String scale = lo == lo
-                ? String.format(Locale.ROOT, "The colours follow the chart: %s from blue (" + f + "%s or less) to "
-                        + "red (" + f + "%s or more)%s.", series.title.toLowerCase(Locale.ROOT), lo, unit, hi, unit,
-                        series.lineCount() > 1 ? ", " + series.lines[series.lineCount() - 1] + " line" : "")
-                : "This ride has no " + series.title.toLowerCase(Locale.ROOT) + " where it has a position: the "
-                        + "track is grey.";
-        trackNote.setText(scale + " The green dot is where it started; zooming the chart fades the rest of the "
-                + "ride. Pinch or double-tap the map to zoom, drag it to move around.");
+                ? Lang.t(R.string.ride_colours, title, String.format(Locale.ROOT, f, lo) + unit,
+                        String.format(Locale.ROOT, f, hi) + unit, series.lineCount() > 1
+                                ? ", " + Lang.t(R.string.ride_colours_line, Ride.shown(series.lines[series.lineCount() - 1])) : "")
+                : Lang.t(R.string.ride_colours_none, title);
+        trackNote.setText(scale + " " + Lang.t(R.string.ride_track_note));
     }
 
     /** OpenStreetMap's credit, on the map as its tile policy asks; a tap opens its copyright page. */
     private TextView attribution() {
         TextView t = text(10, false);
-        t.setText("© OpenStreetMap contributors");
+        t.setText(Lang.t(R.string.ride_osm));
         t.setTextColor(night ? 0xFFDDDDDD : 0xFF333333);
         t.setBackgroundColor(night ? 0xB3000000 : 0xB3FFFFFF);
         t.setPadding(dp(4), dp(1), dp(4), dp(1));
@@ -203,14 +202,14 @@ public class RideActivity extends KawaActivity {
     private LinearLayout chartCard() {
         LinearLayout c = card();
         LinearLayout head = row();
-        head.addView(iconTitle(R.drawable.ic_speed, cardTitle("Values")), weight());
+        head.addView(iconTitle(R.drawable.ic_speed, cardTitle(Lang.t(R.string.ride_values))), weight());
         String[] names = new String[SERIES.length];
-        for (int i = 0; i < SERIES.length; i++) names[i] = SERIES[i].title;
+        for (int i = 0; i < SERIES.length; i++) names[i] = Ride.shown(SERIES[i].title);
         seriesSpinner = spinner(names, 0);
         seriesSpinner.setOnItemSelectedListener(onSelect(this::showChart));
         head.addView(seriesSpinner, controlWidth());
         chart = new ChartView(this);
-        head.addView(headerAction(R.drawable.ic_fit, "Show the whole ride on the chart", v -> chart.showAll()),
+        head.addView(headerAction(R.drawable.ic_fit, Lang.t(R.string.ride_fit_chart), v -> chart.showAll()),
                 new LinearLayout.LayoutParams(dp(Ui.TOUCH_MIN), dp(Ui.TOUCH_MIN)));
         c.addView(head);
         // the map fades what the chart is not showing, so a zoomed stretch can be found on the track
@@ -227,10 +226,10 @@ public class RideActivity extends KawaActivity {
     private void showChart(int which) {
         if (samples == null || seriesSpinner == null) return;
         ChartView.Series series = SERIES[Math.max(0, Math.min(SERIES.length - 1, which))];
-        String availability = missingSeries(series) ? " · this ride has no " + series.title.toLowerCase(Locale.ROOT)
-                : "";
-        cursor.setText("Touch the line to see the second, pinch or double-tap to zoom in" + availability
-                + (hasInterventions() ? " · marks below: traction control (orange), ABS (red)" : ""));
+        String availability = missingSeries(series)
+                ? " · " + Lang.t(R.string.ride_chart_missing, Ride.shown(series.title).toLowerCase(Locale.getDefault())) : "";
+        cursor.setText(Lang.t(R.string.ride_chart_hint) + availability
+                + (hasInterventions() ? " · " + Lang.t(R.string.ride_chart_marks) : ""));
         // the track takes the chart's colours: the same value, from blue (lowest) to red (highest)
         double[] values = new double[samples.size()];
         for (int i = 0; i < values.length; i++) values[i] = ChartView.mapValue(samples.get(i), series);
@@ -255,11 +254,11 @@ public class RideActivity extends KawaActivity {
     private LinearLayout bendsCard() {
         LinearLayout c = card();
         c.setVisibility(View.GONE);
-        c.addView(iconTitle(R.drawable.ic_road, cardTitle("Bends")));
+        c.addView(iconTitle(R.drawable.ic_road, cardTitle(Lang.t(R.string.ride_bends_title))));
         bendSummary = column();
         c.addView(bendSummary);
         grip = new GripView(this);
-        grip.setContentDescription("The grip the ride used: each second's sideways and forward acceleration");
+        grip.setContentDescription(Lang.t(R.string.ride_grip_description));
         LinearLayout.LayoutParams lp = matchWrap();
         lp.height = dp(280);
         lp.setMargins(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE2));
@@ -269,17 +268,14 @@ public class RideActivity extends KawaActivity {
         LinearLayout head = row();
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         head.setPadding(0, dp(Ui.SPACE4), 0, dp(Ui.SPACE1));
-        head.addView(itemTitle("The bends"), weight());
-        bendOrder = spinner(RideAnalysis.ORDERS, 0);
+        head.addView(itemTitle(Lang.t(R.string.ride_the_bends)), weight());
+        bendOrder = spinner(RideAnalysis.orders(), 0);
         bendOrder.setOnItemSelectedListener(onSelect(this::showBendList));
         head.addView(bendOrder, controlWidth());
         c.addView(head);
         bendList = column();
         c.addView(bendList);
-        TextView how = note("A bend is two seconds or more leant the same way by more than 10°; its apex is the "
-                + "second leant over the most. The radius is the one that speed and lean give in a steady turn. "
-                + "Braking at the apex: the throttle shut and the bike slowing by more than 0.1 g there. Tap a "
-                + "bend to see it on the track and the chart.");
+        TextView how = note(Lang.t(R.string.ride_bends_how));
         how.setPadding(0, dp(Ui.SPACE2), 0, 0);
         c.addView(how);
         return c;
@@ -292,10 +288,10 @@ public class RideActivity extends KawaActivity {
         if (!any) return;
         bendSummary.removeAllViews();
         LinearLayout tiles = statGrid(2,
-                statTile("Bends", String.valueOf(a.bends.size())),
-                statTile("Typical lean", String.format(Locale.ROOT, "%.0f°", a.median(b -> b.lean))),
-                statTile("Typical apex speed", String.format(Locale.ROOT, "%.0f km/h", a.median(b -> b.apexKmh))),
-                statTile("Out against in", String.format(Locale.ROOT, "%+.0f km/h", a.median(RideAnalysis.Bend::gain))));
+                statTile(Lang.t(R.string.ride_bends_title), String.valueOf(a.bends.size())),
+                statTile(Lang.t(R.string.ride_typical_lean), String.format(Locale.ROOT, "%.0f°", a.median(b -> b.lean))),
+                statTile(Lang.t(R.string.ride_typical_apex), String.format(Locale.ROOT, "%.0f km/h", a.median(b -> b.apexKmh))),
+                statTile(Lang.t(R.string.ride_out_in), String.format(Locale.ROOT, "%+.0f km/h", a.median(RideAnalysis.Bend::gain))));
         LinearLayout tileSurface = group();
         tileSurface.setPadding(dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2));
         tileSurface.addView(tiles);
@@ -303,20 +299,18 @@ public class RideActivity extends KawaActivity {
         lp.setMargins(0, dp(Ui.SPACE2), 0, dp(Ui.SPACE2));
         bendSummary.addView(tileSurface, lp);
         LinearLayout g = group();
-        add(g, "Left / right", a.count(-1) + " / " + a.count(1));
-        add(g, "Braking at the apex", bends(a.brakingAtApex()));
-        add(g, "Throttle snapped open leant over", bends(a.snapThrottle()));
-        add(g, "Shifting down leant over", bends(a.downshifting()));
+        add(g, Lang.t(R.string.ride_left_right), a.count(-1) + " / " + a.count(1));
+        add(g, Lang.t(R.string.ride_braking_apex), bends(a.brakingAtApex()));
+        add(g, Lang.t(R.string.ride_snap), bends(a.snapThrottle()));
+        add(g, Lang.t(R.string.ride_downshift), bends(a.downshifting()));
         bendSummary.addView(g);
         grip.set(a);
-        gripNote.setText(String.format(Locale.ROOT, "Each dot is a second of riding: sideways from the lean, "
-                + "forward and back from the change of speed. Hardest braking %.2f g, hardest acceleration "
-                + "%.2f g, most sideways %.2f g.", a.maxBrakeG, a.maxAccelG, a.maxSideG));
+        gripNote.setText(Lang.t(R.string.ride_grip_note, a.maxBrakeG, a.maxAccelG, a.maxSideG));
         showBendList(bendOrder.getSelectedItemPosition());
     }
 
     private static String bends(int n) {
-        return n == 0 ? "none" : n == 1 ? "1 bend" : n + " bends";
+        return n == 0 ? Lang.t(R.string.ride_bends_none) : Lang.plural(R.plurals.ride_bends, n);
     }
 
     /** The first bends in the order picked, each a tap away from the track and the chart. */
@@ -324,17 +318,17 @@ public class RideActivity extends KawaActivity {
         if (analysis == null || samples == null) return;
         bendList.removeAllViews();
         for (RideAnalysis.Bend b : analysis.top(order, BENDS_LISTED)) {
-            String title = String.format(Locale.ROOT, "%s · %s · %.0f° at %.0f km/h", seconds(samples.get(b.apex).tMs),
-                    b.side < 0 ? "left" : "right", b.lean, num(b.apexKmh));
-            String line = String.format(Locale.ROOT, "%.0f → %.0f km/h · radius %.0f m", num(b.entryKmh),
-                    num(b.exitKmh), num(b.radiusM));
+            String title = Lang.t(R.string.ride_bend_title, seconds(samples.get(b.apex).tMs),
+                    b.side < 0 ? Lang.t(R.string.ride_left) : Lang.t(R.string.ride_right), b.lean, num(b.apexKmh));
+            String line = Lang.t(R.string.ride_bend_line, num(b.entryKmh), num(b.exitKmh), num(b.radiusM));
             java.util.List<String> notes = new java.util.ArrayList<>();
             if (b.apexThrottle == b.apexThrottle) {
-                notes.add(String.format(Locale.ROOT, "throttle %.0f %% at the apex", b.apexThrottle));
+                notes.add(Lang.t(R.string.ride_bend_throttle, b.apexThrottle));
             }
-            if (b.brakingAtApex) notes.add("braking at the apex");
-            if (b.snapThrottle) notes.add("throttle snapped open");
-            if (b.downshifts > 0) notes.add(b.downshifts == 1 ? "shifted down" : "shifted down " + b.downshifts + " gears");
+            if (b.brakingAtApex) notes.add(Lang.t(R.string.ride_bend_braking));
+            if (b.snapThrottle) notes.add(Lang.t(R.string.ride_bend_snap));
+            if (b.downshifts > 0) notes.add(b.downshifts == 1 ? Lang.t(R.string.ride_bend_shifted)
+                    : Lang.plural(R.plurals.ride_bend_shifted_gears, b.downshifts));
             bendList.addView(listRow(title, line, notes.isEmpty() ? null : String.join(" · ", notes), false,
                     v -> showBend(b)));
         }
@@ -361,7 +355,7 @@ public class RideActivity extends KawaActivity {
         if (!any) have.add(ChartView.Series.SPEED);
         SERIES = have.toArray(new ChartView.Series[0]);
         String[] names = new String[SERIES.length];
-        for (int i = 0; i < SERIES.length; i++) names[i] = SERIES[i].title;
+        for (int i = 0; i < SERIES.length; i++) names[i] = Ride.shown(SERIES[i].title);
         android.widget.Spinner fresh = spinner(names, 0);
         fresh.setOnItemSelectedListener(onSelect(this::showChart));
         android.view.ViewGroup parent = (android.view.ViewGroup) seriesSpinner.getParent();
@@ -420,16 +414,16 @@ public class RideActivity extends KawaActivity {
     /** The numbers a rider looks at first: six tiles, the fuel economy, and what is missing from the ride. */
     private LinearLayout headline(Ride r) {
         LinearLayout section = column();
-        section.addView(sectionHeader(R.drawable.ic_speed, "Summary"));
+        section.addView(sectionHeader(R.drawable.ic_speed, Lang.t(R.string.ride_summary)));
         LinearLayout tiles = statGrid(2,
-                statTile("Time", r.duration()),
-                r.avgKmh > 0 ? statTile("Average", String.format(Locale.ROOT, "%.0f km/h", r.avgKmh)) : null,
-                r.maxKmh > 0 ? statTile("Top speed", String.format(Locale.ROOT, "%.0f km/h", r.maxKmh)) : null,
+                statTile(Lang.t(R.string.ride_time), r.duration()),
+                r.avgKmh > 0 ? statTile(Lang.t(R.string.ride_average), String.format(Locale.ROOT, "%.0f km/h", r.avgKmh)) : null,
+                r.maxKmh > 0 ? statTile(Lang.t(R.string.ride_top_speed), String.format(Locale.ROOT, "%.0f km/h", r.maxKmh)) : null,
                 r.maxLeanL < 0 || r.maxLeanR > 0
-                        ? statTile("Max lean", String.format(Locale.ROOT, "%.0f° / %.0f°", Math.abs(r.maxLeanL), r.maxLeanR))
+                        ? statTile(Lang.t(R.string.ride_max_lean), String.format(Locale.ROOT, "%.0f° / %.0f°", Math.abs(r.maxLeanL), r.maxLeanR))
                         : null,
-                r.maxRpm > 0 ? statTile("Max engine speed", String.format(Locale.ROOT, "%,d rpm", r.maxRpm)) : null,
-                r.fuelL() > 0 ? statTile("Fuel used", String.format(Locale.ROOT,
+                r.maxRpm > 0 ? statTile(Lang.t(R.string.ride_max_rpm), String.format(Locale.ROOT, "%,d rpm", r.maxRpm)) : null,
+                r.fuelL() > 0 ? statTile(Lang.t(R.string.ride_fuel_used), String.format(Locale.ROOT,
                         r.fuelEstimated() ? "≈ %.1f L" : "%.1f L", r.fuelL())) : null);
         LinearLayout tileSurface = group();
         tileSurface.setPadding(dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2), dp(Ui.SPACE2));
@@ -440,16 +434,15 @@ public class RideActivity extends KawaActivity {
 
         double km = r.km();
         if (r.fuelL() > 0 && km > 0) {
-            TextView economy = secondary(String.format(Locale.ROOT, "%.1f L/100 km over %,.1f km",
-                    r.fuelL() / km * 100, km) + (r.fuelEstimated()
-                    ? ", estimated from the instant fuel economy: this bike sends no fuel counter" : ""));
+            TextView economy = secondary(Lang.t(R.string.ride_economy, r.fuelL() / km * 100, km) + (r.fuelEstimated()
+                    ? ", " + Lang.t(R.string.ride_economy_estimated) : ""));
             economy.setPadding(dp(Ui.SPACE1), 0, dp(Ui.SPACE1), dp(Ui.SPACE2));
             section.addView(economy);
         }
         if (!r.hasBike || !r.hasGps) {
             TextView what = note(!r.hasBike
-                    ? "Recorded from the phone alone: no values from the bike."
-                    : "Recorded without GPS: no track and no altitude.");
+                    ? Lang.t(R.string.ride_phone_only)
+                    : Lang.t(R.string.ride_no_gps));
             what.setPadding(dp(Ui.SPACE1), 0, dp(Ui.SPACE1), dp(Ui.SPACE2));
             section.addView(what);
         }
@@ -458,21 +451,21 @@ public class RideActivity extends KawaActivity {
 
     /** One section of values, folded: label left, "lowest / average / highest" right. */
     private Section valueSection(Ride r, String name) {
-        Section sec = section(sectionIcon(name), name, false);
+        Section sec = section(sectionIcon(name), Ride.shown(name), false);
         LinearLayout g = group();
         boolean any = false;
         for (Ride.Metric m : r.metrics) {
             if (!name.equals(m.section) || !m.known()) continue;
-            add(g, m.label, range(m));
+            add(g, Ride.shown(m.label), range(m));
             any = true;
         }
         // the electronics: how long they worked, not what level they were at (a level means nothing averaged)
         if (Ride.BRAKES.equals(name)) {
-            any |= addSeconds(g, "Traction control", r.tcsOnS);
-            any |= addSeconds(g, "ABS", r.absOnS);
-            any |= addSeconds(g, "Cruise control", r.cruiseOnS);
+            any |= addSeconds(g, Lang.t(R.string.ride_tcs), r.tcsOnS);
+            any |= addSeconds(g, Lang.t(R.string.ride_abs), r.absOnS);
+            any |= addSeconds(g, Lang.t(R.string.ride_cruise), r.cruiseOnS);
         }
-        if (Ride.CHASSIS.equals(name)) any |= addSeconds(g, "Front wheel up", r.wheelieS);
+        if (Ride.CHASSIS.equals(name)) any |= addSeconds(g, Lang.t(R.string.ride_wheelie), r.wheelieS);
         if (Ride.ENGINE.equals(name)) {
             any |= addGears(g, r);
             any |= addClutch(g, r);
@@ -480,11 +473,8 @@ public class RideActivity extends KawaActivity {
         if (!any) return null;
         if (hasRanges(r, name)) {
             Ride.Metric economy = r.metric("fuel_inst");
-            TextView legend = note("Lowest, average and highest of the seconds the bike sent this"
-                    + (hasExtremes(r, name) ? "; where an average says nothing (rotation rates, slip), the lowest "
-                    + "to the highest." : ".")
-                    + (economy.known() && name.equals(economy.section)
-                    ? " The fuel economy's average is the distance over the litres it burned." : ""));
+            TextView legend = note((hasExtremes(r, name) ? Lang.t(R.string.ride_legend_extremes) : Lang.t(R.string.ride_legend))
+                    + (economy.known() && name.equals(economy.section) ? " " + Lang.t(R.string.ride_legend_economy) : ""));
             legend.setPadding(0, dp(Ui.SPACE2), 0, 0);
             g.addView(legend);
         }
@@ -498,27 +488,27 @@ public class RideActivity extends KawaActivity {
 
     /** Where the ride's own file is concerned: what was recorded, and how completely. */
     private Section qualitySection(Ride r) {
-        Section sec = section(R.drawable.ic_info, Ride.QUALITY, false);
+        Section sec = section(R.drawable.ic_info, Ride.shown(Ride.QUALITY), false);
         LinearLayout g = group();
         for (Ride.Metric m : r.metrics) {
-            if (Ride.QUALITY.equals(m.section) && m.known()) add(g, m.label, range(m));
+            if (Ride.QUALITY.equals(m.section) && m.known()) add(g, Ride.shown(m.label), range(m));
         }
         if (r.odoStartKm == r.odoStartKm && r.odoEndKm == r.odoEndKm) {
-            add(g, "Odometer", String.format(Locale.ROOT, "%,.0f → %,.0f km", r.odoStartKm, r.odoEndKm));
+            add(g, Lang.t(R.string.main_odometer), String.format(Locale.ROOT, "%,.0f → %,.0f km", r.odoStartKm, r.odoEndKm));
         }
         // both distances when they disagree: the odometer counts whole wheel turns, GPS cuts corners
         if (r.distBikeM > 0 && r.distGpsM > 0 && Math.abs(r.distBikeM - r.distGpsM) > 0.03 * r.distBikeM) {
-            add(g, "Distance: odometer / GPS", String.format(Locale.ROOT, "%.1f / %.1f km",
+            add(g, Lang.t(R.string.ride_distance_odo_gps), String.format(Locale.ROOT, "%.1f / %.1f km",
                     r.distBikeM / 1000, r.distGpsM / 1000));
         }
-        add(g, "Recorded", r.duration() + ", " + r.samples + " samples");
+        add(g, Lang.t(R.string.ride_recorded), Lang.plural(R.plurals.ride_recorded_value, (int) r.samples, r.duration(), r.samples));
         long expected = r.activeMs / 1000 + 1;
         if (expected > 0 && r.samples > 0) {
-            add(g, "Seconds recorded", String.format(Locale.ROOT, "%d of %d (%.0f %%)",
+            add(g, Lang.t(R.string.ride_seconds_recorded), Lang.t(R.string.ride_seconds_value,
                     r.samples, expected, 100.0 * r.samples / expected));
         }
         sec.body.addView(g);
-        sec.setPreview(r.samples + " seconds" + (r.hasGps ? ", with a GPS track" : ", no GPS track"));
+        sec.setPreview(Lang.t(r.hasGps ? R.string.ride_preview_gps : R.string.ride_preview_no_gps, r.samples));
         LinearLayout.LayoutParams lp = matchWrap();
         lp.setMargins(0, 0, 0, dp(Ui.CARD_GAP));
         sec.view.setLayoutParams(lp);
@@ -528,8 +518,9 @@ public class RideActivity extends KawaActivity {
     /** "lowest / average / highest unit", the three numbers a value row carries; "lowest to highest unit" for one that swings both ways. */
     private static String range(Ride.Metric m) {
         String f = "%," + "." + m.decimals + "f";
-        if (m.extremes) return String.format(Locale.ROOT, f + " to " + f + " %s", m.min, m.max, m.unit);
-        return String.format(Locale.ROOT, f + " / " + f + " / " + f + " %s", m.min, m.mean, m.max, m.unit);
+        if (m.extremes) return Lang.t(R.string.ride_range_to, String.format(Locale.ROOT, f, m.min),
+                String.format(Locale.ROOT, f, m.max)) + " " + Ride.shown(m.unit);
+        return String.format(Locale.ROOT, f + " / " + f + " / " + f + " %s", m.min, m.mean, m.max, Ride.shown(m.unit));
     }
 
     /** True when the section has a row that shows only its lowest and highest. */
@@ -550,12 +541,12 @@ public class RideActivity extends KawaActivity {
         for (int gear = 0; gear < r.gearS.length; gear++) {
             int s = r.gearS[gear];
             if (s == 0) continue;
-            add(group, gear == 0 ? "In neutral" : "In gear " + gear,
+            add(group, gear == 0 ? Lang.t(R.string.ride_neutral) : Lang.t(R.string.ride_in_gear, gear),
                     String.format(Locale.ROOT, "%s (%.0f %%)", seconds((double) s), 100.0 * s / total));
         }
-        add(group, "Gear changes", r.shiftsUp + " up, " + r.shiftsDown + " down");
+        add(group, Lang.t(R.string.ride_gear_changes), Lang.t(R.string.ride_up_down, r.shiftsUp, r.shiftsDown));
         if (r.kqsUp == r.kqsUp) {
-            add(group, "With the quick shifter", String.format(Locale.ROOT, "%.0f up, %.0f down", r.kqsUp, r.kqsDown));
+            add(group, Lang.t(R.string.ride_with_kqs), Lang.t(R.string.ride_up_down, Math.round(r.kqsUp), Math.round(r.kqsDown)));
         }
         return true;
     }
@@ -568,11 +559,11 @@ public class RideActivity extends KawaActivity {
     private boolean addClutch(LinearLayout group, Ride r) {
         if (r.clutchLoadS != r.clutchLoadS) return false;
         String verdict = r.clutchSlipping()
-                ? String.format(Locale.ROOT, "may be slipping: %d s in %d roll-ons", r.clutchSlipS, r.clutchSlipRuns)
-                : r.clutchSlipS > 0 ? String.format(Locale.ROOT, "holds (%d s high in one roll-on)", r.clutchSlipS)
-                : "holds";
-        add(group, "Clutch under load", verdict);
-        add(group, "Engine against the gear", String.format(Locale.ROOT, "%+.1f %% typical, %+.1f %% at most, over %s",
+                ? Lang.t(R.string.ride_clutch_slipping, r.clutchSlipS, r.clutchSlipRuns)
+                : r.clutchSlipS > 0 ? Lang.t(R.string.ride_clutch_holds_once, r.clutchSlipS)
+                : Lang.t(R.string.ride_clutch_holds);
+        add(group, Lang.t(R.string.ride_clutch), verdict);
+        add(group, Lang.t(R.string.ride_engine_gear), Lang.t(R.string.ride_engine_gear_value,
                 r.clutchMedianPct, r.clutchMaxPct, seconds(r.clutchLoadS)));
         return true;
     }
@@ -580,13 +571,13 @@ public class RideActivity extends KawaActivity {
     /** A line for a system that either worked or did not: its time when it did, "never" when it did not. */
     private boolean addSeconds(LinearLayout group, String label, double seconds) {
         if (seconds != seconds) return false;              // the ride has no such column at all
-        add(group, label, seconds > 0 ? seconds(seconds) : "never");
+        add(group, label, seconds > 0 ? seconds(seconds) : Lang.t(R.string.ride_never));
         return true;
     }
 
     private static String seconds(double s) {
         long total = Math.round(s);
-        return total >= 60 ? String.format(Locale.ROOT, "%d min %02d s", total / 60, total % 60) : total + " s";
+        return total >= 60 ? Lang.t(R.string.ride_min_s, total / 60, total % 60) : Lang.t(R.string.ride_s, total);
     }
 
     /** True when the section has at least one "lowest / average / highest" row (not only state lines). */
@@ -605,7 +596,7 @@ public class RideActivity extends KawaActivity {
             }
         }
         if (first == null) return "";
-        return String.format(Locale.ROOT, "up to %," + "." + first.decimals + "f %s", first.max, first.unit);
+        return Lang.t(R.string.ride_up_to, String.format(Locale.ROOT, "%," + "." + first.decimals + "f", first.max)) + " " + Ride.shown(first.unit);
     }
 
     private static int sectionIcon(String name) {
@@ -627,28 +618,25 @@ public class RideActivity extends KawaActivity {
 
     private LinearLayout actionsCard() {
         LinearLayout c = card();
-        c.addView(iconTitle(R.drawable.ic_share, cardTitle("Keep or share")));
+        c.addView(iconTitle(R.drawable.ic_share, cardTitle(Lang.t(R.string.ride_keep_share))));
         LinearLayout e = row();
         e.setPadding(0, dp(6), 0, 0);
-        e.addView(iconButton(primaryButton("Export CSV", v -> export("csv")), R.drawable.ic_download), weight());
+        e.addView(iconButton(primaryButton(Lang.t(R.string.ride_export_csv), v -> export("csv")), R.drawable.ic_download), weight());
         e.addView(gap());
-        e.addView(iconButton(secondaryButton("Export GPX", v -> export("gpx")), R.drawable.ic_download), weight());
+        e.addView(iconButton(secondaryButton(Lang.t(R.string.ride_export_gpx), v -> export("gpx")), R.drawable.ic_download), weight());
         c.addView(e);
         // the two that carry everything: every recorded value as a table, and the app's own file
         LinearLayout a = row();
         a.setPadding(0, dp(Ui.SPACE2), 0, 0);
-        a.addView(iconButton(secondaryButton("CSV (all values)", v -> export("full")), R.drawable.ic_download), weight());
+        a.addView(iconButton(secondaryButton(Lang.t(R.string.ride_export_full), v -> export("full")), R.drawable.ic_download), weight());
         a.addView(gap());
-        a.addView(iconButton(secondaryButton("Raw file", v -> export("tsv")), R.drawable.ic_download), weight());
+        a.addView(iconButton(secondaryButton(Lang.t(R.string.ride_export_raw), v -> export("tsv")), R.drawable.ic_download), weight());
         c.addView(a);
         LinearLayout r = row();
         r.setPadding(0, dp(Ui.SPACE2), 0, 0);
-        r.addView(iconButton(destructiveButton("Delete", v -> confirmDelete()), R.drawable.ic_trash), weight());
+        r.addView(iconButton(destructiveButton(Lang.t(R.string.common_delete), v -> confirmDelete()), R.drawable.ic_trash), weight());
         c.addView(r);
-        TextView caption = note("CSV has Rideology's columns, so the existing tools can read the ride. "
-                + "\"CSV (all values)\" has every value KawaNav records, one column each — the same table the "
-                + "app keeps, which is what \"Raw file\" gives too, in the app's own format. GPX is a track for "
-                + "map programs. All of them go to Download/KawaNav.");
+        TextView caption = note(Lang.t(R.string.ride_export_note));
         caption.setPadding(0, dp(Ui.SPACE2), 0, 0);
         c.addView(caption);
         return c;
@@ -665,14 +653,14 @@ public class RideActivity extends KawaActivity {
         input.setText(ride.name);
         input.setSingleLine(true);
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Rename this ride")
+                .setTitle(Lang.t(R.string.ride_rename))
                 .setView(input)
-                .setPositiveButton("Save", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.planner_save), (d, w) -> {
                     ride.name = input.getText().toString().trim();
                     store.save(ride);
                     title.setText(ride.name.isEmpty() ? Ride.defaultName(ride.start) : ride.name);
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
@@ -681,20 +669,20 @@ public class RideActivity extends KawaActivity {
         // the ride would come back finished, with no track at all, at the next stop. Say so instead.
         if (RideStore.isOpen(id)) {
             new android.app.AlertDialog.Builder(this)
-                    .setTitle("This ride is being recorded")
-                    .setMessage("Stop the ride first (the record button on Home), then delete it.")
-                    .setPositiveButton("OK", null)
+                    .setTitle(Lang.t(R.string.ride_recording_title))
+                    .setMessage(Lang.t(R.string.ride_recording_message))
+                    .setPositiveButton(Lang.t(R.string.common_ok), null)
                     .show();
             return;
         }
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Delete this ride?")
-                .setMessage("The recorded ride and its track are removed from the phone.")
-                .setPositiveButton("Delete", (d, w) -> {
+                .setTitle(Lang.t(R.string.ride_delete_title))
+                .setMessage(Lang.t(R.string.ride_delete_message))
+                .setPositiveButton(Lang.t(R.string.common_delete), (d, w) -> {
                     store.delete(id);
                     finish();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
@@ -732,16 +720,16 @@ public class RideActivity extends KawaActivity {
                 : text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         Uri uri = writeToDownloads(name, mime, bytes);
         if (uri == null) {
-            android.widget.Toast.makeText(this, "Export failed", android.widget.Toast.LENGTH_LONG).show();
+            android.widget.Toast.makeText(this, Lang.t(R.string.ride_export_failed), android.widget.Toast.LENGTH_LONG).show();
             return;
         }
         Logger.log("Ride: exported " + name + " (" + bytes.length + " bytes)");
         Intent share = new Intent(Intent.ACTION_SEND).setType(mime)
                 .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
-            startActivity(Intent.createChooser(share, "Share " + name));
+            startActivity(Intent.createChooser(share, Lang.t(R.string.planner_share, name)));
         } catch (android.content.ActivityNotFoundException e) {
-            android.widget.Toast.makeText(this, name + " saved to Download/KawaNav",
+            android.widget.Toast.makeText(this, Lang.t(R.string.planner_gpx_saved, name),
                     android.widget.Toast.LENGTH_LONG).show();
         }
     }

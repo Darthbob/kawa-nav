@@ -71,6 +71,12 @@ public final class RouteMapView extends View {
     private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint dash = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tilePaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+    private final Paint border = new Paint(Paint.ANTI_ALIAS_FLAG);
+    /**
+     * The downloaded regions' borders: per ring the Web Mercator x, y pairs and its box {minX, minY, maxX,
+     * maxY}, so a ring off the screen is skipped.
+     */
+    private List<double[]> borderRings = new ArrayList<>(), borderBoxes = new ArrayList<>();
     private final Path path = new Path();
     private final Path arrow = new Path();
     private final Rect src = new Rect(), dst = new Rect();
@@ -156,6 +162,10 @@ public final class RouteMapView extends View {
         dash.setStrokeCap(Paint.Cap.ROUND);
         dash.setColor(night ? 0xDDFFFFFF : 0xDD171717);
         dash.setPathEffect(new DashPathEffect(new float[]{density * 6, density * 5}, 0));
+        border.setStyle(Paint.Style.STROKE);
+        border.setStrokeJoin(Paint.Join.ROUND);
+        border.setStrokeWidth(density * 2);
+        border.setColor(night ? 0xB3FF6B6B : 0xB3D32F2F);
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         if (night) tilePaint.setColorFilter(darkMap());
         if (Hub.prefs(context).getBoolean(Hub.KEY_RIDE_MAP, true)) tiles = new MapTiles(context, this::postInvalidateOnAnimation);
@@ -206,7 +216,7 @@ public final class RouteMapView extends View {
                 return true;
             }
         });
-        setContentDescription("Map. Drag to move, pinch to zoom, tap to choose a place.");
+        setContentDescription(Lang.t(R.string.map_description));
     }
 
     public void setListener(Listener l) {
@@ -216,6 +226,55 @@ public final class RouteMapView extends View {
     @Override
     public boolean performClick() {
         return super.performClick();
+    }
+
+    /**
+     * The borders of the downloaded regions to draw, each ring as lon, lat pairs ({@link
+     * OfflineRegions#borders}): a thin red line shows how far the offline roads reach. Overlapping
+     * regions each keep their own line.
+     */
+    public void setBorders(List<double[]> rings) {
+        List<double[]> xy = new ArrayList<>(rings.size()), boxes = new ArrayList<>(rings.size());
+        for (double[] r : rings) {
+            double[] m = new double[r.length];
+            double[] box = {Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE};
+            for (int i = 0; i + 1 < r.length; i += 2) {
+                m[i] = MapTiles.x(r[i]);
+                m[i + 1] = MapTiles.y(r[i + 1]);
+                box[0] = Math.min(box[0], m[i]);
+                box[1] = Math.min(box[1], m[i + 1]);
+                box[2] = Math.max(box[2], m[i]);
+                box[3] = Math.max(box[3], m[i + 1]);
+            }
+            xy.add(m);
+            boxes.add(box);
+        }
+        borderRings = xy;
+        borderBoxes = boxes;
+        invalidate();
+    }
+
+    private void drawBorders(Canvas canvas, float halfW, float halfH) {
+        double r = reach() / ppw;
+        float step = density * 1.5f;
+        for (int k = 0; k < borderRings.size(); k++) {
+            double[] box = borderBoxes.get(k);
+            if (box[2] < cx - r || box[0] > cx + r || box[3] < cy - r || box[1] > cy + r) continue;
+            double[] m = borderRings.get(k);
+            path.reset();
+            float lx = 0, ly = 0;
+            for (int i = 0; i + 1 < m.length; i += 2) {
+                float x = (float) ((m[i] - cx) * ppw + halfW), y = (float) ((m[i + 1] - cy) * ppw + halfH);
+                // points closer than a pixel or two add nothing at this zoom (a country has thousands)
+                if (i == 0) path.moveTo(x, y);
+                else if (Math.abs(x - lx) >= step || Math.abs(y - ly) >= step) path.lineTo(x, y);
+                else continue;
+                lx = x;
+                ly = y;
+            }
+            path.close();
+            canvas.drawPath(path, border);
+        }
     }
 
     /** The route to draw (null: none), coloured by its edges' curviness. */
@@ -605,6 +664,7 @@ public final class RouteMapView extends View {
         int z = MapTiles.zoomFor(ppw, tilePx);
         boolean missing = tiles == null || drawMap(canvas, z);
         if (missing && z >= OFFLINE_FROM_ZOOM) drawOfflineRoads(canvas, halfW, halfH);
+        if (!borderRings.isEmpty()) drawBorders(canvas, halfW, halfH);
 
         if (rx != null) {
             float step = density * 1.5f;
@@ -673,7 +733,7 @@ public final class RouteMapView extends View {
             }
         }
         canvas.restore();
-        String c = tiles != null && !missing ? "© OpenStreetMap contributors" : "Roads © OpenStreetMap contributors";
+        String c = tiles != null && !missing ? "© OpenStreetMap contributors" : Lang.t(R.string.map_roads_credit);
         canvas.drawText(c, getWidth() - getPaddingRight() - credit.measureText(c) - density * 6,
                 getHeight() - getPaddingBottom() - density * 6, credit);
     }

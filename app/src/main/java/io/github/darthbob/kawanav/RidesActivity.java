@@ -38,7 +38,7 @@ public class RidesActivity extends KawaActivity {
 
         LinearLayout root = column();
         root.setPadding(dp(Ui.SPACE4), 0, dp(Ui.SPACE4), dp(Ui.SPACE6));
-        root.addView(headerBar("Riding log", null, null));
+        root.addView(headerBar(Lang.t(R.string.rides_title), null, null));
         totals = secondary("");
         totals.setGravity(android.view.Gravity.CENTER);
         totals.setPadding(0, 0, 0, dp(Ui.SPACE2));
@@ -49,7 +49,7 @@ public class RidesActivity extends KawaActivity {
         root.addView(empty);
         list = column();
         root.addView(list);
-        TextView note = note("Rides are stored on the phone only. Nothing is uploaded anywhere.");
+        TextView note = note(Lang.t(R.string.rides_note));
         note.setPadding(dp(Ui.SPACE1), dp(Ui.SPACE5), dp(Ui.SPACE1), dp(Ui.SPACE2));
         root.addView(note);
         setContentView(tabPage(TAB_RIDES, root));
@@ -130,24 +130,21 @@ public class RidesActivity extends KawaActivity {
         totalsTiles.removeAllViews();
         if (!rides.isEmpty()) {
             LinearLayout tiles = statGrid(3,
-                    statTile("This week", String.format(Locale.ROOT, "%.0f km", week)),
-                    statTile("This month", String.format(Locale.ROOT, "%.0f km", month)),
-                    statTile("This year", String.format(Locale.ROOT, "%.0f km", year)));
+                    statTile(Lang.t(R.string.rides_this_week), String.format(Locale.ROOT, "%.0f km", week)),
+                    statTile(Lang.t(R.string.rides_this_month), String.format(Locale.ROOT, "%.0f km", month)),
+                    statTile(Lang.t(R.string.rides_this_year), String.format(Locale.ROOT, "%.0f km", year)));
             LinearLayout.LayoutParams lp = matchWrap();
             lp.setMargins(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE2));
             totalsTiles.addView(tiles, lp);
             totalsTiles.addView(records(rides), lp);
         }
         totals.setText(rides.isEmpty() ? ""
-                : String.format(Locale.ROOT, "%d %s · %s this week · %.0f km altogether",
-                rides.size(), rides.size() == 1 ? "ride" : "rides", minutes(weekMs), all));
+                : Lang.plural(R.plurals.rides_totals, rides.size(), rides.size(), minutes(weekMs), all));
         empty.setVisibility(rides.isEmpty() ? View.VISIBLE : View.GONE);
         empty.removeAllViews();
         if (rides.isEmpty()) {
-            LinearLayout card = emptyState("Record your first ride",
-                    "Tap the round button below before you ride. The bike's values (speed, engine, gear, "
-                            + "throttle, lean, temperatures) and the phone's track are written to the phone once a "
-                            + "second while it is connected.");
+            LinearLayout card = emptyState(Lang.t(R.string.rides_first),
+                    Lang.t(R.string.rides_first_sub));
             empty.addView(card);
         }
         for (Ride r : rides) list.addView(row(r, today));
@@ -157,35 +154,30 @@ public class RidesActivity extends KawaActivity {
     private View records(List<Ride> rides) {
         RideStats stats = RideStats.of(rides);
         LinearLayout c = card();
-        c.addView(iconTitle(R.drawable.ic_speed, cardTitle("Records")));
+        c.addView(iconTitle(R.drawable.ic_speed, cardTitle(Lang.t(R.string.rides_records))));
         if (stats.fastest.known()) {
-            c.addView(secondary("Fastest: " + String.format(Locale.ROOT, "%.0f km/h", stats.fastest.value)
-                    + " on " + when(stats.fastest.ride)));
+            c.addView(secondary(Lang.t(R.string.rides_fastest, stats.fastest.value, when(stats.fastest.ride))));
         }
         if (stats.maxLeanLeft.known() || stats.maxLeanRight.known()) {
             double l = stats.maxLeanLeft.value, r = stats.maxLeanRight.value;
-            c.addView(secondary(String.format(Locale.ROOT, "Most lean: %.0f° left, %.0f° right", l, r)
-                    + (l >= r ? " on " + when(stats.maxLeanLeft.ride) : " on " + when(stats.maxLeanRight.ride))));
+            c.addView(secondary(Lang.t(R.string.rides_most_lean, l, r,
+                    when(l >= r ? stats.maxLeanLeft.ride : stats.maxLeanRight.ride))));
         }
         if (stats.longest.known()) {
-            c.addView(secondary(String.format(Locale.ROOT, "Longest ride: %.0f km on ", stats.longest.value)
-                    + when(stats.longest.ride)));
+            c.addView(secondary(Lang.t(R.string.rides_longest, stats.longest.value, when(stats.longest.ride))));
         }
         // what only the rides opened since 0.9 know about themselves
         if (stats.hottest.known()) {
-            c.addView(secondary(String.format(Locale.ROOT, "Hottest engine: %.0f °C on ",
-                    stats.hottest.value) + when(stats.hottest.ride)));
+            c.addView(secondary(Lang.t(R.string.rides_hottest, stats.hottest.value, when(stats.hottest.ride))));
         }
         if (stats.hardestBraking.known()) {
-            c.addView(secondary(String.format(Locale.ROOT, "Hardest braking: %.2f g on ",
-                    stats.hardestBraking.value) + when(stats.hardestBraking.ride)));
+            c.addView(secondary(Lang.t(R.string.rides_hardest_braking, stats.hardestBraking.value, when(stats.hardestBraking.ride))));
         }
         if (stats.mostSuspension.known()) {
-            c.addView(secondary(String.format(Locale.ROOT, "Most suspension travel: %.1f mm on ",
-                    stats.mostSuspension.value) + when(stats.mostSuspension.ride)));
+            c.addView(secondary(Lang.t(R.string.rides_most_suspension, stats.mostSuspension.value, when(stats.mostSuspension.ride))));
         }
         // the same wording the totals use: "48 min", not "0 h", when the log is young
-        StringBuilder total = new StringBuilder(String.format(Locale.ROOT, "Altogether %,.0f km in %s",
+        StringBuilder total = new StringBuilder(Lang.t(R.string.rides_altogether,
                 stats.totalKm, minutes((long) (stats.totalHours * 3_600_000))));
         if (stats.fuelL > 0 && stats.fuelKm > 0) {
             total.append(String.format(Locale.ROOT, stats.fuelEstimated ? " · ≈ %,.1f L · %.1f L/100 km"
@@ -194,21 +186,20 @@ public class RidesActivity extends KawaActivity {
         c.addView(secondary(total.toString()));
         // how much the electronics worked over the whole log
         StringBuilder work = new StringBuilder();
-        if (stats.tcsSeconds > 0) work.append(minutes((long) (stats.tcsSeconds * 1000))).append(" in traction control");
+        if (stats.tcsSeconds > 0) work.append(Lang.t(R.string.rides_in_tcs, minutes((long) (stats.tcsSeconds * 1000))));
         if (stats.absSeconds > 0) {
             if (work.length() > 0) work.append(" · ");
-            work.append(minutes((long) (stats.absSeconds * 1000))).append(" in ABS");
+            work.append(Lang.t(R.string.rides_in_abs, minutes((long) (stats.absSeconds * 1000))));
         }
         if (stats.wheelieSeconds > 0) {
             if (work.length() > 0) work.append(" · ");
-            work.append(minutes((long) (stats.wheelieSeconds * 1000))).append(" with the front wheel up");
+            work.append(Lang.t(R.string.rides_wheel_up, minutes((long) (stats.wheelieSeconds * 1000))));
         }
         if (work.length() > 0) c.addView(secondary(work.toString()));
         List<RideStats.Year> years = RideStats.byYear(rides);
         if (years.size() > 1) {
             for (RideStats.Year y : years) {
-                c.addView(secondary(String.format(Locale.ROOT, "%d: %,.0f km · %d %s", y.year, y.km, y.rides,
-                        y.rides == 1 ? "ride" : "rides")));
+                c.addView(secondary(Lang.plural(R.plurals.rides_year, y.rides, y.year, y.km, y.rides)));
             }
         }
         return c;
@@ -248,9 +239,9 @@ public class RidesActivity extends KawaActivity {
         t.addView(name);
         String when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                 .format(new java.util.Date(r.start));
-        String state = r.id.equals(Hub.rideId) ? " · recording now"
-                : "recovered".equals(r.state) ? " · recovered after a restart"
-                : "incomplete".equals(r.state) ? " · track lost"
+        String state = r.id.equals(Hub.rideId) ? " · " + Lang.t(R.string.rides_recording_now)
+                : "recovered".equals(r.state) ? " · " + Lang.t(R.string.rides_recovered)
+                : "incomplete".equals(r.state) ? " · " + Lang.t(R.string.rides_track_lost)
                 : "";
         t.addView(secondary(when + state));
         Figure distance = figure(24, android.view.Gravity.START);
@@ -258,8 +249,8 @@ public class RidesActivity extends KawaActivity {
         distance.view.setPadding(0, dp(Ui.SPACE1), 0, 0);
         t.addView(distance.view);
         String detail = r.duration()
-                + (r.maxKmh > 0 ? String.format(Locale.ROOT, " · max %.0f km/h", r.maxKmh) : "")
-                + (r.hasGps ? "" : " · no GPS track");
+                + (r.maxKmh > 0 ? " · " + Lang.t(R.string.rides_max_speed, r.maxKmh) : "")
+                + (r.hasGps ? "" : " · " + Lang.t(R.string.rides_no_gps));
         t.addView(note(detail));
         line.addView(t, weight());
         line.addView(chevron());

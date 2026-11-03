@@ -1,0 +1,1159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the translation work in 1.4.0; edit this file directly. Every language has
+     every text of res/values/strings.xml (StringsTest, lint MissingTranslation). -->
+<resources>
+
+    <!-- Settings: explanations -->
+    <string name="settings_cameras_info">Uit de offline kaartgegevens: de telefoon toont hem en het display van de motor krijgt de afstand. Download de regio opnieuw als die vóór deze versie is gedownload. Flitserwaarschuwingen tijdens het rijden zijn in sommige landen verboden (Duitsland, Frankrijk, Zwitserland)</string>
+    <string name="settings_curves_info">De hoek is de totale richtingsverandering door de hele bocht: 90° is een haakse bocht, 180° een haarspeldbocht. Een bocht moet ook krap genoeg zijn; lange, ruime snelwegbochten tellen niet.\n\nAlleen krappe: vanaf 45°, straal tot ~170 m. Alleen bochten waarvoor je echt moet remmen.\n\nNormaal: vanaf 30°, straal tot ~250 m.\n\nOok flauwe: vanaf 20°, straal tot ~350 m. Twee bochten in dezelfde richting dicht na elkaar kunnen samensmelten tot één.\n\nAlle boven 15°: vanaf 16°, straal tot ~570 m. Alles behalve de flauwste bochten; bochten dicht na elkaar blijven apart. Aanbevolen.\n\nPijl op het display van de motor:\n• Flauw: minder dan 55° en ruimer dan 60 m straal\n• Normaal: 55° of meer, of krapper dan 60 m\n• Scherp: 100° of meer, of krapper dan 30 m\n• Haarspeld (keerpijl): 150° of meer en krapper dan 35 m</string>
+    <string name="settings_curve_sound_info">KawaNav zegt het soort bocht en de richting, zoals „Scherpe bocht links” of „Haarspeldbocht rechts”, zo’n 6 seconden voordat de bocht bij jouw snelheid begint: van 50 m ervoor als je langzaam rijdt tot 300 m als je snel rijdt. Elke bocht één keer, en niets onder 10 km/h. Je snelheid is die van de motor zolang die verbonden is, zonder gps-vertraging; zonder motor die van de gps.\n\nDe soorten zijn die van de pijl op het display van de motor (zie „Welke bochten tellen”):\n• Alleen haarspeldbochten\n• Scherpe en haarspeldbochten\n• Alle bochten: ook normale en flauwe\n\n„Ook als te snel” voegt de bochten toe waar je voor jouw tempo te snel op afkomt, met „rem af”; dat werkt ook als deze instelling uit staat.\n\nEen bocht die binnen 80 m na het einde van de genoemde begint, wordt er samen mee genoemd: „Haarspeldbocht links, daarna scherpe bocht rechts”. Hij wordt niet nog eens apart gezegd, tenzij je er te snel op afkomt.\n\nHet werkt met en zonder navigatie, wat het display ook toont. Tijdens navigatie wordt een bocht vlak voor de volgende manoeuvre van Maps aan de stem van Maps overgelaten. Heeft gedownloade wegen nodig, net als de bochten op het display. De stem is de spraakuitvoer van de telefoon, in de taal van KawaNav (Instellingen → Weergave → Taal).</string>
+    <string name="common_off">Uit</string>
+    <string name="settings_pace_relaxed">Rustig</string>
+    <string name="settings_pace_normal">Normaal</string>
+    <string name="settings_pace_sporty">Sportief</string>
+    <string name="settings_pace_fast">Snel</string>
+    <string name="settings_pace_from_rides">Uit mijn ritten</string>
+    <string name="settings_pace_info_intro">Je tempo is hoe ver je door een bocht helt. Uit de straal van de bocht in de kaartgegevens volgt de snelheid waarmee je de bocht zou nemen:</string>
+    <string name="settings_pace_info_line">%1$s (%2$.0f°): %3$.0f km/h bij een straal van 30 m, %4$.0f km/h bij 100 m</string>
+    <string name="settings_pace_info_rides">Uit mijn ritten: de hellingshoek die je in je laatste %1$d ritten meestal in een bocht haalt, zodra die %2$d bochten bevatten; tot dan Normaal. Een bocht telt vanaf %3$.0f km/h en %4$d° helling. Heeft ritten nodig die met verbonden motor zijn opgenomen, en wordt bij elke start van KawaNav opnieuw berekend</string>
+    <string name="settings_pace_info_too_fast">Kom je meer dan %1$.0f%% sneller dan dat op een bocht af, dan hoor je hem met „rem af” („Bocht links, rem af”) als zacht remmen nog net genoeg zou zijn: ongeveer 0,3 g, na %2$.1f s om het te horen en te reageren. Rem je al genoeg af, dan wordt er niets gezegd.\n\nElk soort bocht, ook met „Gesproken bochtwaarschuwingen” uit, zolang hij telt onder „Welke bochten tellen”. De straal uit de kaart is grof, en een ruime lijn maakt een bocht ruimer dan de weg: de snelheden zijn aan de voorzichtige kant.</string>
+    <plurals name="settings_pace_usual">
+        <item quantity="one">Je helt in een bocht meestal %1$.0f°: %2$d bochten in je laatste %3$d rit</item>
+        <item quantity="other">Je helt in een bocht meestal %1$.0f°: %2$d bochten in je laatste %3$d ritten</item>
+    </plurals>
+    <string name="settings_pace_counting">%1$d van de %2$d benodigde bochten in je ritten tot nu toe: tot dan Normaal</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Instellingen</string>
+    <string name="settings_section_autostart">Automatisch starten</string>
+    <string name="settings_section_road">Onderweg</string>
+    <string name="settings_section_navigation">Navigatie</string>
+    <string name="settings_section_dash">Displaysymbolen en klok</string>
+    <string name="settings_section_recording">Ritopname</string>
+    <string name="settings_section_maps">Offline kaarten</string>
+    <string name="settings_section_appearance">Weergave</string>
+    <string name="settings_section_about">Over</string>
+    <string name="settings_autostart_bike">Als de motor wordt aangezet</string>
+    <string name="settings_autostart_helmet">Als mijn helm verbinding maakt</string>
+    <string name="settings_autostart_helmet_sub">Je intercom maakt vanzelf verbinding als je hem aanzet. Zolang hij verbonden is, toont het display van de motor het headsetsymbool</string>
+    <string name="settings_helmet_saved">Opgeslagen</string>
+    <string name="settings_route_planner">Routeplanner</string>
+    <string name="settings_route_planner_sub">Van A naar B of een rondrit, op de gedownloade regio’s</string>
+    <string name="settings_roads">Wegen</string>
+    <string name="settings_roads_sub">Waar de planner naar zoekt, tenzij je het daar verandert</string>
+    <string name="settings_roads_fastest">Snelste</string>
+    <string name="settings_roads_curvy">Bochtig</string>
+    <string name="settings_roads_extra_curvy">Extra bochtig</string>
+    <string name="settings_avoid_motorways">Snelwegen vermijden</string>
+    <string name="settings_avoid_motorways_sub">Alleen als er geen andere weg is</string>
+    <string name="settings_avoid_tolls">Tol vermijden</string>
+    <string name="settings_avoid_tolls_sub">Tolwegen alleen als er geen andere weg is</string>
+    <string name="settings_avoid_gravel">Grind vermijden</string>
+    <string name="settings_avoid_gravel_sub">Onverharde wegen alleen als er geen andere weg is</string>
+    <string name="settings_maps">Aanwijzingen van Google Maps</string>
+    <string name="settings_maps_sub">Terwijl Maps navigeert, toont het display van de motor de aanwijzingen</string>
+    <string name="settings_free_mode">Komende bochten tonen</string>
+    <string name="settings_free_mode_sub">Zonder navigatie toont het display van de motor de volgende bocht van de weg waarop je rijdt</string>
+    <string name="settings_nav_curves">Bochtwaarschuwingen tijdens navigatie</string>
+    <string name="settings_nav_curves_sub">Getoond tot 300 m voor een bocht, tussen de aanwijzingen van Maps</string>
+    <string name="settings_nav_curves_sharp">Alleen scherpe</string>
+    <string name="settings_nav_curves_all">Alle</string>
+    <string name="settings_curve_sound">Gesproken bochtwaarschuwingen</string>
+    <string name="settings_curve_sound_sub">In je helm gezegd, een paar seconden voor de bocht</string>
+    <string name="settings_curve_sound_hairpins">Alleen haarspeldbochten</string>
+    <string name="settings_curve_sound_sharp">Scherpe en haarspeldbochten</string>
+    <string name="settings_curve_sound_all">Alle bochten</string>
+    <string name="settings_pace">Ook als te snel</string>
+    <string name="settings_pace_sub">Elke bocht, met „rem af”, als je er sneller op afkomt dan je tempo hem neemt</string>
+    <string name="settings_headset_only">Alleen via een headset spreken</string>
+    <string name="settings_headset_only_sub">Stil zolang er geen bluetooth- of bedrade headset verbonden is, zodat de telefoon zelf niet spreekt</string>
+    <string name="settings_beeps">Piepjes in plaats van woorden</string>
+    <string name="settings_beeps_sub">In het oor aan de kant van de bocht: één piep voor een bocht, twee voor een scherpe, drie voor een haarspeld, hoger en sneller als te snel</string>
+    <string name="settings_hear_sample">Een bochtwaarschuwing beluisteren</string>
+    <string name="settings_play">Afspelen</string>
+    <string name="settings_curves">Welke bochten tellen</string>
+    <string name="settings_curves_sub">Hoeveel een bocht moet draaien om getoond te worden</string>
+    <string name="settings_curves_tight">Alleen krappe</string>
+    <string name="settings_curves_gentle">Ook flauwe</string>
+    <string name="settings_curves_all">Alle boven 15°</string>
+    <string name="settings_lookahead">Vooruitkijken</string>
+    <string name="settings_lookahead_sub">Hoe ver vooruit naar de volgende bocht wordt gezocht</string>
+    <string name="settings_imperial">Afstanden in voet</string>
+    <string name="settings_imperial_sub">In plaats van meters</string>
+    <string name="settings_fuel_unit">Verbruik</string>
+    <string name="settings_fuel_unit_sub">De eenheid voor het gemiddelde en momentane verbruik van de motor</string>
+    <string name="settings_left_hand">Linksrijdend verkeer</string>
+    <string name="settings_left_hand_sub">VK, Ierland…: rotondes met de klok mee</string>
+    <string name="settings_battery_warnings">Accuwaarschuwingen</string>
+    <string name="settings_battery_warnings_sub">Als de 12V-accu van de motor laag staat, of de motor draait en hij niet wordt geladen</string>
+    <string name="settings_clutch">Koppelingswaarschuwing</string>
+    <string name="settings_clutch_sub">Na een opgenomen rit, als de motor bij meer dan één flinke acceleratie op het achterwiel vooruitliep: de koppeling slipt misschien</string>
+    <string name="settings_cold_rpm">Koude motor: toerental</string>
+    <string name="settings_cold_rpm_sub">De waarschuwing komt boven dit toerental</string>
+    <string name="settings_cold_warm">Koude motor: warm vanaf</string>
+    <string name="settings_cold_warm_sub">De koelvloeistoftemperatuur vanaf welke de motor als warm geldt</string>
+    <string name="settings_cameras">Flitserwaarschuwingen</string>
+    <string name="settings_camera_warn">Waarschuwen voor een flitser</string>
+    <string name="settings_camera_warn_sub">Hoe ver ervoor de waarschuwing komt</string>
+    <string name="settings_camera_voice">Flitsers aankondigen</string>
+    <string name="settings_camera_voice_sub">Met flitserwaarschuwingen aan wordt elke flitser ook in de helm genoemd als zijn waarschuwing komt („Flitser verderop, limiet 50”), of met piepjes een tweetonige sirene, heel anders dan de piepjes van een bocht. Net als de bochtwaarschuwingen alleen via een headset, tenzij dat uit staat</string>
+    <string name="settings_ignore_caps">Pijlen en symbolen toch sturen</string>
+    <string name="settings_ignore_caps_sub">Het display zegt of het afslaginstructies en statussymbolen heeft, en KawaNav gelooft het, net als Rideology: wat het zegt niet te kunnen tonen, wordt niet gestuurd. Zet dit aan als pijlen of symbolen eerder werkten en zijn gestopt: sommige displays antwoorden verkeerd.</string>
+    <string name="settings_phone_battery">Telefoonaccu</string>
+    <string name="settings_phone_battery_sub">Het display van de motor toont de accu van de telefoon (4 streepjes) en of hij laadt</string>
+    <string name="settings_clock">Displayklok instellen vanaf de telefoon</string>
+    <string name="settings_clock_sub">Eén keer per verbinding, net als Rideology. Laat het schakellampje zoals het op de motor is ingesteld</string>
+    <string name="settings_dash_calls">Belsymbool op het display</string>
+    <string name="settings_dash_calls_sub">Een symbool terwijl er een oproep binnenkomt; heeft toegang tot meldingen nodig. Er worden geen nummers of namen gestuurd</string>
+    <string name="settings_dash_mail">Mail- en berichtsymbool op het display</string>
+    <string name="settings_dash_mail_sub">Een symbool als er een mail of bericht binnenkomt (Gmail, Berichten, LINE…); heeft toegang tot meldingen nodig</string>
+    <string name="settings_ride_auto">Vanzelf opnemen</string>
+    <string name="settings_ride_auto_sub">Zodra de motor verbonden is en rijdt</string>
+    <string name="settings_ride_end">Een rit beëindigen</string>
+    <string name="settings_ride_end_sub">Als de motor wordt uitgezet: meteen, of een paar minuten later zodat een tankstop in dezelfde rit blijft</string>
+    <string name="settings_ride_map">Kaart onder het spoor</string>
+    <string name="settings_ride_map_sub">De kaart van OpenStreetMap achter het spoor van een rit. De kaart wordt voor het gebied dat je bekijkt van openstreetmap.org gehaald en een tijdje op de telefoon bewaard</string>
+    <string name="settings_rides">Opgenomen ritten</string>
+    <string name="settings_rides_sub">Alles wat je hebt opgenomen, met spoor en grafieken</string>
+    <string name="settings_maps_intro">Bochten, de routeplanner en de navigatie werken alleen waar de wegen zijn gedownload. Download de regio’s waar je rijdt, via wifi. Regio’s tellen op: bijv. nu Beieren, later Tirol.</string>
+    <string name="settings_maps_credit">Weggegevens © OpenStreetMap-bijdragers (ODbL)</string>
+    <string name="settings_download_region">Een regio downloaden</string>
+    <string name="settings_region_hint">Zoek een regio: Gelderland, Tirol, Zwitserland…</string>
+    <string name="settings_download">Downloaden</string>
+    <string name="settings_update">Bijwerken</string>
+    <string name="common_delete">Verwijderen</string>
+    <string name="common_cancel">Annuleren</string>
+    <string name="settings_other_roads">Andere wegen</string>
+    <string name="settings_delete_region_message">De wegen ervan worden van de telefoon verwijderd. Wegen die een andere gedownloade regio ook dekt, blijven.</string>
+    <string name="settings_delete_other_title">Andere wegen verwijderen?</string>
+    <string name="settings_delete_other_message">Wegen uit eerdere downloads die bij geen enkele regio in de lijst horen, worden verwijderd.</string>
+    <string name="settings_regions_offline">Regiolijst niet beschikbaar. Ben je online?</string>
+    <string name="settings_pick_region">Kies een regio uit de lijst</string>
+    <string name="settings_mobile_data">Mobiele data</string>
+    <string name="settings_export_log">Logboek exporteren</string>
+    <string name="settings_export_log_sub">Kopieert het logboek van KawaNav naar Download/KawaNav, om mee te sturen bij een probleemmelding. Het bevat de aanwijzingen van Google Maps met straatnamen, het bluetooth-adres van de motor en de naam van de helm: lees het voordat je het deelt</string>
+
+    <!-- Settings: with values -->
+    <string name="settings_nav_voice">Gesproken navigatie</string>
+    <string name="settings_nav_voice_sub">Afslaginstructies in je helm, in de taal van KawaNav</string>
+    <string name="unit_m">%1$d m</string>
+    <string name="settings_hear_sample_sub">Speelt nu de waarschuwing voor een scherpe bocht naar links („%1$s”, of de piepjes ervan), om het volume in de helm in te stellen</string>
+    <string name="settings_cold_engine">Waarschuwing koude motor</string>
+    <string name="settings_cold_engine_sub">„%1$s” in je helm als je de motor boven het hieronder ingestelde toerental jaagt voordat de koelvloeistof de hieronder ingestelde temperatuur haalt</string>
+    <string name="settings_dash_no_icons">Het display van je motor zegt dat het geen statussymbolen toont</string>
+    <string name="settings_dash_no_clock">Het display van je motor zegt dat de telefoon de klok niet mag instellen</string>
+    <string name="main_riding_notice">KawaNav is een rijhulp, geen veiligheidssysteem. Aanwijzingen en bochten kunnen te laat komen, ontbreken of fout zijn. Rij altijd op wat je op de weg ziet en houd je ogen erop.</string>
+    <string name="main_affiliation_notice">KawaNav is een onafhankelijk project, niet verbonden aan of goedgekeurd door Kawasaki of Google.</string>
+    <string name="settings_about_data">Weggegevens © OpenStreetMap-bijdragers, beschikbaar onder de Open Database License (ODbL), gedownload van Geofabrik.</string>
+    <string name="settings_about_licence">KawaNav © 2026 Darthbob en jackyes. Vrije software onder de GNU General Public License v3, zonder enige garantie. Broncode: github.com/Darthbob/kawa-nav</string>
+    <string name="settings_about_version">Versie %1$s</string>
+    <string name="settings_log_none">Geen logboek om te exporteren</string>
+    <plurals name="settings_log_files">
+        <item quantity="one">%1$d bestand in Download/KawaNav</item>
+        <item quantity="other">%1$d bestanden in Download/KawaNav</item>
+    </plurals>
+    <string name="settings_autostart_on_for">Aan voor %1$s</string>
+    <string name="settings_autostart_set_up_sub">Eén keer instellen naast de motor, contact aan, Rideology gesloten</string>
+    <string name="settings_autostart_turn_off">Uitzetten</string>
+    <string name="settings_autostart_set_up">Instellen</string>
+    <string name="settings_free_mode_active">Actief</string>
+    <string name="settings_regions_none">Nog geen regio’s gedownload</string>
+    <string name="settings_regions_stored">Gedownload · %1$.0f MB</string>
+    <string name="settings_region_checking">Zoeken naar nieuwere gegevens…</string>
+    <string name="settings_region_check_failed">Kon niet zoeken naar nieuwere gegevens (offline?)</string>
+    <string name="settings_region_newer">Nieuwere gegevens beschikbaar van %1$s</string>
+    <string name="settings_region_up_to_date">Actueel</string>
+    <string name="settings_region_data">Gegevens van %1$s · %2$.0f MB</string>
+    <string name="settings_region_no_cameras">Nog geen flitsers in deze gegevens: download de regio opnieuw</string>
+    <string name="settings_region_no_routing">Nog geen gegevens voor routeplanning: download de regio opnieuw</string>
+    <string name="settings_other_roads_sub">%1$.0f MB uit eerdere downloads, geen deel van een regio</string>
+    <string name="settings_region_checking_size">%1$s: grootte wordt gecontroleerd…</string>
+    <string name="settings_region_size">%1$s: %2$.0f MB downloaden, ongeveer %3$.0f MB opgeslagen met de gegevens voor routeplanning\nHeeft %4$.1f GB vrij nodig tijdens het omzetten (%5$.1f GB vrij)</string>
+    <string name="settings_mobile_data_message">Je zit niet op wifi. Het bestand voor %1$s kan honderden MB groot zijn. Toch downloaden?</string>
+    <string name="settings_delete_region_title">%1$s verwijderen?</string>
+    <string name="settings_language">Taal</string>
+    <string name="settings_language_sub">De teksten van de app en de stem. Systeemstandaard: de taal van de telefoon als KawaNav die heeft, anders Engels</string>
+    <string name="settings_language_system">Systeemstandaard</string>
+    <string name="settings_theme">Thema</string>
+    <string name="settings_theme_sub">Wit of zwart, met limoengroen. Zoals de telefoon: volgt de donkere modus van de telefoon</string>
+
+    <!-- Settings -->
+    <string name="settings_pace_looking">Je ritten worden bekeken…</string>
+
+    <!-- Theme -->
+    <string name="theme_system">Zoals de telefoon</string>
+    <string name="theme_light">Licht</string>
+    <string name="theme_dark">Donker</string>
+
+    <!-- Units -->
+    <string name="unit_rpm">%1$,d tpm</string>
+
+    <!-- Language -->
+    <string name="lang_code">nl</string>
+
+    <!-- Home -->
+    <string name="main_notice_title">Voordat je gaat rijden</string>
+    <string name="main_notice_ok">Begrepen</string>
+    <string name="main_maps_access_title">Aanwijzingen van Google Maps lezen</string>
+    <string name="main_maps_access_message">Om de aanwijzingen van Maps op het display te tonen, leest KawaNav de navigatiemelding van Maps.\n\nZet op het volgende scherm „KawaNav” aan.</string>
+    <string name="common_continue">Doorgaan</string>
+    <string name="main_not_now">Niet nu</string>
+    <string name="main_restricted_steps">KawaNav is geïnstalleerd vanuit een gedownload bestand, dus Android beschermt deze instelling. Ontgrendel hem één keer:\n\n1. „Schakelaar proberen”: tik één keer op KawaNav en de grijze schakelaar. Android weigert, maar zo verschijnt stap 2.\n2. „App-info openen”: tik rechtsboven op ⋮, dan op „Beperkte instellingen toestaan” en bevestig.\n3. Terug in KawaNav tik je bij de aanwijzingen van Google Maps op „Openen”: de schakelaar werkt nu.</string>
+    <string name="main_restricted_shot">App-info met het menu open: Beperkte instellingen toestaan</string>
+    <string name="main_restricted_title">Schakelaar grijs?</string>
+    <string name="main_open_app_info">App-info openen</string>
+    <string name="main_try_switch">Schakelaar proberen</string>
+    <string name="common_close">Sluiten</string>
+    <string name="main_my_vehicle">Mijn voertuig</string>
+    <string name="main_menu">Menu</string>
+    <string name="main_camera_sub">Uit de offline kaartgegevens</string>
+    <string name="main_on_dash">Nu op het display</string>
+    <string name="main_pause">Pauze</string>
+    <string name="main_stop_ride">Rit stoppen</string>
+    <string name="main_range">Bereik</string>
+    <string name="main_fuel">Brandstof</string>
+    <string name="main_odometer">Kilometerstand</string>
+    <string name="main_walk">Lopend naar de motor</string>
+    <string name="main_dash_icons">Displaysymbolen</string>
+    <string name="main_no_parked">Nog geen parkeerpositie: die wordt opgeslagen als de verbinding met de motor wegvalt</string>
+    <string name="main_no_maps_app">Geen kaarten-app gevonden</string>
+    <string name="main_stopped_by_hand">Met de hand gestopt: het automatisch starten wacht tot de motor uit is (je bluetooth-apparaat start het toch). Starten verbindt nu.</string>
+    <string name="main_start_hint">Start voor de rit, of laat KawaNav vanzelf starten (Instellingen).</string>
+    <string name="main_nothing_to_show">Niets te tonen</string>
+    <string name="main_nothing_sent">Niets naar de motor gestuurd</string>
+    <string name="main_maps_starting">Google Maps start…</string>
+    <string name="main_waiting_gps">Wachten op gps</string>
+    <string name="main_start_maps_or_curves">Start de navigatie in Google Maps, of zet komende bochten aan</string>
+    <string name="main_turn_on_maps_or_curves">Zet aanwijzingen van Google Maps of komende bochten aan</string>
+    <string name="main_from_maps">Van Google Maps</string>
+    <string name="main_from_camera">Flitser uit de offline kaartgegevens</string>
+    <string name="main_from_curves">Bocht verderop op je weg</string>
+    <string name="main_stop_kawanav">KawaNav stoppen</string>
+    <string name="main_start_kawanav">KawaNav starten</string>
+    <string name="main_ride_paused">● Rit gepauzeerd</string>
+    <string name="main_ride_recording">● Rit wordt opgenomen</string>
+    <string name="main_chip_connected">Verbonden</string>
+    <string name="main_bike_values_hint">Kilometerstand, brandstof, temperaturen, onderhoud en rijmodi verschijnen zodra de motor verbonden is</string>
+    <string name="main_banner_sub">Voor de beste ervaring op de motor:</string>
+    <string name="main_perms">Bluetooth, locatie en meldingen toestaan</string>
+    <string name="main_perms_sub">Om met de motor te praten en de bochten verderop te vinden</string>
+    <string name="main_allow">Toestaan</string>
+    <string name="main_bluetooth">Bluetooth aanzetten</string>
+    <string name="main_bluetooth_sub">KawaNav kan de motor niet bereiken zolang het uit staat</string>
+    <string name="main_turn_on">Aanzetten</string>
+    <string name="main_gps">Locatie aanzetten</string>
+    <string name="main_gps_sub">Komende bochten hebben gps nodig</string>
+    <string name="main_open">Openen</string>
+    <string name="main_access">Lezen van aanwijzingen van Google Maps toestaan</string>
+    <string name="main_access_sub_file">Zet „KawaNav” aan in de lijst die opent. Grijs? Tik voor hulp</string>
+    <string name="main_access_sub">Zet „KawaNav” aan in de lijst die opent</string>
+    <string name="main_battery">Onbeperkt accugebruik toestaan</string>
+    <string name="main_battery_sub">Zodat Android KawaNav niet stopt in je zak</string>
+    <string name="main_bg_location">Locatie op „Altijd toestaan” zetten</string>
+    <string name="main_bg_location_sub">Voor bochten na een automatische start</string>
+    <string name="main_update_stops">\n\nKawaNav stopt tijdens het bijwerken. Start het daarna opnieuw.</string>
+    <string name="main_later">Later</string>
+    <string name="main_skip_version">Deze versie overslaan</string>
+    <string name="main_allow_installs">Installeren van updates toestaan</string>
+    <string name="main_allow_installs_message">Android vraagt één keer of KawaNav apps mag installeren.\n\nZet op het volgende scherm „Toestaan vanuit deze bron” aan en ga dan terug.</string>
+    <string name="main_update_failed">Downloaden van de update mislukt. Ben je online?</string>
+
+    <!-- Home: with values -->
+    <string name="bridge_no_paired">Geen gekoppelde Kawasaki gevonden</string>
+    <string name="main_chip_not_supported">Niet ondersteund</string>
+    <string name="main_chip_not_paired">Niet gekoppeld</string>
+    <string name="main_chip_searching">Zoeken</string>
+    <string name="unit_km">%1$d km</string>
+    <string name="unit_km_grouped">%1$,d km</string>
+    <string name="main_fuel_bars">Brandstof · %1$s</string>
+    <plurals name="main_banner_title">
+        <item quantity="one">%1$d instelling vraagt je aandacht</item>
+        <item quantity="other">%1$d instellingen vragen je aandacht</item>
+    </plurals>
+    <string name="main_pair_hint">Contact aan en Rideology gesloten, kies dan je motor</string>
+    <string name="main_pair">Je motor koppelen</string>
+    <string name="main_pair_button">Koppelen</string>
+    <string name="turn_straight">Rechtdoor</string>
+    <string name="turn_left">Linksaf</string>
+    <string name="turn_right">Rechtsaf</string>
+    <string name="turn_sharp_left">Scherp linksaf</string>
+    <string name="turn_sharp_right">Scherp rechtsaf</string>
+    <string name="turn_slight_left">Flauw linksaf</string>
+    <string name="turn_slight_right">Flauw rechtsaf</string>
+    <string name="turn_u_left">Omkeren links</string>
+    <string name="turn_u_right">Omkeren rechts</string>
+    <string name="turn_fork_left">Splitsing, links aanhouden</string>
+    <string name="turn_fork_right">Splitsing, rechts aanhouden</string>
+    <string name="turn_fork_middle">Splitsing, midden aanhouden</string>
+    <string name="turn_ramp_left">Oprit links</string>
+    <string name="turn_ramp_right">Oprit rechts</string>
+    <string name="turn_exit_left">Afrit links</string>
+    <string name="turn_exit_right">Afrit rechts</string>
+    <string name="turn_merge_left">Links invoegen</string>
+    <string name="turn_merge_right">Rechts invoegen</string>
+    <string name="turn_roundabout">Rotonde, afslag %1$d</string>
+    <string name="turn_departure">Vertrek</string>
+    <string name="turn_destination">Bestemming</string>
+    <string name="turn_waypoint">Tussenstop %1$d</string>
+    <string name="main_update_title">KawaNav %1$s is beschikbaar</string>
+    <string name="main_update_downloading">KawaNav %1$s wordt gedownload</string>
+
+    <!-- Bike tab: rows -->
+    <string name="bike_row_basic_information">Basisinformatie</string>
+    <string name="bike_row_engine">Motorblok</string>
+    <string name="bike_row_suspension">Vering</string>
+    <string name="bike_row_maintenance">Onderhoud</string>
+    <string name="bike_row_riding_modes">Rijmodi</string>
+    <string name="bike_row_dash">Display</string>
+    <string name="bike_row_odometer">Kilometerstand</string>
+    <string name="bike_row_trip_a">Trip A</string>
+    <string name="bike_row_trip_b">Trip B</string>
+    <string name="bike_row_average_fuel_economy">Gemiddeld verbruik</string>
+    <string name="bike_row_fuel_consumption">Verbruik</string>
+    <string name="bike_row_average_speed">Gemiddelde snelheid</string>
+    <string name="bike_row_total_time">Totale tijd</string>
+    <string name="bike_row_outside_temperature">Buitentemperatuur</string>
+    <string name="bike_row_max_lean_left">Max. helling links</string>
+    <string name="bike_row_max_lean_right">Max. helling rechts</string>
+    <string name="bike_row_fuel_used_in_total">Totaal verbruikte brandstof</string>
+    <string name="bike_row_battery_engine_control_unit">Accu (motormanagement)</string>
+    <string name="bike_row_battery_dash">Accu (display)</string>
+    <string name="bike_row_distance_in_total">Totale afstand</string>
+    <string name="bike_row_speed">Snelheid</string>
+    <string name="bike_row_engine_speed">Toerental</string>
+    <string name="bike_row_gear">Versnelling</string>
+    <string name="bike_row_throttle">Gas</string>
+    <string name="bike_row_lean_angle">Hellingshoek</string>
+    <string name="bike_row_acceleration">Acceleratie</string>
+    <string name="bike_row_front_brake_unverified">Voorrem (niet geverifieerd)</string>
+    <string name="bike_row_traction_control_reading_unverified">Meting tractiecontrole (niet geverifieerd)</string>
+    <string name="bike_row_abs">ABS</string>
+    <string name="bike_row_wheelie">Wheelie</string>
+    <string name="bike_row_cruise_control">Cruisecontrol</string>
+    <string name="bike_row_torque_asked_by_the_throttle">Koppel gevraagd door het gas</string>
+    <string name="bike_row_torque_the_engine_control_asks_for">Koppel gevraagd door het motormanagement</string>
+    <string name="bike_row_torque_from_the_engine">Koppel van de motor</string>
+    <string name="bike_row_front_brake_master_unverified">Hoofdremcilinder voor (niet geverifieerd)</string>
+    <string name="bike_row_rear_brake_master_unverified">Hoofdremcilinder achter (niet geverifieerd)</string>
+    <string name="bike_row_rear_brake_caliper_unverified">Remklauw achter (niet geverifieerd)</string>
+    <string name="bike_row_abs_working">ABS-ingrijpen</string>
+    <string name="bike_row_abs_switching">ABS-omschakeling</string>
+    <string name="bike_row_fuel_use_now">Verbruik nu</string>
+    <string name="bike_row_fuel_economy_now">Rendement nu</string>
+    <string name="bike_row_coolant_temperature">Koelvloeistoftemperatuur</string>
+    <string name="bike_row_oil_temperature">Olietemperatuur</string>
+    <string name="bike_row_intake_air_temperature">Inlaatluchttemperatuur</string>
+    <string name="bike_row_front_tyre">Voorband</string>
+    <string name="bike_row_rear_tyre">Achterband</string>
+    <string name="bike_row_front_travel">Veerweg voor</string>
+    <string name="bike_row_rear_travel">Veerweg achter</string>
+    <string name="bike_row_acceleration_forward_accelerating">Acceleratie (in rijrichting, + = optrekken)</string>
+    <string name="bike_row_acceleration_sideways">Acceleratie (zijwaarts)</string>
+    <string name="bike_row_acceleration_up">Acceleratie (verticaal)</string>
+    <string name="bike_row_yaw_rate_turning_right">Giersnelheid (+ = naar rechts draaien)</string>
+    <string name="bike_row_roll_rate_rolling_right">Rolsnelheid (+ = naar rechts rollen)</string>
+    <string name="bike_row_pitch_rate">Stampsnelheid</string>
+    <string name="bike_row_front_wheel_speed_filtered">Snelheid voorwiel (gefilterd)</string>
+    <string name="bike_row_rear_wheel_speed_filtered">Snelheid achterwiel (gefilterd)</string>
+    <string name="bike_row_traction_control_level">Niveau tractiecontrole</string>
+    <string name="bike_row_quick_shifter">Quickshifter</string>
+    <string name="bike_row_wheelie_suspension_unit">Wheelie (veringsregeling)</string>
+    <string name="bike_row_damping_now">Demping nu</string>
+    <string name="bike_row_where_the_suspension_stands">Toestand van de vering</string>
+    <string name="bike_row_riding_mode">Rijmodus</string>
+    <string name="bike_row_power_mode">Vermogensmodus</string>
+    <string name="bike_row_ktrc">KTRC</string>
+    <string name="bike_row_quickshifter_kqs">Quickshifter (KQS)</string>
+    <string name="bike_row_engine_brake_kebc">Motorrem (KEBC)</string>
+    <string name="bike_row_suspension_mode_kecs">Veringsmodus (KECS)</string>
+    <string name="bike_row_kecs_preload">KECS-voorspanning</string>
+    <string name="bike_row_kecs_load_adjustment">KECS-belastingaanpassing</string>
+    <string name="bike_row_front_compression">Indemping voor</string>
+    <string name="bike_row_front_rebound">Uitdemping voor</string>
+    <string name="bike_row_rear_compression">Indemping achter</string>
+    <string name="bike_row_rear_rebound">Uitdemping achter</string>
+    <string name="bike_row_clock_when_read">Klok (bij uitlezen)</string>
+    <string name="bike_row_shift_lamp">Schakellampje</string>
+
+    <!-- Bike tab: values -->
+    <string name="bike_value_tcs">hoog %1$d / laag %2$d</string>
+    <string name="common_yes">ja</string>
+    <string name="bike_value_wheelie">ja, %1$.0f°</string>
+    <string name="bike_value_cruise_mode">aan, modus %1$d</string>
+    <string name="common_on">aan</string>
+    <string name="common_off_lower">uit</string>
+    <string name="bike_value_bike_units">%1$d (eenheden van de motor)</string>
+    <string name="bike_value_abs_working">doel %1$d, indicator %2$d</string>
+    <string name="bike_value_dash_units_2">%1$.2f (eenheden van het display)</string>
+    <string name="bike_value_dash_units_1">%1$.1f (eenheden van het display)</string>
+    <string name="bike_value_kqs">terug %1$d, op %2$d</string>
+    <string name="bike_value_suspension">kalibratie %1$d, status %2$d, regeleenheid %3$d</string>
+    <string name="bike_abs_fault">storing</string>
+    <string name="bike_abs_inspection">controlemodus</string>
+    <string name="bike_abs_both">grijpt in voor en achter</string>
+    <string name="bike_abs_front">grijpt in voor</string>
+    <string name="bike_abs_rear">grijpt in achter</string>
+    <string name="bike_abs_ready">gereed</string>
+    <string name="bike_ago_now">zojuist</string>
+    <string name="bike_ago_min">%1$d min geleden</string>
+    <string name="bike_ago_h">%1$d u geleden</string>
+    <string name="bike_not_read">Nog niet uitgelezen: de waarden verschijnen zodra de motor verbonden is</string>
+    <string name="bike_read_ago">Uitgelezen %1$s</string>
+    <string name="bike_title">Je motor</string>
+    <string name="bike_summary_fuel">brandstof %1$s</string>
+    <string name="bike_summary_range">bereik %1$d km</string>
+    <string name="bike_fuel_reserve">Reserve</string>
+    <plurals name="bike_fuel_bars">
+        <item quantity="one">%1$d streepje</item>
+        <item quantity="other">%1$d streepjes</item>
+    </plurals>
+    <string name="bike_low_fuel">Weinig brandstof</string>
+    <string name="bike_fuel_unknown">Brandstof –</string>
+    <string name="bike_battery_unknown">Accu –</string>
+    <string name="bike_battery">Accu %1$.1f V</string>
+    <string name="bike_lamp_on_dash">Nu op het display: %1$s, %2$,d tpm</string>
+    <string name="bike_not_connected_reason">de motor is niet verbonden</string>
+    <string name="bike_parked_text">%1$s, %2$s · positie tot op ongeveer %3$.0f m</string>
+    <string name="bike_last_parked">Laatst geparkeerd</string>
+    <string name="bike_parked">Geparkeerd</string>
+    <string name="bike_maintenance_due">Te doen: %1$s</string>
+    <string name="bike_last_fill">Laatste tankbeurt %1$s</string>
+    <string name="bike_vin">VIN %1$s</string>
+
+    <!-- Bike tab: with values -->
+    <string name="bike_profiles_full">Hooguit %1$d profielen: verwijder er eerst een</string>
+    <string name="bike_profile_saved">„%1$s” op de telefoon opgeslagen</string>
+    <string name="bike_profile_no_mode">Deze motor heeft geen %1$s: de rijmodus bleef zoals hij was</string>
+    <string name="bike_profile_replace_title">Het profiel „%1$s” vervangen?</string>
+    <string name="bike_profile_delete_title">Het profiel „%1$s” verwijderen?</string>
+    <string name="bike_name_note">Tot %1$d bytes, meegestuurd met de instellingen zoals Rideology de titel van een instelling stuurt, en de naam waaronder een profiel wordt opgeslagen. Of het display hem ergens toont, is nog niet bekend.</string>
+    <string name="bike_send_message">Dit gaat allemaal in één schrijfactie naar de motor:\n\n%1$s\n\nDe motor moet stilstaan, in neutraal staan en het gas moet dicht zijn. KawaNav controleert dit opnieuw voor het sturen en leest de instellingen daarna terug.</string>
+    <string name="bike_not_sent">Niet gestuurd: %1$s</string>
+    <string name="bike_lamp_message_off">Het display laat het schakellampje oplichten bij %1$,d tpm, of helemaal niet.</string>
+    <string name="bike_lamp_message">Het display laat het schakellampje oplichten bij %1$,d tpm, in de modus %2$s.</string>
+    <string name="bike_km_ago">%1$,.0f km geleden</string>
+
+    <!-- Bike tab -->
+    <string name="bike_read_again">Waarden opnieuw uitlezen</string>
+    <string name="bike_asked">De motor om zijn waarden gevraagd</string>
+    <string name="bike_not_connected">De motor is niet verbonden</string>
+    <string name="bike_values_note">Waarden zoals de motor ze bij de laatste verbinding gaf. Tik op het VIN om het helemaal te tonen.</string>
+    <string name="bike_ride_settings">Rij-instellingen</string>
+    <string name="bike_ride_settings_note">Schrijft rijmodus, vermogen, KTRC en KQS naar de motor, net als het tuningscherm van Rideology, en een naam ervoor als je die geeft. Ze gaan altijd samen in één schrijfactie: wat je laat zoals het is, gaat zoals de motor het heeft. Sport, Road en Rain zetten vermogen en KTRC op hun eigen waarden, net als in Rideology; verander er een en de modus wordt Rider, die de jouwe houdt. Als profiel opgeslagen staan ze op de telefoon om te kiezen en opnieuw te sturen. De motor moet stilstaan, in neutraal staan en het gas moet dicht zijn.</string>
+    <string name="bike_profile">Profiel</string>
+    <string name="bike_power">Vermogen</string>
+    <string name="bike_not_in_mode">Geen deel van de rijmodus</string>
+    <string name="bike_kqs">KQS</string>
+    <string name="bike_name_hint">Naam (optioneel)</string>
+    <string name="bike_name">Naam</string>
+    <string name="bike_save_profile">Opslaan als profiel</string>
+    <string name="bike_delete_profile">Profiel verwijderen</string>
+    <string name="bike_back_to_bike">Terug naar de waarden van de motor</string>
+    <string name="bike_send">Naar de motor sturen</string>
+    <string name="bike_changed">gewijzigd</string>
+    <string name="bike_none">Geen</string>
+    <string name="bike_profile_name_first">Geef het profiel eerst een naam, in het veld Naam</string>
+    <string name="bike_profile_replace_message">Het wordt op de telefoon opgeslagen met de waarden die de keuzelijsten nu tonen.</string>
+    <string name="bike_replace">Vervangen</string>
+    <string name="bike_profile_delete_message">Het wordt alleen van de telefoon verwijderd: de motor houdt de instellingen die hij heeft.</string>
+    <string name="bike_send_title">Instellingen naar de motor sturen?</string>
+    <string name="bike_send_button">Sturen</string>
+    <string name="bike_shift_lamp">Schakellampje van het display</string>
+    <string name="bike_shift_lamp_note">Schrijft alleen het schakellampje; de klok van het display blijft zoals hij is. De motor moet verbonden zijn (hij hoeft niet stil te staan).</string>
+    <string name="bike_lights_up">Licht op</string>
+    <string name="bike_at">Bij</string>
+    <string name="bike_send_dash">Naar het display sturen</string>
+    <string name="bike_lamp_send_title">Schakellampje naar het display sturen?</string>
+    <string name="bike_lamp_not_read">Nog niet uitgelezen: zet het contact aan terwijl KawaNav draait</string>
+    <string name="bike_refuels">Tankbeurten</string>
+    <string name="bike_refuel_diary">Tankdagboek</string>
+    <string name="bike_refuel_diary_sub">Liters, kilometerstand en wat de motor tussen de tankbeurten verbruikte</string>
+    <string name="bike_maintenance_none">Niets genoteerd: houd het werk bij dat het display niet ziet.</string>
+    <string name="bike_maintenance_log">Onderhoudsboekje</string>
+    <string name="bike_maintenance_log_sub">Wat je hebt laten doen, wanneer en bij welke kilometerstand</string>
+    <string name="bike_fuel_none">Nog niets opgenomen: tank met de app verbonden en het wordt opgemerkt.</string>
+    <string name="bike_connected_updating">Verbonden · de waarden worden bijgewerkt zolang de motor aan staat</string>
+    <string name="bike_remaining_range">Resterend bereik</string>
+    <string name="bike_remaining_range_unread">Resterend bereik: nog niet uitgelezen</string>
+    <string name="bike_modes_seven">Deze motor meldt 7 rijmodi: Rider 2–4 staan in de lijst.</string>
+    <string name="bike_modes_unknown">Hoeveel rijmodi de motor heeft, is nog niet bekend (geen klaar antwoord op 0x47): de lijst biedt de vier die elke motor heeft.</string>
+    <string name="bike_modes_four">Deze motor meldt 4 rijmodi, dus de lijst stopt bij Rider.</string>
+    <string name="bike_no_values">Nog geen waarden</string>
+    <string name="bike_no_values_sub">Start KawaNav en zet het contact aan: de motor stuurt zijn waarden zodra hij verbonden is.</string>
+    <string name="bike_modes_note">De namen komen uit Rideology; het getal dat de motor stuurde, staat tussen haakjes. Alleen getoond waar de motor zegt de instelling te hebben.</string>
+
+    <!-- Route planner: with values -->
+    <string name="planner_shape_any">Elke vorm</string>
+    <string name="planner_shape_triangle">Driehoek</string>
+    <string name="planner_shape_square">Vierkant</string>
+    <string name="planner_shape_pentagon">Vijfhoek</string>
+    <string name="planner_shape_circle">Cirkel</string>
+    <string name="planner_my_position">Mijn positie</string>
+    <string name="planner_saved_round_trip">rondrit</string>
+    <string name="planner_legend_straight">recht</string>
+    <string name="planner_legend_sweeping">ruime bochten</string>
+    <string name="planner_legend_winding">bochtig</string>
+    <string name="planner_legend_very_winding">zeer bochtig</string>
+    <string name="planner_data_unreadable">Routegegevens onleesbaar: download de regio opnieuw (%1$s)</string>
+    <string name="planner_direction_any">Elke richting: tik op de kaart om de richting aan te geven</string>
+    <string name="planner_direction_towards">Richting %1$s</string>
+    <string name="planner_point_description">%1$s: %2$s. Tik om een andere plek te kiezen.</string>
+    <string name="planner_start">Start</string>
+    <string name="planner_destination">Bestemming</string>
+    <string name="planner_via_number">Tussenstop %1$d</string>
+    <string name="planner_near">Bij %1$s</string>
+    <string name="planner_round_trip_start">Start van de rondrit</string>
+    <string name="planner_new_via">Nieuwe tussenstop</string>
+    <string name="planner_search_failed">Zoeken mislukt (%1$s): tik in plaats daarvan op de kaart.</string>
+    <string name="planner_favourite_saved">„%1$s” is nu een favoriet: hij staat bovenaan bij het zoeken.</string>
+    <string name="planner_avoid_motorways">snelwegen</string>
+    <string name="planner_avoid_tolls">tol</string>
+    <string name="planner_avoid_gravel">grind</string>
+    <string name="planner_avoiding_nothing">Vermijdt niets</string>
+    <string name="planner_avoiding">Vermijdt %1$s</string>
+    <string name="planner_list_and">%1$s en %2$s</string>
+    <string name="planner_shorter">Korter dan de gevraagde %1$s: niet genoeg wegen in de buurt voor meer.</string>
+    <string name="planner_longer">Langer dan de gevraagde %1$s: geen betere oplossing op de wegen in de buurt.</string>
+    <string name="planner_no_route_why">Geen route: %1$s. De punten moeten in een gedownloade regio liggen.</string>
+    <string name="planner_winding_share">%1$d%% bochtig</string>
+    <string name="planner_tile_no_route">geen route</string>
+    <string name="planner_tile_tap">tik om te plannen</string>
+    <string name="planner_round_trip_name">Rondrit van %1$s vanaf %2$s</string>
+    <string name="planner_route_saved">Opgeslagen als „%1$s”: open hem met de lijstknop bovenaan.</string>
+    <string name="planner_saving_failed_why">Opslaan mislukt: %1$s</string>
+    <string name="planner_renaming_failed">Hernoemen mislukt: %1$s</string>
+    <string name="planner_delete_route_title">„%1$s” verwijderen?</string>
+    <string name="planner_share">%1$s delen</string>
+    <string name="planner_gpx_saved">%1$s opgeslagen in Download/KawaNav</string>
+
+    <!-- Route planner -->
+    <string name="planner_saved_routes">Opgeslagen routes</string>
+    <string name="planner_map_downloading">Kaart wordt nog gedownload</string>
+    <string name="planner_map_downloading_text">De routeplanner werkt zodra de regio die wordt gedownload klaar is: Offline kaarten laat zien hoe ver hij is.</string>
+    <string name="planner_update_maps">Werk je kaarten bij</string>
+    <string name="planner_update_maps_text">Je regio’s zijn gedownload met een oudere versie van KawaNav en hebben nog geen gegevens voor routeplanning. Download ze nog een keer onder Offline kaarten (Bijwerken): dat voegt de gegevens voor routeplanning toe, ongeveer evenveel opslag als de regio nu inneemt.</string>
+    <string name="planner_download_first">Download eerst een kaart</string>
+    <string name="planner_download_first_text">KawaNav plant routes op de telefoon, uit de kaart van een regio die je één keer downloadt (OpenStreetMap, liefst via wifi). Download onder Offline kaarten de regio waar je rijdt, bijv. Gelderland of Tirol. Daar werken dan de routeplanner, de navigatie en de bochtwaarschuwingen, ook zonder mobiele data.</string>
+    <string name="common_back">Terug</string>
+    <string name="planner_no_data">Nog geen routegegevens: download een regio onder Instellingen, Offline kaarten. Regio’s die met een oudere versie van KawaNav zijn gedownload, moeten nog een keer worden gedownload.</string>
+    <string name="planner_a_to_b">A naar B</string>
+    <string name="planner_round_trip">Rondrit</string>
+    <string name="planner_via">Tussenstop</string>
+    <string name="planner_reverse">Omdraaien</string>
+    <string name="planner_length">Lengte</string>
+    <string name="planner_length_description">Lengte van de rondrit</string>
+    <string name="planner_any_direction">Elke richting</string>
+    <string name="planner_another">Nog een</string>
+    <string name="planner_options">Opties</string>
+    <string name="planner_start_navigation">Navigatie starten</string>
+    <string name="planner_save_route">Route opslaan</string>
+    <string name="planner_save_gpx">Opslaan als GPX</string>
+    <string name="planner_dest_hint">Bestemming: tik op de kaart of zoek</string>
+    <string name="planner_remove">Verwijderen</string>
+    <string name="planner_via_here">Tussenstop hier</string>
+    <string name="planner_dest_here">Bestemming hier</string>
+    <string name="planner_start_here">Start hier</string>
+    <string name="planner_use_position">Mijn positie gebruiken</string>
+    <string name="planner_remove_corner">Deze hoek verwijderen</string>
+    <string name="planner_save_favourite">Opslaan als favoriet</string>
+    <string name="planner_choose_dest">Kies eerst een bestemming.</string>
+    <string name="planner_finding">Je positie wordt bepaald…</string>
+    <string name="planner_finding_long_press">Je positie wordt bepaald… Je kunt ook lang op de kaart drukken voor een start.</string>
+    <string name="planner_search_hint">Een plek zoeken (online)</string>
+    <string name="planner_search">Zoeken</string>
+    <string name="planner_favourites_hint">Druk lang op een favoriet om hem te hernoemen of te verwijderen.</string>
+    <string name="planner_favourites_empty">Hier verschijnen je favoriete plekken en recente bestemmingen.</string>
+    <string name="planner_no_search">Deze telefoon heeft geen plaatszoeker: tik in plaats daarvan op de kaart.</string>
+    <string name="planner_searching">Zoeken…</string>
+    <string name="planner_nothing_found">Niets gevonden. Tik in plaats daarvan op de kaart.</string>
+    <string name="planner_rename">Hernoemen</string>
+    <string name="planner_remove_favourite">Uit favorieten verwijderen</string>
+    <string name="planner_save">Opslaan</string>
+    <string name="planner_shape_title">Vorm van de rondrit</string>
+    <string name="planner_options_note">Bochtig kiest kronkelige wegen en vermijdt dorpen; extra bochtig maakt lange omwegen voor bochten. Routes worden op de telefoon berekend uit de gedownloade OpenStreetMap-regio’s (Instellingen, Offline kaarten).</string>
+    <string name="planner_route_options">Route-opties</string>
+    <string name="planner_done">Klaar</string>
+    <string name="planner_opening">Routegegevens worden geopend…</string>
+    <string name="planner_finding_or_start">Je positie wordt bepaald… of tik op Start om er een te kiezen.</string>
+    <string name="planner_tap_or_search">Tik op de kaart of zoek een bestemming.</string>
+    <string name="planner_same_place">Start en bestemming zijn dezelfde plek.</string>
+    <string name="planner_planning">Route wordt gepland…</string>
+    <string name="planner_finding_or_long_press">Je positie wordt bepaald… of druk lang op de kaart voor de start.</string>
+    <string name="planner_planning_round_trip">Rondrit wordt gepland…</string>
+    <string name="planner_no_saved">Nog geen opgeslagen routes: plan er een en tik op de ster om hem te bewaren.</string>
+    <string name="common_ok">OK</string>
+    <string name="planner_saved_routes_edit">Opgeslagen routes (lang drukken om te bewerken)</string>
+    <string name="planner_saving_failed">Opslaan mislukt</string>
+
+    <!-- Ride: with values -->
+    <string name="ride_distance_caption">Afstand · %1$s</string>
+    <string name="ride_ended">beëindigd: %1$s</string>
+    <string name="ride_colours">De kleuren volgen de grafiek: %1$s van blauw (%2$s of minder) tot rood (%3$s of meer)%4$s.</string>
+    <string name="ride_colours_line">lijn %1$s</string>
+    <string name="ride_colours_none">Deze rit heeft geen %1$s waar hij een positie heeft: het spoor is grijs.</string>
+    <string name="ride_track_note">De groene stip is het begin; inzoomen op de grafiek vervaagt de rest van de rit. Knijp of tik twee keer op de kaart om te zoomen, sleep om te verschuiven.</string>
+    <string name="ride_chart_missing">deze rit heeft geen %1$s</string>
+    <string name="ride_chart_hint">Raak de lijn aan om de seconde te zien, knijp of tik twee keer om in te zoomen</string>
+    <string name="ride_chart_marks">markeringen onder: tractiecontrole (oranje), ABS (rood)</string>
+    <string name="ride_bends_none">geen</string>
+    <plurals name="ride_bends">
+        <item quantity="one">%1$d bocht</item>
+        <item quantity="other">%1$d bochten</item>
+    </plurals>
+    <string name="ride_bend_title">%1$s · %2$s · %3$.0f° bij %4$.0f km/h</string>
+    <string name="ride_left">links</string>
+    <string name="ride_right">rechts</string>
+    <string name="ride_bend_line">%1$.0f → %2$.0f km/h · straal %3$.0f m</string>
+    <string name="ride_bend_throttle">gas %1$.0f %% in de top</string>
+    <string name="ride_bend_braking">remmen in de top</string>
+    <string name="ride_bend_snap">gas ineens open</string>
+    <string name="ride_bend_shifted">teruggeschakeld</string>
+    <string name="ride_grip_note">Elke stip is een seconde rijden: zijwaarts uit de helling, voor- en achterwaarts uit de snelheidsverandering. Hardst remmen %1$.2f g, hardst optrekken %2$.2f g, meest zijwaarts %3$.2f g.</string>
+    <string name="ride_economy">%1$.1f L/100 km over %2$,.1f km</string>
+    <string name="ride_economy_estimated">geschat uit het momentane verbruik: deze motor stuurt geen brandstofteller</string>
+    <string name="ride_legend">Laagste, gemiddelde en hoogste van de seconden waarin de motor dit stuurde.</string>
+    <string name="ride_legend_extremes">Laagste, gemiddelde en hoogste van de seconden waarin de motor dit stuurde; waar een gemiddelde niets zegt (draaisnelheden, slip), van het laagste tot het hoogste.</string>
+    <string name="ride_legend_economy">Het gemiddelde verbruik is de afstand gedeeld door de verbrande liters.</string>
+    <string name="ride_distance_odo_gps">Afstand: kilometerteller / gps</string>
+    <string name="ride_recorded">Opgenomen</string>
+    <string name="ride_seconds_recorded">Opgenomen seconden</string>
+    <string name="ride_seconds_value">%1$d van %2$d (%3$.0f %%)</string>
+    <string name="ride_preview_gps">%1$d seconden, met gps-spoor</string>
+    <string name="ride_preview_no_gps">%1$d seconden, geen gps-spoor</string>
+    <string name="ride_range_to">%1$s tot %2$s</string>
+    <string name="ride_neutral">In neutraal</string>
+    <string name="ride_in_gear">In de %1$de versnelling</string>
+    <string name="ride_gear_changes">Schakelmomenten</string>
+    <string name="ride_up_down">%1$d op, %2$d terug</string>
+    <string name="ride_with_kqs">Met de quickshifter</string>
+    <string name="ride_clutch_slipping">slipt misschien: %1$d s bij %2$d keer gas geven</string>
+    <string name="ride_clutch_holds_once">houdt (%1$d s hoog bij één keer gas geven)</string>
+    <string name="ride_clutch_holds">houdt</string>
+    <string name="ride_clutch">Koppeling onder belasting</string>
+    <string name="ride_engine_gear">Motor tegenover de versnelling</string>
+    <string name="ride_engine_gear_value">%1$+.1f %% typisch, %2$+.1f %% hooguit, over %3$s</string>
+    <string name="ride_never">nooit</string>
+    <string name="ride_min_s">%1$d min %2$02d s</string>
+    <string name="ride_s">%1$d s</string>
+    <string name="ride_up_to">tot %1$s</string>
+
+    <!-- Ride -->
+    <string name="ride_rename">Deze rit hernoemen</string>
+    <string name="ride_not_found">Rit niet gevonden</string>
+    <string name="ride_track">Spoor</string>
+    <string name="ride_fit">De hele rit tonen</string>
+    <string name="ride_osm">© OpenStreetMap-bijdragers</string>
+    <string name="ride_values">Waarden</string>
+    <string name="ride_fit_chart">De hele rit in de grafiek tonen</string>
+    <string name="ride_bends_title">Bochten</string>
+    <string name="ride_grip_description">De grip die de rit gebruikte: de zijwaartse en voorwaartse acceleratie van elke seconde</string>
+    <string name="ride_the_bends">De bochten</string>
+    <string name="ride_bends_how">Een bocht is twee seconden of meer naar dezelfde kant hellen met meer dan 10°; de top is de seconde met de meeste helling. De straal is die welke snelheid en helling in een gelijkmatige bocht geven. Remmen in de top: gas dicht en de motor die daar meer dan 0,1 g vertraagt. Tik op een bocht om hem op het spoor en in de grafiek te zien.</string>
+    <string name="ride_typical_lean">Typische helling</string>
+    <string name="ride_typical_apex">Typische snelheid in de top</string>
+    <string name="ride_out_in">Uit tegenover in</string>
+    <string name="ride_left_right">Links / rechts</string>
+    <string name="ride_braking_apex">Remmen in de top</string>
+    <string name="ride_snap">Gas ineens open onder helling</string>
+    <string name="ride_downshift">Terugschakelen onder helling</string>
+    <string name="ride_summary">Overzicht</string>
+    <string name="ride_time">Tijd</string>
+    <string name="ride_average">Gemiddeld</string>
+    <string name="ride_top_speed">Topsnelheid</string>
+    <string name="ride_max_lean">Max. helling</string>
+    <string name="ride_max_rpm">Max. toerental</string>
+    <string name="ride_fuel_used">Verbruikt</string>
+    <string name="ride_phone_only">Alleen met de telefoon opgenomen: geen waarden van de motor.</string>
+    <string name="ride_no_gps">Zonder gps opgenomen: geen spoor en geen hoogte.</string>
+    <string name="ride_tcs">Tractiecontrole</string>
+    <string name="ride_abs">ABS</string>
+    <string name="ride_cruise">Cruisecontrol</string>
+    <string name="ride_wheelie">Voorwiel van de grond</string>
+    <string name="ride_keep_share">Bewaren of delen</string>
+    <string name="ride_export_csv">CSV exporteren</string>
+    <string name="ride_export_gpx">GPX exporteren</string>
+    <string name="ride_export_full">CSV (alle waarden)</string>
+    <string name="ride_export_raw">Ruw bestand</string>
+    <string name="ride_export_note">CSV heeft de kolommen van Rideology, zodat de bestaande tools de rit kunnen lezen. „CSV (alle waarden)” heeft elke waarde die KawaNav opneemt, elk in een kolom — dezelfde tabel die de app bijhoudt, en die „Ruw bestand” ook geeft, in het eigen formaat van de app. GPX is een spoor voor kaartprogramma’s. Ze komen allemaal in Download/KawaNav.</string>
+    <string name="ride_recording_title">Deze rit wordt nog opgenomen</string>
+    <string name="ride_recording_message">Stop eerst de rit (met de opnameknop op Start) en verwijder hem dan.</string>
+    <string name="ride_delete_title">Deze rit verwijderen?</string>
+    <string name="ride_delete_message">De opgenomen rit en het spoor ervan worden van de telefoon verwijderd.</string>
+    <string name="ride_export_failed">Exporteren mislukt</string>
+
+    <!-- Ride: names -->
+    <string name="ride_name_engine_speed">Toerental</string>
+    <string name="ride_name_throttle">Gas</string>
+    <string name="ride_name_torque_asked_by_the_throttle">Koppel gevraagd door het gas</string>
+    <string name="ride_name_bike_units">eenheden van de motor</string>
+    <string name="ride_name_torque_the_engine_control_asks_for">Koppel gevraagd door het motormanagement</string>
+    <string name="ride_name_torque_from_the_engine">Koppel van de motor</string>
+    <string name="ride_name_fuel_use">Verbruik</string>
+    <string name="ride_name_dash_units">eenheden van het display</string>
+    <string name="ride_name_fuel_economy_instant">Verbruik, momentaan</string>
+    <string name="ride_name_front_suspension">Vering voor</string>
+    <string name="ride_name_rear_suspension">Vering achter</string>
+    <string name="ride_name_front_suspension_speed_unverified">Snelheid vering voor (niet geverifieerd)</string>
+    <string name="ride_name_rear_suspension_speed_unverified">Snelheid vering achter (niet geverifieerd)</string>
+    <string name="ride_name_acceleration">Acceleratie</string>
+    <string name="ride_name_acceleration_forward">Acceleratie, in rijrichting</string>
+    <string name="ride_name_acceleration_sideways">Acceleratie, zijwaarts</string>
+    <string name="ride_name_acceleration_up">Acceleratie, verticaal</string>
+    <string name="ride_name_lean_angle_either_side">Hellingshoek, beide kanten</string>
+    <string name="ride_name_roll_rate">Rolsnelheid</string>
+    <string name="ride_name_yaw_rate">Giersnelheid</string>
+    <string name="ride_name_pitch_rate">Stampsnelheid</string>
+    <string name="ride_name_front_wheel_filtered">Voorwiel (gefilterd)</string>
+    <string name="ride_name_rear_wheel_filtered">Achterwiel (gefilterd)</string>
+    <string name="ride_name_wheelie_angle">Wheeliehoek</string>
+    <string name="ride_name_front_tyre">Voorband</string>
+    <string name="ride_name_rear_tyre">Achterband</string>
+    <string name="ride_name_front_brake">Voorrem</string>
+    <string name="ride_name_front_brake_master_unverified">Hoofdremcilinder voor (niet geverifieerd)</string>
+    <string name="ride_name_raw">ruw</string>
+    <string name="ride_name_rear_brake_master_unverified">Hoofdremcilinder achter (niet geverifieerd)</string>
+    <string name="ride_name_rear_brake_caliper_unverified">Remklauw achter (niet geverifieerd)</string>
+    <string name="ride_name_rear_wheel_slip">Slip achterwiel</string>
+    <string name="ride_name_battery">Accu</string>
+    <string name="ride_name_coolant">Koelvloeistof</string>
+    <string name="ride_name_oil">Olie</string>
+    <string name="ride_name_intake_air">Inlaatlucht</string>
+    <string name="ride_name_outside">Buiten</string>
+    <string name="ride_name_speed_gps">Snelheid (gps)</string>
+    <string name="ride_name_gps_accuracy">Gps-nauwkeurigheid</string>
+    <string name="ride_name_altitude">Hoogte</string>
+    <string name="ride_name_speed">Snelheid</string>
+    <string name="ride_name_engine">Motorblok</string>
+    <string name="ride_name_torque">Koppel</string>
+    <string name="ride_name_throttle_line">gas</string>
+    <string name="ride_name_control_line">management</string>
+    <string name="ride_name_engine_line">motor</string>
+    <string name="ride_name_gear">Versnelling</string>
+    <string name="ride_name_lean_angle">Hellingshoek</string>
+    <string name="ride_name_oil_temperature">Olietemperatuur</string>
+    <string name="ride_name_fuel_economy">Verbruik</string>
+    <string name="ride_name_outside_temperature">Buitentemperatuur</string>
+    <string name="ride_name_chassis_and_suspension">Rijwielgedeelte en vering</string>
+    <string name="ride_name_brakes_and_electronics">Remmen en elektronica</string>
+    <string name="ride_name_temperatures">Temperaturen</string>
+    <string name="ride_name_data_quality">Kwaliteit van de gegevens</string>
+
+    <!-- Rides: with values -->
+    <plurals name="rides_totals">
+        <item quantity="one">%1$d rit · %2$s deze week · %3$.0f km in totaal</item>
+        <item quantity="other">%1$d ritten · %2$s deze week · %3$.0f km in totaal</item>
+    </plurals>
+    <string name="rides_fastest">Snelst: %1$.0f km/h op %2$s</string>
+    <string name="rides_most_lean">Meeste helling: %1$.0f° links, %2$.0f° rechts op %3$s</string>
+    <string name="rides_longest">Langste rit: %1$.0f km op %2$s</string>
+    <string name="rides_hottest">Heetste motor: %1$.0f °C op %2$s</string>
+    <string name="rides_hardest_braking">Hardst remmen: %1$.2f g op %2$s</string>
+    <string name="rides_most_suspension">Meeste veerweg: %1$.1f mm op %2$s</string>
+    <string name="rides_altogether">In totaal %1$,.0f km in %2$s</string>
+    <string name="rides_in_tcs">%1$s in de tractiecontrole</string>
+    <string name="rides_in_abs">%1$s in de ABS</string>
+    <string name="rides_wheel_up">%1$s met het voorwiel van de grond</string>
+    <plurals name="rides_year">
+        <item quantity="one">%1$d: %2$,.0f km · %3$d rit</item>
+        <item quantity="other">%1$d: %2$,.0f km · %3$d ritten</item>
+    </plurals>
+    <string name="rides_recording_now">wordt nu opgenomen</string>
+    <string name="rides_recovered">hersteld na een herstart</string>
+    <string name="rides_track_lost">spoor kwijt</string>
+    <string name="rides_max_speed">max. %1$.0f km/h</string>
+    <string name="rides_no_gps">geen gps-spoor</string>
+
+    <!-- Rides -->
+    <string name="rides_title">Rittenboek</string>
+    <string name="rides_note">Ritten worden alleen op de telefoon bewaard. Er wordt nergens iets geüpload.</string>
+    <string name="rides_this_week">Deze week</string>
+    <string name="rides_this_month">Deze maand</string>
+    <string name="rides_this_year">Dit jaar</string>
+    <string name="rides_first">Neem je eerste rit op</string>
+    <string name="rides_first_sub">Tik voor de rit op de ronde knop hieronder. De waarden van de motor (snelheid, motor, versnelling, gas, helling, temperaturen) en het spoor van de telefoon worden één keer per seconde naar de telefoon geschreven zolang hij verbonden is.</string>
+    <string name="rides_records">Records</string>
+
+    <!-- Refuels -->
+    <string name="fuel_note">De motor meldt niet hoeveel brandstof erin gaat: hij meldt de brandstofmeter, het bereik en de in totaal verbrande brandstof. Tankbeurten worden afgeleid uit de sprong van de meter terwijl de motor stilstaat; de liters zijn een schatting tot je ze corrigeert.</string>
+    <string name="fuel_tank">Tank</string>
+    <string name="fuel_tank_note">Wat een volle tank bevat, om de meter in liters om te rekenen. Het getal staat in de handleiding van je motor.</string>
+    <string name="fuel_change">Wijzigen</string>
+    <string name="fuel_tank_capacity">Tankinhoud in liters</string>
+    <string name="fuel_add">Een tankbeurt toevoegen</string>
+    <string name="fuel_add_note">Voor een tankbeurt die de app niet zag: de motor stond uit, of de meter bewoog niet.</string>
+    <string name="fuel_add_by_hand">Met de hand toevoegen</string>
+    <string name="fuel_litres_added">Getankte liters</string>
+    <string name="fuel_added_by_hand">met de hand toegevoegd</string>
+    <string name="fuel_unreadable">Het tankdagboek kon niet worden gelezen</string>
+    <string name="fuel_unreadable_sub">Het bestand blijft bewaard als fuel.json.bad en wordt niet overschreven: tankbeurten die je nu toevoegt, komen in een nieuw bestand.</string>
+    <string name="fuel_none">Nog geen tankbeurten</string>
+    <string name="fuel_none_sub">Sta je met de app verbonden bij de pomp, dan wordt een tankbeurt vanzelf opgemerkt.</string>
+    <string name="fuel_litres_hint">liters</string>
+    <string name="fuel_note_hint">notitie (waar, wat je betaalde…)</string>
+    <string name="fuel_delete_title">Deze tankbeurt verwijderen?</string>
+
+    <!-- Refuels: with values -->
+    <string name="fuel_since_last">%1$.1f L/100 km sinds de vorige tankbeurt</string>
+    <string name="fuel_first">Eerste tankbeurt in het dagboek</string>
+    <string name="fuel_litres_unknown">Liters onbekend: tik om ze in te vullen</string>
+    <plurals name="fuel_count">
+        <item quantity="one">%1$d tankbeurt</item>
+        <item quantity="other">%1$d tankbeurten</item>
+    </plurals>
+    <string name="fuel_total">%1$,.1f L in totaal</string>
+
+    <!-- Refuels -->
+    <string name="fuel_estimated">geschat</string>
+
+    <!-- Maintenance: log -->
+    <string name="maint_oil_change">Olie verversen</string>
+    <string name="maint_oil_filter">Oliefilter</string>
+    <string name="maint_air_filter">Luchtfilter</string>
+    <string name="maint_chain">Ketting</string>
+    <string name="maint_tyres">Banden</string>
+    <string name="maint_brake_pads">Remblokken</string>
+    <string name="maint_brake_fluid">Remvloeistof</string>
+    <string name="maint_coolant">Koelvloeistof</string>
+    <string name="maint_spark_plugs">Bougies</string>
+    <string name="maint_valves">Klepspeling</string>
+    <string name="maint_battery">Accu</string>
+    <string name="maint_other">Overig</string>
+    <string name="maint_or">%1$s of %2$s</string>
+    <plurals name="maint_months">
+        <item quantity="one">%1$d maand</item>
+        <item quantity="other">%1$d maanden</item>
+    </plurals>
+    <string name="maint_every">elke %1$s</string>
+    <string name="maint_never_logged">nooit genoteerd: noteer het één keer om met tellen te beginnen</string>
+    <string name="maint_km_over">%1$,.0f km over tijd</string>
+    <string name="maint_since">sinds %1$s</string>
+    <string name="maint_due">te doen: %1$s</string>
+    <string name="maint_in_km">over %1$,.0f km</string>
+    <string name="maint_by">uiterlijk %1$s</string>
+    <string name="maint_wait_odometer">de kilometers tellen zodra de motor zijn kilometerstand heeft gestuurd</string>
+    <string name="maint_log_odometer">noteer de kilometerstand bij het werk om de kilometers te tellen</string>
+    <string name="maint_at_km">bij %1$,d km</string>
+    <string name="maint_km_left">nog %1$,d km</string>
+    <string name="maint_km_overdue">%1$,d km te laat</string>
+    <string name="maint_due_now">nu te doen</string>
+    <string name="maint_in_km_whole">over %1$,d km</string>
+    <string name="maint_at_km_whole">bij %1$,.0f km</string>
+    <string name="maint_service_kawasaki">Kawasaki-onderhoudsbeurt</string>
+    <string name="maint_service_rider">Herinnering van de rijder</string>
+
+    <!-- Maintenance -->
+    <string name="maint_note">Alleen op de telefoon bewaard. „Het display zegt” komt van het display zelf; je herinneringen en wat je hier schrijft, zijn je eigen overzicht van het gedane werk.</string>
+    <string name="maint_dash_says">Het display zegt</string>
+    <string name="maint_your_reminders">Je herinneringen</string>
+    <string name="maint_reminders_empty">Hoe vaak een klus te doen is, vanaf de laatste keer dat hij hier is genoteerd: de ketting elke 1.000 km, de olie elk jaar. Een melding laat weten als er een te doen is.</string>
+    <string name="maint_add_reminder">Herinnering toevoegen</string>
+    <string name="maint_other_dots">Overig…</string>
+    <string name="maint_remind_me">Herinner me aan</string>
+    <string name="maint_what_due">wat te doen is</string>
+    <string name="maint_next">Volgende</string>
+    <string name="maint_every_km">elke … km (leeg: niet op km)</string>
+    <string name="maint_every_months">elke … maanden (leeg: niet op datum)</string>
+    <string name="maint_counted">Geteld vanaf de laatste keer dat het is genoteerd, wat het eerst komt.</string>
+    <string name="maint_add_job">Een klus toevoegen</string>
+    <string name="maint_add_job_sub">Wat je deed, wanneer en bij welke kilometerstand.</string>
+    <string name="maint_odometer_hint">kilometerstand in km</string>
+    <string name="maint_note_hint">wat er gedaan is, wat het kostte…</string>
+    <string name="maint_what_done">wat er gedaan is</string>
+    <string name="maint_note_short">notitie</string>
+    <string name="maint_delete_title">Deze notitie verwijderen?</string>
+
+    <!-- Maintenance: with values -->
+    <string name="maint_odometer_now">Kilometerstand nu: %1$,.0f km</string>
+    <string name="maint_soon">binnenkort: %1$s</string>
+    <string name="maint_nothing_yet">Nog niets genoteerd</string>
+    <plurals name="maint_entries">
+        <item quantity="one">%1$d notitie</item>
+        <item quantity="other">%1$d notities</item>
+    </plurals>
+    <plurals name="maint_days_ago">
+        <item quantity="one">%1$d dag geleden</item>
+        <item quantity="other">%1$d dagen geleden</item>
+    </plurals>
+    <string name="maint_no_odometer">geen kilometerstand</string>
+
+    <!-- Navigation: with values -->
+    <string name="nav_remaining">nog %1$s · %2$s · aankomst %3$s</string>
+    <string name="nav_refuel">Bereik %1$s, nog %2$s te gaan: tank onderweg</string>
+    <string name="nav_limit_description">Snelheidslimiet %1$s</string>
+    <string name="nav_next_winding">Komende %1$s · %2$d%% bochtig</string>
+    <string name="nav_done">%1$s in %2$s</string>
+    <string name="nav_moving_average">%1$.0f %2$s rijgemiddelde</string>
+    <string name="nav_skip_via">Tussenstop %1$d overslaan</string>
+
+    <!-- Navigation -->
+    <string name="nav_no_gps">Geen gps-signaal: wachten op je positie</string>
+    <string name="nav_overview">Overzicht</string>
+    <string name="nav_stop">Stoppen</string>
+    <string name="nav_turns_ahead_description">Komende afslagen en tussenstops</string>
+    <string name="nav_north_up">Noorden boven</string>
+    <string name="nav_heading_up">Rijrichting boven</string>
+    <string name="nav_heading_up_description">De kaart draait mee met je richting: tik voor noorden boven</string>
+    <string name="nav_north_up_description">Het noorden is boven: tik om de kaart met je richting mee te laten draaien</string>
+    <string name="nav_follow">Volg mij</string>
+    <string name="nav_tap_again">Tik nog een keer</string>
+    <string name="nav_close_description">De navigatie sluiten</string>
+    <string name="nav_tap_again_description">Tik nog een keer om de navigatie te stoppen</string>
+    <string name="nav_stop_description">De navigatie stoppen</string>
+    <string name="nav_voice_on">Stem aan: tik om hem uit te zetten</string>
+    <string name="nav_voice_off">Stem uit: tik om hem aan te zetten</string>
+    <string name="nav_no_headset">Geen headset verbonden: KawaNav spreekt alleen via een headset (Instellingen)</string>
+    <string name="nav_starting">Starten…</string>
+    <string name="nav_stopped">Navigatie gestopt</string>
+    <string name="nav_turns_ahead">Komende afslagen</string>
+
+    <!-- Battery: with values -->
+    <plurals name="battery_summary">
+        <item quantity="one">%1$d meting · laatste %2$.1f V · laagste %3$.1f V</item>
+        <item quantity="other">%1$d metingen · laatste %2$.1f V · laagste %3$.1f V</item>
+    </plurals>
+    <string name="battery_declining">De accu is in de gemeten tijd %1$.1f V verloren: hij is misschien op weg naar zijn einde.</string>
+    <string name="battery_low">Met %1$.1f V is deze meting laag: laad hem op of laat de accu controleren.</string>
+    <string name="battery_since_first">%1$+.1f V sinds de eerste</string>
+
+    <!-- Battery -->
+    <string name="battery_title">12V-accu</string>
+    <string name="battery_note">Elke keer dat de app verbinding maakt met de motor uit, wordt er een meting gedaan: wat een accu in rust doet, verraadt zijn leeftijd. Een meting onder 12,4 V op een warme dag, of een daling van maand tot maand, is het bekijken waard.</string>
+    <string name="battery_at_rest">Rustspanning</string>
+    <string name="battery_unreadable">Het accuoverzicht kon niet worden gelezen</string>
+    <string name="battery_unreadable_sub">Het bestand blijft bewaard als battery.json.bad en wordt niet overschreven.</string>
+    <string name="battery_none">Nog geen metingen</string>
+    <string name="battery_nothing">Nog niets opgenomen</string>
+    <string name="battery_nothing_sub">Maak verbinding met de motor terwijl die uit staat, dan wordt de eerste meting gedaan.</string>
+    <string name="battery_fine">Tot nu toe geen daling om je zorgen over te maken.</string>
+
+    <!-- Tabs and record button: with values -->
+    <string name="tab_selected">%1$s, geselecteerd</string>
+    <string name="record_not_started">Niet gestart: %1$s</string>
+    <string name="section_open">%1$s, open</string>
+    <string name="section_closed">%1$s, dicht</string>
+
+    <!-- Tabs and record button -->
+    <string name="tab_home">Start</string>
+    <string name="tab_bike">Motor</string>
+    <string name="tab_rides">Ritten</string>
+    <string name="record_idle">Een rit opnemen</string>
+    <string name="record_paused">Rit gepauzeerd: doorgaan of stoppen</string>
+    <string name="record_recording">Opname loopt: pauzeren of stoppen</string>
+    <string name="main_ride_recording_plain">Rit wordt opgenomen</string>
+    <string name="record_starting">KawaNav start en neemt de rit op</string>
+    <string name="record_paused_title">Rit gepauzeerd</string>
+    <string name="common_what_options">Wat betekenen de opties?</string>
+    <string name="bg_location_title">Locatie: „Altijd toestaan”</string>
+    <string name="bg_location_message">Het automatisch starten start KawaNav terwijl je telefoon vergrendeld in je zak zit. Om dan bochtwaarschuwingen te tonen, heeft KawaNav gps op de achtergrond nodig.\n\nKies op het volgende scherm „Altijd toestaan”.\n\nZonder dat werken de pijlen van Google Maps toch, maar de bochtwaarschuwingen beginnen pas nadat je KawaNav opent.</string>
+
+    <!-- Service: with values -->
+    <string name="bridge_not_taken">Niet aangenomen: de motor antwoordde %1$s.</string>
+    <string name="bridge_read_back_differs">Gestuurd, maar de motor leest modus %1$d, vermogen %2$d, KTRC %3$d, KQS %4$d terug (zijn eigen getallen), niet wat er gestuurd is. Controleer het display.</string>
+    <string name="bridge_lamp_levels">het display neemt niveaus van %1$d tot %2$d</string>
+    <string name="bridge_lamp_refused">Niet aangenomen: het display weigerde het (resultaat %1$d).</string>
+    <string name="bridge_looking_for">%1$s zoeken…</string>
+    <string name="bridge_connected_to">Verbonden met %1$s</string>
+    <string name="bridge_the_bike">de motor</string>
+    <string name="bridge_output_not_connected">%1$s (motor niet verbonden)</string>
+    <string name="bridge_battery_down">De accu gaat achteruit</string>
+    <string name="bridge_battery_down_text">De 12V-accu is in de gemeten tijd %1$.1f V verloren: laat hem controleren voordat hij je ergens laat staan.</string>
+    <plurals name="bridge_maintenance_due">
+        <item quantity="one">%1$d onderhoudsklus te doen</item>
+        <item quantity="other">%1$d onderhoudsklussen te doen</item>
+    </plurals>
+    <string name="bridge_clutch_text">Bij %1$d flinke acceleraties in deze rit draaide de motor tot %2$.1f%% hoger dan versnelling en snelheid geven: de koppeling slipt misschien. Laat hem controleren.</string>
+    <string name="bridge_curves_paused">Bochtdetectie gepauzeerd: tik om KawaNav te openen</string>
+    <string name="bridge_refuel">Tankbeurt genoteerd</string>
+    <string name="bridge_refuel_text">%1$s — corrigeer de liters als ze niet kloppen.</string>
+
+    <!-- Service -->
+    <string name="bridge_busy">de motor beantwoordt nog een ander verzoek, probeer het opnieuw</string>
+    <string name="bridge_sending">Sturen…</string>
+    <string name="bridge_no_answer">Geen antwoord van de motor: voor zover KawaNav weet, is er niets veranderd. Controleer het display.</string>
+    <string name="bridge_applying">Het display past het toe…</string>
+    <string name="bridge_reading_back">Instellingen worden teruggelezen…</string>
+    <string name="bridge_not_read_back">Gestuurd, maar de instellingen konden niet worden teruggelezen: controleer het display.</string>
+    <string name="bridge_done">Klaar: de motor leest terug wat er gestuurd is.</string>
+    <string name="bridge_lamp_not_supported">dit display neemt geen instellingen voor het schakellampje</string>
+    <string name="bridge_sending_lamp">Schakellampje wordt gestuurd…</string>
+    <string name="bridge_lamp_no_answer">Geen antwoord van het display: controleer het.</string>
+    <string name="bridge_lamp_taken">Door het display aangenomen: controleer het schakellampje.</string>
+    <string name="bridge_channel_connection">Verbinding met de motor</string>
+    <string name="bridge_channel_warnings">Waarschuwingen</string>
+    <string name="bridge_channel_rides">Ritten en tankbeurten</string>
+    <string name="bridge_not_running">Niet actief</string>
+    <string name="bridge_bluetooth_not_allowed">Bluetooth niet toegestaan</string>
+    <string name="bridge_pair_hint">Koppel de motor één keer: „Je motor koppelen” in de oranje balk (contact aan).</string>
+    <string name="bridge_several">Er zijn meerdere Kawasaki’s aan deze telefoon gekoppeld. Stel „Automatisch starten” in met de jouwe, ernaast met het contact aan, zodat KawaNav weet welke; of verwijder de andere in de bluetooth-instellingen.</string>
+    <string name="bridge_ignition">Zet het contact aan. Rideology moet gesloten zijn: de motor praat met één app tegelijk.</string>
+    <string name="bridge_no_turn_by_turn">Het display van deze motor meldt geen afslaginstructies, dus pijlen en bochten worden niet gestuurd. Als ze eerder werkten, zet dan „Pijlen en symbolen toch sturen” aan in Instellingen.</string>
+    <string name="bridge_no_status_icons">Het display van deze motor meldt geen statussymbolen, dus de symbolen voor oproepen, mail en de telefoon worden niet gestuurd. „Pijlen en symbolen toch sturen” in Instellingen gaat daaroverheen.</string>
+    <string name="bridge_reconnecting">Verbinding verloren, opnieuw verbinden…</string>
+    <string name="bridge_older_dash">Ouder Kawasaki-display: niet ondersteund</string>
+    <string name="bridge_waiting_bike">Wachten op de motor (gps uit)</string>
+    <string name="bridge_camera_source">Uit de offline kaartgegevens van KawaNav</string>
+    <string name="bridge_clutch_title">Koppeling slipt misschien</string>
+
+    <!-- Service -->
+    <string name="bridge_older_dash_hint">Dit display gebruikt het Kawasaki-protocol van vóór BLE5: het kan geen aanwijzingen tonen, en KawaNav kan er niet mee praten.</string>
+    <string name="bridge_older_dash_several">Er zijn meerdere Kawasaki’s gekoppeld: stel „Automatisch starten” in met degene waarop je rijdt.</string>
+
+    <!-- Hub -->
+    <string name="hub_bluetooth_hint">KawaNav mag bluetooth niet gebruiken: open KawaNav en sta „Apparaten in de buurt” toe.</string>
+
+    <!-- Speed cameras -->
+    <string name="camera_red_light">Roodlichtcamera</string>
+    <string name="camera_average">Trajectcontrole</string>
+    <string name="camera_speed">Flitser</string>
+    <string name="camera_ahead">%1$s verderop</string>
+    <string name="camera_limit">%1$s, limiet %2$d</string>
+    <string name="camera_in">%1$s over %2$s</string>
+
+    <!-- Curves -->
+    <string name="curves_no_roads">Geen offline wegen: download een regio onder Offline kaarten</string>
+    <string name="curves_loading">Wegen worden geladen…</string>
+    <string name="curves_no_roads_here">Hier geen offline wegen: download deze regio onder Offline kaarten</string>
+    <string name="curves_waiting_movement">Wachten op beweging om de richting te kennen</string>
+    <string name="curves_no_road">Niet op een bekende weg</string>
+    <string name="curves_gps_off">Gps staat uit</string>
+
+    <!-- Pairing -->
+    <string name="pair_looking">Motor wordt gezocht: contact aan, Rideology gesloten…</string>
+    <string name="pair_failed">Koppelen mislukt: contact aan, Rideology gesloten, probeer het dan opnieuw</string>
+    <string name="pair_pairing">Koppelen… bevestig op de telefoon (en het display) als daarom wordt gevraagd</string>
+    <string name="pair_could_not_start">Koppelen kon niet starten: contact aan, probeer het dan opnieuw</string>
+    <string name="pair_no_bike">Geen motor gekozen: contact aan, Rideology gesloten, probeer het dan opnieuw</string>
+
+    <!-- Offline maps: with values -->
+    <string name="offline_failed">Mislukt: %1$s</string>
+    <string name="offline_too_large">regio te groot voor deze telefoon, kies een kleinere</string>
+    <string name="offline_downloading">%1$s: %2$.0f / %3$.0f MB gedownload</string>
+    <string name="offline_no_space">niet genoeg vrije opslag: %1$s heeft ongeveer %2$.1f GB nodig, %3$.1f GB vrij</string>
+    <string name="offline_cameras">%1$s: flitsers worden opgeslagen…</string>
+    <string name="offline_done">Klaar: %1$s, %2$d wegen in %3$d tegels (+%4$d randtegels), %5$d flitsers, %6$d kruispunten voor navigatie · %7$.1f MB · %8$d s</string>
+
+    <!-- Offline maps -->
+    <string name="offline_channel">Download van offline wegen</string>
+    <string name="offline_stopped">Gestopt door Android: een download mag maar zo lang duren. Start hem opnieuw.</string>
+    <string name="offline_cancelled">Geannuleerd (de download gaat verder als je hem opnieuw start)</string>
+    <string name="offline_loading_list">Regiolijst wordt geladen…</string>
+    <string name="offline_title">Offline wegen van KawaNav</string>
+
+    <!-- Navigation -->
+    <string name="nav_starting_navigation">Navigatie start…</string>
+    <string name="nav_notification_title">KawaNav-navigatie</string>
+
+    <!-- Updates -->
+    <string name="update_failed">Bijwerken mislukt</string>
+    <string name="update_failed_why">Bijwerken mislukt: %1$s</string>
+
+    <!-- Updates -->
+    <string name="update_no_changes">Geen lijst met wijzigingen voor deze versie.</string>
+    <string name="update_not_signed">Bijwerken mislukt: deze KawaNav is niet ondertekend zoals de uitgave (debugversie?)</string>
+
+    <!-- Ride settings -->
+    <string name="write_no_data">geen actuele gegevens van de motor: laat hem aan staan</string>
+    <string name="write_stand_still">de motor moet stilstaan</string>
+    <string name="write_neutral">de motor moet in neutraal staan</string>
+    <string name="write_throttle">het gas moet dicht zijn</string>
+    <string name="write_no_config">de motor heeft niet gezegd welke instellingen hij neemt</string>
+    <string name="write_no_settings">deze motor neemt geen rij-instellingen</string>
+
+    <!-- Ride settings: with values -->
+    <string name="write_bad_mode">rijmodus %1$d biedt de motor niet aan</string>
+    <string name="write_bad_power">vermogensmodus %1$d biedt de motor niet aan</string>
+    <string name="write_bad_ktrc">KTRC-niveau %1$d kan niet worden geschreven</string>
+    <string name="write_bad_kqs">quickshifterwaarde %1$d is geen OFF of ON</string>
+    <string name="write_bad_kebc">motorremwaarde %1$d biedt de motor niet aan</string>
+    <string name="write_your_own">Eigen: %1$s</string>
+    <string name="write_preset">%1$s: vermogen %2$s, KTRC %3$s</string>
+    <string name="write_bike_other">(de motor heeft andere waarden)</string>
+    <string name="write_rider_note">%1$s hoort bij vermogen %2$s en KTRC %3$s, dus met andere waarden is de rijmodus nu Rider, die de jouwe houdt.</string>
+    <string name="write_kebc_line">Motorrem: %1$s (zoals de motor hem heeft)</string>
+    <string name="write_name_none">Naam: geen</string>
+    <string name="write_name">Naam: „%1$s”</string>
+    <string name="write_lamp_on">Aan</string>
+    <string name="write_lamp_tacho">Toerenteller</string>
+    <string name="write_lamp_led_tacho">LED + toerenteller</string>
+    <string name="write_ready">Klaar</string>
+    <string name="write_not_ready">Niet klaar: %1$s</string>
+    <string name="write_accepted">aangenomen</string>
+    <string name="write_applying">het display past het toe; wacht tot het klaar is</string>
+    <string name="write_rejected">geweigerd (resultaat %1$02X)</string>
+
+    <!-- Warnings: with values -->
+    <string name="alert_fuel_low_range">Nog %1$d km bereik volgens het display: tank binnenkort</string>
+    <string name="alert_not_charging_text">%1$.1f V met draaiende motor: controleer het laadsysteem</string>
+    <string name="alert_battery_low_text">%1$.1f V: de motor start de volgende keer misschien niet</string>
+    <string name="alert_tyre_now">Nu %1$.2f bar: stop en controleer hem</string>
+
+    <!-- Warnings -->
+    <string name="alert_tyre_front">Voorband verliest druk</string>
+    <string name="alert_tyre_rear">Achterband verliest druk</string>
+    <string name="alert_sensor_front">Batterij van de bandensensor voor is bijna leeg</string>
+    <string name="alert_sensor_front_text">De druksensor in het voorwiel heeft een nieuwe batterij nodig</string>
+    <string name="alert_sensor_rear">Batterij van de bandensensor achter is bijna leeg</string>
+    <string name="alert_sensor_rear_text">De druksensor in het achterwiel heeft een nieuwe batterij nodig</string>
+    <string name="alert_abs">ABS meldt een storing</string>
+    <string name="alert_abs_text">De ABS werkt misschien niet: controleer het waarschuwingslampje op het display en laat de motor nakijken</string>
+    <string name="alert_fuel_low">Weinig brandstof</string>
+    <string name="alert_fuel_low_text">Het display meldt een laag brandstofniveau: tank binnenkort</string>
+    <string name="alert_not_charging">De accu wordt niet geladen</string>
+    <string name="alert_battery_low">De accu staat laag</string>
+    <string name="alert_check">Stop en controleer hem</string>
+
+    <!-- Routing -->
+    <string name="route_no_road_start">geen weg bij de start</string>
+    <string name="route_no_road_dest">geen weg bij de bestemming</string>
+    <string name="route_too_long">route te lang voor het zoeken op deze telefoon</string>
+    <string name="route_no_connection">geen weg verbindt deze punten</string>
+
+    <!-- Routing -->
+    <string name="route_no_road_via">geen weg bij tussenstop %1$d</string>
+
+    <!-- Routing -->
+    <string name="route_no_roads_round">geen wegen rond de start voor een rondrit</string>
+    <string name="route_no_round">geen rondrit gevonden</string>
+
+    <!-- Recording -->
+    <string name="record_no_space">niet genoeg vrije ruimte op de telefoon</string>
+
+    <!-- Recording -->
+    <string name="ride_end_at_once">Meteen</string>
+    <string name="ride_end_5">Na 5 min</string>
+    <string name="ride_end_15">Na 15 min</string>
+
+    <!-- Ride -->
+    <string name="bends_most_lean">Meeste helling</string>
+    <string name="bends_fastest">Snelste</string>
+    <string name="bends_best_exit">Beste uitgang</string>
+    <string name="bends_speed_lost">Meeste snelheid verloren</string>
+    <string name="bends_ride_order">In ritvolgorde</string>
+
+    <!-- Maps -->
+    <string name="map_track_description">Het spoor van de rit op een kaart. Knijp om te zoomen, sleep om te verschuiven.</string>
+
+    <!-- Maps -->
+    <string name="map_description">Kaart. Sleep om te verschuiven, knijp om te zoomen, tik om een plek te kiezen.</string>
+    <string name="map_roads_credit">Wegen © OpenStreetMap-bijdragers</string>
+
+    <!-- Gauge -->
+    <string name="gauge_unknown">Onbekend</string>
+    <string name="gauge_of">%1$d van %2$d</string>
+
+    <!-- Ride: end reasons -->
+    <string name="ride_end_24h">24 uur bereikt</string>
+    <string name="ride_end_bike_gone">motor weg</string>
+    <string name="ride_end_switched_off">motor uitgezet</string>
+    <string name="ride_end_bridge_stopped">KawaNav gestopt</string>
+    <string name="ride_end_battery">telefoonaccu bijna leeg</string>
+    <string name="ride_end_by_hand">met de hand gestopt</string>
+    <plurals name="ride_bend_shifted_gears">
+        <item quantity="one">%1$d versnelling teruggeschakeld</item>
+        <item quantity="other">%1$d versnellingen teruggeschakeld</item>
+    </plurals>
+    <plurals name="ride_recorded_value">
+        <item quantity="one">%1$s, %2$d meetpunt</item>
+        <item quantity="other">%1$s, %2$d meetpunten</item>
+    </plurals>
+</resources>

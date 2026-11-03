@@ -112,7 +112,7 @@ public final class ChartView extends View {
         line.setStyle(Paint.Style.STROKE);
         line.setStrokeWidth(d * 2);
         night = Ui.night(context);
-        line.setColor(Ui.accent(night));
+        line.setColor(Ui.accentText(night));
         grid.setColor(Ui.chartGrid(night));
         grid.setStrokeWidth(1);
         text.setColor(Ui.chartInk(night));
@@ -310,7 +310,7 @@ public final class ChartView extends View {
 
     /** "Yaw rate +3.2", "Torque 40 / 38 / 36": the series at one second, for the line under the chart. */
     static String describe(RideTsv.Sample s, Series series) {
-        StringBuilder sb = new StringBuilder(series.title).append(' ');
+        StringBuilder sb = new StringBuilder(Ride.shown(series.title)).append(' ');
         String f = "%." + series.decimals + "f";
         for (int l = 0; l < series.lineCount(); l++) {
             if (l > 0) sb.append(" / ");
@@ -331,7 +331,7 @@ public final class ChartView extends View {
 
     /** One line alone in the accent colour; of several, the last (what the engine gives) keeps it. */
     private int lineColour(int l, int count) {
-        if (count == 1 || l == count - 1) return Ui.accent(night);
+        if (count == 1 || l == count - 1) return Ui.accentText(night);
         return l == count - 2 ? Ui.warn(night) : Ui.inkSecondary(night);
     }
 

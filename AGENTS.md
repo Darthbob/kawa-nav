@@ -25,12 +25,28 @@ Pull requests fail when `changelog.json` has no entry for the current versionNam
 User-visible changes that are not released yet can already be added to the top entry of a new,
 higher version in `changelog.json`; the version in `app/build.gradle` decides when it is released.
 
+A changelog line says only what differs from the last released version, as a rider of that version
+will notice it, in one plain sentence. It is not a record of the work: when a later change reworks
+something still unreleased, rewrite its line to the end result instead of adding a line about the
+change, and leave out the reasons and steps in between.
+
 ## Code
 
 - Java 17, minSdk 33, Android framework only: no AndroidX, no third-party libraries in the app
   (JUnit for the JVM tests in `app/src/test` only).
 - The UI is built in code (no XML layouts): screens extend `KawaActivity`, shared styling is in
-  `Ui`; UI text is English.
+  `Ui`.
+- Every text the rider sees is a string resource, looked up with `Lang.t(R.string.…)` or
+  `Lang.plural(R.plurals.…)` (plain Java classes too), never a literal in code; logs and the debug
+  tools stay English literals. A new or changed text goes into `res/values/strings.xml` (English)
+  **and into every language** in `Lang.CODES` (`res/values-de`, `-it`, `-fr`, `-es`, `-nl`, `-pt`,
+  `-pl`, `-sv`), translated, never copied in English; plurals with the forms each language needs
+  (Polish: one, few, many). Keep the values (`%1$s`, `%2$d`…) the same in every language and escape
+  `'` and `"` with a backslash. `StringsTest` and lint (`MissingTranslation`) fail the build when a
+  language misses a text, and an AI agent checks every language whenever it touches a text. Don't
+  keep a looked-up text in a static field: the language can change while the app runs. The spoken
+  phrases are in `NavText` (every phrase takes all nine languages); a new app language needs both,
+  plus `res/xml/locales_config.xml`.
 - Shared state between services and UI and the setting keys are in `Hub`; log with `Logger`
   (`KawaApp` sets it up and sends crashes into it).
 - What the dash shows each second is decided in `DashArbiter` (plain Java, tested in

@@ -200,7 +200,7 @@ public final class BikeData {
             for (int k = 0; k < 3; k++) {
                 BikeFrames.ServiceIndicator.Reminder r = service.reminders[k];
                 if (!r.supported) continue;
-                sb.append(BikeFrames.ServiceIndicator.NAMES[k]).append(String.format(Locale.ROOT,
+                sb.append(BikeFrames.ServiceIndicator.names()[k]).append(String.format(Locale.ROOT,
                         ": %04d-%02d-%02d, %d km, notify %d\n", r.year, r.month, r.day, r.distanceKm, r.notify));
             }
         }

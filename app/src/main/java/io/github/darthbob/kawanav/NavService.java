@@ -89,8 +89,8 @@ public class NavService extends Service implements LocationListener {
         super.onCreate();
         Logger.init(this);
         getSystemService(NotificationManager.class).createNotificationChannel(
-                new NotificationChannel(CHANNEL, "Navigation", NotificationManager.IMPORTANCE_LOW));
-        startForeground(NOTIFICATION_ID, notification("Starting navigation…"), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                new NotificationChannel(CHANNEL, Lang.t(R.string.settings_section_navigation), NotificationManager.IMPORTANCE_LOW));
+        startForeground(NOTIFICATION_ID, notification(Lang.t(R.string.nav_starting_navigation)), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
     }
 
     @Override
@@ -123,7 +123,7 @@ public class NavService extends Service implements LocationListener {
             stopSelf();
             return START_NOT_STICKY;
         }
-        text = NavText.phone();
+        text = NavText.current();
         navigator = new Navigator(graph, route, text, leftHand(), Hub.prefs(this).getBoolean(Hub.KEY_IMPERIAL, false));
         Hub.nav = new Hub.Nav(KawaProtocol.TURN_NONE, -1, text.action(navigator.maneuvers().get(0)), route.length,
                 route.time, Navigator.State.NAVIGATING);
@@ -147,6 +147,9 @@ public class NavService extends Service implements LocationListener {
     @Override
     public void onLocationChanged(Location loc) {
         if (navigator == null) return;
+        // GPS only: a Wi-Fi or cell position (the planner's quick start) is tens of metres off and has no
+        // speed or heading; the navigation would follow the wrong road and announce turns at the wrong place
+        if (!LocationManager.GPS_PROVIDER.equals(loc.getProvider())) return;
         Hub.lastFix = loc;
         updateHeading(loc);
         if (lastMoveFix != null && loc.hasSpeed() && loc.getSpeed() >= MIN_SPEED_MOVING) {
@@ -304,7 +307,7 @@ public class NavService extends Service implements LocationListener {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_directions)
-                .setContentTitle("KawaNav navigation")
+                .setContentTitle(Lang.t(R.string.nav_notification_title))
                 .setContentText(s)
                 .setContentIntent(open)
                 .addAction(new Notification.Action.Builder(null, "Stop", stop).build())

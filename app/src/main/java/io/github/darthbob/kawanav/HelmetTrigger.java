@@ -31,7 +31,7 @@ public class HelmetTrigger extends BroadcastReceiver {
         // the user may have revoked "Nearby devices": getAddress()/getName() would throw, and the
         // bridge could not talk to the bike either
         if (!Hub.bluetoothAllowed(context)) {
-            Logger.log("Helmet connected, but " + Hub.BLUETOOTH_HINT);
+            Logger.log("Helmet connected, but " + Hub.bluetoothHint());
             return;
         }
         BluetoothDevice d = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);

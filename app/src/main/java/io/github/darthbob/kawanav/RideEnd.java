@@ -13,7 +13,9 @@ final class RideEnd {
     private RideEnd() {}
 
     /** The choices, in the settings order. */
-    static final String[] LABELS = {"At once", "After 5 min", "After 15 min"};
+    static String[] labels() {
+        return new String[]{Lang.t(R.string.ride_end_at_once), Lang.t(R.string.ride_end_5), Lang.t(R.string.ride_end_15)};
+    }
     static final int DEFAULT = 0;
     /** How long after the link was lost each choice ends the ride; the first is the bike counting as off. */
     private static final long[] AFTER_MS = {Hub.BIKE_OFF_MS, 5 * 60_000L, 15 * 60_000L};

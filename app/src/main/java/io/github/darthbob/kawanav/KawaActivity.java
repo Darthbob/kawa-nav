@@ -73,6 +73,7 @@ public abstract class KawaActivity extends Activity {
     protected ScrollView page(View content) {
         systemBarsFollowTheme();
         ScrollView scroll = new ScrollView(this);
+        scroll.setId(R.id.page_scroll); // keeps its position when the screen is recreated
         scroll.setBackgroundColor(Ui.bg(night));
         scroll.addView(content);
         scroll.setClipToPadding(true);
@@ -102,6 +103,7 @@ public abstract class KawaActivity extends Activity {
     protected View tabPage(int tab, View content) {
         systemBarsFollowTheme();
         ScrollView scroll = new ScrollView(this);
+        scroll.setId(R.id.page_scroll); // keeps its position when the screen is recreated
         scroll.addView(content);
         scroll.setClipToPadding(true);
         pageScroll = scroll;
@@ -138,11 +140,11 @@ public abstract class KawaActivity extends Activity {
         bg.setColor(Ui.tabBar(night));
         bar.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
                 bg, hairlineTop()}));
-        bar.addView(tabItem(TAB_HOME, R.drawable.ic_home, "Home", current), tabWeight());
-        bar.addView(tabItem(TAB_BIKE, R.drawable.ic_moto, "Bike", current), tabWeight());
+        bar.addView(tabItem(TAB_HOME, R.drawable.ic_home, Lang.t(R.string.tab_home), current), tabWeight());
+        bar.addView(tabItem(TAB_BIKE, R.drawable.ic_moto, Lang.t(R.string.tab_bike), current), tabWeight());
         bar.addView(recordSlot(), tabWeight());
-        bar.addView(tabItem(TAB_RIDES, R.drawable.ic_list, "Rides", current), tabWeight());
-        bar.addView(tabItem(TAB_SETTINGS, R.drawable.ic_settings, "Settings", current), tabWeight());
+        bar.addView(tabItem(TAB_RIDES, R.drawable.ic_list, Lang.t(R.string.tab_rides), current), tabWeight());
+        bar.addView(tabItem(TAB_SETTINGS, R.drawable.ic_settings, Lang.t(R.string.settings_title), current), tabWeight());
         return bar;
     }
 
@@ -163,7 +165,7 @@ public abstract class KawaActivity extends Activity {
 
     private View tabItem(int tab, int drawable, String label, int current) {
         boolean on = tab == current;
-        int color = on ? Ui.accent(night) : Ui.inkSecondary(night);
+        int color = on ? Ui.accentText(night) : Ui.inkSecondary(night);
         LinearLayout item = column();
         item.setGravity(Gravity.CENTER);
         ImageView icon = new ImageView(this);
@@ -179,7 +181,7 @@ public abstract class KawaActivity extends Activity {
         t.setPadding(0, dp(2), 0, 0);
         item.addView(t, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        item.setContentDescription(label + (on ? ", selected" : ""));
+        item.setContentDescription(on ? Lang.t(R.string.tab_selected, label) : label);
         item.setBackground(new RippleDrawable(ColorStateList.valueOf(Ui.rippleOnPlain(night)), null, null));
         item.setOnClickListener(v -> {
             if (tab == current) {
@@ -224,8 +226,8 @@ public abstract class KawaActivity extends Activity {
         recordIcon.setImageResource(state == RideRecorder.RECORDING ? R.drawable.ic_stop
                 : state == RideRecorder.PAUSED ? R.drawable.ic_pause : R.drawable.ic_record);
         recordIcon.setColorFilter(state == RideRecorder.PAUSED ? Ui.bannerInk() : 0xFFFFFFFF);
-        recordButton.setContentDescription(state == RideRecorder.IDLE ? "Record a ride"
-                : state == RideRecorder.PAUSED ? "Ride paused: continue or stop" : "Recording: pause or stop");
+        recordButton.setContentDescription(state == RideRecorder.IDLE ? Lang.t(R.string.record_idle)
+                : state == RideRecorder.PAUSED ? Lang.t(R.string.record_paused) : Lang.t(R.string.record_recording));
     }
 
     /** Idle: starts recording (and KawaNav, if needed). Recording or paused: pause, continue or stop. */
@@ -233,23 +235,23 @@ public abstract class KawaActivity extends Activity {
         if (Hub.rideState == RideRecorder.IDLE) {
             boolean running = Hub.serviceRunning;
             String problem = BridgeService.startRide(this);
-            android.widget.Toast.makeText(this, problem != null ? "Not started: " + problem
-                    : running ? "Recording the ride" : "Starting KawaNav and recording the ride",
+            android.widget.Toast.makeText(this, problem != null ? Lang.t(R.string.record_not_started, problem)
+                    : running ? Lang.t(R.string.main_ride_recording_plain) : Lang.t(R.string.record_starting),
                     problem != null ? android.widget.Toast.LENGTH_LONG : android.widget.Toast.LENGTH_SHORT).show();
         } else {
             boolean paused = Hub.rideState == RideRecorder.PAUSED;
             new AlertDialog.Builder(this)
-                    .setTitle(paused ? "Ride paused" : "Recording the ride")
+                    .setTitle(paused ? Lang.t(R.string.record_paused_title) : Lang.t(R.string.main_ride_recording_plain))
                     .setMessage(Hub.rideText)
-                    .setPositiveButton("Stop ride", (d, w) -> {
+                    .setPositiveButton(Lang.t(R.string.main_stop_ride), (d, w) -> {
                         BridgeService.stopRide();
                         recordButton.postDelayed(this::updateTabBar, 300);
                     })
-                    .setNeutralButton(paused ? "Continue" : "Pause", (d, w) -> {
+                    .setNeutralButton(paused ? Lang.t(R.string.common_continue) : Lang.t(R.string.main_pause), (d, w) -> {
                         BridgeService.toggleRidePause();
                         recordButton.postDelayed(this::updateTabBar, 300);
                     })
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(Lang.t(R.string.common_cancel), null)
                     .show();
         }
         recordButton.postDelayed(this::updateTabBar, 300);
@@ -294,7 +296,7 @@ public abstract class KawaActivity extends Activity {
             arrow.setImageResource(R.drawable.ic_back);
             arrow.setColorFilter(Ui.ink(night));
             arrow.setScaleType(ImageView.ScaleType.CENTER);
-            arrow.setContentDescription("Back");
+            arrow.setContentDescription(Lang.t(R.string.common_back));
             arrow.setBackground(new RippleDrawable(ColorStateList.valueOf(Ui.rippleOnPlain(night)), null, null));
             arrow.setOnClickListener(back);
             left = arrow;
@@ -319,7 +321,7 @@ public abstract class KawaActivity extends Activity {
     protected ImageView headerAction(int drawable, String description, View.OnClickListener l) {
         ImageView v = new ImageView(this);
         v.setImageResource(drawable);
-        v.setColorFilter(Ui.accent(night));
+        v.setColorFilter(Ui.accentText(night));
         v.setScaleType(ImageView.ScaleType.CENTER);
         v.setContentDescription(description);
         v.setBackground(new RippleDrawable(ColorStateList.valueOf(Ui.rippleOnPlain(night)), null, null));
@@ -365,7 +367,7 @@ public abstract class KawaActivity extends Activity {
     protected TextView number(int size) {
         TextView t = text(size, false);
         t.setTypeface(Ui.numbers());
-        t.setTextColor(Ui.accent(night));
+        t.setTextColor(Ui.accentText(night));
         t.setFontFeatureSettings("tnum");
         t.setIncludeFontPadding(false);
         return t;
@@ -567,7 +569,7 @@ public abstract class KawaActivity extends Activity {
 
     /** The "DEBUG" tag of the test tools. */
     protected TextView debugPill() {
-        return pill("DEBUG", (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accent(night));
+        return pill("DEBUG", (Ui.accent(night) & 0x00FFFFFF) | 0x33000000, Ui.accentText(night));
     }
 
     // ------------------------------------------------------------------ numbers
@@ -697,7 +699,7 @@ public abstract class KawaActivity extends Activity {
             body.setVisibility(nowOpen ? View.VISIBLE : View.GONE);
             preview.setVisibility(nowOpen || preview.getText().length() == 0 ? View.GONE : View.VISIBLE);
             arrow.setRotation(nowOpen ? 90 : 0);
-            view.setContentDescription(title + (nowOpen ? ", open" : ", closed"));
+            view.setContentDescription(Lang.t(nowOpen ? R.string.section_open : R.string.section_closed, title));
         }
 
         public boolean isOpen() {
@@ -860,7 +862,7 @@ public abstract class KawaActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setView(box)
-                .setPositiveButton("Save", (d, w) -> {
+                .setPositiveButton(Lang.t(R.string.planner_save), (d, w) -> {
                     double v = before;
                     try {
                         v = Double.parseDouble(input.getText().toString().trim().replace(',', '.'));
@@ -868,7 +870,7 @@ public abstract class KawaActivity extends Activity {
                     }
                     ok.on(Math.max(min, Math.min(max, v)));
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(Lang.t(R.string.common_cancel), null)
                 .show();
     }
 
@@ -896,7 +898,7 @@ public abstract class KawaActivity extends Activity {
         return b;
     }
 
-    /** The main action of a screen or card: accent fill (lime / violet), 56 dp tall. */
+    /** The main action of a screen or card: lime fill with dark text, 56 dp tall. */
     protected Button primaryButton(String text, View.OnClickListener l) {
         Button b = button(text, l);
         b.setTextColor(Ui.onAccent(night));
@@ -916,7 +918,7 @@ public abstract class KawaActivity extends Activity {
     /** The other choice: outline, accent text, quieter than the primary action. */
     protected Button secondaryButton(String text, View.OnClickListener l) {
         Button b = button(text, l);
-        b.setTextColor(Ui.accent(night));
+        b.setTextColor(Ui.accentText(night));
         outline(b);
         return b;
     }
@@ -1001,7 +1003,7 @@ public abstract class KawaActivity extends Activity {
         int accent = Ui.accent(night);
         s.setThumbTintList(new ColorStateList(states, new int[]{accent, Ui.outline(night)}));
         s.setTrackTintList(new ColorStateList(states,
-                new int[]{(accent & 0x00FFFFFF) | 0x66000000, night ? 0x33545454 : 0x33D9D8E3}));
+                new int[]{(accent & 0x00FFFFFF) | 0x66000000, night ? 0x33545454 : 0x33D9D9D9}));
         return s;
     }
 
@@ -1045,13 +1047,13 @@ public abstract class KawaActivity extends Activity {
         if (under != null) t.addView(under);
         if (info != null) {
             TextView more = text(13, false);
-            more.setText("What do the options mean?");
-            more.setTextColor(Ui.accent(night));
+            more.setText(Lang.t(R.string.common_what_options));
+            more.setTextColor(Ui.accentText(night));
             more.setPadding(0, dp(Ui.SPACE1), 0, dp(Ui.SPACE1));
             more.setOnClickListener(v -> new AlertDialog.Builder(this)
                     .setTitle(title)
                     .setMessage(info)
-                    .setPositiveButton("OK", null)
+                    .setPositiveButton(Lang.t(R.string.common_ok), null)
                     .show());
             t.addView(more);
         }
@@ -1069,7 +1071,7 @@ public abstract class KawaActivity extends Activity {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 TextView t = (TextView) super.getView(position, convertView, parent);
-                t.setTextColor(Ui.accent(night));
+                t.setTextColor(Ui.accentText(night));
                 t.setTextSize(15);
                 t.setPadding(0, dp(Ui.SPACE3), 0, dp(Ui.SPACE3));
                 t.setMinimumHeight(dp(Ui.TOUCH_MIN));
@@ -1140,13 +1142,9 @@ public abstract class KawaActivity extends Activity {
     protected void askBackgroundLocation(Runnable onContinue, Runnable onSkip) {
         if (hasBackgroundLocation()) return;
         new AlertDialog.Builder(this)
-                .setTitle("Location: \"Allow all the time\"")
-                .setMessage("Autostart starts KawaNav while your phone is locked in your pocket. "
-                        + "To show curve warnings then, KawaNav needs GPS in the background.\n\n"
-                        + "On the next screen, select \"Allow all the time\".\n\n"
-                        + "Without it, Google Maps arrows still work, but curve warnings only start "
-                        + "after you open KawaNav.")
-                .setPositiveButton("Continue", (d, w) -> {
+                .setTitle(Lang.t(R.string.bg_location_title))
+                .setMessage(Lang.t(R.string.bg_location_message))
+                .setPositiveButton(Lang.t(R.string.common_continue), (d, w) -> {
                     if (onContinue != null) onContinue.run();
                     if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         requestMissingPermissions(); // "all the time" can only follow "while using"
@@ -1154,7 +1152,7 @@ public abstract class KawaActivity extends Activity {
                         requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_BG_LOCATION);
                     }
                 })
-                .setNegativeButton("Not now", (d, w) -> {
+                .setNegativeButton(Lang.t(R.string.main_not_now), (d, w) -> {
                     if (onSkip != null) onSkip.run();
                 })
                 .setCancelable(false)

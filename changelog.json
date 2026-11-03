@@ -1,6 +1,19 @@
 {
   "versions": [
     {
+      "version": "1.4.0",
+      "changes": [
+        "KawaNav speaks your language: English, German, Italian, French, Spanish, Dutch, Portuguese, Polish or Swedish, on every screen and in the voice. It follows the phone's language, or the one picked under Settings, Appearance, Language",
+        "Settings, Appearance: the app can stay light or dark whatever the phone's dark mode is (Theme: Like the phone, Light or Dark)",
+        "The light theme is green instead of violet",
+        "Refuel diary: a fill from reserve (the last bar blinking) is recorded too",
+        "The fuel gauge on Home and on the Bike tab shows the reserve like the dash: one orange blinking bar and \"Reserve\"",
+        "The route planner says at once when there is no map to plan on, and takes you to Offline maps to download one (or to update maps from before 1.3). Before, it opened as usual and only a small line at the bottom said why no route came",
+        "The route planner finds your position within seconds also in a building: it takes Wi-Fi and cell towers too, not only the GPS. The navigation itself still follows the GPS only",
+        "The route planner's map shows the border of each downloaded region as a thin red line, so you see how far your offline maps reach. Regions downloaded before get their border the next time the planner is opened online (a few KB, no new download)"
+      ]
+    },
+    {
       "version": "1.3.4",
       "changes": [
         "Bike tab and Home: on dashes that send a low fuel warning, \"Low fuel\" next to the fuel bars and a \"Fuel is low\" warning with the range left, as Rideology shows since its October update (a 2026 Z900 does not send it)",

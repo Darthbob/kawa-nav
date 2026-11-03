@@ -223,9 +223,12 @@ final class RideAnalysis {
     }
 
     /** The ways the list of bends can be ordered: its labels, and the order each stands for. */
-    static final String[] ORDERS = {"Most lean", "Fastest", "Best exit", "Most speed lost", "In ride order"};
+    static String[] orders() {
+        return new String[]{Lang.t(R.string.bends_most_lean), Lang.t(R.string.bends_fastest), Lang.t(R.string.bends_best_exit),
+                Lang.t(R.string.bends_speed_lost), Lang.t(R.string.bends_ride_order)};
+    }
 
-    /** The bends in the order {@code order} picks ({@link #ORDERS}), the first {@code max} of them. */
+    /** The bends in the order {@code order} picks ({@link #orders}), the first {@code max} of them. */
     List<Bend> top(int order, int max) {
         List<Bend> out = new ArrayList<>(bends);
         java.util.Comparator<Bend> by;

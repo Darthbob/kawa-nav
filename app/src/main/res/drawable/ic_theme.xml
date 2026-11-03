@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <!-- a ring with its right half filled: light and dark -->
+    <path android:fillColor="#FF000000" android:fillType="evenOdd"
+        android:pathData="M480,80A400,400 0,1 1,480 880A400,400 0,1 1,480 80ZM480,160A320,320 0,1 0,480 800A320,320 0,1 0,480 160ZM480,160A320,320 0,0 1,480 800Z"/>
+</vector>

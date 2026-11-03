@@ -255,7 +255,7 @@ public final class RideStats {
      */
     public static String rideStatusLine(double metres, long activeMs, boolean partialGps) {
         String line = String.format(java.util.Locale.ROOT, "%.1f km · %s", metres / 1000, duration(activeMs));
-        return partialGps ? line + " · " + NO_TRACK : line;
+        return partialGps ? line + " · " + Lang.t(R.string.rides_no_gps) : line;
     }
 
     /** Milliseconds as h:mm:ss (or m:ss under an hour). */

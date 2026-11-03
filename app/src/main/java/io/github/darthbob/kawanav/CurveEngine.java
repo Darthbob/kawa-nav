@@ -78,8 +78,8 @@ public final class CurveEngine implements LocationListener {
         running = true;
         LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this, Looper.getMainLooper());
-        Hub.curveStatus = store.keys().isEmpty() ? "No offline roads: download a region under Offline maps"
-                : "Waiting for GPS";
+        Hub.curveStatus = store.keys().isEmpty() ? Lang.t(R.string.curves_no_roads)
+                : Lang.t(R.string.main_waiting_gps);
         Logger.log("Curve detection on");
     }
 
@@ -100,7 +100,7 @@ public final class CurveEngine implements LocationListener {
         camera = null;
         cameras = Collections.emptyList();
         cameraTiles = "";
-        Hub.curveStatus = "Off";
+        Hub.curveStatus = Lang.t(R.string.common_off);
         Logger.log("Curve detection off");
     }
 
@@ -182,12 +182,12 @@ public final class CurveEngine implements LocationListener {
         cameraAt = System.currentTimeMillis();
         RoadNetwork net = network;
         if (net == null) {
-            Hub.curveStatus = busy ? "Loading roads…" : "No offline roads here: download this region under Offline maps";
+            Hub.curveStatus = busy ? Lang.t(R.string.curves_loading) : Lang.t(R.string.curves_no_roads_here);
             output = smoother.next(null, 0, 0);
             return;
         }
         if (Double.isNaN(heading)) {
-            Hub.curveStatus = "Waiting for movement to know the heading";
+            Hub.curveStatus = Lang.t(R.string.curves_waiting_movement);
             output = smoother.next(null, 0, 0);
             return;
         }
@@ -196,7 +196,7 @@ public final class CurveEngine implements LocationListener {
         lastMatch = m;
         if (m != null && !net.onRoundabout(m)) approach = net.approach(m, heading);
         if (m == null) {
-            Hub.curveStatus = "Not on a known road";
+            Hub.curveStatus = Lang.t(R.string.curves_no_road);
             output = smoother.next(null, 0, 0);
             return;
         }
@@ -353,6 +353,6 @@ public final class CurveEngine implements LocationListener {
 
     @Override
     public void onProviderDisabled(String provider) {
-        Hub.curveStatus = "GPS is off";
+        Hub.curveStatus = Lang.t(R.string.curves_gps_off);
     }
 }

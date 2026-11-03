@@ -234,8 +234,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
      * read back to compare. Returns null when the job started, else why it did not.
      */
     public static String writeSettings(int mode, int power, int ktrcLevel, int kqs, int kebc, String name) {
-        if (instance == null || !instance.ble.isReady()) return "the bike is not connected";
-        if (!instance.requests.idle()) return "the bike is still answering another request, try again";
+        if (instance == null || !instance.ble.isReady()) return Lang.t(R.string.bike_not_connected_reason);
+        if (!instance.requests.idle()) return Lang.t(R.string.bridge_busy);
         long age = System.currentTimeMillis() - Hub.bike.liveAt;
         String blocked = SettingsWrite.blockedBecause(Hub.bike.live, age, Hub.bike.tuning);
         if (blocked != null) return blocked;
@@ -245,7 +245,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         int ktrc = SettingsWrite.ktrcWire(ktrcLevel);
         byte[] frame = SettingsWrite.frame(mode, power, ktrc, kqs, kebc, name);
         Hub.settingsWritePending = new PendingSettings(mode, power, ktrcLevel, kqs, kebc, name);
-        settingsJob = "Sending…";
+        settingsJob = Lang.t(R.string.bridge_sending);
         settingsOutcome = "";
         Logger.log("Bike: sending settings (mode " + mode + ", power " + power + ", KTRC " + ktrcLevel
                 + ", KQS " + kqs + ")");
@@ -276,24 +276,24 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (!answered) {
             settingsJob = "";
             Hub.settingsWritePending = null;
-            noteSettings("No answer from the bike: nothing was changed as far as KawaNav knows. Check the dash.");
+            noteSettings(Lang.t(R.string.bridge_no_answer));
             Logger.log("Bike: no answer to the settings write; nothing was changed as far as we know");
             return;
         }
         int result = SettingsWrite.result(Hub.bike.last[BikeFrames.VEHICLE_SETTINGS]);
         if (result == SettingsWrite.RESULT_WAIT) {
-            settingsJob = "The meter is applying it…";
+            settingsJob = Lang.t(R.string.bridge_applying);
             Logger.log("Bike: " + SettingsWrite.describeResult(result));
             return; // the meter finishes on its own and answers again (PROTOCOL.md)
         }
         if (result != SettingsWrite.RESULT_OK) {
             settingsJob = "";
             Hub.settingsWritePending = null;
-            noteSettings("Not taken: the bike " + SettingsWrite.describeResult(result) + ".");
+            noteSettings(Lang.t(R.string.bridge_not_taken, SettingsWrite.describeResult(result)));
             Logger.log("Bike: settings write " + SettingsWrite.describeResult(result));
             return;
         }
-        settingsJob = "Reading the settings back…";
+        settingsJob = Lang.t(R.string.bridge_reading_back);
         Logger.log("Bike: settings write accepted, reading back");
         instance.requests.submit(new BikeRequests.Request(KawaProtocol.vehicleSettingsRead(), "vehicle settings read",
                 BikeRequests.DATA_OR_ACK, BikeRequests.USER, (r, ok, res) -> instance.verifySettings()));
@@ -306,7 +306,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         settingsJob = "";
         if (p == null) return;
         if (Hub.bike.settings == null) {
-            noteSettings("Sent, but the settings could not be read back: check the dash.");
+            noteSettings(Lang.t(R.string.bridge_not_read_back));
             return;
         }
         BikeFrames.VehicleSettings s = Hub.bike.settings;
@@ -315,9 +315,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 && s.kqs == p.kqs && SettingsWrite.ktrcFromWire(s.ktrc) >= 0;
         Logger.log("Bike: settings read back: mode " + s.ridingMode + ", power " + s.power + ", KTRC "
                 + s.ktrc + ", KQS " + s.kqs + " -> " + (ok ? "as asked" : "NOT as asked"));
-        noteSettings(ok ? "Done: the bike reads back what was sent."
-                : "Sent, but the bike reads back mode " + s.ridingMode + ", power " + s.power + ", KTRC " + s.ktrc
-                + ", KQS " + s.kqs + " (its own numbers), not what was sent. Check the dash.");
+        noteSettings(ok ? Lang.t(R.string.bridge_done)
+                : Lang.t(R.string.bridge_read_back_differs, s.ridingMode, s.power, s.ktrc, s.kqs));
     }
 
     /** The bike reports the KTRC field; the app sends OFF as 10. */
@@ -374,16 +373,16 @@ public class BridgeService extends Service implements KawaBle.Listener {
      * carries the result in byte 7 and is read back afterwards. Tried on a Z900 (2026).
      */
     public static String writeShiftLamp(int status, int level) {
-        if (instance == null || !instance.ble.isReady()) return "the bike is not connected";
+        if (instance == null || !instance.ble.isReady()) return Lang.t(R.string.bike_not_connected_reason);
         BikeFrames.GeneralCaps caps = Hub.bike.caps;
-        if (caps == null || !caps.shiftLampSettable) return "this dash does not take shift-lamp settings";
+        if (caps == null || !caps.shiftLampSettable) return Lang.t(R.string.bridge_lamp_not_supported);
         if (level < caps.shiftLampMin || level > caps.shiftLampMax) {
-            return "the dash takes levels " + caps.shiftLampMin + " to " + caps.shiftLampMax;
+            return Lang.t(R.string.bridge_lamp_levels, caps.shiftLampMin, caps.shiftLampMax);
         }
-        if (!instance.requests.idle()) return "the bike is still answering another request, try again";
+        if (!instance.requests.idle()) return Lang.t(R.string.bridge_busy);
         byte[] frame = KawaProtocol.shiftLampWrite(status, level);
         Logger.log("Bike: sending shift lamp (status " + status + ", " + SettingsWrite.lampRpm(level) + " rpm)");
-        settingsJob = "Sending the shift lamp…";
+        settingsJob = Lang.t(R.string.bridge_sending_lamp);
         lampOutcome = "";
         instance.requests.submit(new BikeRequests.Request(frame, "shift lamp write", BikeRequests.DATA_OR_ACK,
                 BikeRequests.USER, (r, ok, result) -> instance.afterShiftLamp(ok)));
@@ -409,12 +408,12 @@ public class BridgeService extends Service implements KawaBle.Listener {
         int result = g == null ? -1 : g.result;
         settingsJob = "";
         if (!answered || result != 0) {
-            noteLamp(answered ? "Not taken: the dash refused it (result " + result + ")."
-                    : "No answer from the dash: check it.");
+            noteLamp(answered ? Lang.t(R.string.bridge_lamp_refused, result)
+                    : Lang.t(R.string.bridge_lamp_no_answer));
             Logger.log("Bike: shift lamp " + (answered ? "refused (" + result + ")" : "not answered"));
             return;
         }
-        noteLamp("Taken by the dash: check its shift lamp.");
+        noteLamp(Lang.t(R.string.bridge_lamp_taken));
         Logger.log("Bike: shift lamp accepted, reading back");
         requests.submit(new BikeRequests.Request(KawaProtocol.generalSettingsRead(), "general settings read",
                 BikeRequests.DATA_OR_ACK, BikeRequests.USER, null));
@@ -451,15 +450,15 @@ public class BridgeService extends Service implements KawaBle.Listener {
         instance = this;
         Logger.init(this);
         NotificationManager nm = getSystemService(NotificationManager.class);
-        nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Bike connection", NotificationManager.IMPORTANCE_LOW));
-        nm.createNotificationChannel(new NotificationChannel(CHANNEL_ALERTS, "Warnings",
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL, Lang.t(R.string.bridge_channel_connection), NotificationManager.IMPORTANCE_LOW));
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL_ALERTS, Lang.t(R.string.bridge_channel_warnings),
                 NotificationManager.IMPORTANCE_DEFAULT));
-        nm.createNotificationChannel(new NotificationChannel(CHANNEL_RIDES, "Rides and refuels",
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL_RIDES, Lang.t(R.string.bridge_channel_rides),
                 NotificationManager.IMPORTANCE_DEFAULT));
         locationAllowed = false;
         enableLocation();
         if (!locationAllowed) {
-            startForeground(NOTIFICATION_ID, buildNotification("Starting…"),
+            startForeground(NOTIFICATION_ID, buildNotification(Lang.t(R.string.nav_starting)),
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
         }
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "KawaNav:bridge");
@@ -526,7 +525,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
     private void enableLocation() {
         if (!hasLocationPermission()) return;
         try {
-            startForeground(NOTIFICATION_ID, buildNotification(lastNotificationText.isEmpty() ? "Starting…" : lastNotificationText),
+            startForeground(NOTIFICATION_ID, buildNotification(lastNotificationText.isEmpty() ? Lang.t(R.string.nav_starting) : lastNotificationText),
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE | ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             boolean was = locationAllowed;
             locationAllowed = true;
@@ -595,7 +594,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         } else {
             b.disconnect();
         }
-        Hub.bikeStatus = "Not running";
+        Hub.bikeStatus = Lang.t(R.string.bridge_not_running);
         Hub.bikeHint = "";
         Hub.bikeConnected = false;
         Hub.bikeOlderDash = false;
@@ -621,23 +620,22 @@ public class BridgeService extends Service implements KawaBle.Listener {
         // the permission can be revoked while the service runs (autostart path): every Bluetooth call
         // below would throw SecurityException on the main thread
         if (!Hub.bluetoothAllowed(this)) {
-            Hub.bikeStatus = "Bluetooth not allowed";
-            Hub.bikeHint = Hub.BLUETOOTH_HINT;
-            Logger.log("Bridge: " + Hub.BLUETOOTH_HINT);
+            Hub.bikeStatus = Lang.t(R.string.bridge_bluetooth_not_allowed);
+            Hub.bikeHint = Hub.bluetoothHint();
+            Logger.log("Bridge: " + Hub.bluetoothHint());
             return;
         }
         BluetoothDevice d = findBike();
         if (d == null) {
-            Hub.bikeStatus = "No paired Kawasaki found";
-            Hub.bikeHint = "Pair the bike once: \"Pair your bike\" in the orange banner (ignition on).";
+            Hub.bikeStatus = Lang.t(R.string.bridge_no_paired);
+            Hub.bikeHint = Lang.t(R.string.bridge_pair_hint);
             handler.postDelayed(connectRunnable, NO_BIKE_RETRY_MS);
             return;
         }
-        Hub.bikeStatus = "Looking for " + d.getName() + "…";
+        Hub.bikeStatus = Lang.t(R.string.bridge_looking_for, d.getName());
         Hub.bikeHint = bikeGuessed
-                ? "Several Kawasakis are paired with this phone. Set up \"Start automatically\" with yours, next "
-                        + "to it with the ignition on, so KawaNav knows which one; or remove the other in Bluetooth settings."
-                : "Switch on the ignition. Rideology must be closed: the bike talks to one app at a time.";
+                ? Lang.t(R.string.bridge_several)
+                : Lang.t(R.string.bridge_ignition);
         if (bikeGuessed) Logger.log("Bridge: several Kawasakis paired and none picked: trying " + d.getAddress());
         ble.setDumpServices(Hub.DEBUG_TOOLS && Hub.prefs(this).getBoolean(Hub.KEY_DEBUG_ICONS, false));
         ble.connect(d, true);
@@ -715,7 +713,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (destroyed) return;
         if (ready) {
             BluetoothDevice d = findBike();
-            Hub.bikeStatus = "Connected to " + (d != null ? d.getName() : "the bike");
+            Hub.bikeStatus = Lang.t(R.string.bridge_connected_to, d != null ? d.getName() : Lang.t(R.string.bridge_the_bike));
             if (d != null && d.getName() != null) Hub.prefs(this).edit().putString(Hub.KEY_BIKE_NAME, d.getName()).apply();
             Hub.bikeHint = "";
             Hub.bikeConnected = true;
@@ -788,12 +786,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 + ", status icons " + (c.statusIcons ? "supported" : "NOT supported"));
         if (c.valid && !c.turnByTurn && !ignoreCaps()) {
             // the frames stop going out: say so, and say how to get them back
-            Hub.bikeHint = "This bike's display reports no turn-by-turn support, so arrows and curves are not "
-                    + "being sent to it. If they used to work, turn on \"Send arrows and icons anyway\" in "
-                    + "Settings.";
+            Hub.bikeHint = Lang.t(R.string.bridge_no_turn_by_turn);
         } else if (c.valid && !c.statusIcons && !ignoreCaps()) {
-            Hub.bikeHint = "This bike's display reports no status icons, so the call, mail and phone icons are "
-                    + "not being sent to it. \"Send arrows and icons anyway\" in Settings overrides this.";
+            Hub.bikeHint = Lang.t(R.string.bridge_no_status_icons);
         } else {
             Hub.bikeHint = "";
         }
@@ -824,7 +819,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
             BikeStore.save(this);
         }
         Hub.bikeCapabilities = null;
-        Hub.bikeStatus = "Connection lost, reconnecting…";
+        Hub.bikeStatus = Lang.t(R.string.bridge_reconnecting);
         Hub.bikeHint = "";
         Hub.bikeConnected = false;
         updateNotification();
@@ -838,10 +833,9 @@ public class BridgeService extends Service implements KawaBle.Listener {
         handler.removeCallbacks(connectRunnable);
         Hub.bikeOlderDash = true;
         Hub.bikeConnected = false;
-        Hub.bikeStatus = "Older Kawasaki dash: not supported";
-        Hub.bikeHint = "This dash uses Kawasaki's protocol from before BLE5: it cannot show directions, and "
-                + "KawaNav cannot talk to it."
-                + (bikeGuessed ? " Several Kawasakis are paired: set up \"Start automatically\" with the one you ride." : "");
+        Hub.bikeStatus = Lang.t(R.string.bridge_older_dash);
+        Hub.bikeHint = Lang.t(R.string.bridge_older_dash_hint)
+                + (bikeGuessed ? " " + Lang.t(R.string.bridge_older_dash_several) : "");
         Logger.log("Bridge: older Kawasaki dash, not connecting again until KawaNav is started again");
         updateNotification();
     }
@@ -898,7 +892,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         } else if (curveWanted && curve.running()) {
             curve.stop();
             Logger.log("Bike away for " + GPS_IDLE_MS / 60_000 + " min, no ride: GPS off until it is back");
-            Hub.curveStatus = "Waiting for the bike (GPS off)";
+            Hub.curveStatus = Lang.t(R.string.bridge_waiting_bike);
         } else if (!curveWanted) {
             curve.stop();
         }
@@ -964,7 +958,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
             Logger.log("Meter -> " + (out == null ? "nothing" : out.describe()) + (ble.isReady() ? "" : "  [bike not connected]"));
         }
         if (!ble.isReady()) {
-            Hub.outputStatus = (out == null ? "Nothing to show" : out.describe()) + " (bike not connected)";
+            Hub.outputStatus = Lang.t(R.string.bridge_output_not_connected,
+                    out == null ? Lang.t(R.string.main_nothing_to_show) : out.shown());
             updateNotification();
             return;
         }
@@ -972,14 +967,14 @@ public class BridgeService extends Service implements KawaBle.Listener {
         pollVehicleInfo(now);
         if (Hub.prefs(this).getBoolean(Hub.KEY_RIDE_AUTO, false)) recorder.autoCheck();
         if (out == null) {
-            Hub.outputStatus = "Nothing to show";
+            Hub.outputStatus = Lang.t(R.string.main_nothing_to_show);
             if (clearsSent < CLEAR_REPEATS && navFramesAllowed()) {
                 ble.write(KawaProtocol.clearFrame(), "clear", true);
                 clearsSent++;
             }
         } else {
             clearsSent = 0;
-            Hub.outputStatus = out.describe();
+            Hub.outputStatus = out.shown();
             SharedPreferences p = Hub.prefs(this);
             boolean imperial = p.getBoolean(Hub.KEY_IMPERIAL, false);
             int dist = Math.max(0, out.distanceM);
@@ -1240,7 +1235,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Notification n = new Notification.Builder(this, CHANNEL_ALERTS)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)
                 .setContentTitle(out.alert)
-                .setContentText("From the offline map data of KawaNav")
+                .setContentText(Lang.t(R.string.bridge_camera_source))
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .build();
@@ -1265,7 +1260,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
                 p.getInt(Hub.KEY_CURVE_SOUND, CurveAlerts.OFF), paceLean(p.getInt(Hub.KEY_CURVE_PACE, CurveAlerts.PACE_OFF)),
                 maneuver, now);
         if (w == null) return;
-        String text = w.text(NavText.phone());
+        String text = w.text(NavText.current());
         Logger.log(String.format(Locale.ROOT, "Curve voice: %s, %.0f m ahead at %.0f km/h (GPS %.0f, radius %.0f m%s)",
                 text, w.curve.startDist, speed * 3.6, curve.speed() * 3.6, w.curve.minRadius,
                 Double.isInfinite(w.okSpeed) ? "" : String.format(Locale.ROOT, ", pace %.0f km/h", w.okSpeed * 3.6)));
@@ -1301,7 +1296,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Logger.log(String.format(Locale.ROOT, "Cold engine: %d rpm with the coolant at %.0f °C", rpm, coolant));
         if (!voiceAllowed()) return;
         if (beeps()) curveSound.beep(CurveBeeps.coldEngine());
-        else curveSound.sayAfter(ColdEngine.PHRASE);
+        else curveSound.sayAfter(NavText.current().coldEngine());
     }
 
     /** Beeps instead of words: asked for, or the phone cannot speak. */
@@ -1317,7 +1312,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
         if (beeps()) {
             curveSound.beep(CurveBeeps.camera());
         } else {
-            curveSound.sayAfter(NavText.phone().camera(a.camera.type, a.camera.maxspeed));
+            curveSound.sayAfter(NavText.current().camera(a.camera.type, a.camera.maxspeed));
         }
     }
 
@@ -1425,8 +1420,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Hub.fuelEntries = FuelLog.sorted(entries);
         new FuelStore(this).save(entries);
         Logger.log("Fuel: refuel recorded at " + e.odoKm + " km: " + e.describe());
-        announceOn(CHANNEL_RIDES, REFUEL_NOTIFICATION_ID, "Refuel recorded", FuelActivity.class,
-                e.describe() + " — correct the litres if they are wrong.");
+        announceOn(CHANNEL_RIDES, REFUEL_NOTIFICATION_ID, Lang.t(R.string.bridge_refuel), FuelActivity.class,
+                Lang.t(R.string.bridge_refuel_text, e.describe()));
     }
 
     /**
@@ -1448,10 +1443,8 @@ public class BridgeService extends Service implements KawaBle.Listener {
             double decline = BatteryLog.decline(readings);
             // a warning about the bike, on the warnings channel, with an id of its own: the refuel
             // confirmation is not a warning and must not replace it
-            announceOn(CHANNEL_ALERTS, BIKE_ALERT_NOTIFICATION_BASE + 1, "Battery is going down",
-                    BatteryActivity.class, String.format(java.util.Locale.ROOT,
-                            "The 12 V battery has lost %.1f V over the time logged: have it checked before "
-                                    + "it leaves you somewhere.", decline));
+            announceOn(CHANNEL_ALERTS, BIKE_ALERT_NOTIFICATION_BASE + 1, Lang.t(R.string.bridge_battery_down),
+                    BatteryActivity.class, Lang.t(R.string.bridge_battery_down_text, decline));
         }
     }
 
@@ -1479,15 +1472,16 @@ public class BridgeService extends Service implements KawaBle.Listener {
         for (MaintenanceLog.Due d : MaintenanceLog.due(Hub.maintenanceEntries, reminders, odo, now)) {
             if (!d.due()) continue;
             // the title says "due": "Oil change: since 22 Sept 2026", "Chain: 57 km over"
-            lines.add(d.reminder.item + ": " + d.describe(df).replaceFirst("^due: ", ""));
+            String state = d.describe(df), duePrefix = Lang.t(R.string.maint_due, "");
+            lines.add(d.reminder.item + ": " + (state.startsWith(duePrefix) ? state.substring(duePrefix.length()) : state));
             fresh |= told.add(MaintenanceLog.toldKey(d));
         }
         if (!fresh) return;
         p.edit().putStringSet(Hub.KEY_MAINT_TOLD, told).apply();
         Logger.log("Maintenance due: " + String.join("; ", lines));
         // all that is due in one note, which the next one replaces: it is a list to work through
-        announceOn(CHANNEL_ALERTS, MAINTENANCE_NOTIFICATION_ID, lines.size() == 1 ? "Maintenance due"
-                : lines.size() + " maintenance jobs due", MaintenanceActivity.class, String.join("\n", lines));
+        announceOn(CHANNEL_ALERTS, MAINTENANCE_NOTIFICATION_ID, Lang.plural(R.plurals.bridge_maintenance_due, lines.size()),
+                MaintenanceActivity.class, String.join("\n", lines));
     }
 
     /**
@@ -1523,12 +1517,10 @@ public class BridgeService extends Service implements KawaBle.Listener {
         Intent open = new Intent(c, RideActivity.class).putExtra(RideActivity.EXTRA_ID, r.id);
         PendingIntent tap = PendingIntent.getActivity(c, ("clutch" + r.id).hashCode(), open,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        String text = String.format(java.util.Locale.ROOT, "In %d hard accelerations on this ride the engine "
-                + "revved up to %.1f%% higher than the gear and the speed give: the clutch may be slipping. "
-                + "Have it checked.", r.clutchSlipRuns, r.clutchMaxPct);
+        String text = Lang.t(R.string.bridge_clutch_text, r.clutchSlipRuns, r.clutchMaxPct);
         Notification n = new Notification.Builder(c, CHANNEL_ALERTS)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                .setContentTitle("Clutch may be slipping")
+                .setContentTitle(Lang.t(R.string.bridge_clutch_title))
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setContentIntent(tap)
@@ -1580,7 +1572,7 @@ public class BridgeService extends Service implements KawaBle.Listener {
 
     private void updateNotification() {
         String text = Hub.bikeStatus + " · " + Hub.outputStatus
-                + (locationAllowed ? "" : "\nCurve detection paused: tap to open KawaNav");
+                + (locationAllowed ? "" : "\n" + Lang.t(R.string.bridge_curves_paused));
         if (text.equals(lastNotificationText)) return;
         lastNotificationText = text;
         getSystemService(NotificationManager.class).notify(NOTIFICATION_ID, buildNotification(text));

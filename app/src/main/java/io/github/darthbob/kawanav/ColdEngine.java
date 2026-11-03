@@ -18,7 +18,6 @@ final class ColdEngine {
     static final long KEEP_WARM_MS = 10 * 60_000;
     /** An engine speed older than this is not used: the revs change from one second to the next. */
     static final long FRESH_MS = 5_000;
-    static final String PHRASE = "Engine still cold";
 
     private boolean warm, over;
     private long saidAt = -REPEAT_MS;
@@ -28,7 +27,7 @@ final class ColdEngine {
     /** The labels of {@link #RPM_CHOICES}: "4,500 rpm". */
     static String[] rpmLabels() {
         String[] out = new String[RPM_CHOICES.length];
-        for (int i = 0; i < out.length; i++) out[i] = String.format(java.util.Locale.ROOT, "%,d rpm", RPM_CHOICES[i]);
+        for (int i = 0; i < out.length; i++) out[i] = Lang.t(R.string.unit_rpm, RPM_CHOICES[i]);
         return out;
     }
 
